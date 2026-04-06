@@ -168,6 +168,60 @@ export function Authentication(props: PropsType) {
   );
 }
 
+export function Certificate(props: PropsType) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={24}
+      height={24}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      {...props}
+    >
+      <path d="M12 2a1 1 0 011 1v2h8a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V6a1 1 0 011-1h8V3a1 1 0 011-1zm0 6a3 3 0 100 6 3 3 0 000-6z" />
+    </svg>
+  );
+}
+
+export function Settings(props: PropsType) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={24}
+      height={24}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      {...props}
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M12 2a1 1 0 01.993.883l.291 2.326a7.974 7.974 0 011.957 1.134l1.8-1.354a1 1 0 011.328.159l1.414 1.414a1 1 0 01.158 1.328l-1.354 1.8a7.976 7.976 0 011.134 1.957l2.326.291A1 1 0 0122 15a1 1 0 01-.883.993l-2.326.291a7.976 7.976 0 01-1.134 1.957l1.354 1.8a1 1 0 01-.158 1.328l-1.414 1.414a1 1 0 01-1.328-.158l-1.8-1.354a7.974 7.974 0 01-1.957 1.134l-.291 2.326A1 1 0 0112 22a1 1 0 01-.993-.883l-.291-2.326a7.974 7.974 0 01-1.957-1.134l-1.8 1.354a1 1 0 01-1.328-.159l-1.414-1.414a1 1 0 01-.158-1.328l1.354-1.8a7.976 7.976 0 01-1.134-1.957L2.883 13.993A1 1 0 012 13a1 1 0 01.883-.993l2.326-.291a7.976 7.976 0 011.134-1.957l-1.354-1.8a1 1 0 01.158-1.328l1.414-1.414a1 1 0 011.328.158l1.8 1.354a7.974 7.974 0 011.957-1.134l.291-2.326A1 1 0 0112 2zm0 7a2 2 0 100 4 2 2 0 000-4z"
+      />
+    </svg>
+  );
+}
+
+export function ChevronLeft(props: PropsType) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={24}
+      height={24}
+      viewBox="0 0 24 24"
+      fill="none"
+      {...props}
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M15.41 19.41a1 1 0 01-1.414 0l-7-7a1 1 0 010-1.414l7-7a1 1 0 011.414 1.414L9.414 12l6.996 6.996a1 1 0 010 1.414z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 export function ArrowLeftIcon(props: PropsType) {
   return (
     <svg
@@ -182,6 +236,70 @@ export function ArrowLeftIcon(props: PropsType) {
         clipRule="evenodd"
         d="M7.89775 4.10225C8.11742 4.32192 8.11742 4.67808 7.89775 4.89775L4.358 8.4375H15C15.3107 8.4375 15.5625 8.68934 15.5625 9C15.5625 9.31066 15.3107 9.5625 15 9.5625H4.358L7.89775 13.1023C8.11742 13.3219 8.11742 13.6781 7.89775 13.8977C7.67808 14.1174 7.32192 14.1174 7.10225 13.8977L2.60225 9.39775C2.38258 9.17808 2.38258 8.82192 2.60225 8.60225L7.10225 4.10225C7.32192 3.88258 7.67808 3.88258 7.89775 4.10225Z"
         fill=""
+      />
+    </svg>
+  );
+}
+
+export function ShieldIcon(props: PropsType) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={24}
+      height={24}
+      viewBox="0 0 24 24"
+      fill="none"
+      {...props}
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.5V7l-5 2.5v2.5l5-2.5V12l-5 2.5V10l5-2.5V5z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function KeyIcon(props: PropsType) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={24}
+      height={24}
+      viewBox="0 0 24 24"
+      fill="none"
+      {...props}
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M7 14c-2.21 0-4-1.79-4-4S4.79 6 7 6s4 1.79 4 4c0 .74-.2 1.44-.56 2.03l5.56 5.56a2 2 0 002.83-2.83l-5.56-5.56c-.59-.36-1.29-.56-2.03-.56zm0-6a2 2 0 100 4 2 2 0 000-4z"
+        fill="currentColor"
+      />
+      <path
+        d="M19.07 4.93l-1.41 1.41A9 9 0 1012 21a9 9 0 001.41-1.41l1.41 1.41a11 11 0 000-15.52z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function UsersIcon(props: PropsType) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={24}
+      height={24}
+      viewBox="0 0 24 24"
+      fill="none"
+      {...props}
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M9 2a4 4 0 00-4 4v1.05c-.59-.19-1.21-.3-1.85-.3C1.96 6.75.5 8.21.5 10c0 .96.41 1.82 1.05 2.45A4.97 4.97 0 003 15.5c0 .73.16 1.42.44 2.05.53 1.17 1.52 2.01 2.81 2.2 1.28.19 2.75.05 4.75.05s3.47.14 4.75-.05c1.29-.19 2.28-1.03 2.81-2.2.28-.63.44-1.32.44-2.05a4.97 4.97 0 001.45-2.55c.64-.63 1.05-1.49 1.05-2.45 0-1.79-1.46-3.25-3.65-3.25-.64 0-1.26.11-1.85.3V6c0-2.21-1.79-4-4-4zm0 6a2 2 0 110-4 2 2 0 010 4zm8 8c0-2.21-1.79-4-4-4h-.08c1.06 1.06 1.58 2.43 1.58 4H17zm2-8c0 2.21 1.79 4 4 4 .73 0 1.42-.16 2.05-.44 1.17-.53 2.01-1.52 2.2-2.81.19-1.28.05-2.75.05-4.75s-.14-3.47.05-4.75c.19-1.29-1.03-2.28-2.2-2.81-.63-.28-1.32-.44-2.05-.44-2.21 0-4 1.79-4 4z"
+        fill="currentColor"
       />
     </svg>
   );

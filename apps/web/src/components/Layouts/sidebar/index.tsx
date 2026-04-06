@@ -4,47 +4,20 @@ import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { NAV_DATA } from "./data";
-import { ArrowLeftIcon, ChevronUp } from "./icons";
+import { ArrowLeftIcon, ChevronLeft } from "./icons";
 import { MenuItem } from "./menu-item";
 import { useSidebarContext } from "./sidebar-context";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { setIsOpen, isOpen, isMobile, toggleSidebar } = useSidebarContext();
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
-
-  const toggleExpanded = (title: string) => {
-    setExpandedItems((prev) => (prev.includes(title) ? [] : [title]));
-
-    // Uncomment the following line to enable multiple expanded items
-    // setExpandedItems((prev) =>
-    //   prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title],
-    // );
-  };
-
-  useEffect(() => {
-    // Keep collapsible open, when it's subpage is active
-    NAV_DATA.some((section) => {
-      return section.items.some((item) => {
-        return item.items.some((subItem) => {
-          if (subItem.url === pathname) {
-            if (!expandedItems.includes(item.title)) {
-              toggleExpanded(item.title);
-            }
-
-            // Break the loop
-            return true;
-          }
-        });
-      });
-    });
-  }, [pathname]);
+  const { setIsOpen, isOpen, isMobile, toggleSidebar, isCollapsed, toggleCollapse } =
+    useSidebarContext();
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   return (
     <>
-      {/* Mobile Overlay */}
       {isMobile && isOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-300"
@@ -55,121 +28,104 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "max-w-[290px] overflow-hidden border-r border-gray-200 bg-white transition-[width] duration-200 ease-linear dark:border-gray-800 dark:bg-gray-dark",
-          isMobile ? "fixed bottom-0 top-0 z-50" : "sticky top-0 h-screen",
-          isOpen ? "w-full" : "w-0",
+          "border-r border-green-200 bg-green-100 transition-[width] duration-300 ease-linear overflow-visible h-screen sticky top-0",
+          isMobile ? "fixed bottom-0 top-0 z-50" : "",
+          isOpen ? "" : "w-0",
+          isCollapsed && !isMobile ? "w-24" : "max-w-[290px] w-full",
         )}
-        aria-label="Main navigation"
-        aria-hidden={!isOpen}
-        inert={!isOpen}
       >
         <div className="flex h-full flex-col py-10 pl-[25px] pr-[7px]">
-          <div className="relative pr-4.5">
-            <Link
-              href={"/"}
-              onClick={() => isMobile && toggleSidebar()}
-              className="px-0 py-2.5 min-[850px]:py-0"
-            >
-              <Logo />
-            </Link>
+          
+          {/* Logo y botón collapse */}
+          <div className="relative pr-4.5 flex items-center justify-between">
+            {!isCollapsed && (
+              <Link
+                href={"/"}
+                onClick={() => isMobile && toggleSidebar()}
+                className="px-0 py-2.5 min-[850px]:py-0"
+              >
+                <Logo />
+              </Link>
+            )}
 
-            {isMobile && (
+            {!isMobile && (
+              <button
+                onClick={toggleCollapse}
+                className={cn(
+                  "p-1.5 hover:bg-green-200 rounded-lg transition ml-auto",
+                  isCollapsed ? "ml-1" : ""
+                )}
+                title={isCollapsed ? "Expandir" : "Colapsar"}
+              >
+                <ChevronLeft className={cn(
+                  "size-5 transition-transform duration-300",
+                  isCollapsed ? "rotate-180" : ""
+                )} />
+              </button>
+            )}
+
+            {isMobile && isOpen && (
               <button
                 onClick={toggleSidebar}
-                className="absolute left-3/4 right-4.5 top-1/2 -translate-y-1/2 text-right"
+                className="ml-auto p-1.5"
               >
-                <span className="sr-only">Close Menu</span>
-
-                <ArrowLeftIcon className="ml-auto size-7" />
+                <ArrowLeftIcon className="size-7" />
               </button>
             )}
           </div>
 
           {/* Navigation */}
-          <div className="custom-scrollbar mt-6 flex-1 overflow-y-auto pr-3 min-[850px]:mt-10">
+          <div className="mt-6 flex-1 overflow-y-auto pr-3 min-[850px]:mt-10">
             {NAV_DATA.map((section) => (
-              <div key={section.label} className="mb-6">
-                <h2 className="mb-5 text-sm font-medium text-dark-4 dark:text-dark-6">
-                  {section.label}
-                </h2>
+              <div key={section.label} className="mb-8">
+                
+                {!isCollapsed && (
+                  <h2 className="mb-5 text-sm font-medium text-green-900">
+                    {section.label}
+                  </h2>
+                )}
 
-                <nav role="navigation" aria-label={section.label}>
-                  <ul className="space-y-2">
-                    {section.items.map((item) => (
-                      <li key={item.title}>
-                        {item.items.length ? (
-                          <div>
-                            <MenuItem
-                              isActive={item.items.some(
-                                ({ url }) => url === pathname,
-                              )}
-                              onClick={() => toggleExpanded(item.title)}
-                            >
-                              <item.icon
-                                className="size-6 shrink-0"
-                                aria-hidden="true"
-                              />
-
-                              <span>{item.title}</span>
-
-                              <ChevronUp
-                                className={cn(
-                                  "ml-auto rotate-180 transition-transform duration-200",
-                                  expandedItems.includes(item.title) &&
-                                    "rotate-0",
-                                )}
-                                aria-hidden="true"
-                              />
-                            </MenuItem>
-
-                            {expandedItems.includes(item.title) && (
-                              <ul
-                                className="ml-9 mr-0 space-y-1.5 pb-[15px] pr-0 pt-2"
-                                role="menu"
-                              >
-                                {item.items.map((subItem) => (
-                                  <li key={subItem.title} role="none">
-                                    <MenuItem
-                                      as="link"
-                                      href={subItem.url}
-                                      isActive={pathname === subItem.url}
-                                    >
-                                      <span>{subItem.title}</span>
-                                    </MenuItem>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        ) : (
-                          (() => {
-                            const href =
-                              "url" in item
-                                ? item.url + ""
-                                : "/" +
-                                  item.title.toLowerCase().split(" ").join("-");
-
-                            return (
-                              <MenuItem
-                                className="flex items-center gap-3 py-3"
-                                as="link"
-                                href={href}
-                                isActive={pathname === href}
-                              >
-                                <item.icon
-                                  className="size-6 shrink-0"
-                                  aria-hidden="true"
-                                />
-
-                                <span>{item.title}</span>
-                              </MenuItem>
-                            );
-                          })()
+                <ul className={cn(
+                  "space-y-2",
+                  isCollapsed ? "flex flex-col items-center gap-4" : ""
+                )}>
+                  {section.items.map((item) => (
+                    <li 
+                      key={item.title} 
+                      className={cn(
+                        "relative",
+                        isCollapsed ? "w-12" : ""
+                      )}
+                      onMouseEnter={() => isCollapsed && setHoveredItem(item.title)}
+                      onMouseLeave={() => setHoveredItem(null)}
+                    >
+                      <MenuItem
+                        className={cn(
+                          "flex items-center gap-3 py-3 px-3 rounded-lg transition",
+                          "hover:bg-green-200",
+                          pathname === item.url &&
+                            "bg-green-300 text-green-900 font-medium",
+                          isCollapsed ? "justify-center p-3" : ""
                         )}
-                      </li>
-                    ))}
-                  </ul>
-                </nav>
+                        as="link"
+                        href={item.url}
+                        isActive={pathname === item.url}
+                        title={item.title}
+                      >
+                        <item.icon className={cn("shrink-0", isCollapsed ? "size-7" : "size-6")} />
+                        {!isCollapsed && <span>{item.title}</span>}
+                      </MenuItem>
+
+                      {/* Menú flotante cuando está colapsado */}
+                      {isCollapsed && hoveredItem === item.title && !isMobile && (
+                        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 bg-green-900 text-white px-3 py-2 rounded-lg whitespace-nowrap text-sm font-medium shadow-lg pointer-events-none">
+                          {item.title}
+                          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-green-900"></div>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </div>

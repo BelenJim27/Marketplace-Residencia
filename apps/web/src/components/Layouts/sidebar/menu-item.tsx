@@ -24,7 +24,11 @@ export function MenuItem(
     className?: string;
     children: React.ReactNode;
     isActive: boolean;
-  } & ({ as?: "button"; onClick: () => void } | { as: "link"; href: string }),
+    title?: string;
+  } & (
+    | { as?: "button"; onClick: () => void }
+    | { as: "link"; href: string }
+  ),
 ) {
   const { toggleSidebar, isMobile } = useSidebarContext();
 
@@ -32,6 +36,7 @@ export function MenuItem(
     return (
       <Link
         href={props.href}
+        title={props.title}
         // Close sidebar on clicking link if it's mobile
         onClick={() => isMobile && toggleSidebar()}
         className={cn(
@@ -49,7 +54,7 @@ export function MenuItem(
 
   return (
     <button
-      onClick={props.onClick}
+      onClick={() => 'onClick' in props && props.onClick()}
       aria-expanded={props.isActive}
       className={menuItemBaseStyles({
         isActive: props.isActive,
