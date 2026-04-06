@@ -50,8 +50,6 @@ model auditoria {
   @@index([id_usuario], map: "idx_auditoria_usuario")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model carrito_item {
   id_item                  BigInt    @id @default(autoincrement())
   id_usuario               String    @db.Uuid
@@ -97,7 +95,6 @@ model configuracion_sistema {
   actualizado_en DateTime @default(now()) @db.Timestamptz(6)
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model detalle_pedido {
   id_detalle    BigInt    @id @default(autoincrement())
   id_pedido     BigInt
@@ -184,7 +181,6 @@ model envio_guias {
   transportistas     transportistas?     @relation(fields: [id_transportista], references: [id_transportista], onUpdate: NoAction)
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model envios {
   id_envio               BigInt           @id @default(autoincrement())
   id_pedido              BigInt
@@ -213,7 +209,6 @@ model envios {
   @@index([id_pedido], map: "idx_envios_pedido")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model facturas {
   id_factura      BigInt   @id @default(autoincrement())
   id_pedido       BigInt?
@@ -234,7 +229,6 @@ model facturas {
   pedidos         pedidos? @relation(fields: [id_pedido], references: [id_pedido], onDelete: Restrict, onUpdate: NoAction)
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model integraciones_envio {
   id_integracion     Int            @id @default(autoincrement())
   id_transportista   Int
@@ -251,8 +245,6 @@ model integraciones_envio {
   @@unique([id_transportista, entorno])
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model inventario {
   id_inventario          BigInt                   @id @default(autoincrement())
   id_producto            BigInt
@@ -269,7 +261,6 @@ model inventario {
   @@index([id_producto], map: "idx_inventario_producto")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model lote_atributos {
   id_atributo     BigInt   @id @default(autoincrement())
   id_lote         Int
@@ -284,7 +275,6 @@ model lote_atributos {
   @@index([id_lote], map: "idx_lote_atributos_lote")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model lotes {
   id_lote          Int              @id @default(autoincrement())
   id_productor     Int
@@ -349,7 +339,6 @@ model notificaciones {
   @@index([id_usuario, leido], map: "idx_notificaciones_usuario_leido")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model pagos {
   id_pago           BigInt   @id @default(autoincrement())
   id_pedido         BigInt
@@ -380,8 +369,6 @@ model password_reset_tokens {
   @@index([id_usuario], map: "idx_prt_usuario")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model pedidos {
   id_pedido                      BigInt                   @id @default(autoincrement())
   id_usuario                     String                   @db.Uuid
@@ -446,7 +433,6 @@ model productores {
   tiendas               tiendas[]
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model productos {
   id_producto                                  BigInt               @id @default(autoincrement())
   id_tienda                                    Int
@@ -467,10 +453,12 @@ model productos {
   creado_en                                    DateTime             @default(now()) @db.Timestamptz(6)
   actualizado_en                               DateTime             @default(now()) @db.Timestamptz(6)
   eliminado_en                                 DateTime?            @db.Timestamptz(6)
+  imagen_principal_url                         String?              @db.VarChar(500)
   carrito_item                                 carrito_item[]
   detalle_pedido                               detalle_pedido[]
   inventario                                   inventario[]
   producto_categoria                           producto_categoria[]
+  producto_imagenes                            producto_imagenes[]
   usuarios_productos_actualizado_porTousuarios usuarios?            @relation("productos_actualizado_porTousuarios", fields: [actualizado_por], references: [id_usuario], onUpdate: NoAction)
   usuarios_productos_creado_porTousuarios      usuarios?            @relation("productos_creado_porTousuarios", fields: [creado_por], references: [id_usuario], onUpdate: NoAction)
   lotes                                        lotes?               @relation(fields: [id_lote], references: [id_lote], onUpdate: NoAction)
@@ -484,7 +472,6 @@ model productos {
   @@index([traducciones], map: "idx_productos_traducciones", type: Gin)
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model refresh_tokens {
   id_token    BigInt    @id @default(autoincrement())
   id_usuario  String    @db.Uuid
@@ -509,8 +496,6 @@ model regiones {
   productores productores[]
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model resenas {
   id_resena          BigInt    @id @default(autoincrement())
   id_usuario         String    @db.Uuid
@@ -564,7 +549,6 @@ model servicios_envio {
   @@unique([id_transportista, codigo_servicio])
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model tasas_impuesto {
   id_tasa            Int         @id @default(autoincrement())
   pais_iso2          String      @db.Char(2)
@@ -629,7 +613,6 @@ model usuario_rol {
   @@id([id_usuario, id_rol])
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model usuarios {
   id_usuario                                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre                                        String                   @db.VarChar(100)
@@ -660,4 +643,17 @@ model usuarios {
   refresh_tokens                                refresh_tokens[]
   resenas                                       resenas[]
   usuario_rol                                   usuario_rol[]
+}
+
+model producto_imagenes {
+  id_imagen    BigInt    @id @default(autoincrement())
+  id_producto  BigInt
+  url          String    @db.VarChar(500)
+  orden        Int       @default(0)
+  es_principal Boolean   @default(false)
+  alt_text     String?   @db.VarChar(255)
+  creado_en    DateTime  @default(now()) @db.Timestamptz(6)
+  productos    productos @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_producto], map: "idx_producto_imagenes_producto")
 }
