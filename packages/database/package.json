@@ -1,0 +1,17 @@
+{
+  "name": "database",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "db:generate": "prisma generate --schema=./prisma/schema.prisma",
+    "db:push": "prisma db push --schema=./prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
+    "db:studio": "prisma studio --schema=./prisma/schema.prisma"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  }
+}
