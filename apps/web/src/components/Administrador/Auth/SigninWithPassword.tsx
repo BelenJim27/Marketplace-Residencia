@@ -36,20 +36,26 @@ export default function SigninWithPassword() {
 
     try {
       const response = await api.auth.login(data.email, data.password);
-      const usuario = await api.usuarios.getOne(response.user.id_usuario ?? response.user.sub);
-      const roles =
-        usuario.usuario_rol?.filter((ur: any) => ur.estado === "activo").map((ur: any) => ur.roles?.nombre).filter(Boolean) || [];
+      const roles = response.user.roles || [];
+      const permisos = response.user.permisos || [];
 
       login(response.tokens.access_token, {
         id_usuario: response.user.id_usuario,
         sub: response.user.id_usuario ?? response.user.sub,
         email: response.user.email || data.email,
-        nombre: response.user.nombre || usuario.nombre || "",
+        id_productor: response.user.id_productor ?? null,
+        nombre: response.user.nombre || "",
         roles,
+        permisos,
       }, response.tokens.refresh_token);
 
-      const isAdminOrProductor = roles.some((rol: string) => ["ADMIN", "administrador", "admin", "PRODUCTOR", "productor"].includes(rol));
-      router.push(isAdminOrProductor ? "/Administrador/dashboard" : "/Cliente/producto");
+      if (permisos.includes("panel_productor") || roles.some((rol: string) => ["PRODUCTOR", "productor"].includes(rol))) {
+        router.push("/dashboard/productor");
+        return;
+      }
+
+      const isAdmin = roles.some((rol: string) => ["ADMIN", "administrador", "admin"].includes(rol));
+      router.push(isAdmin ? "/Administrador/dashboard" : "/Cliente/producto");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión");
     } finally {

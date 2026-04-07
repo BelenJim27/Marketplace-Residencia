@@ -5,16 +5,19 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { NAV_DATA } from "./data";
+import { getNavData } from "./data";
 import { ArrowLeftIcon, ChevronLeft } from "./icons";
 import { MenuItem } from "./menu-item";
 import { useSidebarContext } from "./sidebar-context";
+import { useAuth } from "@/context/AuthContext";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user, isProductor } = useAuth();
   const { setIsOpen, isOpen, isMobile, toggleSidebar, isCollapsed, toggleCollapse } =
     useSidebarContext();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const navData = getNavData(isProductor || user?.permisos?.includes("panel_productor") || false);
 
   return (
     <>
@@ -76,7 +79,7 @@ export function Sidebar() {
 
           {/* Navigation */}
           <div className="mt-6 flex-1 overflow-y-auto pr-3 min-[850px]:mt-10">
-            {NAV_DATA.map((section) => (
+            {navData.map((section) => (
               <div key={section.label} className="mb-8">
                 
                 {!isCollapsed && (
@@ -109,7 +112,7 @@ export function Sidebar() {
                         )}
                         as="link"
                         href={item.url}
-                        isActive={pathname === item.url}
+                        isActive={pathname === item.url.split("#")[0]}
                         title={item.title}
                       >
                         <item.icon className={cn("shrink-0", isCollapsed ? "size-7" : "size-6")} />

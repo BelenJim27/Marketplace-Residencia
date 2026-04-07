@@ -12,8 +12,8 @@ export function RootContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const { user, loading, isAdmin, isProductor, isAuthenticated } = useAuth();
 
-  const isLoggedIn = isAuthenticated && user && user.roles.length > 0;
-  const isAdminOrProductor = isAdmin || isProductor;
+  const isLoggedIn = isAuthenticated && !!user && (user.roles.length > 0 || (user.permisos?.length ?? 0) > 0);
+  const isAdminOrProductor = isAdmin || isProductor || user?.permisos?.includes("panel_productor");
 
   const isAuthRoute = pathname.startsWith("/auth/");
 

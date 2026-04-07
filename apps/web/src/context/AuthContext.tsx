@@ -13,6 +13,7 @@ import { getCookie, setCookie, removeCookie } from "@/lib/cookies";
 
 interface Usuario {
   id_usuario?: string;
+  id_productor?: number | null;
   sub: string;
   email: string;
   nombre: string;
@@ -44,7 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token && usuarioStr) {
       try {
         const usuario = JSON.parse(usuarioStr);
-        setUser(usuario);
+        setUser({
+          ...usuario,
+          roles: Array.isArray(usuario.roles) ? usuario.roles : [],
+          permisos: Array.isArray(usuario.permisos) ? usuario.permisos : [],
+          id_productor: usuario.id_productor ?? null,
+        });
       } catch {
         setUser(null);
       }
@@ -78,7 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   );
   const isProductor = useMemo(
-    () => user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r)) ?? false,
+    () =>
+      (user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r)) ?? false) ||
+      user?.permisos?.includes("panel_productor") ||
+      false,
     [user],
   );
 
