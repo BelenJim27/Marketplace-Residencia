@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, usuarios } from '@prisma/client';
 import { createHash, createHmac, randomBytes, timingSafeEqual, scrypt } from 'crypto';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   AuthResponseDto,
@@ -329,6 +330,10 @@ function hashPassword(password: string): Promise<string> {
 }
 
 function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  if (storedHash.startsWith('$2b$') || storedHash.startsWith('$2a$')) {
+    return bcrypt.compare(password, storedHash);
+  }
+
   const parts = storedHash.split('$');
   if (parts.length !== 7 || parts[0] !== 'scrypt') {
     return Promise.resolve(false);
