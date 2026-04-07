@@ -20,13 +20,16 @@ import {
   ResetPasswordDto,
 } from './dto/auth.dto';
 
-type JwtPayload = Record<string, string | number | boolean | undefined>;
+type JwtPayload = Record<string, string | number | boolean | null | undefined | string[]>;
 
 interface AccessTokenPayload extends JwtPayload {
   sub: string;
   email: string;
   version_token: number;
   token_type: 'access';
+  roles: string[];
+  permisos: string[];
+  id_productor: number | null;
 }
 
 interface RefreshTokenPayload extends JwtPayload {
@@ -255,12 +258,17 @@ export class AuthService {
       throw new NotFoundException('Usuario no encontrado');
     }
 
+    const accessData = await getAccessData(this.prisma, freshUser.id_usuario);
+
     const accessToken = createSignedJwt<AccessTokenPayload>(
       {
         sub: freshUser.id_usuario,
         email: freshUser.email,
         version_token: freshUser.version_token,
         token_type: 'access',
+        roles: accessData.roles,
+        permisos: accessData.permisos,
+        id_productor: accessData.id_productor,
       },
       ACCESS_TOKEN_SECRET,
       ACCESS_TOKEN_EXPIRES_IN,
@@ -285,7 +293,12 @@ export class AuthService {
     });
 
     return {
-      user: mapUser(freshUser),
+      user: {
+        ...mapUser(freshUser),
+        roles: accessData.roles,
+        permisos: accessData.permisos,
+        id_productor: accessData.id_productor,
+      },
       tokens: {
         access_token: accessToken,
         refresh_token: refreshToken,
@@ -309,6 +322,49 @@ function mapUser(user: usuarios): AuthUserDto {
     version_token: user.version_token,
     fecha_registro: user.fecha_registro,
     eliminado_en: user.eliminado_en,
+  };
+}
+
+async function getAccessData(prisma: PrismaService, id_usuario: string): Promise<{ roles: string[]; permisos: string[]; id_productor: number | null }> {
+  const user = await prisma.usuarios.findUnique({
+    where: { id_usuario },
+    include: {
+      productores: { select: { id_productor: true } },
+      usuario_rol: {
+        where: { estado: 'activo' },
+        include: {
+          roles: {
+            include: {
+              rol_permiso: { include: { permisos: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    throw new NotFoundException('Usuario no encontrado');
+  }
+
+  const roles = user.usuario_rol
+    .map((relation) => relation.roles?.nombre)
+    .filter((role): role is string => Boolean(role));
+
+  const permisos = Array.from(
+    new Set(
+      user.usuario_rol.flatMap((relation) =>
+        relation.roles?.rol_permiso
+          .map((permiso) => permiso.permisos?.nombre)
+          .filter((permiso): permiso is string => Boolean(permiso)) ?? [],
+      ),
+    ),
+  );
+
+  return {
+    roles,
+    permisos,
+    id_productor: user.productores?.id_productor ?? null,
   };
 }
 

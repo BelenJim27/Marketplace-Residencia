@@ -107,6 +107,9 @@ export class AuthUserDto {
   version_token!: number;
   fecha_registro!: Date;
   eliminado_en!: Date | null;
+  roles?: string[];
+  permisos?: string[];
+  id_productor?: number | null;
 }
 
 export class AuthResponseDto {
