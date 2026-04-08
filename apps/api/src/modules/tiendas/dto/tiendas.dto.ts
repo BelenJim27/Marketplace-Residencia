@@ -1,12 +1,61 @@
-import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsDateString, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateTiendaDto {
-  @IsInt() @Type(() => Number) id_productor!: number;
-  @IsString() @MaxLength(150) nombre!: string;
-  @IsOptional() @IsString() descripcion?: string;
-  @IsOptional() @IsString() @MaxLength(2) pais_operacion?: string;
-  @IsOptional() @IsString() @MaxLength(20) status?: string;
+  @IsInt()
+  @Type(() => Number)
+  id_productor!: number;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  nombre!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  descripcion!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2)
+  @IsIn(['MX', 'US', 'CA', 'ES'])
+  pais_operacion!: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['activo', 'inactivo'])
+  status?: string;
+
+  @IsOptional()
+  @IsDateString()
+  fecha_creacion?: string;
 }
-export class UpdateTiendaDto extends PartialType(CreateTiendaDto) {}
+
+export class UpdateTiendaDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  nombre?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  descripcion?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2)
+  @IsIn(['MX', 'US', 'CA', 'ES'])
+  pais_operacion?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['activo', 'inactivo'])
+  status?: string;
+
+  @IsOptional()
+  @IsDateString()
+  actualizado_en?: string;
+}

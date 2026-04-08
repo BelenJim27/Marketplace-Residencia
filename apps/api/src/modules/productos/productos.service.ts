@@ -8,7 +8,15 @@ import { CreateProductoDto, UpdateProductoDto } from './dto/productos.dto';
 export class ProductosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() { return serializeBigInts(await this.prisma.productos.findMany({ where: { eliminado_en: null }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } })); }
+  async findAll(id_productor?: number) {
+    if (id_productor) {
+      const stores = await this.prisma.tiendas.findMany({ where: { id_productor, eliminado_en: null }, select: { id_tienda: true } });
+      const ids = stores.map((store) => store.id_tienda);
+      return serializeBigInts(await this.prisma.productos.findMany({ where: { eliminado_en: null, id_tienda: { in: ids } }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }));
+    }
+
+    return serializeBigInts(await this.prisma.productos.findMany({ where: { eliminado_en: null }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }));
+  }
   async findOne(id: string) { const item = await this.prisma.productos.findUnique({ where: { id_producto: toBigIntId(id) }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }); if (!item || item.eliminado_en) throw new NotFoundException('Producto no encontrado'); return serializeBigInts(item); }
 
   async create(dto: CreateProductoDto) {
