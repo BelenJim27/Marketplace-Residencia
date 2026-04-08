@@ -58,6 +58,10 @@ export function ProductorProductos() {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [storeFilter, setStoreFilter] = useState("todos");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<"create" | "edit" | "view">("create");
@@ -101,17 +105,34 @@ export function ProductorProductos() {
 
   const visibleProducts = useMemo(() => {
     const q = query.toLowerCase().trim();
+    const min = minPrice === "" ? null : Number(minPrice);
+    const max = maxPrice === "" ? null : Number(maxPrice);
+
     return products
       .filter((product) => storeIds.has(Number(product.id_tienda)))
       .filter((product) => {
-        if (!q) return true;
-        return (
-          product.nombre.toLowerCase().includes(q) ||
-          String(product.status || "").toLowerCase().includes(q) ||
-          String(storeMap.get(Number(product.id_tienda)) || "").toLowerCase().includes(q)
-        );
+        const productName = product.nombre.toLowerCase();
+        const productStatus = String(product.status || "activo").toLowerCase();
+        const storeName = String(storeMap.get(Number(product.id_tienda)) || "").toLowerCase();
+        const price = Number(product.precio_base || 0);
+
+        const matchesQuery = !q || productName.includes(q) || productStatus.includes(q) || storeName.includes(q);
+        const matchesStatus = statusFilter === "todos" || productStatus === statusFilter;
+        const matchesStore = storeFilter === "todos" || String(product.id_tienda) === storeFilter;
+        const matchesMin = min === null || Number.isNaN(min) ? true : price >= min;
+        const matchesMax = max === null || Number.isNaN(max) ? true : price <= max;
+
+        return matchesQuery && matchesStatus && matchesStore && matchesMin && matchesMax;
       });
-  }, [products, storeIds, query, storeMap]);
+  }, [products, storeIds, query, storeMap, statusFilter, storeFilter, minPrice, maxPrice]);
+
+  const clearFilters = () => {
+    setQuery("");
+    setStatusFilter("todos");
+    setStoreFilter("todos");
+    setMinPrice("");
+    setMaxPrice("");
+  };
 
   const openCreate = () => {
     setSelected(null);
@@ -240,6 +261,72 @@ export function ProductorProductos() {
           placeholder="Buscar por nombre o tienda"
           className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
         />
+      </div>
+
+      <div className="mb-6 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4 xl:grid-cols-5">
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Filtro por Estatus</span>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+            >
+              <option value="todos">Todos</option>
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+              <option value="borrador">Borrador</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Filtro por Tienda</span>
+            <select
+              value={storeFilter}
+              onChange={(event) => setStoreFilter(event.target.value)}
+              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+            >
+              <option value="todos">Todas</option>
+              {stores.map((store) => (
+                <option key={store.id_tienda} value={String(store.id_tienda)}>
+                  {store.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Precio mín</span>
+            <input
+              type="number"
+              value={minPrice}
+              onChange={(event) => setMinPrice(event.target.value)}
+              placeholder="Precio mín"
+              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Precio máx</span>
+            <input
+              type="number"
+              value={maxPrice}
+              onChange={(event) => setMaxPrice(event.target.value)}
+              placeholder="Precio máx"
+              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+            />
+          </label>
+
+          <div className="flex items-end xl:col-span-1">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="w-full rounded-lg border border-stroke px-4 py-3 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-dark-3 dark:text-white dark:hover:bg-white/5"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark">

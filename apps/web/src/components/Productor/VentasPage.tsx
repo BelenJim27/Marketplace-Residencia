@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
 import { Eye, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -15,6 +17,11 @@ type SaleItem = {
   cantidad: number;
   status: SaleStatus;
   fecha: string;
+};
+
+type StoreItem = {
+  id_tienda: number;
+  nombre: string;
 };
 
 const MOCK_SALES: SaleItem[] = [
@@ -57,21 +64,75 @@ const MOCK_SALES: SaleItem[] = [
 ];
 
 export function VentasPage() {
+  const { user, loading: authLoading } = useAuth();
   const [query, setQuery] = useState("");
+  const [storeFilter, setStoreFilter] = useState("todos");
+  const [minQuantity, setMinQuantity] = useState("");
+  const [maxQuantity, setMaxQuantity] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [stores, setStores] = useState<StoreItem[]>([]);
+
+  useEffect(() => {
+    if (authLoading || !user?.id_productor) return;
+
+    let cancelled = false;
+
+    const loadStores = async () => {
+      if (!user?.id_productor) return;
+
+      try {
+        const data = await api.tiendas.getByProductor(user.id_productor);
+        if (cancelled) return;
+        setStores(Array.isArray(data) ? (data as StoreItem[]) : []);
+      } catch {
+        if (!cancelled) setStores([]);
+      }
+    };
+
+    loadStores();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user?.id_productor]);
 
   const filteredSales = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-
-    if (!normalized) return MOCK_SALES;
+    const minQty = minQuantity === "" ? null : Number(minQuantity);
+    const maxQty = maxQuantity === "" ? null : Number(maxQuantity);
+    const fromDate = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+    const toDate = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
 
     return MOCK_SALES.filter((sale) => {
-      return (
+      const saleDate = new Date(sale.fecha);
+      const matchesQuery =
+        !normalized ||
         sale.producto.toLowerCase().includes(normalized) ||
-        sale.tienda.toLowerCase().includes(normalized) ||
-        sale.status.toLowerCase().includes(normalized)
-      );
+        sale.tienda.toLowerCase().includes(normalized);
+      const matchesStore = storeFilter === "todos" || sale.tienda === storeFilter;
+      const matchesQuantity =
+        (minQty === null || Number.isNaN(minQty) ? true : sale.cantidad >= minQty) &&
+        (maxQty === null || Number.isNaN(maxQty) ? true : sale.cantidad <= maxQty);
+      const matchesStatus = statusFilter === "todos" || sale.status === statusFilter;
+      const matchesDate =
+        (!fromDate || saleDate >= fromDate) &&
+        (!toDate || saleDate <= toDate);
+
+      return matchesQuery && matchesStore && matchesQuantity && matchesStatus && matchesDate;
     });
-  }, [query]);
+  }, [query, storeFilter, minQuantity, maxQuantity, statusFilter, dateFrom, dateTo]);
+
+  const clearFilters = () => {
+    setQuery("");
+    setStoreFilter("todos");
+    setMinQuantity("");
+    setMaxQuantity("");
+    setStatusFilter("todos");
+    setDateFrom("");
+    setDateTo("");
+  };
 
   const totals = useMemo(() => {
     const totalVentas = filteredSales.length;
@@ -116,6 +177,90 @@ export function VentasPage() {
           placeholder="Buscar por producto o tienda"
           className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none transition focus:border-primary dark:border-dark-3 dark:bg-dark-2"
         />
+      </div>
+
+      <div className="mb-6 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4 xl:grid-cols-6">
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Filtro por Tienda</span>
+            <select
+              value={storeFilter}
+              onChange={(event) => setStoreFilter(event.target.value)}
+              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+            >
+              <option value="todos">Todas las tiendas</option>
+              {stores.map((store) => (
+                <option key={store.id_tienda} value={store.nombre}>
+                  {store.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Cant. mín</span>
+            <input
+              type="number"
+              value={minQuantity}
+              onChange={(event) => setMinQuantity(event.target.value)}
+              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Cant. máx</span>
+            <input
+              type="number"
+              value={maxQuantity}
+              onChange={(event) => setMaxQuantity(event.target.value)}
+              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Filtro por Estatus</span>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+            >
+              <option value="todos">Todos</option>
+              <option value="completada">Completada</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="cancelada">Cancelada</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Desde</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(event) => setDateFrom(event.target.value)}
+              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Hasta</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(event) => setDateTo(event.target.value)}
+              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+            />
+          </label>
+
+          <div className="flex items-end xl:col-span-1">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="w-full rounded-lg border border-stroke px-4 py-3 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-dark-3 dark:text-white dark:hover:bg-white/5"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark">

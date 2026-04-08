@@ -10,13 +10,15 @@ import { ArrowLeftIcon, ChevronLeft } from "./icons";
 import { MenuItem } from "./menu-item";
 import { useSidebarContext } from "./sidebar-context";
 import { useAuth } from "@/context/AuthContext";
+import { LogOut } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, isProductor } = useAuth();
+  const { user, isProductor, logout } = useAuth();
   const { setIsOpen, isOpen, isMobile, toggleSidebar, isCollapsed, toggleCollapse } =
     useSidebarContext();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const navData = getNavData(isProductor || user?.permisos?.includes("panel_productor") || false);
 
   return (
@@ -31,7 +33,7 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "border-r border-stroke bg-white transition-[width] duration-300 ease-linear overflow-visible h-screen sticky top-0 dark:border-dark-3 dark:bg-gray-dark",
+          "border-r border-green-100 bg-green-50 transition-[width] duration-300 ease-linear overflow-visible h-screen sticky top-0 dark:border-dark-3 dark:bg-gray-dark",
           isMobile ? "fixed bottom-0 top-0 z-50" : "",
           isOpen ? "" : "w-0",
           isCollapsed && !isMobile ? "w-24" : "max-w-[290px] w-full",
@@ -129,9 +131,54 @@ export function Sidebar() {
                 </ul>
               </div>
             ))}
+
+            <div className="mt-8 border-t border-stroke pt-5 dark:border-dark-3">
+              <MenuItem
+                as="button"
+                isActive={false}
+                title="Cerrar sesión"
+                onClick={() => setShowLogoutConfirm(true)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-red-500 transition hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300",
+                  isCollapsed ? "justify-center p-3" : "",
+                )}
+              >
+                <LogOut className={cn("shrink-0", isCollapsed ? "size-7" : "size-6")} />
+                {!isCollapsed && <span>Cerrar sesión</span>}
+              </MenuItem>
+            </div>
           </div>
         </div>
       </aside>
+
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-dark">
+            <h3 className="text-lg font-semibold text-dark dark:text-white">Cerrar sesión</h3>
+            <p className="mt-2 text-sm text-gray-500">¿Estás seguro que deseas cerrar sesión?</p>
+
+            <div className="mt-6 flex items-center justify-end gap-3 border-t border-stroke pt-4 dark:border-dark-3">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  logout();
+                }}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

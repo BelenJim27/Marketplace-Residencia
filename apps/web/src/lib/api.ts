@@ -108,6 +108,8 @@ export const api = {
   pedidos: {
     getAll: () => fetchJson(endpoint("/pedidos")),
     getOne: (id: string) => fetchJson(endpoint(`/pedidos/${id}`)),
+    getAnalytics: (id_productor: number, periodo: string) =>
+      fetchJson(endpoint(`/pedidos/estadisticas?id_productor=${id_productor}&periodo=${periodo}`)),
     getByUsuario: (usuarioId: string) => fetchJson(endpoint(`/pedidos?usuario=${usuarioId}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/pedidos"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
