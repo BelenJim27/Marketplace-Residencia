@@ -1,4 +1,5 @@
 import * as Icons from "../icons";
+import { BadgeDollarSign, LayoutDashboard, Package, Store, UserRound } from "lucide-react";
 
 export const ADMIN_NAV_DATA = [
   {
@@ -26,10 +27,11 @@ export const PRODUCTOR_NAV_DATA = [
   {
     label: "MAESTRO MEZCALERO",
     items: [
-      { title: "Dashboard", url: "/dashboard/productor", icon: Icons.HomeIcon },
-      { title: "Productos", url: "/dashboard/productor#productos", icon: Icons.Alphabet },
-      { title: "Tiendas", url: "/dashboard/productor#tiendas", icon: Icons.HomeIcon },
-      { title: "Perfil", url: "/dashboard/productor#perfil", icon: Icons.User },
+      { title: "Dashboard", url: "/dashboard/productor", icon: LayoutDashboard },
+      { title: "Tienda", url: "/dashboard/productor/tienda", icon: Store },
+      { title: "Productos", url: "/dashboard/productor/productos", icon: Package },
+      { title: "Ventas", url: "/dashboard/productor/ventas", icon: BadgeDollarSign },
+      { title: "Perfil", url: "/dashboard/productor/perfil", icon: UserRound },
     ],
   },
 ];

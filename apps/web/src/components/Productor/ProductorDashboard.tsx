@@ -67,12 +67,12 @@ const EMPTY_STORE: StoreFormState = {
 };
 
 export function ProductorDashboard() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<StoreItem[]>([]);
-  const [producers, setProducers] = useState<Producer[]>([]);
+  const [currentProducer, setCurrentProducer] = useState<Producer | null>(null);
 
   const [productMode, setProductMode] = useState<"create" | "edit" | "view" | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -83,21 +83,6 @@ export function ProductorDashboard() {
   const [storeForm, setStoreForm] = useState<StoreFormState>(EMPTY_STORE);
 
   const token = getCookie("token") ?? "";
-
-  const currentProducer = useMemo(() => {
-    return (
-      producers.find((producer) => {
-        const currentId = user?.id_productor;
-        const userId = user?.id_usuario || user?.sub;
-
-        return (
-          (typeof currentId === "number" && producer.id_productor === currentId) ||
-          producer.id_usuario === userId ||
-          producer.usuarios?.id_usuario === userId
-        );
-      }) ?? null
-    );
-  }, [producers, user]);
 
   const ownedStores = useMemo(
     () => stores.filter((store) => currentProducer && store.id_productor === currentProducer.id_productor),
@@ -111,19 +96,21 @@ export function ProductorDashboard() {
   );
 
   const loadData = async () => {
+    if (authLoading || !user?.id_productor) return;
+
     setLoading(true);
     setError(null);
 
     try {
-      const [productsRes, storesRes, producersRes] = await Promise.all([
-        api.productos.getAll(),
-        api.tiendas.getAll(),
-        api.productores.getAll(),
+      const [productsRes, storesRes, producerRes] = await Promise.all([
+        api.productos.getByProductor(user.id_productor),
+        api.tiendas.getByProductor(user.id_productor),
+        api.productores.getOne(user.id_productor),
       ]);
 
       setProducts(productsRes as Product[]);
       setStores(storesRes as StoreItem[]);
-      setProducers(producersRes as Producer[]);
+      setCurrentProducer(producerRes as Producer);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar el panel de productor");
     } finally {
@@ -132,8 +119,9 @@ export function ProductorDashboard() {
   };
 
   useEffect(() => {
+    if (authLoading || !user?.id_productor) return;
     loadData();
-  }, []);
+  }, [authLoading, user?.id_productor]);
 
   const stats = [
     { label: "Productos", value: ownedProducts.length, icon: Package },

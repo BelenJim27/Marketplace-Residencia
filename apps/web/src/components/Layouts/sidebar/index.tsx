@@ -31,7 +31,7 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "border-r border-green-200 bg-green-100 transition-[width] duration-300 ease-linear overflow-visible h-screen sticky top-0",
+          "border-r border-stroke bg-white transition-[width] duration-300 ease-linear overflow-visible h-screen sticky top-0 dark:border-dark-3 dark:bg-gray-dark",
           isMobile ? "fixed bottom-0 top-0 z-50" : "",
           isOpen ? "" : "w-0",
           isCollapsed && !isMobile ? "w-24" : "max-w-[290px] w-full",
@@ -55,7 +55,7 @@ export function Sidebar() {
               <button
                 onClick={toggleCollapse}
                 className={cn(
-                  "p-1.5 hover:bg-green-200 rounded-lg transition ml-auto",
+                  "p-1.5 hover:bg-gray-100 rounded-lg transition ml-auto dark:hover:bg-white/10",
                   isCollapsed ? "ml-1" : ""
                 )}
                 title={isCollapsed ? "Expandir" : "Colapsar"}
@@ -83,7 +83,7 @@ export function Sidebar() {
               <div key={section.label} className="mb-8">
                 
                 {!isCollapsed && (
-                  <h2 className="mb-5 text-sm font-medium text-green-900">
+                  <h2 className="mb-5 text-sm font-medium text-gray-500 dark:text-gray-4">
                     {section.label}
                   </h2>
                 )}
@@ -104,10 +104,8 @@ export function Sidebar() {
                     >
                       <MenuItem
                         className={cn(
-                          "flex items-center gap-3 py-3 px-3 rounded-lg transition",
-                          "hover:bg-green-200",
-                          pathname === item.url &&
-                            "bg-green-300 text-green-900 font-medium",
+                          "flex items-center gap-3 rounded-lg px-3 py-3 transition",
+                          "hover:bg-[rgba(124,58,237,0.08)]",
                           isCollapsed ? "justify-center p-3" : ""
                         )}
                         as="link"
@@ -121,9 +119,9 @@ export function Sidebar() {
 
                       {/* Menú flotante cuando está colapsado */}
                       {isCollapsed && hoveredItem === item.title && !isMobile && (
-                        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 bg-green-900 text-white px-3 py-2 rounded-lg whitespace-nowrap text-sm font-medium shadow-lg pointer-events-none">
+                        <div className="absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white shadow-lg pointer-events-none">
                           {item.title}
-                          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-green-900"></div>
+                          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-primary"></div>
                         </div>
                       )}
                     </li>

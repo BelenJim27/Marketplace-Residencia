@@ -59,6 +59,7 @@ export const api = {
 
   productos: {
     getAll: () => fetchJson(endpoint("/productos")),
+    getByProductor: (id_productor: number) => fetchJson(endpoint(`/productos?id_productor=${id_productor}`)),
     getOne: (id: string) => fetchJson(endpoint(`/productos/${id}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/productos"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
@@ -82,10 +83,11 @@ export const api = {
   tiendas: {
     getAll: () => fetchJson(endpoint("/tiendas")),
     getOne: (id: number) => fetchJson(endpoint(`/tiendas/${id}`)),
+    getByProductor: (id_productor: number) => fetchJson(endpoint(`/tiendas?id_productor=${id_productor}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/tiendas"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: number, data: any) =>
-      fetchJson(endpoint(`/tiendas/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
+      fetchJson(endpoint(`/tiendas/${id}`), { method: "PUT", headers: headers(token), body: JSON.stringify(data) }),
     delete: (token: string, id: number) =>
       fetchJson(endpoint(`/tiendas/${id}`), { method: "DELETE", headers: headers(token) }),
   },
@@ -93,7 +95,7 @@ export const api = {
   productores: {
     getAll: () => fetchJson(endpoint("/productores")),
     getOne: (id: number) => fetchJson(endpoint(`/productores/${id}`)),
-    getByUsuario: (id_usuario: string) => fetchJson(endpoint(`/productores?usuario=${id_usuario}`)),
+    getByUsuario: (id_usuario: string) => fetchJson(endpoint(`/productores/by-usuario/${id_usuario}`)),
     getByUbicacion: (ubicacion: string) => fetchJson(endpoint(`/productores?ubicacion=${ubicacion}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/productores"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),

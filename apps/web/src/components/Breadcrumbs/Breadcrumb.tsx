@@ -2,13 +2,14 @@ import Link from "next/link";
 
 interface BreadcrumbProps {
   pageName: string;
+  title?: string;
 }
 
-const Breadcrumb = ({ pageName }: BreadcrumbProps) => {
+const Breadcrumb = ({ pageName, title }: BreadcrumbProps) => {
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h2 className="text-[26px] font-bold leading-[30px] text-dark dark:text-white">
-        {pageName}
+        {title ?? pageName}
       </h2>
 
       <nav>

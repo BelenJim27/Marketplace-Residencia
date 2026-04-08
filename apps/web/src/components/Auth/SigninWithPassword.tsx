@@ -43,6 +43,7 @@ export default function SigninWithPassword() {
           sub: response.user.id_usuario,
           email: response.user.email,
           nombre: response.user.nombre,
+          id_productor: response.user.id_productor ?? null,
           roles: [],
         },
         response.tokens.refresh_token,

@@ -9,6 +9,7 @@ import {
   useMemo,
   ReactNode,
 } from "react";
+import { api } from "@/lib/api";
 import { getCookie, setCookie, removeCookie } from "@/lib/cookies";
 
 interface Usuario {
@@ -63,6 +64,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshAuth();
   }, [refreshAuth]);
+
+  useEffect(() => {
+    if (!user?.id_usuario || user.id_productor != null) return;
+
+    let cancelled = false;
+
+    const resolveProductor = async () => {
+      try {
+        const productor = (await api.productores.getByUsuario(user.id_usuario as string)) as { id_productor?: number } | Array<{ id_productor?: number }>;
+        if (cancelled) return;
+
+        const idProductor = Array.isArray(productor) ? productor[0]?.id_productor : productor?.id_productor;
+        if (idProductor == null) return;
+
+        const nextUser = { ...user, id_productor: Number(idProductor) };
+        setUser(nextUser);
+        setCookie("usuario", JSON.stringify(nextUser), 7);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    setLoading(true);
+    resolveProductor();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id_usuario, user?.id_productor]);
 
   const login = useCallback((token: string, usuario: Usuario, refreshToken?: string) => {
     setCookie("token", token, 7);
