@@ -132,10 +132,10 @@ export function ProductorDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-[10px] border border-stroke bg-white p-6 shadow-sm dark:border-form-strokedark dark:bg-form-input">
+    <div className="min-h-screen space-y-6 bg-gray-100 dark:bg-gray-900">
+      <div className="rounded-[10px] border border-stroke bg-white dark:bg-gray-800 p-6 shadow-sm dark:border-gray-700">
         <h1 className="text-2xl font-bold text-dark dark:text-white">Dashboard Productor</h1>
-        <p className="text-gray-500">Panel de Maestro Mezcalero con acceso limitado</p>
+        <p className="text-gray-500 dark:text-gray-200">Panel de Maestro Mezcalero con acceso limitado</p>
       </div>
 
       {error && <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600">{error}</div>}
@@ -147,11 +147,11 @@ export function ProductorDashboard() {
         profileLabel={producer ? "Completo" : "Pendiente"}
       />
 
-      <section id="analiticas" className="rounded-[10px] border border-stroke bg-white p-6 shadow-sm dark:border-form-strokedark dark:bg-form-input">
+      <section id="analiticas" className="rounded-[10px] border border-stroke bg-white dark:bg-gray-800 p-6 shadow-sm dark:border-gray-700">
         <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h2 className="text-xl font-semibold text-dark dark:text-white">Analíticas</h2>
-            <p className="text-sm text-gray-500">Ventas y productos más vendidos de tu productor</p>
+            <p className="text-sm text-gray-500 dark:text-gray-300">Ventas y productos más vendidos de tu productor</p>
           </div>
 
           <ExportButtons onExportPdf={exportPdf} onExportCsv={exportCsv} disabled={salesLoading || productsLoading} />
@@ -190,8 +190,8 @@ export function ProductorDashboard() {
 
 function MiniStat({ title, value }: { title: string; value: number | string }) {
   return (
-    <div className="rounded-[10px] border border-stroke bg-gray-50 p-4 dark:border-form-strokedark dark:bg-white/5">
-      <p className="text-xs uppercase tracking-wide text-gray-500">{title}</p>
+    <div className="rounded-[10px] border border-stroke bg-gray-50 dark:bg-gray-700 p-4 dark:border-gray-600">
+      <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-300">{title}</p>
       <div className="mt-2 text-xl font-semibold text-dark dark:text-white">{value}</div>
     </div>
   );

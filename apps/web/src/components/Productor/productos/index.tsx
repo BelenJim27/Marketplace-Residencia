@@ -21,6 +21,7 @@ type ProductItem = {
   descripcion?: string | null;
   precio_base?: string | number | null;
   moneda_base?: string | null;
+  stock?: number | null;
   status?: string | null;
   creado_en?: string | Date | null;
 };
@@ -88,7 +89,13 @@ export function ProductorProductos() {
       const storesData = (detail.tiendas || []) as StoreItem[];
       setProducer(detail);
       setStores(storesData);
-      setProducts(productsData as ProductItem[]);
+      const demoStocks = [0, 4, 18, 9, 22, 12];
+      setProducts(
+        (productsData as ProductItem[]).map((product, index) => ({
+          ...product,
+          stock: product.stock ?? demoStocks[index % demoStocks.length],
+        })),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "No fue posible cargar los productos");
     } finally {

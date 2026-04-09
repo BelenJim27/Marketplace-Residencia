@@ -16,13 +16,13 @@ export function ProductosChart({ periodo, onPeriodoChange, data, isLoading, erro
   const chartData = data?.productos || [];
 
   return (
-    <div className="rounded-[10px] border border-stroke bg-white p-5 shadow-sm dark:border-form-strokedark dark:bg-form-input">
+    <div className="rounded-[10px] border border-stroke bg-white dark:bg-gray-800 p-5 shadow-sm dark:border-gray-700">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-dark dark:text-white">Productos</h3>
-          <p className="text-sm text-gray-500">Ranking de productos por cantidad vendida</p>
+          <p className="text-sm text-gray-500 dark:text-gray-300">Ranking de productos por cantidad vendida</p>
         </div>
-        <div className="flex rounded-full bg-gray-100 p-1 dark:bg-white/5">
+        <div className="flex rounded-full bg-gray-100 p-1 dark:bg-gray-700">
           {(["semana", "mes", "año"] as DashboardPeriod[]).map((option) => (
             <button
               key={option}
@@ -45,7 +45,7 @@ export function ProductosChart({ periodo, onPeriodoChange, data, isLoading, erro
       ) : (
         <ResponsiveContainer width="100%" height={320}>
           <BarChart data={chartData} layout="vertical" margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="5 5" horizontal={false} />
+            <CartesianGrid strokeDasharray="5 5" horizontal={false} stroke="rgba(148,163,184,0.25)" />
             <XAxis type="number" tickLine={false} axisLine={false} />
             <YAxis type="category" dataKey="x" tickLine={false} axisLine={false} width={180} tickFormatter={(value) => truncate(String(value), 24)} />
             <Tooltip formatter={(value, _name, entry) => [`${Number(value)} unidades`, `${(entry as any)?.payload?.x ?? ""}`] as [string, string]} labelFormatter={() => ""} />
@@ -79,11 +79,11 @@ function truncate(value: string, maxLength: number) {
 }
 
 function ChartSkeleton() {
-  return <div className="h-[320px] animate-pulse rounded-[10px] bg-gray-100 dark:bg-white/5" />;
+  return <div className="h-[320px] animate-pulse rounded-[10px] bg-gray-100 dark:bg-gray-700" />;
 }
 
 function EmptyState({ message }: { message: string }) {
-  return <div className="flex h-[320px] items-center justify-center rounded-[10px] border border-dashed border-stroke text-sm text-gray-500 dark:border-form-strokedark">{message}</div>;
+  return <div className="flex h-[320px] items-center justify-center rounded-[10px] border border-dashed border-stroke text-sm text-gray-500 dark:border-gray-700 dark:text-gray-300">{message}</div>;
 }
 
 function ChartError({ message, onRetry }: { message: string; onRetry: () => void }) {

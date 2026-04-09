@@ -30,7 +30,7 @@ export function VentasChart({ periodo, onPeriodoChange, data, isLoading, error, 
               <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="5 5" vertical={false} />
+          <CartesianGrid strokeDasharray="5 5" vertical={false} stroke="rgba(148,163,184,0.25)" />
           <XAxis dataKey="x" tickLine={false} axisLine={false} />
           <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => `$${Number(v).toLocaleString("es-MX")}`} />
           <Tooltip formatter={(value) => [`$${Number(value).toLocaleString("es-MX")}`, "Ventas"] as [string, string]} labelFormatter={(label) => `Fecha: ${label}`} />
@@ -41,13 +41,13 @@ export function VentasChart({ periodo, onPeriodoChange, data, isLoading, error, 
   }, [chartData, error, isLoading, onRetry]);
 
   return (
-    <div className="rounded-[10px] border border-stroke bg-white p-5 shadow-sm dark:border-form-strokedark dark:bg-form-input">
+    <div className="rounded-[10px] border border-stroke bg-white dark:bg-gray-800 p-5 shadow-sm dark:border-gray-700">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-dark dark:text-white">Ventas</h3>
-          <p className="text-sm text-gray-500">Monto total vendido en MXN</p>
+          <p className="text-sm text-gray-500 dark:text-gray-300">Monto total vendido en MXN</p>
         </div>
-        <div className="flex rounded-full bg-gray-100 p-1 dark:bg-white/5">
+        <div className="flex rounded-full bg-gray-100 p-1 dark:bg-gray-700">
           {(["semana", "mes", "año"] as DashboardPeriod[]).map((option) => (
             <button
               key={option}
@@ -72,11 +72,11 @@ function labelPeriodo(periodo: DashboardPeriod) {
 }
 
 function ChartSkeleton() {
-  return <div className="h-[320px] animate-pulse rounded-[10px] bg-gray-100 dark:bg-white/5" />;
+  return <div className="h-[320px] animate-pulse rounded-[10px] bg-gray-100 dark:bg-gray-700" />;
 }
 
 function EmptyState({ message }: { message: string }) {
-  return <div className="flex h-[320px] items-center justify-center rounded-[10px] border border-dashed border-stroke text-sm text-gray-500 dark:border-form-strokedark">{message}</div>;
+  return <div className="flex h-[320px] items-center justify-center rounded-[10px] border border-dashed border-stroke text-sm text-gray-500 dark:border-gray-700 dark:text-gray-300">{message}</div>;
 }
 
 function ChartError({ message, onRetry }: { message: string; onRetry: () => void }) {

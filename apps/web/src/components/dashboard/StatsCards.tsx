@@ -22,9 +22,9 @@ export function StatsCards({ products, stores, active, profileLabel }: Props) {
       {cards.map((stat) => {
         const Icon = stat.icon;
         return (
-          <div key={stat.label} className="rounded-[10px] border border-stroke bg-white p-5 shadow-sm dark:border-form-strokedark dark:bg-form-input">
+          <div key={stat.label} className="rounded-[10px] border border-stroke bg-white dark:bg-gray-800 p-5 shadow-sm dark:border-gray-700">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">{stat.label}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-200">{stat.label}</span>
               <Icon className="h-5 w-5 text-green-600" />
             </div>
             <div className="mt-2 text-2xl font-bold text-dark dark:text-white">{stat.value}</div>

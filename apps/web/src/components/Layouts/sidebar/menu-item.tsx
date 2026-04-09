@@ -4,13 +4,12 @@ import Link from "next/link";
 import { useSidebarContext } from "./sidebar-context";
 
 const menuItemBaseStyles = cva(
-  "rounded-lg px-3.5 font-medium text-gray-600 transition-all duration-200 dark:text-dark-6",
+  "rounded-lg px-3.5 font-medium text-gray-700 transition-all duration-200 dark:text-gray-300",
   {
     variants: {
       isActive: {
-        true: "bg-[rgba(124,58,237,0.1)] text-primary hover:bg-[rgba(124,58,237,0.1)] dark:bg-[#FFFFFF1A] dark:text-white",
-        false:
-          "hover:bg-gray-100 hover:text-dark hover:dark:bg-[#FFFFFF1A] hover:dark:text-white",
+        true: "bg-white/60 text-gray-900 hover:bg-white/60 dark:bg-white/10 dark:text-white dark:hover:bg-white/10",
+        false: "hover:bg-white/60 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white",
       },
     },
     defaultVariants: {

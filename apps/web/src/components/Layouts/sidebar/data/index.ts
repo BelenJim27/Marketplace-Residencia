@@ -1,7 +1,26 @@
 import * as Icons from "../icons";
-import { BadgeDollarSign, LayoutDashboard, Package, Store, UserRound } from "lucide-react";
+import { BadgeDollarSign, FileText, FolderOpen, Image, Layers, LayoutDashboard, Package, Store, UserRound } from "lucide-react";
+import type { ComponentType } from "react";
 
-export const ADMIN_NAV_DATA = [
+type SidebarIcon = ComponentType<{ className?: string }>;
+
+type NavItem = {
+  title: string;
+  url?: string;
+  icon: SidebarIcon;
+  children?: Array<{
+    title: string;
+    url: string;
+    icon: SidebarIcon;
+  }>;
+};
+
+type NavSection = {
+  label: string;
+  items: NavItem[];
+};
+
+export const ADMIN_NAV_DATA: NavSection[] = [
   {
     label: "MAIN MENU",
     items: [
@@ -23,15 +42,24 @@ export const ADMIN_NAV_DATA = [
   },
 ];
 
-export const PRODUCTOR_NAV_DATA = [
+export const PRODUCTOR_NAV_DATA: NavSection[] = [
   {
     label: "MAESTRO MEZCALERO",
     items: [
       { title: "Dashboard", url: "/dashboard/productor", icon: LayoutDashboard },
       { title: "Tienda", url: "/dashboard/productor/tienda", icon: Store },
       { title: "Productos", url: "/dashboard/productor/productos", icon: Package },
+      { title: "Lotes", url: "/dashboard/productor/lotes", icon: Layers },
       { title: "Ventas", url: "/dashboard/productor/ventas", icon: BadgeDollarSign },
       { title: "Perfil", url: "/dashboard/productor/perfil", icon: UserRound },
+      {
+        title: "Archivos",
+        icon: FolderOpen,
+        children: [
+          { title: "NOM-070", url: "/dashboard/productor/archivos/nom070", icon: FileText },
+          { title: "Galería", url: "/dashboard/productor/archivos/galeria", icon: Image },
+        ],
+      },
     ],
   },
 ];

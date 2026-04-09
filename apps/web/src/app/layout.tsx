@@ -13,10 +13,10 @@ import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Tienda",
-    default: "Tienda - Productos Frescos",
+    template: "%s | MAESTRO",
+    default: "MAESTRO - Administración",
   },
-  description: "Tienda de productos frescos",
+  description: "Interfaz de administración MAESTRO",
 };
 
 export default function RootLayout({ children }: PropsWithChildren) {
