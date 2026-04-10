@@ -1,7 +1,7 @@
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "");
 
-const headers = (token?: string) => ({
-  "Content-Type": "application/json",
+const headers = (token?: string, isFormData = false) => ({
+  ...(!isFormData && { "Content-Type": "application/json" }),
   ...(token && { Authorization: `Bearer ${token}` }),
 });
 
@@ -62,9 +62,17 @@ export const api = {
     getByProductor: (id_productor: number) => fetchJson(endpoint(`/productos?id_productor=${id_productor}`)),
     getOne: (id: string) => fetchJson(endpoint(`/productos/${id}`)),
     create: (token: string, data: any) =>
-      fetchJson(endpoint("/productos"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+      fetchJson(endpoint("/productos"), {
+        method: "POST",
+        headers: headers(token, data instanceof FormData),
+        body: data instanceof FormData ? data : JSON.stringify(data),
+      }),
     update: (token: string, id: string, data: any) =>
-      fetchJson(endpoint(`/productos/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
+      fetchJson(endpoint(`/productos/${id}`), {
+        method: "PATCH",
+        headers: headers(token, data instanceof FormData),
+        body: data instanceof FormData ? data : JSON.stringify(data),
+      }),
     delete: (token: string, id: string) =>
       fetchJson(endpoint(`/productos/${id}`), { method: "DELETE", headers: headers(token) }),
   },

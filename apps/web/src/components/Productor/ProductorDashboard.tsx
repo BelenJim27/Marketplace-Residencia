@@ -1,1 +1,1 @@
-export { ProductorDashboard } from "@/components/dashboard/ProductorDashboard";
+export { ProductorDashboard } from "@/components/Productor/dashboard/ProductorDashboard";

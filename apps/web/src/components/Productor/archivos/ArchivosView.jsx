@@ -24,7 +24,7 @@ export default function ArchivosView({ initialTab = "nom070" }) {
                   : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
               }`}
             >
-              📄 NOM-070
+               NOM-070
             </button>
             <button
               type="button"
@@ -35,7 +35,7 @@ export default function ArchivosView({ initialTab = "nom070" }) {
                   : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
               }`}
             >
-              🖼️ Galería
+               Galería
             </button>
           </div>
         </div>

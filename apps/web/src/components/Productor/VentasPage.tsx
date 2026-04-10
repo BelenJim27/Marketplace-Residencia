@@ -161,8 +161,7 @@ export function VentasPage() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-[1200px]">
-      <Breadcrumb pageName="Ventas" title="Ventas" />
+    <div className="mx-auto w-full max-w-[1200px] overflow-hidden">
 
       <div className="mb-6 flex flex-col gap-4 rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark lg:flex-row lg:items-center lg:justify-between">
         <div>
@@ -182,23 +181,23 @@ export function VentasPage() {
         ))}
       </div>
 
-      <div className="mb-4 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark">
+      <div className="mb-4 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark overflow-hidden">
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Buscar por producto o tienda"
-          className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none transition focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+          className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none transition focus:border-primary dark:border-dark-3 dark:bg-dark-2"
         />
       </div>
 
-      <div className="mb-6 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4 xl:grid-cols-6">
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Filtro por Tienda</span>
+      <div className="mb-6 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark overflow-hidden">
+        <div className="flex flex-wrap items-end gap-3 xl:flex-nowrap">
+          <label className="block min-w-0 flex-[1.3]">
+            <span className="mb-1 block text-xs font-medium text-dark dark:text-white">Tienda</span>
             <select
               value={storeFilter}
               onChange={(event) => setStoreFilter(event.target.value)}
-              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+              className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
             >
               <option value="todos">Todas las tiendas</option>
               {stores.map((store) => (
@@ -209,32 +208,32 @@ export function VentasPage() {
             </select>
           </label>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Cant. mín</span>
+          <label className="block min-w-0 flex-1">
+            <span className="mb-1 block text-xs font-medium text-dark dark:text-white">Cant. min</span>
             <input
               type="number"
               value={minQuantity}
               onChange={(event) => setMinQuantity(event.target.value)}
-              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+              className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
             />
           </label>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Cant. máx</span>
+          <label className="block min-w-0 flex-1">
+            <span className="mb-1 block text-xs font-medium text-dark dark:text-white">Cant. max</span>
             <input
               type="number"
               value={maxQuantity}
               onChange={(event) => setMaxQuantity(event.target.value)}
-              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+              className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
             />
           </label>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Filtro por Estatus</span>
+          <label className="block min-w-0 flex-1">
+            <span className="mb-1 block text-xs font-medium text-dark dark:text-white">Estatus</span>
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+              className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
             >
               <option value="todos">Todos</option>
               <option value="completada">Completada</option>
@@ -243,31 +242,31 @@ export function VentasPage() {
             </select>
           </label>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Desde</span>
+          <label className="block min-w-0 flex-1">
+            <span className="mb-1 block text-xs font-medium text-dark dark:text-white">Desde</span>
             <input
               type="date"
               value={dateFrom}
               onChange={(event) => setDateFrom(event.target.value)}
-              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+              className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
             />
           </label>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Hasta</span>
+          <label className="block min-w-0 flex-1">
+            <span className="mb-1 block text-xs font-medium text-dark dark:text-white">Hasta</span>
             <input
               type="date"
               value={dateTo}
               onChange={(event) => setDateTo(event.target.value)}
-              className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+              className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
             />
           </label>
 
-          <div className="flex items-end xl:col-span-1">
+          <div className="flex min-w-[120px] items-end xl:w-auto">
             <button
               type="button"
               onClick={clearFilters}
-              className="w-full rounded-lg border border-stroke px-4 py-3 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-dark-3 dark:text-white dark:hover:bg-white/5"
+              className="w-full rounded-lg border border-stroke px-3 py-2 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-dark-3 dark:text-white dark:hover:bg-white/5"
             >
               Limpiar filtros
             </button>
@@ -275,19 +274,19 @@ export function VentasPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-left">
+      <div className="w-full overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark">
+        <div className="w-full overflow-hidden">
+          <table className="w-full table-fixed text-left text-xs">
             <thead className="bg-gray-2 dark:bg-dark-2">
-              <tr className="text-sm text-gray-500">
-                <th className="px-5 py-4">Producto</th>
-                <th className="px-5 py-4">Tienda</th>
-                <th className="px-5 py-4">Precio unitario</th>
-                <th className="px-5 py-4">Cantidad</th>
-                <th className="px-5 py-4">Total</th>
-                <th className="px-5 py-4">Status</th>
-                <th className="px-5 py-4">Fecha</th>
-                <th className="px-5 py-4 text-right">Acciones</th>
+              <tr className="text-xs text-gray-500">
+                <th className="w-[22%] px-3 py-3">Producto</th>
+                <th className="w-[18%] px-3 py-3">Tienda</th>
+                <th className="w-[13%] px-3 py-3">P. unit.</th>
+                <th className="w-[9%] px-3 py-3">Cant.</th>
+                <th className="w-[13%] px-3 py-3">Total</th>
+                <th className="w-[10%] px-3 py-3">Status</th>
+                <th className="w-[11%] px-3 py-3">Fecha</th>
+                <th className="w-[4%] px-3 py-3 text-right">Acc.</th>
               </tr>
             </thead>
 
@@ -296,17 +295,21 @@ export function VentasPage() {
                 const total = sale.precio_unitario * sale.cantidad;
 
                 return (
-                  <tr key={sale.id} className="border-t border-stroke text-sm dark:border-dark-3">
-                    <td className="px-5 py-4 font-medium text-dark dark:text-white">{sale.producto}</td>
-                    <td className="px-5 py-4 text-gray-600 dark:text-gray-3">{sale.tienda}</td>
-                    <td className="px-5 py-4 text-gray-600 dark:text-gray-3">{formatCurrency(sale.precio_unitario)}</td>
-                    <td className="px-5 py-4 text-gray-600 dark:text-gray-3">{sale.cantidad}</td>
-                    <td className="px-5 py-4 font-medium text-dark dark:text-white">{formatCurrency(total)}</td>
-                    <td className="px-5 py-4">
+                  <tr key={sale.id} className="border-t border-stroke text-xs dark:border-dark-3">
+                    <td className="px-3 py-3 font-medium text-dark dark:text-white">
+                      <span className="block truncate" title={sale.producto}>{sale.producto}</span>
+                    </td>
+                    <td className="px-3 py-3 text-gray-600 dark:text-gray-3">
+                      <span className="block truncate" title={sale.tienda}>{sale.tienda}</span>
+                    </td>
+                    <td className="px-3 py-3 text-gray-600 dark:text-gray-3 whitespace-nowrap">{formatCurrency(sale.precio_unitario)}</td>
+                    <td className="px-3 py-3 text-gray-600 dark:text-gray-3">{sale.cantidad}</td>
+                    <td className="px-3 py-3 font-medium text-dark dark:text-white whitespace-nowrap">{formatCurrency(total)}</td>
+                    <td className="px-3 py-3">
                       <Badge status={sale.status} />
                     </td>
-                    <td className="px-5 py-4 text-gray-500">{formatDate(sale.fecha)}</td>
-                    <td className="px-5 py-4">
+                    <td className="px-3 py-3 text-gray-500">{formatDate(sale.fecha)}</td>
+                    <td className="px-3 py-3">
                       <div className="flex justify-end gap-2">
                         <ActionButton label="Ver detalle" icon={<Eye size={16} />} onClick={() => abrirDetalle(sale)} />
                       </div>
@@ -317,7 +320,7 @@ export function VentasPage() {
 
               {filteredSales.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center text-gray-500">
+                  <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">
                     No hay ventas para mostrar
                   </td>
                 </tr>
@@ -449,7 +452,7 @@ function Badge({ status }: { status: SaleStatus }) {
         ? "bg-amber-50 text-amber-700"
         : "bg-red-50 text-red-700";
 
-  return <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${className}`}>{status}</span>;
+  return <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-medium capitalize ${className}`}>{status}</span>;
 }
 
 function ActionButton({ label, icon, onClick }: { label: string; icon: ReactNode; onClick?: () => void }) {
@@ -458,7 +461,7 @@ function ActionButton({ label, icon, onClick }: { label: string; icon: ReactNode
       type="button"
       title={label}
       onClick={onClick}
-      className="rounded-lg p-2 text-gray-500 transition hover:bg-[rgba(124,58,237,0.08)] hover:text-primary"
+      className="rounded-lg p-1.5 text-gray-500 transition hover:bg-[rgba(124,58,237,0.08)] hover:text-primary"
     >
       {icon}
     </button>

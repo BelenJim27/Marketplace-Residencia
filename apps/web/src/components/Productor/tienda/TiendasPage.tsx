@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import type { ReactNode } from "react";
 import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
-import { ModalAgregar, ModalEditar, ModalEliminar, ModalVer } from "./tienda/acciones.jsx";
+import { ModalAgregar, ModalEditar, ModalEliminar, ModalVer } from "./acciones";
 
 type Tienda = {
   id_tienda: number;
@@ -14,6 +14,7 @@ type Tienda = {
   nombre: string;
   descripcion: string | null;
   pais_operacion: string | null;
+  stock: number;
   status: string | null;
   fecha_creacion: string;
   actualizado_en: string | null;
@@ -43,7 +44,14 @@ export function TiendasPage() {
 
     try {
       const data = await api.tiendas.getByProductor(user.id_productor);
-      setStores(Array.isArray(data) ? (data as Tienda[]) : []);
+      setStores(
+        Array.isArray(data)
+          ? data.map((store) => ({
+              ...(store as Omit<Tienda, 'stock'> & { stock?: number }),
+              stock: Number((store as { stock?: number }).stock ?? 0),
+            }))
+          : [],
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "No fue posible cargar las tiendas");
     } finally {
@@ -88,8 +96,7 @@ export function TiendasPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1200px]">
-      <Breadcrumb pageName="Tiendas" title="Mis Tiendas" />
-
+      
       <div className="mb-6 flex flex-col gap-4 rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-dark dark:text-white">Mis Tiendas</h1>
@@ -131,6 +138,7 @@ export function TiendasPage() {
                 <th className="px-5 py-4">Nombre</th>
                 <th className="px-5 py-4">Descripción</th>
                 <th className="px-5 py-4">País</th>
+                <th className="px-5 py-4">Stock</th>
                 <th className="px-5 py-4">Status</th>
                 <th className="px-5 py-4">Fecha creación</th>
                 <th className="px-5 py-4 text-right">Acciones</th>
@@ -140,7 +148,7 @@ export function TiendasPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500">
                     Cargando tiendas...
                   </td>
                 </tr>
@@ -150,6 +158,11 @@ export function TiendasPage() {
                     <td className="px-5 py-4 font-medium text-dark dark:text-white">{store.nombre}</td>
                     <td className="px-5 py-4 text-gray-600 dark:text-gray-3">{truncate(store.descripcion || "", 60)}</td>
                     <td className="px-5 py-4 text-gray-600 dark:text-gray-3">{store.pais_operacion || "-"}</td>
+                    <td className="px-5 py-4">
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+                        {store.stock}
+                      </span>
+                    </td>
                     <td className="px-5 py-4">
                       <Badge status={store.status} />
                     </td>
@@ -167,7 +180,7 @@ export function TiendasPage() {
 
               {!loading && filteredStores.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500">
                     No hay tiendas para mostrar
                   </td>
                 </tr>
@@ -177,18 +190,20 @@ export function TiendasPage() {
         </div>
       </div>
 
-      <ModalAgregar
-        isOpen={activeModal === "create"}
-        onClose={closeModal}
-        onSuccess={(created: Tienda) => setStores((current) => [created, ...current])}
-      />
+        <ModalAgregar
+          isOpen={activeModal === "create"}
+          onClose={closeModal}
+          onSuccess={(created: Tienda) => setStores((current) => [{ ...created, stock: Number(created.stock ?? 0) }, ...current])}
+        />
       <ModalVer isOpen={activeModal === "view"} onClose={closeModal} tienda={selectedStore} />
-      <ModalEditar
-        isOpen={activeModal === "edit"}
-        onClose={closeModal}
-        tienda={selectedStore}
-        onSuccess={(updated: Tienda) => setStores((current) => current.map((item) => (item.id_tienda === updated.id_tienda ? updated : item)))}
-      />
+        <ModalEditar
+          isOpen={activeModal === "edit"}
+          onClose={closeModal}
+          tienda={selectedStore}
+          onSuccess={(updated: Tienda) =>
+            setStores((current) => current.map((item) => (item.id_tienda === updated.id_tienda ? { ...updated, stock: Number(updated.stock ?? 0) } : item)))
+          }
+        />
       <ModalEliminar
         isOpen={activeModal === "delete"}
         onClose={closeModal}

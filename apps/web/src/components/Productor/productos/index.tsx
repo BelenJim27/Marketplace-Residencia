@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { Eye, Pencil, Plus, Store, Trash2 } from "lucide-react";
+import {
+  appendImagenProducto,
+  EMPTY_IMAGEN_PRODUCTO,
+  ImagenProducto,
+  type ImagenProductoState,
+  ProductoThumbnail,
+  resetImagenProductoState,
+} from "./ImagenProducto";
 
 type StoreItem = {
   id_tienda: number;
@@ -19,11 +26,12 @@ type ProductItem = {
   id_tienda: number;
   nombre: string;
   descripcion?: string | null;
+  imagen_url?: string | null;
+  imagen_principal_url?: string | null;
   precio_base?: string | number | null;
   moneda_base?: string | null;
   stock?: number | null;
   status?: string | null;
-  creado_en?: string | Date | null;
 };
 
 type ProducerDetail = {
@@ -68,6 +76,9 @@ export function ProductorProductos() {
   const [mode, setMode] = useState<"create" | "edit" | "view">("create");
   const [selected, setSelected] = useState<ProductItem | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [imagen, setImagen] = useState<ImagenProductoState>(EMPTY_IMAGEN_PRODUCTO);
+  const [selectionEnabled, setSelectionEnabled] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const loadData = async () => {
     if (!user?.id_productor) {
@@ -82,18 +93,18 @@ export function ProductorProductos() {
     try {
       const [producerData, productsData] = await Promise.all([
         api.productores.getOne(user.id_productor),
-        api.productos.getAll(),
+        api.productos.getByProductor(user.id_productor),
       ]);
 
       const detail = producerData as ProducerDetail;
       const storesData = (detail.tiendas || []) as StoreItem[];
       setProducer(detail);
       setStores(storesData);
-      const demoStocks = [0, 4, 18, 9, 22, 12];
       setProducts(
-        (productsData as ProductItem[]).map((product, index) => ({
+        (productsData as ProductItem[]).map((product) => ({
           ...product,
-          stock: product.stock ?? demoStocks[index % demoStocks.length],
+          imagen_url: product.imagen_url ?? product.imagen_principal_url ?? null,
+          stock: product.stock ?? 0,
         })),
       );
     } catch (err) {
@@ -141,8 +152,34 @@ export function ProductorProductos() {
     setMaxPrice("");
   };
 
+  const visibleProductIds = useMemo(() => visibleProducts.map((product) => product.id_producto), [visibleProducts]);
+
+  const allVisibleSelected = visibleProductIds.length > 0 && visibleProductIds.every((id) => selectedIds.includes(id));
+
+  const toggleSelectionMode = (enabled: boolean) => {
+    setSelectionEnabled(enabled);
+    if (!enabled) {
+      setSelectedIds([]);
+    }
+  };
+
+  const toggleProductSelection = (productId: number, checked: boolean) => {
+    setSelectedIds((current) => (checked ? Array.from(new Set([...current, productId])) : current.filter((id) => id !== productId)));
+  };
+
+  const toggleSelectAllVisible = (checked: boolean) => {
+    setSelectedIds((current) => {
+      if (checked) {
+        return Array.from(new Set([...current, ...visibleProductIds]));
+      }
+
+      return current.filter((id) => !visibleProductIds.includes(id));
+    });
+  };
+
   const openCreate = () => {
     setSelected(null);
+    setImagen(resetImagenProductoState(imagen));
     setForm({
       ...EMPTY_FORM,
       id_tienda: String(stores[0]?.id_tienda ?? ""),
@@ -153,6 +190,7 @@ export function ProductorProductos() {
 
   const openEdit = (product: ProductItem) => {
     setSelected(product);
+    setImagen(resetImagenProductoState(imagen, product.imagen_url ?? product.imagen_principal_url ?? null));
     setForm({
       nombre: product.nombre,
       descripcion: product.descripcion ?? "",
@@ -167,6 +205,7 @@ export function ProductorProductos() {
 
   const openView = (product: ProductItem) => {
     setSelected(product);
+    setImagen(resetImagenProductoState(imagen, product.imagen_url ?? product.imagen_principal_url ?? null));
     setForm({
       nombre: product.nombre,
       descripcion: product.descripcion ?? "",
@@ -188,16 +227,16 @@ export function ProductorProductos() {
     setError(null);
 
     try {
-      const payload = {
-        id_tienda: Number(form.id_tienda),
-        nombre: form.nombre,
-        descripcion: form.descripcion || null,
-        precio_base: form.precio_base,
-        moneda_base: form.moneda_base,
-        status: form.status,
-        creado_por: user.id_usuario,
-        actualizado_por: user.id_usuario,
-      };
+      const payload = new FormData();
+      payload.append("id_tienda", String(Number(form.id_tienda)));
+      payload.append("nombre", form.nombre);
+      payload.append("descripcion", form.descripcion);
+      payload.append("precio_base", form.precio_base);
+      payload.append("moneda_base", form.moneda_base);
+      payload.append("status", form.status);
+      payload.append("creado_por", user.id_usuario);
+      payload.append("actualizado_por", user.id_usuario);
+      appendImagenProducto(payload, imagen);
 
       if (mode === "edit" && selected) {
         await api.productos.update(token, String(selected.id_producto), payload);
@@ -206,6 +245,7 @@ export function ProductorProductos() {
       }
 
       setModalOpen(false);
+      setImagen(resetImagenProductoState(imagen));
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No fue posible guardar el producto");
@@ -225,10 +265,18 @@ export function ProductorProductos() {
     }
   };
 
-  const createdAt = (value?: string | Date | null) => {
-    if (!value) return "-";
-    const date = new Date(value);
-    return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`¿Eliminar ${selectedIds.length} producto(s) seleccionados?`)) return;
+
+    try {
+      await Promise.all(selectedIds.map((id) => api.productos.delete(token, String(id))));
+      setSelectedIds([]);
+      setSelectionEnabled(false);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No fue posible eliminar los productos seleccionados");
+    }
   };
 
   if (loading) {
@@ -241,7 +289,6 @@ export function ProductorProductos() {
 
   return (
     <div className="mx-auto w-full max-w-[1200px]">
-      <Breadcrumb pageName="Productos del Productor" />
 
       <div className="mb-6 flex items-center justify-between gap-4 rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark">
         <div>
@@ -336,24 +383,70 @@ export function ProductorProductos() {
         </div>
       </div>
 
+      <div className="mb-4 flex flex-col gap-3 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark md:flex-row md:items-center md:justify-between">
+        <label className="inline-flex items-center gap-3 text-sm font-medium text-dark dark:text-white">
+          <input
+            type="checkbox"
+            checked={selectionEnabled}
+            onChange={(event) => toggleSelectionMode(event.target.checked)}
+            className="h-4 w-4 rounded border-stroke text-primary focus:ring-primary"
+          />
+          <span>Seleccionar productos</span>
+        </label>
+
+        {selectedIds.length > 0 ? (
+          <button
+            type="button"
+            onClick={handleDeleteSelected}
+            className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+          >
+            Eliminar seleccionados ({selectedIds.length})
+          </button>
+        ) : null}
+      </div>
+
       <div className="overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left">
+          <table className="w-full min-w-[900px] text-left">
             <thead className="bg-gray-2 dark:bg-dark-2">
               <tr className="text-sm text-gray-500">
-                <th className="px-5 py-4">Nombre</th>
-                <th className="px-5 py-4">Precio base</th>
-                <th className="px-5 py-4">Moneda</th>
-                <th className="px-5 py-4">Status</th>
-                <th className="px-5 py-4">Tienda</th>
-                <th className="px-5 py-4">Creado en</th>
-                <th className="px-5 py-4 text-right">Acciones</th>
+                {selectionEnabled ? (
+                  <th className="w-12 px-4 py-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={(event) => toggleSelectAllVisible(event.target.checked)}
+                      className="h-4 w-4 rounded border-stroke text-primary focus:ring-primary"
+                    />
+                  </th>
+                ) : null}
+                <th className="w-[36%] px-5 py-4">Nombre</th>
+                <th className="w-[14%] px-5 py-4">Precio base</th>
+                <th className="w-[12%] px-5 py-4">Moneda</th>
+                <th className="w-[14%] px-5 py-4">Status</th>
+                <th className="w-[18%] px-5 py-4">Tienda</th>
+                <th className="w-[16%] px-5 py-4 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {visibleProducts.map((product) => (
                 <tr key={product.id_producto} className="border-t border-stroke text-sm dark:border-dark-3">
-                  <td className="px-5 py-4 font-medium text-dark dark:text-white">{product.nombre}</td>
+                  {selectionEnabled ? (
+                    <td className="px-4 py-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(product.id_producto)}
+                        onChange={(event) => toggleProductSelection(product.id_producto, event.target.checked)}
+                        className="h-4 w-4 rounded border-stroke text-primary focus:ring-primary"
+                      />
+                    </td>
+                  ) : null}
+                  <td className="px-5 py-4 font-medium text-dark dark:text-white">
+                    <div className="flex items-center gap-3">
+                      <ProductoThumbnail src={product.imagen_url} alt={product.nombre} />
+                      <span>{product.nombre}</span>
+                    </div>
+                  </td>
                   <td className="px-5 py-4">{Number(product.precio_base || 0).toFixed(2)}</td>
                   <td className="px-5 py-4">{product.moneda_base || "MXN"}</td>
                   <td className="px-5 py-4">
@@ -365,7 +458,6 @@ export function ProductorProductos() {
                       {storeMap.get(Number(product.id_tienda)) || `#${product.id_tienda}`}
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-gray-500">{createdAt(product.creado_en)}</td>
                   <td className="px-5 py-4">
                     <div className="flex justify-end gap-2">
                       <button onClick={() => openView(product)} className="rounded-lg p-2 text-gray-500 hover:bg-green-50 hover:text-green-600"><Eye size={16} /></button>
@@ -377,7 +469,7 @@ export function ProductorProductos() {
               ))}
               {visibleProducts.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500">No hay productos para mostrar</td>
+                  <td colSpan={selectionEnabled ? 7 : 6} className="px-5 py-10 text-center text-gray-500">No hay productos para mostrar</td>
                 </tr>
               )}
             </tbody>
@@ -392,7 +484,7 @@ export function ProductorProductos() {
               <h2 className="text-xl font-bold text-dark dark:text-white">
                 {mode === "create" ? "Nuevo producto" : mode === "edit" ? "Editar producto" : "Detalle de producto"}
               </h2>
-              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <button onClick={() => { setModalOpen(false); setImagen(resetImagenProductoState(imagen)); }} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -403,6 +495,14 @@ export function ProductorProductos() {
 
               <Field label="Descripción" value={form.descripcion} onChange={(value) => setForm((current) => ({ ...current, descripcion: value }))} disabled={mode === "view"} textarea />
 
+              <ImagenProducto
+                label="Imagen"
+                disabled={mode === "view"}
+                imagen={imagen}
+                fallbackPreview={selected?.imagen_url ?? selected?.imagen_principal_url ?? null}
+                onChange={setImagen}
+              />
+
               <div className="grid gap-4 md:grid-cols-3">
                 <SelectField label="Tienda" value={form.id_tienda} onChange={(value) => setForm((current) => ({ ...current, id_tienda: value }))} disabled={mode === "view"} options={stores.map((store) => ({ label: store.nombre, value: String(store.id_tienda) }))} />
                 <SelectField label="Moneda" value={form.moneda_base} onChange={(value) => setForm((current) => ({ ...current, moneda_base: value }))} disabled={mode === "view"} options={[{ label: "MXN", value: "MXN" }, { label: "USD", value: "USD" }]} />
@@ -410,7 +510,7 @@ export function ProductorProductos() {
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-stroke px-5 py-3 font-medium text-dark dark:border-dark-3 dark:text-white">
+                <button type="button" onClick={() => { setModalOpen(false); setImagen(resetImagenProductoState(imagen)); }} className="rounded-lg border border-stroke px-5 py-3 font-medium text-dark dark:border-dark-3 dark:text-white">
                   Cerrar
                 </button>
                 {mode !== "view" && (

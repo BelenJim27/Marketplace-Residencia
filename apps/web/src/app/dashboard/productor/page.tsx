@@ -1,4 +1,4 @@
-import { ProductorDashboard } from "@/components/dashboard/ProductorDashboard";
+import { ProductorDashboard } from "@/components/Productor/dashboard/ProductorDashboard";
 
 export default function Page() {
   return <ProductorDashboard />;

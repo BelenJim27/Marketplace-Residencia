@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-
+import { Eye, Pencil, Trash2 } from "lucide-react";
 export default function NOM070View() {
   const inputRef = useRef(null);
   const [selectedFileName, setSelectedFileName] = useState("");
@@ -44,9 +44,9 @@ export default function NOM070View() {
             <p className="text-sm text-gray-500 dark:text-gray-400">2.4 MB · Subido hace 2 días</p>
           </div>
           <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
-            <button type="button" className="hover:text-green-600" aria-label="Ver archivo">👁</button>
-            <button type="button" className="hover:text-green-600" aria-label="Editar archivo">✏️</button>
-            <button type="button" className="hover:text-red-600" aria-label="Eliminar archivo">🗑️</button>
+            <Eye className="text-gray-400 w-4 h-4" />
+            <Pencil className="text-gray-400 w-4 h-4" />
+            <Trash2 className="text-gray-400 w-4 h-4" />
           </div>
         </div>
       </div>
