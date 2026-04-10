@@ -9,6 +9,7 @@ import {
   useMemo,
   ReactNode,
 } from "react";
+import { useSession } from "next-auth/react";
 import { api } from "@/lib/api";
 import { getCookie, setCookie, removeCookie } from "@/lib/cookies";
 
@@ -40,8 +41,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
+  const { data: session } = useSession();
 
   const refreshAuth = useCallback(() => {
+    // Si hay sesión de NextAuth, usarla
+    if (session?.user) {
+      console.log("📋 Usando sesión de NextAuth", session.user.email);
+      setUser({
+        sub: session.user.id || "",
+        email: session.user.email || "",
+        nombre: session.user.name || "Usuario",
+        roles: [(session.user as any)?.role || "user"],
+        permisos: [],
+        id_productor: null,
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Si no, intentar leer de cookies
     const token = getCookie("token");
     const usuarioStr = getCookie("usuario");
 
@@ -61,11 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
     }
     setLoading(false);
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     refreshAuth();
-  }, [refreshAuth]);
+  }, [refreshAuth, session]);
 
   useEffect(() => {
     if (!user?.id_usuario || user.id_productor != null) return;
