@@ -34,6 +34,7 @@ export class CreateProductoDto {
   @IsOptional() @IsString() @MaxLength(20) status?: string;
   @IsOptional() @IsString() creado_por?: string;
   @IsOptional() @IsString() actualizado_por?: string;
+  @IsOptional() @IsString() @MaxLength(500) imagen_url?: string;
   @IsOptional() @IsString() @MaxLength(500) imagen_principal_url?: string;
   @IsOptional() @IsArray() @Type(() => Number) categorias?: number[];
   @IsOptional() @IsArray() imagenes?: ProductoImagenDto[];

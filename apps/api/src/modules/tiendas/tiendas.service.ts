@@ -8,11 +8,34 @@ export class TiendasService {
   constructor(private readonly prisma: PrismaService) {}
   async findAll(id_productor: number) {
     if (!id_productor) throw new BadRequestException('id_productor es requerido');
+
+    const stores = await this.prisma.tiendas.findMany({
+      where: { id_productor, eliminado_en: null },
+      orderBy: { fecha_creacion: 'desc' },
+    });
+
+    const storeIds = stores.map((store) => store.id_tienda);
+    const productCounts =
+      storeIds.length === 0
+        ? []
+        : await this.prisma.productos.groupBy({
+            by: ['id_tienda'],
+            where: {
+              eliminado_en: null,
+              id_tienda: { in: storeIds },
+            },
+            _count: {
+              id_producto: true,
+            },
+          });
+
+    const stockByStore = new Map(productCounts.map((item) => [item.id_tienda, item._count.id_producto]));
+
     return serializeBigInts(
-      await this.prisma.tiendas.findMany({
-        where: { id_productor, eliminado_en: null },
-        orderBy: { fecha_creacion: 'desc' },
-      }),
+      stores.map((store) => ({
+        ...store,
+        stock: stockByStore.get(store.id_tienda) ?? 0,
+      })),
     );
   }
 
