@@ -339,6 +339,24 @@ model notificaciones {
   @@index([id_usuario, leido], map: "idx_notificaciones_usuario_leido")
 }
 
+model oauth_cuentas {
+  id_cuenta      BigInt    @id @default(autoincrement())
+  id_usuario     String    @db.Uuid
+  provider       String    @db.VarChar(30)
+  provider_uid   String    @db.VarChar(255)
+  email          String?   @db.VarChar(255)
+  foto_url       String?   @db.VarChar(500)
+  acceso_token   String?
+  refresco_token String?
+  expira_en      DateTime? @db.Timestamptz(6)
+  creado_en      DateTime  @default(now()) @db.Timestamptz(6)
+  actualizado_en DateTime  @default(now()) @db.Timestamptz(6)
+  usuarios       usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([provider, provider_uid], map: "oauth_cuentas_provider_uid_key")
+  @@index([id_usuario], map: "idx_oauth_cuentas_usuario")
+}
+
 model pagos {
   id_pago           BigInt   @id @default(autoincrement())
   id_pedido         BigInt
@@ -415,6 +433,19 @@ model producto_categoria {
 
   @@id([id_producto, id_categoria])
   @@index([id_categoria], map: "idx_prod_cat_categoria")
+}
+
+model producto_imagenes {
+  id_imagen    BigInt    @id @default(autoincrement())
+  id_producto  BigInt
+  url          String    @db.VarChar(500)
+  orden        Int       @default(0)
+  es_principal Boolean   @default(false)
+  alt_text     String?   @db.VarChar(255)
+  creado_en    DateTime  @default(now()) @db.Timestamptz(6)
+  productos    productos @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_producto], map: "idx_producto_imagenes_producto")
 }
 
 model productores {
@@ -615,6 +646,7 @@ model usuario_rol {
 
 model usuarios {
   id_usuario                                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  google_id                                     String?                  @unique @db.VarChar(255)
   nombre                                        String                   @db.VarChar(100)
   foto_url                                      String?                  @db.VarChar(500)
   apellido_paterno                              String?                  @db.VarChar(100)
@@ -622,7 +654,6 @@ model usuarios {
   email                                         String                   @unique @db.VarChar(255)
   telefono                                      String?                  @db.VarChar(30)
   password_hash                                 String?                  @db.VarChar(255)
-  google_id                                     String?                  @unique @db.VarChar(255)
   idioma_preferido                              String                   @default("es") @db.VarChar(10)
   moneda_preferida                              String                   @default("MXN") @db.Char(3)
   version_token                                 Int                      @default(1)
@@ -635,6 +666,7 @@ model usuarios {
   envio_cotizaciones                            envio_cotizaciones[]
   movimientos_inventario                        movimientos_inventario[]
   notificaciones                                notificaciones[]
+  oauth_cuentas                                 oauth_cuentas[]
   password_reset_tokens                         password_reset_tokens[]
   pedidos                                       pedidos[]
   productores                                   productores?
@@ -643,17 +675,4 @@ model usuarios {
   refresh_tokens                                refresh_tokens[]
   resenas                                       resenas[]
   usuario_rol                                   usuario_rol[]
-}
-
-model producto_imagenes {
-  id_imagen    BigInt    @id @default(autoincrement())
-  id_producto  BigInt
-  url          String    @db.VarChar(500)
-  orden        Int       @default(0)
-  es_principal Boolean   @default(false)
-  alt_text     String?   @db.VarChar(255)
-  creado_en    DateTime  @default(now()) @db.Timestamptz(6)
-  productos    productos @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([id_producto], map: "idx_producto_imagenes_producto")
 }

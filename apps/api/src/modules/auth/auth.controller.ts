@@ -34,8 +34,8 @@ export class AuthController {
   }
 
   @Post('password-reset/request')
-  requestPasswordReset(@Body() dto: RequestPasswordResetDto, @Ip() ip: string) {
-    return this.authService.requestPasswordReset(dto, ip);
+  requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    return this.authService.requestPasswordReset(dto);
   }
 
   @Post('password-reset/confirm')

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { EmailModule } from './modules/email/email.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { ProductosModule } from './modules/productos/productos.module';
@@ -25,6 +26,7 @@ import { AuditoriaModule } from './modules/auditoria/auditoria.module';
   imports: [
     PrismaModule,
     AuthModule,
+    EmailModule,
     UsuariosModule,
     RolesModule,
     ProductosModule,

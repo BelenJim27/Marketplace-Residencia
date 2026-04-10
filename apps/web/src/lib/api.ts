@@ -47,6 +47,18 @@ export const api = {
     googleLogin: () => {
       window.location.href = "/auth/sign-in";
     },
+    forgotPassword: (email: string) =>
+      fetchJson(endpoint("/auth/password-reset/request"), {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ email }),
+      }),
+    resetPassword: (token: string, password: string) =>
+      fetchJson(endpoint("/auth/password-reset/confirm"), {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ token, password }),
+      }),
     getProfile: (token: string) =>
       fetchJson(endpoint("/usuarios/me"), { headers: headers(token) }),
     validateToken: (token: string) =>

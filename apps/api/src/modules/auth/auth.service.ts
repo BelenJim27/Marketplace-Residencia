@@ -1,14 +1,9 @@
-import {
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Prisma, usuarios } from '@prisma/client';
 import { createHash, createHmac, randomBytes, timingSafeEqual, scrypt } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import {
   AuthResponseDto,
   AuthUserDto,
@@ -55,7 +50,10 @@ const PASSWORD_RESET_EXPIRES_IN = parseDurationToSeconds(process.env.PASSWORD_RE
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+  ) {}
 
   async register(dto: RegisterAuthDto): Promise<AuthResponseDto> {
     const email = dto.email.toLowerCase().trim();
@@ -81,11 +79,12 @@ export class AuthService {
           apellido_materno: dto.apellido_materno?.trim() || null,
           telefono: dto.telefono?.trim() || null,
           foto_url: dto.foto_url?.trim() || null,
-          google_id: dto.google_id?.trim() || null,
           idioma_preferido: dto.idioma_preferido?.trim() || 'es',
           moneda_preferida: dto.moneda_preferida?.trim() || 'MXN',
         },
       });
+
+      await this.logAuthEvent('register', user.id_usuario, { email: user.email });
 
       return this.issueTokens(user);
     } catch (error) {
@@ -117,70 +116,81 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    await this.logAuthEvent('login', user.id_usuario, { email: user.email });
+
     return this.issueTokens(user);
   }
 
   async refresh(dto: RefreshAuthDto): Promise<AuthResponseDto> {
     const payload = verifyJwt<RefreshTokenPayload>(dto.refresh_token, REFRESH_TOKEN_SECRET);
+
     if (payload.token_type !== 'refresh') {
       throw new UnauthorizedException('Token inválido');
     }
 
     const tokenHash = hashToken(dto.refresh_token);
-    const storedToken = await this.prisma.refresh_tokens.findUnique({
-      where: { token_hash: tokenHash },
-      include: { usuarios: true },
-    });
-
-    if (!storedToken || storedToken.revocado_en || storedToken.expira_en <= new Date()) {
-      throw new UnauthorizedException('Refresh token inválido');
-    }
-
-    if (!storedToken.usuarios || storedToken.usuarios.eliminado_en) {
-      throw new UnauthorizedException('Refresh token inválido');
-    }
-
-    if (storedToken.usuarios.id_usuario !== payload.sub || storedToken.usuarios.version_token !== payload.version_token) {
-      throw new UnauthorizedException('Refresh token inválido');
-    }
-
-    await this.prisma.refresh_tokens.update({
-      where: { token_hash: tokenHash },
-      data: { revocado_en: new Date() },
-    });
-
-    return this.issueTokens(storedToken.usuarios);
-  }
-
-  async logout(dto: LogoutAuthDto): Promise<{ message: string }> {
-    const tokenHash = hashToken(dto.refresh_token);
-    const storedToken = await this.prisma.refresh_tokens.findUnique({
-      where: { token_hash: tokenHash },
+    const storedToken = await this.prisma.refresh_tokens.findFirst({
+      where: {
+        id_usuario: payload.sub,
+        token_hash: tokenHash,
+        revocado_en: null,
+      },
     });
 
     if (!storedToken) {
-      return { message: 'Sesión cerrada' };
+      throw new UnauthorizedException('Token inválido o ya usado');
     }
 
-    if (!storedToken.revocado_en) {
-      await this.prisma.refresh_tokens.update({
-        where: { token_hash: tokenHash },
-        data: { revocado_en: new Date() },
-      });
-    }
-
-    return { message: 'Sesión cerrada' };
-  }
-
-  async requestPasswordReset(dto: RequestPasswordResetDto, ipSolicitud?: string): Promise<{ message: string }> {
-    const email = dto.email.toLowerCase().trim();
-    const user = await this.prisma.usuarios.findUnique({ where: { email } });
+    const user = await this.prisma.usuarios.findUnique({
+      where: { id_usuario: payload.sub },
+    });
 
     if (!user || user.eliminado_en) {
-      return { message: 'Si el usuario existe, recibirá instrucciones para restablecer su contraseña' };
+      throw new UnauthorizedException('Usuario no encontrado o eliminado');
     }
 
-    const rawToken = createSignedJwt(
+    if (user.version_token !== payload.version_token) {
+      throw new UnauthorizedException('Token invalidado');
+    }
+
+    await this.prisma.refresh_tokens.update({
+      where: { id_token: storedToken.id_token },
+      data: { revocado_en: new Date() },
+    });
+
+    return this.issueTokens(user);
+  }
+
+  async logout(dto: LogoutAuthDto): Promise<{ message: string }> {
+    const payload = verifyJwt<RefreshTokenPayload>(dto.refresh_token, REFRESH_TOKEN_SECRET);
+
+    const tokenHash = hashToken(dto.refresh_token);
+    await this.prisma.refresh_tokens.updateMany({
+      where: {
+        id_usuario: payload.sub,
+        token_hash: tokenHash,
+        revocado_en: null,
+      },
+      data: { revocado_en: new Date() },
+    });
+
+    await this.logAuthEvent('logout', payload.sub, {});
+
+    return { message: 'Logout exitoso' };
+  }
+
+  async requestPasswordReset(dto: RequestPasswordResetDto): Promise<{ message: string }> {
+    const email = dto.email.toLowerCase().trim();
+
+    const user = await this.prisma.usuarios.findUnique({
+      where: { email },
+    });
+
+    if (!user || user.eliminado_en) {
+      return { message: 'Si el email existe, se enviará un enlace de recuperación' };
+    }
+
+    const resetToken = createSignedJwt<PasswordResetPayload>(
       {
         sub: user.id_usuario,
         token_type: 'password_reset',
@@ -190,63 +200,60 @@ export class AuthService {
       PASSWORD_RESET_EXPIRES_IN,
     );
 
-    await this.prisma.password_reset_tokens.create({
-      data: {
-        id_usuario: user.id_usuario,
-        token_hash: hashToken(rawToken),
-        ip_solicitud: ipSolicitud ?? null,
-      },
-    });
+    await this.emailService.sendPasswordResetEmail(email, resetToken);
 
-    return { message: 'Si el usuario existe, recibirá instrucciones para restablecer su contraseña' };
+    await this.logAuthEvent('password_reset_request', user.id_usuario, { email: user.email });
+
+    return { message: 'Si el email existe, se enviará un enlace de recuperación' };
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
     const payload = verifyJwt<PasswordResetPayload>(dto.reset_token, PASSWORD_RESET_SECRET);
 
     if (payload.token_type !== 'password_reset') {
-      throw new UnauthorizedException('Token de restablecimiento inválido');
+      throw new UnauthorizedException('Token inválido');
     }
 
-    const tokenHash = hashToken(dto.reset_token);
-    const resetToken = await this.prisma.password_reset_tokens.findUnique({
-      where: { token_hash: tokenHash },
-      include: { usuarios: true },
+    const user = await this.prisma.usuarios.findUnique({
+      where: { id_usuario: payload.sub },
     });
 
-    if (!resetToken || resetToken.usado || resetToken.expira_en <= new Date()) {
-      throw new UnauthorizedException('Token de restablecimiento inválido');
-    }
-
-    if (!resetToken.usuarios || resetToken.usuarios.eliminado_en) {
-      throw new UnauthorizedException('Token de restablecimiento inválido');
-    }
-
-    if (resetToken.usuarios.id_usuario !== payload.sub) {
-      throw new UnauthorizedException('Token de restablecimiento inválido');
+    if (!user || user.eliminado_en) {
+      throw new UnauthorizedException('Usuario no encontrado o eliminado');
     }
 
     const passwordHash = await hashPassword(dto.new_password);
 
-    await this.prisma.$transaction([
-      this.prisma.usuarios.update({
-        where: { id_usuario: resetToken.usuarios.id_usuario },
-        data: {
-          password_hash: passwordHash,
-          version_token: { increment: 1 },
-        },
-      }),
-      this.prisma.password_reset_tokens.update({
-        where: { token_hash: tokenHash },
-        data: { usado: true },
-      }),
-      this.prisma.refresh_tokens.updateMany({
-        where: { id_usuario: resetToken.usuarios.id_usuario, revocado_en: null },
-        data: { revocado_en: new Date() },
-      }),
-    ]);
+    await this.prisma.usuarios.update({
+      where: { id_usuario: user.id_usuario },
+      data: {
+        password_hash: passwordHash,
+        version_token: { increment: 1 },
+      },
+    });
 
-    return { message: 'Contraseña actualizada correctamente' };
+    await this.prisma.refresh_tokens.updateMany({
+      where: { id_usuario: user.id_usuario },
+      data: { revocado_en: new Date() },
+    });
+
+    await this.logAuthEvent('password_reset_complete', user.id_usuario, {});
+
+    return { message: 'Password actualizado exitosamente' };
+  }
+
+  async loginWithOAuth(idUsuario: string): Promise<AuthResponseDto> {
+    const user = await this.prisma.usuarios.findUnique({
+      where: { id_usuario: idUsuario },
+    });
+
+    if (!user || user.eliminado_en) {
+      throw new UnauthorizedException('Usuario no encontrado o eliminado');
+    }
+
+    await this.logAuthEvent('oauth_login', user.id_usuario, { email: user.email });
+
+    return this.issueTokens(user);
   }
 
   private async issueTokens(user: usuarios): Promise<AuthResponseDto> {
@@ -294,7 +301,19 @@ export class AuthService {
 
     return {
       user: {
-        ...mapUser(freshUser),
+        id_usuario: freshUser.id_usuario,
+        nombre: freshUser.nombre,
+        email: freshUser.email,
+        apellido_paterno: freshUser.apellido_paterno,
+        apellido_materno: freshUser.apellido_materno,
+        telefono: freshUser.telefono,
+        foto_url: freshUser.foto_url,
+        google_id: freshUser.google_id,
+        idioma_preferido: freshUser.idioma_preferido,
+        moneda_preferida: freshUser.moneda_preferida,
+        version_token: freshUser.version_token,
+        fecha_registro: freshUser.fecha_registro,
+        eliminado_en: freshUser.eliminado_en,
         roles: accessData.roles,
         permisos: accessData.permisos,
         id_productor: accessData.id_productor,
@@ -305,24 +324,24 @@ export class AuthService {
       },
     };
   }
-}
 
-function mapUser(user: usuarios): AuthUserDto {
-  return {
-    id_usuario: user.id_usuario,
-    nombre: user.nombre,
-    email: user.email,
-    apellido_paterno: user.apellido_paterno,
-    apellido_materno: user.apellido_materno,
-    telefono: user.telefono,
-    foto_url: user.foto_url,
-    google_id: user.google_id,
-    idioma_preferido: user.idioma_preferido,
-    moneda_preferida: user.moneda_preferida,
-    version_token: user.version_token,
-    fecha_registro: user.fecha_registro,
-    eliminado_en: user.eliminado_en,
-  };
+  private async logAuthEvent(action: string, idUsuario?: string, metadata?: Record<string, unknown>) {
+    try {
+      await this.prisma.auditoria.create({
+        data: {
+          id_usuario: idUsuario || undefined,
+          accion: `auth.${action}`,
+          tabla_afectada: 'usuarios',
+          registro_id: idUsuario || undefined,
+          valor_anterior: metadata as Prisma.InputJsonValue | undefined,
+          valor_nuevo: { success: true },
+          ip_origen: undefined,
+        },
+      });
+    } catch (error) {
+      console.error('Error logging auth event:', error);
+    }
+  }
 }
 
 async function getAccessData(prisma: PrismaService, id_usuario: string): Promise<{ roles: string[]; permisos: string[]; id_productor: number | null }> {

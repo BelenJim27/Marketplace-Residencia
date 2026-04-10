@@ -1,4 +1,4 @@
-import { ProductorPerfil } from "@/components/Productor/perfil";
+import { ProductorPerfil } from "@/components/perfil";
 
 export default function Page() {
   return <ProductorPerfil />;

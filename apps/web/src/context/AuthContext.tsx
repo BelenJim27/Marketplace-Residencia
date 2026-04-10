@@ -18,6 +18,8 @@ interface Usuario {
   sub: string;
   email: string;
   nombre: string;
+  apellido_paterno?: string;
+  apellido_materno?: string;
   roles: string[];
   permisos?: string[];
 }
