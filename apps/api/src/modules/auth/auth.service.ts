@@ -84,6 +84,14 @@ export class AuthService {
         },
       });
 
+      // Enviar email de bienvenida
+      try {
+        await this.emailService.sendWelcomeEmail(user.email, user.nombre);
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+        // No lanzar error si falla el email, el usuario ya está registrado
+      }
+
       await this.logAuthEvent('register', user.id_usuario, { email: user.email });
 
       return this.issueTokens(user);
@@ -208,7 +216,7 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
-    const payload = verifyJwt<PasswordResetPayload>(dto.reset_token, PASSWORD_RESET_SECRET);
+    const payload = verifyJwt<PasswordResetPayload>(dto.token, PASSWORD_RESET_SECRET);
 
     if (payload.token_type !== 'password_reset') {
       throw new UnauthorizedException('Token inválido');
@@ -222,7 +230,7 @@ export class AuthService {
       throw new UnauthorizedException('Usuario no encontrado o eliminado');
     }
 
-    const passwordHash = await hashPassword(dto.new_password);
+    const passwordHash = await hashPassword(dto.password);
 
     await this.prisma.usuarios.update({
       where: { id_usuario: user.id_usuario },

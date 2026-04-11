@@ -8,8 +8,10 @@ import 'dotenv/config';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use('/uploads', expressStatic(join(process.cwd(), 'uploads')));
+  
+  const corsOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: corsOrigin,
     credentials: true,
   });
   app.useGlobalPipes(
@@ -19,7 +21,8 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-  await app.listen(3001);
-  console.log('API running on http://localhost:3001');
+  const port = process.env.PORT || 3001;
+  await app.listen(port);
+  console.log(`API running on http://localhost:${port}`);
 }
 bootstrap();

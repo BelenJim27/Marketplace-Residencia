@@ -90,12 +90,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
 
-    const resolveProductor = async () => {
+const resolveProductor = async () => {
       try {
-        const productor = (await api.productores.getByUsuario(user.id_usuario as string)) as { id_productor?: number } | Array<{ id_productor?: number }>;
-        if (cancelled) return;
+        const accessToken = getCookie("token");
+        if (!accessToken) {
+          setLoading(false);
+          return;
+        }
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/productores/by-usuario/${user.id_usuario}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!response.ok) {
+          if (response.status === 404) {
+            if (cancelled) return;
+            setLoading(false);
+            return;
+          }
+          throw new Error(`Error ${response.status}`);
+        }
+        const text = await response.text();
+        if (!text || cancelled) {
+          setLoading(false);
+          return;
+        }
+        const prod = JSON.parse(text) as { id_productor?: number } | Array<{ id_productor?: number }>;
+        if (!prod || (typeof prod === 'object' && !Array.isArray(prod) && !prod.id_productor)) return;
 
-        const idProductor = Array.isArray(productor) ? productor[0]?.id_productor : productor?.id_productor;
+        const idProductor = Array.isArray(prod) ? prod[0]?.id_productor : prod.id_productor;
         if (idProductor == null) return;
 
         const nextUser = { ...user, id_productor: Number(idProductor) };
