@@ -151,9 +151,9 @@ export default function UsuariosUI() {
 
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Gestión de Usuarios</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Gestión de Usuarios</h1>
           <p className="text-gray-500 text-sm mt-0.5">Controla los accesos y permisos del personal</p>
         </div>
         <button
@@ -162,7 +162,7 @@ export default function UsuariosUI() {
             setEditingUser(null);
             setFormData({ nombre: "", email: "", telefono: "" });
           }}
-          className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95"
+          className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95 w-full sm:w-auto"
         >
           <Plus size={18} className="inline mr-2" />
           Invitar Usuario

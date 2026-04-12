@@ -106,11 +106,11 @@ export default function Page() {
     .join(" ");
 
   return (
-    <div className="mx-auto w-full max-w-[970px]">
+    <div className="mx-auto w-full max-w-[970px] px-2 sm:px-4">
       <Breadcrumb pageName="Profile" />
 
       <div className="overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card">
-        <div className="relative z-20 h-35 md:h-65">
+        <div className="relative z-20 h-28 sm:h-35 md:h-65">
           <Image
             src={data?.coverPhoto}
             alt="profile cover"
@@ -189,11 +189,11 @@ export default function Page() {
               </div>
             </div>
 
-            <div className="mx-auto max-w-[720px]">
+            <div className="mx-auto px-2 sm:px-0 max-w-[720px]">
               <h4 className="font-medium text-dark dark:text-white">
                 Información del Usuario
               </h4>
-              <div className="mt-4 grid grid-cols-1 gap-4 text-left md:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:gap-4 text-left md:grid-cols-2">
                 <div>
                   <p className="text-body-sm text-gray-500">Nombre</p>
                   <p className="font-medium">{data.name}</p>

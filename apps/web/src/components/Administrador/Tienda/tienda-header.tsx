@@ -21,7 +21,6 @@ export function TiendaHeader() {
           alt="Tierra Agaves"
           className="object-contain"
         />
-        <span className="text-2xl font-bold text-green-800">Tienda</span>
       </Link>
 
       <nav className="flex items-center gap-4">
