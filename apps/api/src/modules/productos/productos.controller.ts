@@ -28,7 +28,22 @@ const productoImageStorage: StorageEngine = diskStorage({
 @Controller('productos')
 export class ProductosController {
   constructor(private readonly service: ProductosService) {}
-  @Get() findAll(@Query('id_productor') idProductor?: string) { return this.service.findAll(idProductor ? Number(idProductor) : undefined); }
+  @Get() findAll(
+    @Query('id_productor') idProductor?: string,
+    @Query('busqueda') busqueda?: string,
+    @Query('tipo_mezcal') tipoMezcal?: string,
+    @Query('maguey') maguey?: string,
+    @Query('precio_min') precioMin?: string,
+    @Query('precio_max') precioMax?: string,
+    @Query('destilacion') destilacion?: string,
+    @Query('molienda') molienda?: string,
+    @Query('maestro_mezcalero') maestroMezcalero?: string,
+  ) {
+    return this.service.findAll(
+      idProductor ? Number(idProductor) : undefined,
+      { busqueda, tipoMezcal, maguey, precioMin, precioMax, destilacion, molienda, maestroMezcalero },
+    );
+  }
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
   @Post()
   @UseInterceptors(FileInterceptor('imagen', { storage: productoImageStorage }))

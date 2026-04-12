@@ -4,26 +4,73 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 import { CreateProductoDto, UpdateProductoDto } from './dto/productos.dto';
 
+export interface FiltrosProducto {
+  busqueda?: string;
+  tipoMezcal?: string;
+  maguey?: string;
+  precioMin?: string;
+  precioMax?: string;
+  destilacion?: string;
+  molienda?: string;
+  maestroMezcalero?: string;
+}
+
 @Injectable()
 export class ProductosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(id_productor?: number) {
+  async findAll(id_productor?: number, filtros?: FiltrosProducto) {
+    const where: Prisma.productosWhereInput = { eliminado_en: null };
+
     if (id_productor) {
       const stores = await this.prisma.tiendas.findMany({ where: { id_productor, eliminado_en: null }, select: { id_tienda: true } });
       const ids = stores.map((store) => store.id_tienda);
-      return serializeBigInts(
-        mapProductoResponse(
-          await this.prisma.productos.findMany({ where: { eliminado_en: null, id_tienda: { in: ids } }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }),
-        ),
-      );
+      where.id_tienda = { in: ids };
     }
 
-    return serializeBigInts(
-      mapProductoResponse(
-        await this.prisma.productos.findMany({ where: { eliminado_en: null }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }),
-      ),
-    );
+    if (filtros?.busqueda) {
+      where.OR = [
+        { nombre: { contains: filtros.busqueda, mode: 'insensitive' } },
+        { descripcion: { contains: filtros.busqueda, mode: 'insensitive' } },
+      ];
+    }
+
+    if (filtros?.precioMin || filtros?.precioMax) {
+      where.precio_base = {};
+      if (filtros.precioMin) where.precio_base.gte = parseFloat(filtros.precioMin);
+      if (filtros.precioMax) where.precio_base.lte = parseFloat(filtros.precioMax);
+    }
+
+    let productos = await this.prisma.productos.findMany({
+      where,
+      include: {
+        producto_imagenes: true,
+        producto_categoria: { include: { categorias: true } },
+        lotes: { include: { productores: true } },
+      },
+    });
+
+    if (filtros?.tipoMezcal || filtros?.maguey || filtros?.destilacion || filtros?.molienda || filtros?.maestroMezcalero) {
+      productos = productos.filter((p) => {
+        const lot = p.lotes;
+        if (!lot) return true;
+
+        const attrs = lot.datos_api as Record<string, string> || {};
+
+        if (filtros.tipoMezcal && attrs.tipo_mezcal?.toLowerCase() !== filtros.tipoMezcal.toLowerCase()) return false;
+        if (filtros.maguey && attrs.maguey?.toLowerCase() !== filtros.maguey.toLowerCase()) return false;
+        if (filtros.destilacion && attrs.destilacion?.toLowerCase() !== filtros.destilacion.toLowerCase()) return false;
+        if (filtros.molienda && attrs.molienda?.toLowerCase() !== filtros.molienda.toLowerCase()) return false;
+        if (filtros.maestroMezcalero) {
+          const maestro = lot.productores?.biografia || lot.productores?.otras_caracteristicas || '';
+          if (!maestro.toLowerCase().includes(filtros.maestroMezcalero.toLowerCase())) return false;
+        }
+
+        return true;
+      });
+    }
+
+    return serializeBigInts(mapProductoResponse(productos));
   }
   async findOne(id: string) { const item = await this.prisma.productos.findUnique({ where: { id_producto: toBigIntId(id) }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }); if (!item || item.eliminado_en) throw new NotFoundException('Producto no encontrado'); return serializeBigInts(mapProductoResponse(item)); }
 

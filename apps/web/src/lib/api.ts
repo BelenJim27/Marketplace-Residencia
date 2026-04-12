@@ -70,7 +70,30 @@ export const api = {
   },
 
   productos: {
-    getAll: () => fetchJson(endpoint("/productos")),
+    getAll: (filtros?: {
+      busqueda?: string;
+      tipo_mezcal?: string;
+      maguey?: string;
+      precio_min?: string;
+      precio_max?: string;
+      destilacion?: string;
+      molienda?: string;
+      maestro_mezcalero?: string;
+    }) => {
+      const params = new URLSearchParams();
+      if (filtros) {
+        if (filtros.busqueda) params.append("busqueda", filtros.busqueda);
+        if (filtros.tipo_mezcal) params.append("tipo_mezcal", filtros.tipo_mezcal);
+        if (filtros.maguey) params.append("maguey", filtros.maguey);
+        if (filtros.precio_min) params.append("precio_min", filtros.precio_min);
+        if (filtros.precio_max) params.append("precio_max", filtros.precio_max);
+        if (filtros.destilacion) params.append("destilacion", filtros.destilacion);
+        if (filtros.molienda) params.append("molienda", filtros.molienda);
+        if (filtros.maestro_mezcalero) params.append("maestro_mezcalero", filtros.maestro_mezcalero);
+      }
+      const query = params.toString();
+      return fetchJson(endpoint("/productos" + (query ? `?${query}` : "")));
+    },
     getByProductor: (id_productor: number) => fetchJson(endpoint(`/productos?id_productor=${id_productor}`)),
     getOne: (id: string) => fetchJson(endpoint(`/productos/${id}`)),
     create: (token: string, data: any) =>

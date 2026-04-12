@@ -7,6 +7,14 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: "/uploads/:path*",
+        destination: "http://localhost:3001/uploads/:path*",
+      },
+    ];
+  },
   images: {
     qualities: [100, 75],
     remotePatterns: [

@@ -4,13 +4,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 
 export const metadata: Metadata = {
-  title: "Sign in",
+  title: "Iniciar Sesión",
 };
 
 export default function SignIn() {
   return (
     <>
-      <Breadcrumb pageName="Sign In" />
+      <Breadcrumb pageName="Iniciar Sesión" />
 
       <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card">
         <div className="flex flex-wrap">

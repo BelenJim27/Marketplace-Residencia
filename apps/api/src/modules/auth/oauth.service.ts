@@ -86,6 +86,12 @@ export class OAuthService {
         apellido_paterno: apellidoPaterno,
         idioma_preferido: 'es',
         moneda_preferida: 'MXN',
+        usuario_rol: {
+          create: {
+            id_rol: 6, // Rol cliente
+            estado: 'activo',
+          },
+        },
       },
     });
 

@@ -4,6 +4,7 @@ import { SearchIcon } from "@/assets/icons";
 import Image from "next/image";
 import Link from "next/link";
 import { useSidebarContext } from "../sidebar/sidebar-context";
+import { useAuth } from "@/context/AuthContext";
 import { MenuIcon } from "./icons";
 import { Notification } from "./notification";
 import { ThemeToggleSwitch } from "./theme-toggle";
@@ -11,6 +12,11 @@ import { UserInfo } from "./user-info";
 
 export function Header() {
   const { toggleSidebar, isMobile } = useSidebarContext();
+  const { isAdmin, isProductor, isAuthenticated } = useAuth();
+
+  const isClient = isAuthenticated && !isAdmin && !isProductor;
+
+  const showLogo = isClient;
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-green-200 bg-green-100 px-4 py-5 shadow-1 dark:border-gray-700 dark:bg-gray-900 md:px-5 2xl:px-10">
@@ -24,28 +30,35 @@ export function Header() {
         <span className="sr-only">Toggle Sidebar</span>
       </button>
 
-      {/* LOGO MOBILE */}
-      {isMobile && (
-        <Link href={"/"} className="ml-2 max-[430px]:hidden min-[375px]:ml-4">
+      {/* LOGO MOBILE - SÓLO CLIENTE */}
+      {isMobile && showLogo && (
+        <Link href={"/producto"} className="ml-2 max-[430px]:hidden min-[375px]:ml-4">
           <Image
-            src={"/images/logo/logo-icon.svg"}
+            src={"/images/logo/tierra_agaves.png"}
             width={32}
             height={32}
-            alt=""
+            alt="Tierra Agaves"
             role="presentation"
+            className="object-contain"
           />
         </Link>
       )}
 
-      {/* TÍTULO */}
-      <div className="max-xl:hidden">
-        <h1 className="mb-0.5 text-heading-5 font-bold text-green-900 dark:text-gray-100">
-          Dashboard
-        </h1>
-        <p className="font-medium text-green-800 dark:text-gray-300">
-          Administrador
-        </p>
-      </div>
+      {/* LOGO DESKTOP - SÓLO CLIENTE */}
+      {!isMobile && showLogo && (
+        <Link href={"/producto"} className="hidden lg:flex items-center">
+          <Image
+            src={"/images/logo/tierra_agaves.png"}
+            width={80}
+            height={40}
+            alt="Tierra Agaves"
+            role="presentation"
+            className="object-contain"
+          />
+        </Link>
+      )}
+
+      
 
       {/* DERECHA */}
       <div className="flex flex-1 items-center justify-end gap-2 min-[375px]:gap-4">

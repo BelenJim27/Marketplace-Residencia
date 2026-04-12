@@ -14,7 +14,7 @@ import { ChevronDown, LogOut } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, isProductor, logout } = useAuth();
+  const { user, isProductor, isAdmin, logout } = useAuth();
   const { setIsOpen, isOpen, isMobile, toggleSidebar, isCollapsed, toggleCollapse } =
     useSidebarContext();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -22,7 +22,7 @@ export function Sidebar() {
   const [openMenus, setOpenMenus] = useState<string[]>(() =>
     pathname.startsWith("/dashboard/productor/archivos") ? ["Archivos"] : [],
   );
-  const navData = getNavData(isProductor || user?.permisos?.includes("panel_productor") || false);
+  const navData = getNavData(isProductor || user?.permisos?.includes("panel_productor") || false, isAdmin || user?.roles?.some((r) => ["administrador", "ADMIN"].includes(r)) || false);
   const isFilesRoute = pathname.startsWith("/dashboard/productor/archivos");
 
   const isItemActive = (item: { url?: string; children?: Array<{ url: string }> }) => {
@@ -161,7 +161,7 @@ export function Sidebar() {
                             </div>
                           )}
                         </>
-                      ) : (
+                      ) : item.url ? (
                         <MenuItem
                           className={cn(
                             "group flex items-center gap-3 rounded-lg px-3 py-3 transition",
@@ -176,8 +176,8 @@ export function Sidebar() {
                           <item.icon className={cn("shrink-0 text-gray-600 transition-colors group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white", isCollapsed ? "size-7" : "size-6", isItemActive(item) && "text-gray-900 dark:text-white")} />
                           {!isCollapsed && <span>{item.title}</span>}
                         </MenuItem>
-                      )}
-
+                      ) : null
+                    }
                       {/* Menú flotante cuando está colapsado */}
                       {isCollapsed && hoveredItem === item.title && !isMobile && (
                           <div className="absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white shadow-lg pointer-events-none">
