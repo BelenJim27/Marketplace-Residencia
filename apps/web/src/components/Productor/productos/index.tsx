@@ -30,7 +30,7 @@ type ProductItem = {
   imagen_principal_url?: string | null;
   precio_base?: string | number | null;
   moneda_base?: string | null;
-  stock?: number | null;
+  stock: number;
   status?: string | null;
 };
 
@@ -421,9 +421,10 @@ export function ProductorProductos() {
                   </th>
                 ) : null}
                 <th className="w-[36%] px-5 py-4">Nombre</th>
-                <th className="w-[14%] px-5 py-4">Precio base</th>
-                <th className="w-[12%] px-5 py-4">Moneda</th>
-                <th className="w-[14%] px-5 py-4">Status</th>
+                <th className="w-[13%] px-5 py-4">Precio base</th>
+                <th className="w-[10%] px-5 py-4">Moneda</th>
+                <th className="w-[13%] px-5 py-4">Status</th>
+                <th className="w-[10%] px-5 py-4">Stock</th>
                 <th className="w-[18%] px-5 py-4">Tienda</th>
                 <th className="w-[16%] px-5 py-4 text-right">Acciones</th>
               </tr>
@@ -451,6 +452,11 @@ export function ProductorProductos() {
                   <td className="px-5 py-4">{product.moneda_base || "MXN"}</td>
                   <td className="px-5 py-4">
                     <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">{product.status || "activo"}</span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+                      {product.stock ?? 0}
+                    </span>
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2">
