@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { diskStorage, StorageEngine } from 'multer';
 import { extname, join } from 'path';
 import { mkdirSync } from 'fs';
 import { CreateProductoDto, UpdateProductoDto } from './dto/productos.dto';
@@ -8,12 +8,12 @@ import { ProductosService } from './productos.service';
 
 const uploadPath = join(process.cwd(), 'uploads', 'productos');
 
-const productoImageStorage = diskStorage({
-  destination: (_request, _file, callback) => {
+const productoImageStorage: StorageEngine = diskStorage({
+  destination: (_request: Express.Request, _file: Express.Multer.File, callback: (error: Error | null, destination: string) => void) => {
     mkdirSync(uploadPath, { recursive: true });
     callback(null, uploadPath);
   },
-  filename: (_request, file, callback) => {
+  filename: (_request: Express.Request, file: Express.Multer.File, callback: (error: Error | null, filename: string) => void) => {
     const safeName = file.originalname
       .replace(extname(file.originalname), '')
       .toLowerCase()
@@ -28,7 +28,22 @@ const productoImageStorage = diskStorage({
 @Controller('productos')
 export class ProductosController {
   constructor(private readonly service: ProductosService) {}
-  @Get() findAll(@Query('id_productor') idProductor?: string) { return this.service.findAll(idProductor ? Number(idProductor) : undefined); }
+  @Get() findAll(
+    @Query('id_productor') idProductor?: string,
+    @Query('busqueda') busqueda?: string,
+    @Query('tipo_mezcal') tipoMezcal?: string,
+    @Query('maguey') maguey?: string,
+    @Query('precio_min') precioMin?: string,
+    @Query('precio_max') precioMax?: string,
+    @Query('destilacion') destilacion?: string,
+    @Query('molienda') molienda?: string,
+    @Query('maestro_mezcalero') maestroMezcalero?: string,
+  ) {
+    return this.service.findAll(
+      idProductor ? Number(idProductor) : undefined,
+      { busqueda, tipoMezcal, maguey, precioMin, precioMax, destilacion, molienda, maestroMezcalero },
+    );
+  }
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
   @Post()
   @UseInterceptors(FileInterceptor('imagen', { storage: productoImageStorage }))

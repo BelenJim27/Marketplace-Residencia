@@ -6,9 +6,9 @@ export default function Pedidos() {
       <div className="w-full py-6">
         
         {/* HEADER: Con padding interno px-6 */}
-        <div className="flex justify-between items-center mb-6 px-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 px-4 sm:px-6">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
               Gestión de Pedidos
             </h1>
             <p className="text-gray-500 text-sm mt-0.5">
@@ -16,7 +16,7 @@ export default function Pedidos() {
             </p>
           </div>
 
-          <button className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95">
+          <button className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95 w-full sm:w-auto">
             + Nuevo Pedido
           </button>
         </div>

@@ -1,5 +1,5 @@
 import * as Icons from "../icons";
-import { BadgeDollarSign, FileText, FolderOpen, Image, Layers, LayoutDashboard, Package, Store, UserRound } from "lucide-react";
+import { Award, BarChart3, Boxes, ClipboardList, FileBarChart, FileCheck, FileText, FolderOpen, Image, Key, Layers, LayoutDashboard, Lock, Package, Settings, ShoppingCart, Store, UserCog, UserRound, Users, Shield, ShieldCheck, BadgeDollarSign } from "lucide-react";
 import type { ComponentType } from "react";
 
 type SidebarIcon = ComponentType<{ className?: string }>;
@@ -22,36 +22,38 @@ type NavSection = {
 
 export const ADMIN_NAV_DATA: NavSection[] = [
   {
-    label: "MAIN MENU",
+    label: "ADMINISTRADOR",
     items: [
-      { title: "Dashboard", url: "/Administrador/dashboard", icon: Icons.HomeIcon },
-      { title: "Profile", url: "/profile", icon: Icons.User },
-      { title: "Settings", url: "/pages/settings", icon: Icons.Alphabet },
-      { title: "Productos", url: "/Administrador/productos", icon: Icons.Alphabet },
-      { title: "Inventario", url: "/Administrador/inventario", icon: Icons.Alphabet },
-      { title: "Pedidos", url: "/Administrador/pedidos", icon: Icons.Alphabet },
-      { title: "Usuarios", url: "/Administrador/usuarios", icon: Icons.User },
-      { title: "Roles", url: "/Administrador/roles", icon: Icons.ShieldIcon },
-      { title: "Permisos", url: "/Administrador/permisos", icon: Icons.KeyIcon },
-      { title: "Usuarios-Roles", url: "/Administrador/usuarios-roles", icon: Icons.UsersIcon },
-      { title: "Tienda", url: "/Administrador/tienda", icon: Icons.HomeIcon },
-      { title: "Reportes", url: "/Administrador/reportes", icon: Icons.PieChart },
-      { title: "Certificaciones", url: "/Administrador/certificaciones", icon: Icons.Certificate },
-      { title: "Configuración", url: "/configuracion", icon: Icons.Settings },
+      { title: "Dashboard", url: "/Administrador/dashboard", icon: LayoutDashboard },
+      { title: "Perfil", url: "/profile", icon: UserRound },
+      { title: "Usuarios", url: "/Administrador/usuarioss", icon: Users },
+      { title: "Auditoría", url: "/Administrador/auditoria", icon: FileBarChart },
+      { title: "Roles", url: "/Administrador/roles", icon: Shield },
+      { title: "Permisos", url: "/Administrador/permisos", icon: Key },
+      { title: "Usuarios-Roles", url: "/Administrador/usuarios-roles", icon: UserCog },
+      { title: "Tienda", url: "/Administrador/tienda", icon: Store },
+      { title: "Reportes", url: "/Administrador/reportes", icon: BarChart3 },
+      { title: "Productos", url: "/Administrador/productos", icon: Package },
+      { title: "Inventario", url: "/Administrador/inventario", icon: Boxes },
+      { title: "Pedidos", url: "/Administrador/pedidos", icon: ShoppingCart },
+      { title: "Certificaciones", url: "/Administrador/validar-certificaciones", icon: Award },
+      { title: "Validar Certificaciones", url: "/Administrador/validar-certificaciones", icon: ShieldCheck },
+      { title: "Configuración", url: "/Administrador/configuracion", icon: Settings },
+      { title: "Settings", url: "/pages/settings", icon: Settings },
     ],
   },
 ];
 
 export const PRODUCTOR_NAV_DATA: NavSection[] = [
   {
-    label: "MAESTRO MEZCALERO",
+    label: "PRODUCTOR",
     items: [
       { title: "Dashboard", url: "/dashboard/productor", icon: LayoutDashboard },
       { title: "Tienda", url: "/dashboard/productor/tienda", icon: Store },
       { title: "Productos", url: "/dashboard/productor/productos", icon: Package },
       { title: "Lotes", url: "/dashboard/productor/lotes", icon: Layers },
       { title: "Ventas", url: "/dashboard/productor/ventas", icon: BadgeDollarSign },
-      { title: "Perfil", url: "/dashboard/productor/perfil", icon: UserRound },
+      { title: "Perfil", url: "/profile", icon: UserRound },
       {
         title: "Archivos",
         icon: FolderOpen,
@@ -64,6 +66,8 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
   },
 ];
 
-export function getNavData(isProductor: boolean) {
-  return isProductor ? PRODUCTOR_NAV_DATA : ADMIN_NAV_DATA;
+export function getNavData(isProductor: boolean, isAdmin: boolean = false) {
+  if (isAdmin) return ADMIN_NAV_DATA;
+  if (isProductor) return PRODUCTOR_NAV_DATA;
+  return [];
 }

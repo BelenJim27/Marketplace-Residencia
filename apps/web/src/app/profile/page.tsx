@@ -3,19 +3,79 @@
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import Image from "next/image";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CameraIcon } from "./_components/icons";
 import { SocialAccounts } from "./_components/social-accounts";
+import { ModalEditarPerfil } from "./_components/modal-editar-perfil";
+import { useAuth } from "@/context/AuthContext";
+import { getCookie } from "@/lib/cookies";
+import { PencilIcon } from "lucide-react";
+
+interface StoredUser {
+  id_usuario?: string;
+  email: string;
+  nombre: string;
+  apellido_paterno?: string;
+  apellido_materno?: string;
+  foto_url?: string;
+  telefono?: string;
+  idioma_preferido?: string;
+  moneda_preferida?: string;
+  roles: string[];
+  permisos?: string[];
+}
 
 export default function Page() {
+  const { user: authUser } = useAuth();
+  const [user, setUser] = useState<StoredUser | null>(null);
   const [data, setData] = useState({
-    name: "Danish Heilium",
+    name: "",
     profilePhoto: "/images/user/user-03.png",
     coverPhoto: "/images/cover/cover-01.png",
+    email: "",
+    phone: "",
+    idioma: "es",
+    moneda: "MXN",
   });
 
+  useEffect(() => {
+    if (authUser) {
+      setUser(authUser as unknown as StoredUser);
+      setData({
+        name: authUser.nombre || "",
+        profilePhoto: (authUser as unknown as StoredUser).foto_url || "/images/user/user-03.png",
+        coverPhoto: "/images/cover/cover-01.png",
+        email: authUser.email || "",
+        phone: (authUser as unknown as StoredUser).telefono || "",
+        idioma: (authUser as unknown as StoredUser).idioma_preferido || "es",
+        moneda: (authUser as unknown as StoredUser).moneda_preferida || "MXN",
+      });
+    } else {
+      const usuarioStr = getCookie("usuario");
+      if (usuarioStr) {
+        try {
+          const storedUser = JSON.parse(usuarioStr);
+          setUser(storedUser);
+          setData({
+            name: storedUser.nombre || "",
+            profilePhoto: storedUser.foto_url || "/images/user/user-03.png",
+            coverPhoto: "/images/cover/cover-01.png",
+            email: storedUser.email || "",
+            phone: storedUser.telefono || "",
+            idioma: storedUser.idioma_preferido || "es",
+            moneda: storedUser.moneda_preferida || "MXN",
+          });
+        } catch {
+          console.error("Error parsing user data");
+        }
+      }
+    }
+  }, [authUser]);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const handleChange = (e: any) => {
-    if (e.target.name === "profilePhoto" ) {
+    if (e.target.name === "profilePhoto") {
       const file = e.target?.files[0];
 
       setData({
@@ -37,12 +97,20 @@ export default function Page() {
     }
   };
 
+  const fullName = [
+    data.name,
+    user?.apellido_paterno,
+    user?.apellido_materno,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div className="mx-auto w-full max-w-[970px]">
+    <div className="mx-auto w-full max-w-[970px] px-2 sm:px-4">
       <Breadcrumb pageName="Profile" />
 
       <div className="overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card">
-        <div className="relative z-20 h-35 md:h-65">
+        <div className="relative z-20 h-28 sm:h-35 md:h-65">
           <Image
             src={data?.coverPhoto}
             alt="profile cover"
@@ -108,47 +176,87 @@ export default function Page() {
           </div>
           <div className="mt-4">
             <h3 className="mb-1 text-heading-6 font-bold text-dark dark:text-white">
-              {data?.name}
+              {fullName || "Usuario"}
             </h3>
-            <p className="font-medium">Ui/Ux Designer</p>
+            <p className="font-medium">{data.email}</p>
             <div className="mx-auto mb-5.5 mt-5 grid max-w-[370px] grid-cols-3 rounded-[5px] border border-stroke py-[9px] shadow-1 dark:border-dark-3 dark:bg-dark-2 dark:shadow-card">
-              <div className="flex flex-col items-center justify-center gap-1 border-r border-stroke px-4 dark:border-dark-3 xsm:flex-row">
-                <span className="font-medium text-dark dark:text-white">
-                  259
-                </span>
-                <span className="text-body-sm">Posts</span>
-              </div>
-              <div className="flex flex-col items-center justify-center gap-1 border-r border-stroke px-4 dark:border-dark-3 xsm:flex-row">
-                <span className="font-medium text-dark dark:text-white">
-                  129K
-                </span>
-                <span className="text-body-sm">Followers</span>
-              </div>
+              
               <div className="flex flex-col items-center justify-center gap-1 px-4 xsm:flex-row">
                 <span className="font-medium text-dark dark:text-white">
-                  2K
+                  {data.idioma.toUpperCase()}
                 </span>
-                <span className="text-body-sm-sm">Following</span>
+                <span className="text-body-sm-sm">Idioma</span>
               </div>
             </div>
 
-            <div className="mx-auto max-w-[720px]">
+            <div className="mx-auto px-2 sm:px-0 max-w-[720px]">
               <h4 className="font-medium text-dark dark:text-white">
-                About Me
+                Información del Usuario
               </h4>
-              <p className="mt-4">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                Pellentesque posuere fermentum urna, eu condimentum mauris
-                tempus ut. Donec fermentum blandit aliquet. Etiam dictum dapibus
-                ultricies. Sed vel aliquet libero. Nunc a augue fermentum,
-                pharetra ligula sed, aliquam lacus.
-              </p>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:gap-4 text-left md:grid-cols-2">
+                <div>
+                  <p className="text-body-sm text-gray-500">Nombre</p>
+                  <p className="font-medium">{data.name}</p>
+                </div>
+                <div>
+                  <p className="text-body-sm text-gray-500">Apellido Paterno</p>
+                  <p className="font-medium">{user?.apellido_paterno || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-body-sm text-gray-500">Apellido Materno</p>
+                  <p className="font-medium">{user?.apellido_materno || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-body-sm text-gray-500">Email</p>
+            <p className="font-medium">{data.email}</p>
+            
+                </div>
+                <div>
+                  <p className="text-body-sm text-gray-500">Teléfono</p>
+                  <p className="font-medium">{data.phone || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-body-sm text-gray-500">Moneda Preferida</p>
+                  <p className="font-medium">{data.moneda}</p>
+                </div>
+              </div>
             </div>
-
+<button
+              onClick={() => setIsModalOpen(true)}
+              className="mt-2 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-opacity-90"
+            >
+              <PencilIcon className="h-4 w-4" />
+              Editar Perfil
+            </button>
             <SocialAccounts />
           </div>
         </div>
       </div>
+
+      <ModalEditarPerfil 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => {
+          const usuarioStr = getCookie("usuario");
+          if (usuarioStr) {
+            try {
+              const storedUser = JSON.parse(usuarioStr);
+              setUser(storedUser);
+              setData({
+                name: storedUser.nombre || "",
+                profilePhoto: storedUser.foto_url || "/images/user/user-03.png",
+                coverPhoto: "/images/cover/cover-01.png",
+                email: storedUser.email || "",
+                phone: storedUser.telefono || "",
+                idioma: storedUser.idioma_preferido || "es",
+                moneda: storedUser.moneda_preferida || "MXN",
+              });
+            } catch {
+              console.error("Error parsing user data");
+            }
+          }
+        }}
+      />
     </div>
   );
 }

@@ -47,6 +47,18 @@ export const api = {
     googleLogin: () => {
       window.location.href = "/auth/sign-in";
     },
+    forgotPassword: (email: string) =>
+      fetchJson(endpoint("/auth/password-reset/request"), {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ email }),
+      }),
+    resetPassword: (token: string, password: string) =>
+      fetchJson(endpoint("/auth/password-reset/confirm"), {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ token, password }),
+      }),
     getProfile: (token: string) =>
       fetchJson(endpoint("/usuarios/me"), { headers: headers(token) }),
     validateToken: (token: string) =>
@@ -58,7 +70,30 @@ export const api = {
   },
 
   productos: {
-    getAll: () => fetchJson(endpoint("/productos")),
+    getAll: (filtros?: {
+      busqueda?: string;
+      tipo_mezcal?: string;
+      maguey?: string;
+      precio_min?: string;
+      precio_max?: string;
+      destilacion?: string;
+      molienda?: string;
+      maestro_mezcalero?: string;
+    }) => {
+      const params = new URLSearchParams();
+      if (filtros) {
+        if (filtros.busqueda) params.append("busqueda", filtros.busqueda);
+        if (filtros.tipo_mezcal) params.append("tipo_mezcal", filtros.tipo_mezcal);
+        if (filtros.maguey) params.append("maguey", filtros.maguey);
+        if (filtros.precio_min) params.append("precio_min", filtros.precio_min);
+        if (filtros.precio_max) params.append("precio_max", filtros.precio_max);
+        if (filtros.destilacion) params.append("destilacion", filtros.destilacion);
+        if (filtros.molienda) params.append("molienda", filtros.molienda);
+        if (filtros.maestro_mezcalero) params.append("maestro_mezcalero", filtros.maestro_mezcalero);
+      }
+      const query = params.toString();
+      return fetchJson(endpoint("/productos" + (query ? `?${query}` : "")));
+    },
     getByProductor: (id_productor: number) => fetchJson(endpoint(`/productos?id_productor=${id_productor}`)),
     getOne: (id: string) => fetchJson(endpoint(`/productos/${id}`)),
     create: (token: string, data: any) =>
@@ -317,6 +352,18 @@ export const api = {
   configuracion: {
     getSistema: () => fetchJson(endpoint("/configuracion/sistema")),
     getTasas: () => fetchJson(endpoint("/configuracion/tasas")),
+    updateSistema: (token: string, id: number, data: any) =>
+      fetchJson(endpoint(`/configuracion/sistema/${id}`), {
+        method: "PATCH",
+        headers: headers(token),
+        body: JSON.stringify(data),
+      }),
+    createSistema: (token: string, data: any) =>
+      fetchJson(endpoint("/configuracion/sistema"), {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify(data),
+      }),
   },
 
   archivos: {

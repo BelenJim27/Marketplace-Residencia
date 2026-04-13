@@ -13,6 +13,8 @@ export function SignUpForm() {
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nombre: "",
+    apellido_paterno: "",
+    apellido_materno: "",
     email: "",
     password: "",
     confirmarPassword: "",
@@ -33,6 +35,8 @@ export function SignUpForm() {
         email: formData.email,
         password: formData.password,
         nombre: formData.nombre,
+        apellido_paterno: formData.apellido_paterno,
+        apellido_materno: formData.apellido_materno,
       })) as any;
 
       const usuario = result.user ?? {};
@@ -43,6 +47,8 @@ export function SignUpForm() {
         sub: usuario.id_usuario || usuario.sub || "",
         email: usuario.email || formData.email,
         nombre: usuario.nombre || formData.nombre,
+        apellido_paterno: usuario.apellido_paterno || formData.apellido_paterno,
+        apellido_materno: usuario.apellido_materno || formData.apellido_materno,
         roles,
       }, result.tokens.refresh_token);
 
@@ -58,7 +64,7 @@ export function SignUpForm() {
 
   return (
     <div className="space-y-4">
-      <GoogleSigninButton text="Sign up" />
+      <GoogleSigninButton text="Registrate" />
 
       <div className="my-6 flex items-center justify-center">
         <span className="block h-px w-full bg-stroke dark:bg-dark-3"></span>
@@ -87,6 +93,38 @@ export function SignUpForm() {
             value={formData.nombre}
             onChange={(e) =>
               setFormData({ ...formData, nombre: e.target.value })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
+            Apellido paterno
+          </label>
+          <input
+            type="text"
+            required
+            className="w-full rounded-lg border border-green-200 bg-white p-3 outline-none focus:border-green-400 dark:bg-gray-dark"
+            placeholder="Ingresa tu apellido paterno"
+            value={formData.apellido_paterno}
+            onChange={(e) =>
+              setFormData({ ...formData, apellido_paterno: e.target.value })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
+            Apllido materno
+          </label>
+          <input
+            type="text"
+            required
+            className="w-full rounded-lg border border-green-200 bg-white p-3 outline-none focus:border-green-400 dark:bg-gray-dark"
+            placeholder="Ingresa tu apellido materno"
+            value={formData.apellido_materno}
+            onChange={(e) =>
+              setFormData({ ...formData, apellido_materno: e.target.value })
             }
           />
         </div>

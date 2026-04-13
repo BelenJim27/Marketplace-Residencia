@@ -107,6 +107,12 @@ export default function SigninWithPassword() {
             })
           }
         />
+        <Link
+          href="/auth/forgot-password"
+          className="hover:text-primary dark:text-white dark:hover:text-primary"
+        >
+          ¿Olvidaste tu contraseña?
+        </Link>
       </div>
 
       <div className="mb-4.5">

@@ -13,7 +13,7 @@ import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | MAESTRO",
+    template: "%s | MARKETPLACE RESIDENCIA",
     default: "MAESTRO - Administración",
   },
   description: "Interfaz de administración MAESTRO",

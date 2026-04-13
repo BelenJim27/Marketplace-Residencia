@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Table,
   TableBody,
@@ -9,10 +11,30 @@ import {
 import { compactFormat, standardFormat } from "@/lib/format-number";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { getTopChannels } from "../fetch";
+import { Pagination } from "@/components/ui/pagination";
+import { useState } from "react";
+import * as logos from "@/assets/logos";
 
-export async function TopChannels({ className }: { className?: string }) {
-  const data = await getTopChannels();
+const DATA = [
+  { name: "Google", visitors: 3456, revenues: 4220, sales: 3456, conversion: 2.59, logo: logos.google },
+  { name: "X.com", visitors: 3456, revenues: 4220, sales: 3456, conversion: 2.59, logo: logos.x },
+  { name: "Github", visitors: 3456, revenues: 4220, sales: 3456, conversion: 2.59, logo: logos.github },
+  { name: "Vimeo", visitors: 3456, revenues: 4220, sales: 3456, conversion: 2.59, logo: logos.vimeo },
+  { name: "Facebook", visitors: 3456, revenues: 4220, sales: 3456, conversion: 2.59, logo: logos.facebook },
+  { name: "Instagram", visitors: 2890, revenues: 3100, sales: 2890, conversion: 1.89, logo: logos.facebook },
+  { name: "LinkedIn", visitors: 1980, revenues: 2500, sales: 1980, conversion: 1.45, logo: logos.github },
+];
+
+const ITEMS_PER_PAGE = 5;
+
+export function TopChannels({ className }: { className?: string }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(DATA.length / ITEMS_PER_PAGE);
+
+  const paginatedData = DATA.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div
@@ -37,7 +59,7 @@ export async function TopChannels({ className }: { className?: string }) {
         </TableHeader>
 
         <TableBody>
-          {data.map((channel, i) => (
+          {paginatedData.map((channel, i) => (
             <TableRow
               className="text-center text-base font-medium text-dark dark:text-white"
               key={channel.name + i}
@@ -67,6 +89,18 @@ export async function TopChannels({ className }: { className?: string }) {
           ))}
         </TableBody>
       </Table>
+
+      <div className="mt-4 flex items-center justify-between">
+        <div className="text-sm text-gray-500">
+          Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} a{" "}
+          {Math.min(currentPage * ITEMS_PER_PAGE, DATA.length)} de {DATA.length} canales
+        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      </div>
     </div>
   );
 }

@@ -80,12 +80,12 @@ export class RequestPasswordResetDto {
 
 export class ResetPasswordDto {
   @IsString()
-  reset_token!: string;
+  token!: string;
 
   @IsString()
   @MinLength(8)
   @MaxLength(128)
-  new_password!: string;
+  password!: string;
 }
 
 export class AuthTokensDto {

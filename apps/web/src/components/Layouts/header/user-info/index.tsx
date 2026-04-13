@@ -12,10 +12,28 @@ import Link from "next/link";
 import { useState } from "react";
 import { LogOutIcon, SettingsIcon, UserIcon } from "./icons";
 import { useAuth } from "@/context/AuthContext";
+import { useSession, signOut } from "next-auth/react";
 
 export function UserInfo() {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user: contextUser, logout } = useAuth();
+  const { data: session } = useSession();
+
+  // Priorizar datos de NextAuth, sino usar el contexto
+  const user = session?.user || contextUser;
+  const userName = session?.user?.name || contextUser?.nombre || "Usuario";
+  const userEmail = session?.user?.email || contextUser?.email || "correo@ejemplo.com";
+
+  const handleLogout = async () => {
+    setIsOpen(false);
+    if (session) {
+      // Si hay sesión de NextAuth, usar signOut
+      await signOut({ callbackUrl: "/auth/sign-in" });
+    } else {
+      // Si no, usar el logout del contexto
+      logout();
+    }
+  };
 
   return (
     <Dropdown isOpen={isOpen} setIsOpen={setIsOpen}>
@@ -24,15 +42,15 @@ export function UserInfo() {
 
         <figure className="flex items-center gap-3">
           <Image
-            src="/images/user/user-03.png"
+            src={session?.user?.image || "/images/user/user-03.png"}
             className="size-12"
-            alt={`Avatar of ${user?.nombre || "Usuario"}`}
+            alt={`Avatar of ${userName}`}
             role="presentation"
             width={200}
             height={200}
           />
           <figcaption className="flex items-center gap-1 font-medium text-dark dark:text-dark-6 max-[1024px]:sr-only">
-            <span>{user?.nombre || "Usuario"}</span>
+            <span>{userName}</span>
 
             <ChevronUpIcon
               aria-hidden
@@ -54,9 +72,9 @@ export function UserInfo() {
 
         <figure className="flex items-center gap-2.5 px-5 py-3.5">
           <Image
-            src="/images/user/user-03.png"
+            src={session?.user?.image || "/images/user/user-03.png"}
             className="size-12"
-            alt={`Avatar for ${user?.nombre || "Usuario"}`}
+            alt={`Avatar for ${userName}`}
             role="presentation"
             width={200}
             height={200}
@@ -64,11 +82,11 @@ export function UserInfo() {
 
           <figcaption className="space-y-1 text-base font-medium">
             <div className="mb-2 leading-none text-dark dark:text-white">
-              {user?.nombre || "Usuario"}
+              {userName}
             </div>
 
             <div className="leading-none text-gray-6">
-              {user?.email || "correo@ejemplo.com"}
+              {userEmail}
             </div>
           </figcaption>
         </figure>
@@ -102,7 +120,7 @@ export function UserInfo() {
         <div className="p-2 text-base text-[#4B5563] dark:text-dark-6">
           <button
             className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
-            onClick={logout}
+            onClick={handleLogout}
           >
             <LogOutIcon />
 

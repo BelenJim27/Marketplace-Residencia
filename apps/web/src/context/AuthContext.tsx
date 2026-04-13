@@ -9,6 +9,7 @@ import {
   useMemo,
   ReactNode,
 } from "react";
+import { useSession } from "next-auth/react";
 import { api } from "@/lib/api";
 import { getCookie, setCookie, removeCookie } from "@/lib/cookies";
 
@@ -18,6 +19,8 @@ interface Usuario {
   sub: string;
   email: string;
   nombre: string;
+  apellido_paterno?: string;
+  apellido_materno?: string;
   roles: string[];
   permisos?: string[];
 }
@@ -38,8 +41,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
+  const { data: session } = useSession();
 
   const refreshAuth = useCallback(() => {
+    // Si hay sesión de NextAuth, usarla
+    if (session?.user) {
+      console.log("📋 Usando sesión de NextAuth", session.user.email);
+      setUser({
+        sub: session.user.id || "",
+        email: session.user.email || "",
+        nombre: session.user.name || "Usuario",
+        roles: [(session.user as any)?.role || "user"],
+        permisos: [],
+        id_productor: null,
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Si no, intentar leer de cookies
     const token = getCookie("token");
     const usuarioStr = getCookie("usuario");
 
@@ -59,23 +79,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
     }
     setLoading(false);
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     refreshAuth();
-  }, [refreshAuth]);
+  }, [refreshAuth, session]);
 
   useEffect(() => {
     if (!user?.id_usuario || user.id_productor != null) return;
 
     let cancelled = false;
 
-    const resolveProductor = async () => {
+const resolveProductor = async () => {
       try {
-        const productor = (await api.productores.getByUsuario(user.id_usuario as string)) as { id_productor?: number } | Array<{ id_productor?: number }>;
-        if (cancelled) return;
+        const accessToken = getCookie("token");
+        if (!accessToken) {
+          setLoading(false);
+          return;
+        }
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/productores/by-usuario/${user.id_usuario}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!response.ok) {
+          if (response.status === 404) {
+            if (cancelled) return;
+            setLoading(false);
+            return;
+          }
+          throw new Error(`Error ${response.status}`);
+        }
+        const text = await response.text();
+        if (!text || cancelled) {
+          setLoading(false);
+          return;
+        }
+        const prod = JSON.parse(text) as { id_productor?: number } | Array<{ id_productor?: number }>;
+        if (!prod || (typeof prod === 'object' && !Array.isArray(prod) && !prod.id_productor)) return;
 
-        const idProductor = Array.isArray(productor) ? productor[0]?.id_productor : productor?.id_productor;
+        const idProductor = Array.isArray(prod) ? prod[0]?.id_productor : prod.id_productor;
         if (idProductor == null) return;
 
         const nextUser = { ...user, id_productor: Number(idProductor) };

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, Package, User, UserPlus } from "lucide-react";
 import { UserInfo } from "@/components/Layouts/header/user-info";
@@ -12,8 +13,14 @@ export function TiendaHeader() {
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-green-200 bg-green-100 px-4 py-4 shadow-sm md:px-8">
-      <Link href="/producto" className="flex items-center gap-2">
-        <span className="text-2xl font-bold text-green-800">Tienda</span>
+      <Link href="/producto" className="flex items-center gap-3">
+        <Image
+          src="/images/logo/tierra_agaves.png"
+          width={100}
+          height={35}
+          alt="Tierra Agaves"
+          className="object-contain"
+        />
       </Link>
 
       <nav className="flex items-center gap-4">

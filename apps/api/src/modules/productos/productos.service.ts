@@ -4,31 +4,38 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 import { CreateProductoDto, UpdateProductoDto } from './dto/productos.dto';
 
+export interface FiltrosProducto {
+  busqueda?: string;
+  tipoMezcal?: string;
+  maguey?: string;
+  precioMin?: string;
+  precioMax?: string;
+  destilacion?: string;
+  molienda?: string;
+  maestroMezcalero?: string;
+}
+
 @Injectable()
 export class ProductosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(id_productor?: number) {
+  async findAll(id_productor?: number, filtros?: FiltrosProducto) {
+    const where: Prisma.productosWhereInput = { eliminado_en: null };
+
     if (id_productor) {
       const stores = await this.prisma.tiendas.findMany({ where: { id_productor, eliminado_en: null }, select: { id_tienda: true } });
       const ids = stores.map((store) => store.id_tienda);
-      const products = await this.prisma.productos.findMany({
-        where: { eliminado_en: null, id_tienda: { in: ids } },
-        include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } },
-      });
-
       return serializeBigInts(
-        await mapProductoResponse(this.prisma, products),
+        mapProductoResponse(
+          await this.prisma.productos.findMany({ where: { eliminado_en: null, id_tienda: { in: ids } }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }),
+        ),
       );
     }
 
-    const products = await this.prisma.productos.findMany({
-      where: { eliminado_en: null },
-      include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } },
-    });
-
     return serializeBigInts(
-      await mapProductoResponse(this.prisma, products),
+      mapProductoResponse(
+        await this.prisma.productos.findMany({ where: { eliminado_en: null }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }),
+      ),
     );
   }
   async findOne(id: string) { const item = await this.prisma.productos.findUnique({ where: { id_producto: toBigIntId(id) }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }); if (!item || item.eliminado_en) throw new NotFoundException('Producto no encontrado'); return serializeBigInts(await mapProductoResponse(this.prisma, item)); }

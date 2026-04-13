@@ -34,8 +34,8 @@ export default function ProductosAdmin() {
     const fetchProductos = async () => {
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/productos`);
+            if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
-            console.log("Primer producto:", data[0]); // 👈 revisa en la consola del navegador
 
             const formatted = data.map((p: any) => ({
                 ...p,
