@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Loader2, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
@@ -90,6 +90,9 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
   const { user: authUser, refreshAuth } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [photoPreview, setPhotoPreview] = useState("");
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [form, setForm] = useState<UserData>({
     nombre: "",
     apellido_paterno: "",
@@ -113,12 +116,24 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
         moneda_preferida: (authUser as unknown as UserData).moneda_preferida || "MXN",
         foto_url: (authUser as unknown as UserData).foto_url || "",
       });
+      setPhotoPreview((authUser as unknown as UserData).foto_url || "");
+      setSelectedPhoto(null);
     }
   }, [isOpen, authUser]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setSelectedPhoto(file);
+    setPhotoPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,7 +148,13 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
         return;
       }
 
-      await api.usuarios.update(token, authUser?.id_usuario as string, {
+      const userId = authUser?.id_usuario || authUser?.sub;
+      if (!userId) {
+        setError("No se encontró el usuario actual");
+        return;
+      }
+
+      let updatedUser = await api.usuarios.update(token, userId, {
         nombre: form.nombre,
         apellido_paterno: form.apellido_paterno || null,
         apellido_materno: form.apellido_materno || null,
@@ -143,21 +164,18 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
         foto_url: form.foto_url || null,
       });
 
-      const usuarioStr = getCookie("usuario");
-      if (usuarioStr) {
-        const usuario = JSON.parse(usuarioStr);
-        const updatedUsuario = {
-          ...usuario,
-          nombre: form.nombre,
-          apellido_paterno: form.apellido_paterno || null,
-          apellido_materno: form.apellido_materno || null,
-          telefono: form.telefono || null,
-          idioma_preferido: form.idioma_preferido,
-          moneda_preferida: form.moneda_preferida,
-          foto_url: form.foto_url || null,
-        };
-        setCookie("usuario", JSON.stringify(updatedUsuario), 7);
+      if (selectedPhoto) {
+        const photoData = new FormData();
+        photoData.append("foto", selectedPhoto);
+        updatedUser = await api.usuarios.uploadPhoto(token, userId, photoData);
       }
+
+      const usuarioStr = getCookie("usuario");
+      const updatedUsuario = {
+        ...(usuarioStr ? JSON.parse(usuarioStr) : {}),
+        ...updatedUser,
+      };
+      setCookie("usuario", JSON.stringify(updatedUsuario), 7);
 
       refreshAuth();
       onSuccess?.();
@@ -182,21 +200,30 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-4 sm:flex-row">
             <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-dark-3">
-              {form.foto_url ? (
-                <img src={form.foto_url} alt="Foto de perfil" className="h-20 w-20 rounded-full object-cover" />
+              {photoPreview ? (
+                <img src={photoPreview} alt="Foto de perfil" className="h-20 w-20 rounded-full object-cover" />
               ) : (
                 <User className="h-10 w-10 text-gray-400" />
               )}
             </div>
             <div className="w-full">
-              <Field label="URL de Foto">
-                <Input
-                  type="url"
-                  name="foto_url"
-                  value={form.foto_url}
-                  onChange={handleChange}
-                  placeholder="https://ejemplo.com/foto.jpg"
+              <Field label="Foto de Perfil">
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/png,image/jpg,image/jpeg,image/webp"
+                  className="sr-only"
+                  onChange={handlePhotoChange}
                 />
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-stroke px-4 py-3 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-dark-3 dark:text-white dark:hover:bg-white/10"
+                >
+                  <User className="h-4 w-4" />
+                  {photoPreview ? "Cambiar foto" : "Subir foto"}
+                </button>
+                <p className="mt-2 text-xs text-gray-400">Si no tienes foto guardada, se mostrará un placeholder neutral.</p>
               </Field>
             </div>
           </div>

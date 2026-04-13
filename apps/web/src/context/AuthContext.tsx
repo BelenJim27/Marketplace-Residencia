@@ -21,6 +21,10 @@ interface Usuario {
   nombre: string;
   apellido_paterno?: string;
   apellido_materno?: string;
+  telefono?: string | null;
+  foto_url?: string | null;
+  idioma_preferido?: string;
+  moneda_preferida?: string;
   roles: string[];
   permisos?: string[];
 }
@@ -47,13 +51,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Si hay sesión de NextAuth, usarla
     if (session?.user) {
       console.log("📋 Usando sesión de NextAuth", session.user.email);
+      let storedUser: Partial<Usuario> = {};
+
+      const usuarioStr = getCookie("usuario");
+      if (usuarioStr) {
+        try {
+          storedUser = JSON.parse(usuarioStr);
+        } catch {
+          storedUser = {};
+        }
+      }
+
       setUser({
-        sub: session.user.id || "",
+        ...storedUser,
+        id_usuario: session.user.id_usuario || session.user.id || storedUser.id_usuario,
+        sub: session.user.id || storedUser.sub || "",
         email: session.user.email || "",
-        nombre: session.user.name || "Usuario",
-        roles: [(session.user as any)?.role || "user"],
-        permisos: [],
-        id_productor: null,
+        nombre: session.user.nombre || session.user.name || storedUser.nombre || "Usuario",
+        apellido_paterno: session.user.apellido_paterno ?? storedUser.apellido_paterno,
+        apellido_materno: session.user.apellido_materno ?? storedUser.apellido_materno,
+        telefono: session.user.telefono ?? storedUser.telefono ?? null,
+        foto_url: session.user.foto_url ?? session.user.image ?? storedUser.foto_url ?? null,
+        idioma_preferido: session.user.idioma_preferido || storedUser.idioma_preferido || "es",
+        moneda_preferida: session.user.moneda_preferida || storedUser.moneda_preferida || "MXN",
+        roles: session.user.roles || storedUser.roles || [(session.user as any)?.role || "user"],
+        permisos: session.user.permisos || storedUser.permisos || [],
+        id_productor: session.user.id_productor ?? storedUser.id_productor ?? null,
       });
       setLoading(false);
       return;

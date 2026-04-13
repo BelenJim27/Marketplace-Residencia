@@ -15,7 +15,7 @@ export class UsuariosService {
       include: { usuario_rol: { include: { roles: true } } },
       orderBy: { fecha_registro: 'desc' },
     });
-    return serializeBigInts(items);
+    return sanitizeUserResponse(serializeBigInts(items));
   }
 
   async findOne(id_usuario: string) {
@@ -24,7 +24,7 @@ export class UsuariosService {
       include: { usuario_rol: { include: { roles: true } } },
     });
     if (!item || item.eliminado_en) throw new NotFoundException('Usuario no encontrado');
-    return serializeBigInts(item);
+    return sanitizeUserResponse(serializeBigInts(item));
   }
 
   async create(dto: CreateUsuarioDto) {
@@ -45,7 +45,7 @@ export class UsuariosService {
     };
 
     const user = await this.prisma.usuarios.create({ data });
-    return serializeBigInts(user);
+    return sanitizeUserResponse(serializeBigInts(user));
   }
 
   async update(id_usuario: string, dto: UpdateUsuarioDto) {
@@ -75,7 +75,7 @@ export class UsuariosService {
       }),
     });
 
-    return serializeBigInts(user);
+    return sanitizeUserResponse(serializeBigInts(user));
   }
 
   async remove(id_usuario: string) {
@@ -95,7 +95,7 @@ export class UsuariosService {
       data: { revocado_en: new Date() },
     });
 
-    return serializeBigInts(updated);
+    return sanitizeUserResponse(serializeBigInts(updated));
   }
 
   async addRole(id_usuario: string, id_rol: number) {
@@ -131,6 +131,19 @@ export class UsuariosService {
 
 function clean<T extends Record<string, unknown>>(value: T): Partial<T> {
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
+
+function sanitizeUserResponse<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeUserResponse(item)) as T;
+  }
+
+  if (value && typeof value === 'object') {
+    const { password_hash, ...rest } = value as Record<string, unknown>;
+    return rest as T;
+  }
+
+  return value;
 }
 
 function hashPassword(password: string): Promise<string> {

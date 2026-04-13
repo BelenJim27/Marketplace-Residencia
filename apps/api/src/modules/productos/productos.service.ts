@@ -20,24 +20,26 @@ export class ProductosService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(id_productor?: number, filtros?: FiltrosProducto) {
-    const where: Prisma.productosWhereInput = { eliminado_en: null };
+  const where: Prisma.productosWhereInput = { eliminado_en: null };
 
-    if (id_productor) {
-      const stores = await this.prisma.tiendas.findMany({ where: { id_productor, eliminado_en: null }, select: { id_tienda: true } });
-      const ids = stores.map((store) => store.id_tienda);
-      return serializeBigInts(
-        mapProductoResponse(
-          await this.prisma.productos.findMany({ where: { eliminado_en: null, id_tienda: { in: ids } }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }),
-        ),
-      );
-    }
-
+  if (id_productor) {
+    const stores = await this.prisma.tiendas.findMany({ where: { id_productor, eliminado_en: null }, select: { id_tienda: true } });
+    const ids = stores.map((store) => store.id_tienda);
     return serializeBigInts(
-      mapProductoResponse(
-        await this.prisma.productos.findMany({ where: { eliminado_en: null }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }),
+      await mapProductoResponse(
+        this.prisma,
+        await this.prisma.productos.findMany({ where: { eliminado_en: null, id_tienda: { in: ids } }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }),
       ),
     );
   }
+
+  return serializeBigInts(
+    await mapProductoResponse(
+      this.prisma,
+      await this.prisma.productos.findMany({ where: { eliminado_en: null }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }),
+    ),
+  );
+}
   async findOne(id: string) { const item = await this.prisma.productos.findUnique({ where: { id_producto: toBigIntId(id) }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }); if (!item || item.eliminado_en) throw new NotFoundException('Producto no encontrado'); return serializeBigInts(await mapProductoResponse(this.prisma, item)); }
 
   async create(dto: CreateProductoDto) {

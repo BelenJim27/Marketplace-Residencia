@@ -8,8 +8,9 @@ import { CameraIcon } from "./_components/icons";
 import { SocialAccounts } from "./_components/social-accounts";
 import { ModalEditarPerfil } from "./_components/modal-editar-perfil";
 import { useAuth } from "@/context/AuthContext";
-import { getCookie } from "@/lib/cookies";
-import { PencilIcon } from "lucide-react";
+import { getCookie, setCookie } from "@/lib/cookies";
+import { PencilIcon, User } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface StoredUser {
   id_usuario?: string;
@@ -30,7 +31,7 @@ export default function Page() {
   const [user, setUser] = useState<StoredUser | null>(null);
   const [data, setData] = useState({
     name: "",
-    profilePhoto: "/images/user/user-03.png",
+    profilePhoto: "",
     coverPhoto: "/images/cover/cover-01.png",
     email: "",
     phone: "",
@@ -43,7 +44,7 @@ export default function Page() {
       setUser(authUser as unknown as StoredUser);
       setData({
         name: authUser.nombre || "",
-        profilePhoto: (authUser as unknown as StoredUser).foto_url || "/images/user/user-03.png",
+        profilePhoto: (authUser as unknown as StoredUser).foto_url || "",
         coverPhoto: "/images/cover/cover-01.png",
         email: authUser.email || "",
         phone: (authUser as unknown as StoredUser).telefono || "",
@@ -58,7 +59,7 @@ export default function Page() {
           setUser(storedUser);
           setData({
             name: storedUser.nombre || "",
-            profilePhoto: storedUser.foto_url || "/images/user/user-03.png",
+            profilePhoto: storedUser.foto_url || "",
             coverPhoto: "/images/cover/cover-01.png",
             email: storedUser.email || "",
             phone: storedUser.telefono || "",
@@ -72,17 +73,48 @@ export default function Page() {
     }
   }, [authUser]);
 
+  useEffect(() => {
+    const token = getCookie("token");
+    if (!token) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadProfile = async () => {
+      try {
+        const profile = await api.auth.getProfile(token);
+        if (cancelled) {
+          return;
+        }
+
+        setUser(profile as StoredUser);
+        setCookie("usuario", JSON.stringify(profile), 7);
+        setData((prev) => ({
+          ...prev,
+          name: profile.nombre || "",
+          profilePhoto: profile.foto_url || "",
+          email: profile.email || "",
+          phone: profile.telefono || "",
+          idioma: profile.idioma_preferido || "es",
+          moneda: profile.moneda_preferida || "MXN",
+        }));
+      } catch (error) {
+        console.error("Error loading profile:", error);
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.id_usuario]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleChange = (e: any) => {
-    if (e.target.name === "profilePhoto") {
-      const file = e.target?.files[0];
-
-      setData({
-        ...data,
-        profilePhoto: file && URL.createObjectURL(file),
-      });
-    } else if (e.target.name === "coverPhoto") {
+    if (e.target.name === "coverPhoto") {
       const file = e.target?.files[0];
 
       setData({
@@ -104,6 +136,12 @@ export default function Page() {
   ]
     .filter(Boolean)
     .join(" ");
+
+  const initials = [data.name, user?.apellido_paterno]
+    .filter(Boolean)
+    .map((part) => part?.trim().charAt(0).toUpperCase())
+    .join("")
+    .slice(0, 2);
 
   return (
     <div className="mx-auto w-full max-w-[970px] px-2 sm:px-4">
@@ -145,33 +183,30 @@ export default function Page() {
         <div className="px-4 pb-6 text-center lg:pb-8 xl:pb-11.5">
           <div className="relative z-30 mx-auto -mt-22 h-30 w-full max-w-30 rounded-full bg-white/20 p-1 backdrop-blur sm:h-44 sm:max-w-[176px] sm:p-3">
             <div className="relative drop-shadow-2">
-              {data?.profilePhoto && (
+              {data.profilePhoto ? (
                 <>
                   <Image
-                    src={data?.profilePhoto}
+                    src={data.profilePhoto}
                     width={160}
                     height={160}
-                    className="overflow-hidden rounded-full"
+                    className="overflow-hidden rounded-full object-cover"
                     alt="profile"
                   />
-
-                  <label
-                    htmlFor="profilePhoto"
-                    className="absolute bottom-0 right-0 flex size-8.5 cursor-pointer items-center justify-center rounded-full bg-primary text-white hover:bg-opacity-90 sm:bottom-2 sm:right-2"
-                  >
-                    <CameraIcon />
-
-                    <input
-                      type="file"
-                      name="profilePhoto"
-                      id="profilePhoto"
-                      className="sr-only"
-                      onChange={handleChange}
-                      accept="image/png, image/jpg, image/jpeg"
-                    />
-                  </label>
                 </>
+              ) : (
+                <div className="flex h-30 w-30 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-dark-3 dark:text-gray-400 sm:h-44 sm:w-44">
+                  {initials ? <span className="text-3xl font-bold sm:text-5xl">{initials}</span> : <User className="h-12 w-12 sm:h-16 sm:w-16" />}
+                </div>
               )}
+
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="absolute bottom-0 right-0 flex size-8.5 items-center justify-center rounded-full bg-primary text-white hover:bg-opacity-90 sm:bottom-2 sm:right-2"
+                aria-label="Cambiar foto de perfil"
+              >
+                <CameraIcon />
+              </button>
             </div>
           </div>
           <div className="mt-4">
@@ -244,7 +279,7 @@ export default function Page() {
               setUser(storedUser);
               setData({
                 name: storedUser.nombre || "",
-                profilePhoto: storedUser.foto_url || "/images/user/user-03.png",
+                profilePhoto: storedUser.foto_url || "",
                 coverPhoto: "/images/cover/cover-01.png",
                 email: storedUser.email || "",
                 phone: storedUser.telefono || "",

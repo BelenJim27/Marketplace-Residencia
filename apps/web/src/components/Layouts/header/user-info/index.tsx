@@ -23,6 +23,7 @@ export function UserInfo() {
   const user = session?.user || contextUser;
   const userName = session?.user?.name || contextUser?.nombre || "Usuario";
   const userEmail = session?.user?.email || contextUser?.email || "correo@ejemplo.com";
+  const userPhoto = contextUser?.foto_url || session?.user?.foto_url || session?.user?.image || null;
 
   const handleLogout = async () => {
     setIsOpen(false);
@@ -42,7 +43,7 @@ export function UserInfo() {
 
         <figure className="flex items-center gap-3">
           <Image
-            src={session?.user?.image || "/images/user/user-03.png"}
+            src={userPhoto || "/images/user/user-03.png"}
             className="size-12"
             alt={`Avatar of ${userName}`}
             role="presentation"
@@ -72,7 +73,7 @@ export function UserInfo() {
 
         <figure className="flex items-center gap-2.5 px-5 py-3.5">
           <Image
-            src={session?.user?.image || "/images/user/user-03.png"}
+            src={userPhoto || "/images/user/user-03.png"}
             className="size-12"
             alt={`Avatar for ${userName}`}
             role="presentation"

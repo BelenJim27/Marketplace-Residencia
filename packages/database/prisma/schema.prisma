@@ -507,6 +507,7 @@ model productos {
   carrito_item                                 carrito_item[]
   detalle_pedido                               detalle_pedido[]
   inventario                                   inventario[]
+  lista_deseos                                 ListaDeseosItem[]
   producto_categoria                           producto_categoria[]
   producto_imagenes                            producto_imagenes[]
   usuarios_productos_actualizado_porTousuarios usuarios?            @relation("productos_actualizado_porTousuarios", fields: [actualizado_por], references: [id_usuario], onUpdate: NoAction)

@@ -43,10 +43,18 @@ export class OAuthService {
         data: {
           acceso_token: profile.accesoToken,
           refresco_token: profile.refrescoToken,
+          foto_url: profile.fotoUrl,
           expira_en: profile.expiraEn,
           actualizado_en: new Date(),
         },
       });
+
+      if (profile.fotoUrl && !existingAccount.usuarios?.foto_url) {
+        await this.prisma.usuarios.update({
+          where: { id_usuario: existingAccount.id_usuario },
+          data: { foto_url: profile.fotoUrl },
+        });
+      }
 
       return existingAccount.id_usuario;
     }
@@ -58,6 +66,13 @@ export class OAuthService {
       : null;
 
     if (existingUserByEmail) {
+      if (profile.fotoUrl && !existingUserByEmail.foto_url) {
+        await this.prisma.usuarios.update({
+          where: { id_usuario: existingUserByEmail.id_usuario },
+          data: { foto_url: profile.fotoUrl },
+        });
+      }
+
       const newAccount = await this.prisma.oauth_cuentas.create({
         data: {
           id_usuario: existingUserByEmail.id_usuario,

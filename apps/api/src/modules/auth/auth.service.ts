@@ -264,6 +264,43 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
+  async getMe(accessToken: string): Promise<AuthUserDto> {
+    const payload = verifyJwt<AccessTokenPayload>(accessToken, ACCESS_TOKEN_SECRET);
+
+    if (payload.token_type !== 'access') {
+      throw new UnauthorizedException('Token inválido');
+    }
+
+    const freshUser = await this.prisma.usuarios.findUnique({
+      where: { id_usuario: payload.sub },
+    });
+
+    if (!freshUser || freshUser.eliminado_en) {
+      throw new UnauthorizedException('Usuario no encontrado o eliminado');
+    }
+
+    const accessData = await getAccessData(this.prisma, freshUser.id_usuario);
+
+    return {
+      id_usuario: freshUser.id_usuario,
+      nombre: freshUser.nombre,
+      email: freshUser.email,
+      apellido_paterno: freshUser.apellido_paterno,
+      apellido_materno: freshUser.apellido_materno,
+      telefono: freshUser.telefono,
+      foto_url: freshUser.foto_url,
+      google_id: freshUser.google_id,
+      idioma_preferido: freshUser.idioma_preferido,
+      moneda_preferida: freshUser.moneda_preferida,
+      version_token: freshUser.version_token,
+      fecha_registro: freshUser.fecha_registro,
+      eliminado_en: freshUser.eliminado_en,
+      roles: accessData.roles,
+      permisos: accessData.permisos,
+      id_productor: accessData.id_productor,
+    };
+  }
+
   private async issueTokens(user: usuarios): Promise<AuthResponseDto> {
     const freshUser = await this.prisma.usuarios.findUnique({
       where: { id_usuario: user.id_usuario },

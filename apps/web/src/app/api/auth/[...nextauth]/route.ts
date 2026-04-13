@@ -2,7 +2,10 @@ import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 
+const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "");
+
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
@@ -30,7 +33,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+          const response = await fetch(`${apiBaseUrl}/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -46,9 +49,20 @@ export const authOptions: NextAuthOptions = {
           const data = await response.json();
           return {
             id: String(data.user.id_usuario),
+            id_usuario: String(data.user.id_usuario),
             email: data.user.email,
             name: data.user.nombre,
             image: data.user.foto_url,
+            nombre: data.user.nombre,
+            apellido_paterno: data.user.apellido_paterno,
+            apellido_materno: data.user.apellido_materno,
+            telefono: data.user.telefono,
+            foto_url: data.user.foto_url,
+            idioma_preferido: data.user.idioma_preferido,
+            moneda_preferida: data.user.moneda_preferida,
+            roles: data.user.roles,
+            permisos: data.user.permisos,
+            id_productor: data.user.id_productor,
             accessToken: data.tokens.access_token,
             refreshToken: data.tokens.refresh_token,
           };
@@ -82,19 +96,19 @@ export const authOptions: NextAuthOptions = {
         console.log("🔵 Processing Google OAuth...");
         try {
           // Llamar al backend para registrar/autenticar el usuario de Google
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/oauth/google`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              access_token: account.access_token,
-              refresh_token: account.refresh_token,
-              email: user.email,
-              nombre: user.name,
-              fotoUrl: user.image,
-            }),
-          });
+          const response = await fetch(`${apiBaseUrl}/auth/oauth/google`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                access_token: account.access_token,
+                refresh_token: account.refresh_token,
+                email: user.email,
+                nombre: user.name,
+                fotoUrl: user.image,
+              }),
+            });
 
           console.log("📊 Backend response status:", response.status);
 
@@ -108,8 +122,20 @@ export const authOptions: NextAuthOptions = {
             token.accessToken = data.tokens.access_token;
             token.refreshToken = data.tokens.refresh_token;
             token.id = data.user.id_usuario;
+            token.id_usuario = data.user.id_usuario;
             token.email = user.email;
             token.name = user.name;
+            token.picture = data.user.foto_url || user.image;
+            token.nombre = data.user.nombre;
+            token.apellido_paterno = data.user.apellido_paterno;
+            token.apellido_materno = data.user.apellido_materno;
+            token.telefono = data.user.telefono;
+            token.foto_url = data.user.foto_url;
+            token.idioma_preferido = data.user.idioma_preferido;
+            token.moneda_preferida = data.user.moneda_preferida;
+            token.roles = data.user.roles;
+            token.permisos = data.user.permisos;
+            token.id_productor = data.user.id_productor;
             
             console.log("✅ Token actualizado con datos de backend");
             return token;
@@ -119,6 +145,7 @@ export const authOptions: NextAuthOptions = {
             token.email = user.email;
             token.name = user.name;
             token.id = user.id;
+            token.picture = user.image;
             return token;
           }
         } catch (err) {
@@ -127,6 +154,7 @@ export const authOptions: NextAuthOptions = {
           token.email = user.email;
           token.name = user.name;
           token.id = user.id;
+          token.picture = user.image;
           return token;
         }
       }
@@ -135,8 +163,20 @@ export const authOptions: NextAuthOptions = {
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
         token.id = user.id;
+        token.id_usuario = user.id_usuario || user.id;
         token.email = user.email;
         token.name = user.name;
+        token.picture = user.foto_url || user.image;
+        token.nombre = user.nombre || user.name;
+        token.apellido_paterno = user.apellido_paterno;
+        token.apellido_materno = user.apellido_materno;
+        token.telefono = user.telefono;
+        token.foto_url = user.foto_url;
+        token.idioma_preferido = user.idioma_preferido;
+        token.moneda_preferida = user.moneda_preferida;
+        token.roles = user.roles;
+        token.permisos = user.permisos;
+        token.id_productor = user.id_productor;
       }
       
       return token;
@@ -151,8 +191,20 @@ export const authOptions: NextAuthOptions = {
         session.accessToken = token.accessToken;
         session.refreshToken = token.refreshToken;
         session.user.id = token.id || token.sub;
+        session.user.id_usuario = token.id_usuario || token.id || token.sub;
         session.user.email = token.email;
-        session.user.name = token.name;
+        session.user.name = token.nombre || token.name;
+        session.user.image = token.foto_url || token.picture || null;
+        session.user.nombre = token.nombre || token.name;
+        session.user.apellido_paterno = token.apellido_paterno;
+        session.user.apellido_materno = token.apellido_materno;
+        session.user.telefono = token.telefono;
+        session.user.foto_url = token.foto_url || token.picture || null;
+        session.user.idioma_preferido = token.idioma_preferido;
+        session.user.moneda_preferida = token.moneda_preferida;
+        session.user.roles = token.roles;
+        session.user.permisos = token.permisos;
+        session.user.id_productor = token.id_productor;
       }
       
       console.log("✅ Session retornada:", { 

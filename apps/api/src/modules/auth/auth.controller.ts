@@ -1,4 +1,4 @@
-import { Body, Controller, Ip, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Ip, Post, UnauthorizedException } from '@nestjs/common';
 import {
   LoginAuthDto,
   LogoutAuthDto,
@@ -21,6 +21,16 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginAuthDto) {
     return this.authService.login(dto);
+  }
+
+  @Get('me')
+  me(@Headers('authorization') authorization?: string) {
+    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
+    if (!token) {
+      throw new UnauthorizedException('Token requerido');
+    }
+
+    return this.authService.getMe(token);
   }
 
   @Post('refresh')

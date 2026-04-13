@@ -60,7 +60,7 @@ export const api = {
         body: JSON.stringify({ token, password }),
       }),
     getProfile: (token: string) =>
-      fetchJson(endpoint("/usuarios/me"), { headers: headers(token) }),
+      fetchJson(endpoint("/auth/me"), { headers: headers(token) }),
     validateToken: (token: string) =>
       fetchJson(endpoint("/auth/refresh"), {
         method: "POST",
@@ -323,6 +323,8 @@ export const api = {
     getOne: (id: string) => fetchJson(endpoint(`/usuarios/${id}`)),
     update: (token: string, id: string, data: any) =>
       fetchJson(endpoint(`/usuarios/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
+    uploadPhoto: (token: string, id: string, data: FormData) =>
+      fetchJson(endpoint(`/usuarios/${id}/foto`), { method: "PATCH", headers: headers(token, true), body: data }),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/usuarios"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     delete: (token: string, id: string) =>
