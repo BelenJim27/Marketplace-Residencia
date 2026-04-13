@@ -352,6 +352,18 @@ export const api = {
   configuracion: {
     getSistema: () => fetchJson(endpoint("/configuracion/sistema")),
     getTasas: () => fetchJson(endpoint("/configuracion/tasas")),
+    updateSistema: (token: string, id: number, data: any) =>
+      fetchJson(endpoint(`/configuracion/sistema/${id}`), {
+        method: "PATCH",
+        headers: headers(token),
+        body: JSON.stringify(data),
+      }),
+    createSistema: (token: string, data: any) =>
+      fetchJson(endpoint("/configuracion/sistema"), {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify(data),
+      }),
   },
 
   archivos: {

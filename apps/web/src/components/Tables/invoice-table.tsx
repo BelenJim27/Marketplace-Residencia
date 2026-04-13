@@ -1,3 +1,5 @@
+"use client";
+
 import { TrashIcon } from "@/assets/icons";
 import {
   Table,
@@ -9,11 +11,33 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
-import { getInvoiceTableData } from "./fetch";
 import { DownloadIcon, PreviewIcon } from "./icons";
+import { Pagination } from "@/components/ui/pagination";
+import { useState } from "react";
 
-export async function InvoiceTable() {
-  const data = await getInvoiceTableData();
+const DATA = [
+  { name: "Free package", price: 0.0, date: "2023-01-13T18:00:00.000Z", status: "Paid" },
+  { name: "Standard Package", price: 59.0, date: "2023-01-13T18:00:00.000Z", status: "Paid" },
+  { name: "Business Package", price: 99.0, date: "2023-01-13T18:00:00.000Z", status: "Unpaid" },
+  { name: "Standard Package", price: 59.0, date: "2023-01-13T18:00:00.000Z", status: "Pending" },
+  { name: "Premium Package", price: 149.0, date: "2023-01-14T18:00:00.000Z", status: "Paid" },
+  { name: "Basic Package", price: 29.0, date: "2023-01-15T18:00:00.000Z", status: "Pending" },
+  { name: "Enterprise Package", price: 299.0, date: "2023-01-16T18:00:00.000Z", status: "Paid" },
+  { name: "Starter Package", price: 19.0, date: "2023-01-17T18:00:00.000Z", status: "Unpaid" },
+  { name: "Pro Package", price: 79.0, date: "2023-01-18T18:00:00.000Z", status: "Paid" },
+  { name: "Team Package", price: 199.0, date: "2023-01-19T18:00:00.000Z", status: "Pending" },
+];
+
+const ITEMS_PER_PAGE = 5;
+
+export function InvoiceTable() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(DATA.length / ITEMS_PER_PAGE);
+
+  const paginatedData = DATA.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="rounded-[10px] border border-stroke bg-white p-4 shadow-1 dark:border-dark-3 dark:bg-gray-dark dark:shadow-card sm:p-7.5">
@@ -28,12 +52,12 @@ export async function InvoiceTable() {
         </TableHeader>
 
         <TableBody>
-          {data.map((item, index) => (
+          {paginatedData.map((item, index) => (
             <TableRow key={index} className="border-[#eee] dark:border-dark-3">
               <TableCell className="min-w-[155px] xl:pl-7.5">
                 <h5 className="text-dark dark:text-white">{item.name}</h5>
                 <p className="mt-[3px] text-body-sm font-medium">
-                  ${item.price}
+                  ${item.price.toFixed(2)}
                 </p>
               </TableCell>
 
@@ -83,6 +107,18 @@ export async function InvoiceTable() {
           ))}
         </TableBody>
       </Table>
+
+      <div className="mt-4 flex items-center justify-between">
+        <div className="text-sm text-gray-500">
+          Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} a{" "}
+          {Math.min(currentPage * ITEMS_PER_PAGE, DATA.length)} de {DATA.length} resultados
+        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      </div>
     </div>
   );
 }

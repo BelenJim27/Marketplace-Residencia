@@ -47,8 +47,12 @@ export function Sidebar() {
       )}
 
       <aside
+          style={{ 
+            borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)", 
+            backgroundColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.08)" 
+          }}
           className={cn(
-            "border-r border-green-100 bg-green-100 transition-all duration-300 ease-linear overflow-hidden h-screen sticky top-0 dark:border-gray-800 dark:bg-gray-900",
+            "border-r transition-all duration-300 ease-linear overflow-hidden h-screen sticky top-0 dark:border-gray-800 dark:bg-gray-900",
             isMobile 
               ? isOpen 
                 ? "translate-x-0 fixed bottom-0 top-0 left-0 z-50 w-[280px] max-w-[85vw]" 

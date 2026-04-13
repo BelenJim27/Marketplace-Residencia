@@ -294,6 +294,25 @@ model lotes {
   productos        productos[]
 }
 
+model ListaDeseosItem {
+  id_item         BigInt    @id @default(autoincrement())
+  id_usuario      String    @db.Uuid
+  id_producto     BigInt
+  precio_snapshot Decimal?  @db.Decimal(12, 2)
+  moneda_snapshot String?   @default("MXN") @db.Char(3)
+  nota            String?
+  fecha_agregado  DateTime  @default(now()) @db.Timestamptz
+
+  // Relaciones
+  usuario  usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+  producto productos @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade)
+
+  @@unique([id_usuario, id_producto])
+  @@index([id_usuario], name: "idx_lista_deseos_usuario")
+  @@index([id_producto], name: "idx_lista_deseos_producto")
+  @@map("lista_deseos_item")
+}
+
 model monedas {
   codigo         String           @id @db.Char(3)
   nombre         String           @db.VarChar(100)
@@ -662,6 +681,7 @@ model usuarios {
   archivos                                      archivos[]
   auditoria                                     auditoria[]
   carrito_item                                  carrito_item[]
+  lista_deseos                                  ListaDeseosItem[]
   direcciones                                   direcciones[]
   envio_cotizaciones                            envio_cotizaciones[]
   movimientos_inventario                        movimientos_inventario[]

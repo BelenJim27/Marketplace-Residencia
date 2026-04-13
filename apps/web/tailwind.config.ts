@@ -18,9 +18,11 @@ const config: Config = {
         current: "currentColor",
         transparent: "transparent",
         white: "#FFFFFF",
-        primary: "#5750F1",
+        primary: "var(--color-primary, #5750F1)",
         stroke: "#E6EBF1",
         "stroke-dark": "#27303E",
+        secondary: "var(--color-secondary, #8b5cf6)",
+        accent: "var(--color-accent, #10b981)",
         tierra: {
           50: "#F7F5F2",
           100: "#EDE8E0",

@@ -276,14 +276,14 @@ export function ProductosGrid() {
                     src={producto.producto_imagenes[0].url}
                     alt={producto.nombre}
                     fill
-                    size="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"                    className="object-cover"
                   />
                 ) : producto.imagen_principal_url ? (
                   <Image
                     src={producto.imagen_principal_url}
                     alt={producto.nombre}
                     fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                     className="object-cover"
                   />
                 ) : (

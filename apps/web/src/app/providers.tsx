@@ -2,6 +2,7 @@
 
 import { SidebarProvider } from "@/components/Layouts/sidebar/sidebar-context";
 import { AuthProvider } from "@/context/AuthContext";
+import { ConfigProvider } from "@/context/ConfigContext";
 import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 
@@ -10,9 +11,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <SessionProvider>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         <AuthProvider>
-          <SidebarProvider>
-            {children}
-          </SidebarProvider>
+          <ConfigProvider>
+            <SidebarProvider>
+              {children}
+            </SidebarProvider>
+          </ConfigProvider>
         </AuthProvider>
       </ThemeProvider>
     </SessionProvider>

@@ -19,12 +19,18 @@ export function Header() {
   const showLogo = isClient;
 
 return (
-    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-green-200 bg-green-100 px-3 py-3 shadow-1 dark:border-gray-700 dark:bg-gray-900 md:px-5 md:py-5 2xl:px-10">
+    <header 
+      style={{ 
+        borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)", 
+        backgroundColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.08)" 
+      }} 
+      className="sticky top-0 z-30 flex items-center justify-between border-b px-3 py-3 shadow-1 dark:border-gray-700 dark:bg-gray-900 md:px-5 md:py-5 2xl:px-10">
       
       {/* BOTÓN MENU HAMBURGUESA */}
       <button
         onClick={toggleSidebar}
-        className="rounded-lg border border-green-200 p-1.5 hover:bg-green-200 dark:border-gray-700 dark:hover:bg-gray-800 lg:hidden"
+        style={{ borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)" }}
+        className="rounded-lg border p-1.5 hover:opacity-80 dark:border-gray-700 dark:hover:bg-gray-800 lg:hidden"
         aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
       >
         {isOpen ? <CloseIcon /> : <MenuIcon />}
@@ -68,14 +74,15 @@ return (
           <input
             type="search"
             placeholder="Buscar productos..."
-            className="flex w-full items-center gap-3.5 rounded-full border border-green-200 bg-white py-2 md:py-3 pl-[40px] md:pl-[53px] pr-3 md:pr-5 text-sm md:text-base outline-none focus:border-green-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+            style={{ borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)" }}
+            className="flex w-full items-center gap-3.5 rounded-full border bg-white py-2 md:py-3 pl-[40px] md:pl-[53px] pr-3 md:pr-5 text-sm md:text-base outline-none focus:border-[var(--color-primary)] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
           />
 
           <SearchIcon className="pointer-events-none absolute left-3 md:left-5 top-1/2 -translate-y-1/2" />
         </div>
 
         {/* Icono buscar visible solo en tablet/md */}
-        <button className="md:hidden p-2 rounded-lg border border-green-200 hover:bg-green-200 dark:border-gray-700 dark:hover:bg-gray-800">
+        <button style={{ borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)" }} className="md:hidden p-2 rounded-lg border hover:opacity-80 dark:border-gray-700 dark:hover:bg-gray-800">
           <SearchIcon className="size-5" />
         </button>
 
