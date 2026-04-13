@@ -7,7 +7,7 @@ import {
   DropdownTrigger,
 } from "@/components/ui/dropdown";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
+import { getMediaUrl } from "@/lib/media";
 import Link from "next/link";
 import { useState } from "react";
 import { LogOutIcon, SettingsIcon, UserIcon } from "./icons";
@@ -42,13 +42,11 @@ export function UserInfo() {
         <span className="sr-only">My Account</span>
 
         <figure className="flex items-center gap-3">
-          <Image
-            src={userPhoto || "/images/user/user-03.png"}
-            className="size-12"
+          <img
+            src={getMediaUrl(userPhoto) || "/images/user/user-03.png"}
+            className="size-12 rounded-full object-cover object-center"
             alt={`Avatar of ${userName}`}
             role="presentation"
-            width={200}
-            height={200}
           />
           <figcaption className="flex items-center gap-1 font-medium text-dark dark:text-dark-6 max-[1024px]:sr-only">
             <span>{userName}</span>
@@ -72,13 +70,11 @@ export function UserInfo() {
         <h2 className="sr-only">User information</h2>
 
         <figure className="flex items-center gap-2.5 px-5 py-3.5">
-          <Image
-            src={userPhoto || "/images/user/user-03.png"}
-            className="size-12"
+          <img
+            src={getMediaUrl(userPhoto) || "/images/user/user-03.png"}
+            className="size-12 rounded-full object-cover object-center"
             alt={`Avatar for ${userName}`}
             role="presentation"
-            width={200}
-            height={200}
           />
 
           <figcaption className="space-y-1 text-base font-medium">

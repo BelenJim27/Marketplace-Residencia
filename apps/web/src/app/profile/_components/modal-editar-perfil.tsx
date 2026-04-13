@@ -5,6 +5,7 @@ import { X, Loader2, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie, setCookie } from "@/lib/cookies";
+import { getMediaUrl } from "@/lib/media";
 
 interface ModalEditarPerfilProps {
   isOpen: boolean;
@@ -154,7 +155,7 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
         return;
       }
 
-      let updatedUser = await api.usuarios.update(token, userId, {
+      let updatedUser = (await api.usuarios.update(token, userId, {
         nombre: form.nombre,
         apellido_paterno: form.apellido_paterno || null,
         apellido_materno: form.apellido_materno || null,
@@ -162,17 +163,18 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
         idioma_preferido: form.idioma_preferido,
         moneda_preferida: form.moneda_preferida,
         foto_url: form.foto_url || null,
-      });
+      })) as Record<string, unknown>;
 
       if (selectedPhoto) {
         const photoData = new FormData();
         photoData.append("foto", selectedPhoto);
-        updatedUser = await api.usuarios.uploadPhoto(token, userId, photoData);
+        updatedUser = (await api.usuarios.uploadPhoto(token, userId, photoData)) as Record<string, unknown>;
       }
 
       const usuarioStr = getCookie("usuario");
+      const currentUsuario = usuarioStr ? (JSON.parse(usuarioStr) as Record<string, unknown>) : {};
       const updatedUsuario = {
-        ...(usuarioStr ? JSON.parse(usuarioStr) : {}),
+        ...currentUsuario,
         ...updatedUser,
       };
       setCookie("usuario", JSON.stringify(updatedUsuario), 7);
@@ -199,9 +201,9 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
 
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-4 sm:flex-row">
-            <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-dark-3">
+            <div className="relative flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 dark:bg-dark-3">
               {photoPreview ? (
-                <img src={photoPreview} alt="Foto de perfil" className="h-20 w-20 rounded-full object-cover" />
+                <img src={getMediaUrl(photoPreview)} alt="Foto de perfil" className="h-full w-full object-cover object-center" />
               ) : (
                 <User className="h-10 w-10 text-gray-400" />
               )}

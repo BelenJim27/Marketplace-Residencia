@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getCookie, setCookie } from "@/lib/cookies";
 import { PencilIcon, User } from "lucide-react";
 import { api } from "@/lib/api";
+import { getMediaUrl } from "@/lib/media";
 
 interface StoredUser {
   id_usuario?: string;
@@ -83,7 +84,7 @@ export default function Page() {
 
     const loadProfile = async () => {
       try {
-        const profile = await api.auth.getProfile(token);
+        const profile = (await api.auth.getProfile(token)) as StoredUser;
         if (cancelled) {
           return;
         }
@@ -181,18 +182,14 @@ export default function Page() {
           </div>
         </div>
         <div className="px-4 pb-6 text-center lg:pb-8 xl:pb-11.5">
-          <div className="relative z-30 mx-auto -mt-22 h-30 w-full max-w-30 rounded-full bg-white/20 p-1 backdrop-blur sm:h-44 sm:max-w-[176px] sm:p-3">
-            <div className="relative drop-shadow-2">
+          <div className="relative z-30 mx-auto -mt-22 h-30 w-30 rounded-full bg-white/20 p-1 backdrop-blur sm:h-44 sm:w-44 sm:p-3">
+            <div className="relative h-full w-full overflow-hidden rounded-full drop-shadow-2">
               {data.profilePhoto ? (
-                <>
-                  <Image
-                    src={data.profilePhoto}
-                    width={160}
-                    height={160}
-                    className="overflow-hidden rounded-full object-cover"
-                    alt="profile"
-                  />
-                </>
+                <img
+                  src={getMediaUrl(data.profilePhoto)}
+                  alt="profile"
+                  className="h-full w-full object-cover object-center"
+                />
               ) : (
                 <div className="flex h-30 w-30 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-dark-3 dark:text-gray-400 sm:h-44 sm:w-44">
                   {initials ? <span className="text-3xl font-bold sm:text-5xl">{initials}</span> : <User className="h-12 w-12 sm:h-16 sm:w-16" />}

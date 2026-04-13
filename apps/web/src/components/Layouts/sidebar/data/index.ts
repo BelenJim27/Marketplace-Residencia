@@ -1,5 +1,5 @@
 import * as Icons from "../icons";
-import { Award, BarChart3, Boxes, ClipboardList, FileBarChart, FileCheck, FileText, FolderOpen, Image, Key, Layers, LayoutDashboard, Lock, Package, Settings, ShoppingCart, Store, UserCog, UserRound, Users, Shield, ShieldCheck, BadgeDollarSign } from "lucide-react";
+import { Award, BarChart3, Boxes, ClipboardList, FileBarChart, FileCheck, FileText, FolderOpen, Key, Layers, LayoutDashboard, Lock, Package, Settings, ShoppingCart, Store, UserCog, UserRound, Users, Shield, ShieldCheck, BadgeDollarSign } from "lucide-react";
 import type { ComponentType } from "react";
 
 type SidebarIcon = ComponentType<{ className?: string }>;
@@ -53,15 +53,14 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
       { title: "Productos", url: "/dashboard/productor/productos", icon: Package },
       { title: "Lotes", url: "/dashboard/productor/lotes", icon: Layers },
       { title: "Ventas", url: "/dashboard/productor/ventas", icon: BadgeDollarSign },
-      { title: "Perfil", url: "/profile", icon: UserRound },
       {
         title: "Archivos",
         icon: FolderOpen,
         children: [
           { title: "NOM-070", url: "/dashboard/productor/archivos/nom070", icon: FileText },
-          { title: "Galería", url: "/dashboard/productor/archivos/galeria", icon: Image },
         ],
       },
+      { title: "Perfil", url: "/profile", icon: UserRound },
     ],
   },
 ];
