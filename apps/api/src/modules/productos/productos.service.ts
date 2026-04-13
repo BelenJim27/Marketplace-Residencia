@@ -12,20 +12,26 @@ export class ProductosService {
     if (id_productor) {
       const stores = await this.prisma.tiendas.findMany({ where: { id_productor, eliminado_en: null }, select: { id_tienda: true } });
       const ids = stores.map((store) => store.id_tienda);
+      const products = await this.prisma.productos.findMany({
+        where: { eliminado_en: null, id_tienda: { in: ids } },
+        include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } },
+      });
+
       return serializeBigInts(
-        mapProductoResponse(
-          await this.prisma.productos.findMany({ where: { eliminado_en: null, id_tienda: { in: ids } }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }),
-        ),
+        await mapProductoResponse(this.prisma, products),
       );
     }
 
+    const products = await this.prisma.productos.findMany({
+      where: { eliminado_en: null },
+      include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } },
+    });
+
     return serializeBigInts(
-      mapProductoResponse(
-        await this.prisma.productos.findMany({ where: { eliminado_en: null }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }),
-      ),
+      await mapProductoResponse(this.prisma, products),
     );
   }
-  async findOne(id: string) { const item = await this.prisma.productos.findUnique({ where: { id_producto: toBigIntId(id) }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }); if (!item || item.eliminado_en) throw new NotFoundException('Producto no encontrado'); return serializeBigInts(mapProductoResponse(item)); }
+  async findOne(id: string) { const item = await this.prisma.productos.findUnique({ where: { id_producto: toBigIntId(id) }, include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } } }); if (!item || item.eliminado_en) throw new NotFoundException('Producto no encontrado'); return serializeBigInts(await mapProductoResponse(this.prisma, item)); }
 
   async create(dto: CreateProductoDto) {
     const created = await this.prisma.productos.create({
@@ -54,7 +60,7 @@ export class ProductosService {
       include: { producto_imagenes: true, producto_categoria: { include: { categorias: true } } },
     });
 
-    return serializeBigInts(mapProductoResponse(created));
+    return serializeBigInts(await mapProductoResponse(this.prisma, created));
   }
 
   async update(id: string, dto: UpdateProductoDto) {
@@ -94,24 +100,51 @@ export class ProductosService {
       await this.prisma.producto_imagenes.createMany({ data: dto.imagenes.map((item: { url: string; orden?: number; es_principal?: boolean; alt_text?: string }, index: number) => ({ id_producto, url: item.url.trim(), orden: item.orden ?? index, es_principal: item.es_principal ?? index === 0, alt_text: item.alt_text ?? null })) });
     }
 
-    return serializeBigInts(mapProductoResponse(updated));
+    return serializeBigInts(await mapProductoResponse(this.prisma, updated));
   }
 
   async remove(id: string) {
     const id_producto = toBigIntId(id);
     const current = await this.prisma.productos.findUnique({ where: { id_producto } });
     if (!current || current.eliminado_en) throw new NotFoundException('Producto no encontrado');
-    return serializeBigInts(mapProductoResponse(await this.prisma.productos.update({ where: { id_producto }, data: { eliminado_en: new Date() } })));
+    return serializeBigInts(await mapProductoResponse(this.prisma, await this.prisma.productos.update({ where: { id_producto }, data: { eliminado_en: new Date() } })));
   }
 }
 
-function mapProductoResponse<T extends { imagen_principal_url?: string | null } | Array<{ imagen_principal_url?: string | null }>>(data: T): T {
+async function mapProductoResponse<T extends { id_producto?: bigint | number; imagen_principal_url?: string | null } | Array<{ id_producto?: bigint | number; imagen_principal_url?: string | null }>>(
+  prisma: PrismaService,
+  data: T,
+): Promise<T> {
+  const items = Array.isArray(data) ? data : [data];
+  const productIds = items
+    .map((item) => item.id_producto)
+    .filter((value): value is bigint | number => value !== undefined);
+
+  const inventoryByProduct = new Map<bigint | number, number>();
+
+  if (productIds.length > 0) {
+    const inventoryRows = await prisma.inventario.groupBy({
+      by: ['id_producto'],
+      where: { id_producto: { in: productIds as bigint[] } },
+      _sum: { stock: true },
+    });
+
+    inventoryRows.forEach((row) => {
+      inventoryByProduct.set(row.id_producto, row._sum.stock ?? 0);
+    });
+  }
+
   if (Array.isArray(data)) {
-    return data.map((item) => ({ ...item, imagen_url: item.imagen_principal_url ?? null })) as unknown as T;
+    return data.map((item) => ({
+      ...item,
+      imagen_url: item.imagen_principal_url ?? null,
+      stock: inventoryByProduct.get(item.id_producto ?? 0) ?? 0,
+    })) as unknown as T;
   }
 
   return {
     ...data,
     imagen_url: data.imagen_principal_url ?? null,
+    stock: inventoryByProduct.get(data.id_producto ?? 0) ?? 0,
   } as T;
 }
