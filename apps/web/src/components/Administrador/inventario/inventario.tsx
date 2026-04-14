@@ -1,139 +1,389 @@
-// components/InventarioUI.tsx
-export default function InventarioUI() {
-  return (
-    <div className="bg-gray-100 min-h-screen w-full">
-      {/* Contenedor principal: Sin padding lateral máximo para abarcar todo el ancho gris */}
-      <div className="w-full py-6">
-        
-        {/* HEADER: Con padding interno para que el texto no toque el borde de la ventana */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 px-4 sm:px-6">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Gestión de Inventarios</h1>
-            <p className="text-gray-500 text-sm mt-0.5">
-              Administra el stock y existencias de mezcales
-            </p>
-          </div>
+"use client";
 
-          <button className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95 w-full sm:w-auto">
-            + Nuevo Producto
+import { Edit2, Eye, Search, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+type InventarioSummary = {
+  productos_activos: number;
+  productos_inactivos: number;
+  total_productos: number;
+  total_productores: number;
+};
+
+type InventarioItem = {
+  id_producto: string;
+  nombre_producto: string;
+  productor: string;
+  region: string;
+  stock: number;
+  status: string;
+};
+
+type InventarioResponse = {
+  summary: InventarioSummary;
+  items: InventarioItem[];
+};
+
+type Notice = {
+  type: "error" | "success";
+  message: string;
+};
+
+const EMPTY_SUMMARY: InventarioSummary = {
+  productos_activos: 0,
+  productos_inactivos: 0,
+  total_productos: 0,
+  total_productores: 0,
+};
+
+export default function InventarioUI() {
+  const [query, setQuery] = useState("");
+  const [productFilter, setProductFilter] = useState("");
+  const [producerFilter, setProducerFilter] = useState("");
+  const [regionFilter, setRegionFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [summary, setSummary] = useState<InventarioSummary>(EMPTY_SUMMARY);
+  const [items, setItems] = useState<InventarioItem[]>([]);
+
+  useEffect(() => {
+    async function loadInventario() {
+      setLoading(true);
+
+      try {
+        const response = await fetch("/api/inventario", { cache: "no-store" });
+        const data = (await response
+          .json()
+          .catch(() => null)) as InventarioResponse | null;
+
+        if (!response.ok || !data) {
+          throw new Error(
+            data && "message" in data
+              ? String((data as { message?: string }).message || "")
+              : "No fue posible cargar el inventario.",
+          );
+        }
+
+        setSummary(data.summary ?? EMPTY_SUMMARY);
+        setItems(Array.isArray(data.items) ? data.items : []);
+      } catch (error) {
+        setNotice({
+          type: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "No fue posible cargar el inventario.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadInventario();
+  }, []);
+
+  const filteredItems = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return items.filter((item) => {
+      const matchesQuery =
+        !normalized ||
+        [item.nombre_producto, item.productor].some((value) =>
+          value.toLowerCase().includes(normalized),
+        );
+      const matchesProduct =
+        !productFilter || item.nombre_producto === productFilter;
+      const matchesProducer =
+        !producerFilter || item.productor === producerFilter;
+      const matchesRegion = !regionFilter || item.region === regionFilter;
+      const matchesStatus = !statusFilter || item.status === statusFilter;
+
+      return (
+        matchesQuery &&
+        matchesProduct &&
+        matchesProducer &&
+        matchesRegion &&
+        matchesStatus
+      );
+    });
+  }, [items, productFilter, producerFilter, query, regionFilter, statusFilter]);
+
+  const productOptions = useMemo(
+    () => [...new Set(items.map((item) => item.nombre_producto))].sort(),
+    [items],
+  );
+
+  const producerOptions = useMemo(
+    () => [...new Set(items.map((item) => item.productor))].sort(),
+    [items],
+  );
+
+  const regionOptions = useMemo(
+    () => [...new Set(items.map((item) => item.region))].sort(),
+    [items],
+  );
+
+  const cards = [
+    {
+      label: "Productos Activos",
+      value: summary.productos_activos,
+      color: "text-green-600",
+    },
+    {
+      label: "Productos Inactivos",
+      value: summary.productos_inactivos,
+      color: "text-amber-500",
+    },
+    {
+      label: "Total Productos",
+      value: summary.total_productos,
+      color: "text-slate-800",
+    },
+    {
+      label: "Total Productores",
+      value: summary.total_productores,
+      color: "text-blue-600",
+    },
+  ];
+
+  function clearFilters() {
+    setQuery("");
+    setProductFilter("");
+    setProducerFilter("");
+    setRegionFilter("");
+    setStatusFilter("");
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-800">
+            Gestión de Inventarios
+          </h1>
+          <p className="mt-0.5 text-sm text-gray-500">
+            Administra el stock real de productos y productores.
+          </p>
+        </div>
+      </div>
+
+      {notice ? (
+        <div
+          className={`rounded-2xl border px-4 py-3 text-sm ${notice.type === "success" ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}
+        >
+          {notice.message}
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {cards.map((item) => (
+          <div
+            key={item.label}
+            className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+          >
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              {item.label}
+            </p>
+            <h2 className={`mt-1 text-2xl font-black ${item.color}`}>
+              {item.value}
+            </h2>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar por nombre de producto o productor..."
+            className="w-full rounded-xl border border-gray-100 bg-gray-50 py-3 pl-12 pr-4 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+          />
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+          <select
+            value={productFilter}
+            onChange={(event) => setProductFilter(event.target.value)}
+            className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-slate-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+          >
+            <option value="">Todos los productos</option>
+            {productOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={producerFilter}
+            onChange={(event) => setProducerFilter(event.target.value)}
+            className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-slate-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+          >
+            <option value="">Todos los productores</option>
+            {producerOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={regionFilter}
+            onChange={(event) => setRegionFilter(event.target.value)}
+            className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-slate-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+          >
+            <option value="">Todas las regiones</option>
+            {regionOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-slate-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+          >
+            <option value="">Cualquier estado</option>
+            <option value="ACTIVO">Activo</option>
+            <option value="INACTIVO">Inactivo</option>
+          </select>
+
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+          >
+            Limpiar filtros
           </button>
         </div>
+      </div>
 
-        {/* CARDS: Grid de 5 columnas con padding lateral */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8 px-6">
-          {[
-            { label: "Productos activos", value: 18, color: "text-slate-800" },
-            { label: "Agotados", value: 3, color: "text-red-600" },
-            { label: "Borradores", value: 5, color: "text-gray-400" },
-            { label: "Artesanales", value: 12, color: "text-slate-800" },
-            { label: "Ancestrales", value: 6, color: "text-slate-800" },
-          ].map((item, i) => (
-            <div
-              key={i}
-              className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-center"
-            >
-              <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">{item.label}</p>
-              <h2 className={`text-3xl font-black mt-1 ${item.color}`}>{item.value}</h2>
-            </div>
-          ))}
-        </div>
-
-        {/* FILTROS: Ocupando el ancho disponible con padding lateral */}
-        <div className="flex flex-wrap gap-3 items-center mb-6 px-6">
-          <div className="flex-grow min-w-[300px]">
-            <input
-              placeholder="Buscar mezcal o maestro..."
-              className="w-full border border-gray-200 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-white"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <select className="border border-gray-200 p-2.5 rounded-xl bg-white text-sm text-gray-600 outline-none focus:border-green-500">
-              <option>Tipo: Todos</option>
-            </select>
-
-            <select className="border border-gray-200 p-2.5 rounded-xl bg-white text-sm text-gray-600 outline-none focus:border-green-500">
-              <option>Agave: Todos</option>
-            </select>
-
-            <button className="border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-medium bg-white hover:bg-gray-50 transition-colors">
-              Otros filtros
-            </button>
-
-            <button className="border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-medium bg-white hover:bg-gray-50 transition-colors text-gray-600">
-              Exportar CSV
-            </button>
-          </div>
-        </div>
-
-        {/* TABLA: Edge-to-Edge (Borde a Borde) */}
-        <div className="bg-white border-y border-gray-200 w-full overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead className="bg-gray-50/50 text-gray-400 text-[10px] font-bold uppercase tracking-widest border-b border-gray-100">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] text-left">
+            <thead className="bg-gray-50 text-[11px] font-bold uppercase tracking-wider text-gray-400">
               <tr>
-                <th className="py-4 px-6">Producto</th>
-                <th className="py-4 px-6">Maestro & Tipo</th>
-                <th className="py-4 px-6">Precio</th>
-                <th className="py-4 px-6 w-1/4">Stock</th>
-                <th className="py-4 px-6 text-right">Estado</th>
+                <th className="p-4">ID</th>
+                <th className="p-4">Nombre Producto</th>
+                <th className="p-4">Productor</th>
+                <th className="p-4">Región</th>
+                <th className="p-4 text-center">Stock</th>
+                <th className="p-4 text-center">Status</th>
+                <th className="p-4 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {/* FILA 1 */}
-              <tr className="hover:bg-gray-50/50 transition-colors group">
-                <td className="py-4 px-6">
-                  <p className="font-bold text-sm text-slate-800 group-hover:text-green-700 transition-colors">Mezcal Espadín Joven</p>
-                  <p className="text-xs text-gray-400">750ml · Santiago Matatlán</p>
-                </td>
-                <td className="py-4 px-6">
-                  <p className="text-sm text-slate-700">Beto Valenzuela</p>
-                  <span className="text-green-600 text-[9px] font-black tracking-tighter bg-green-50 px-1.5 py-0.5 rounded">ARTESANAL</span>
-                </td>
-                <td className="py-4 px-6 text-sm font-semibold text-slate-600">$850.00</td>
-                <td className="py-4 px-6">
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs font-bold text-slate-500 w-8">45 u.</span>
-                    <div className="flex-1 bg-gray-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-green-500 h-full rounded-full w-[80%]" />
-                    </div>
-                  </div>
-                </td>
-                <td className="py-4 px-6 text-right">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 uppercase">
-                    ● Activo
-                  </span>
-                </td>
-              </tr>
-
-              {/* FILA 2 */}
-              <tr className="hover:bg-gray-50/50 transition-colors group border-t border-gray-50">
-                <td className="py-4 px-6">
-                  <p className="font-bold text-sm text-slate-800 group-hover:text-green-700 transition-colors">Mezcal Tobalá</p>
-                  <p className="text-xs text-gray-400">750ml · Santa Catarina Minas</p>
-                </td>
-                <td className="py-4 px-6">
-                  <p className="text-sm text-slate-700">Lalo Ángeles</p>
-                  <span className="text-orange-500 text-[9px] font-black tracking-tighter bg-orange-50 px-1.5 py-0.5 rounded">ANCESTRAL</span>
-                </td>
-                <td className="py-4 px-6 text-sm font-semibold text-slate-600">$1,420.00</td>
-                <td className="py-4 px-6">
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs font-bold text-slate-500 w-8">5 u.</span>
-                    <div className="flex-1 bg-gray-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-yellow-500 h-full rounded-full w-[15%]" />
-                    </div>
-                  </div>
-                </td>
-                <td className="py-4 px-6 text-right">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 uppercase">
-                    ● Bajo Stock
-                  </span>
-                </td>
-              </tr>
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="p-10 text-center text-sm text-gray-500"
+                  >
+                    Cargando inventario...
+                  </td>
+                </tr>
+              ) : filteredItems.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="p-10 text-center text-sm text-gray-500"
+                  >
+                    No hay productos para mostrar.
+                  </td>
+                </tr>
+              ) : (
+                filteredItems.map((item) => (
+                  <tr
+                    key={item.id_producto}
+                    className="group transition-colors hover:bg-gray-50/60"
+                  >
+                    <td className="p-4 font-mono text-xs text-gray-400">
+                      #PRD-{item.id_producto}
+                    </td>
+                    <td className="p-4 font-semibold text-slate-800">
+                      {item.nombre_producto}
+                    </td>
+                    <td className="p-4 text-sm text-slate-600">
+                      {item.productor}
+                    </td>
+                    <td className="p-4 text-sm text-slate-600">
+                      {item.region}
+                    </td>
+                    <td className="p-4 text-center text-sm font-semibold">
+                      <span
+                        className={
+                          item.stock <= 5 ? "text-red-600" : "text-slate-700"
+                        }
+                      >
+                        {item.stock}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <StatusBadge status={item.status} />
+                    </td>
+                    <td className="p-4">
+                      <div className="flex justify-end gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+                        <ActionButton label="Ver">
+                          <Eye className="h-4 w-4" />
+                        </ActionButton>
+                        <ActionButton label="Editar">
+                          <Edit2 className="h-4 w-4" />
+                        </ActionButton>
+                        <ActionButton label="Eliminar" danger>
+                          <Trash2 className="h-4 w-4" />
+                        </ActionButton>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const normalized = status.toUpperCase();
+  const className =
+    normalized === "ACTIVO"
+      ? "bg-green-50 text-green-700 border-green-100"
+      : normalized === "INACTIVO"
+        ? "bg-gray-100 text-gray-600 border-gray-200"
+        : "bg-amber-50 text-amber-700 border-amber-100";
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${className}`}
+    >
+      {normalized}
+    </span>
+  );
+}
+
+function ActionButton({
+  children,
+  label,
+  danger = false,
+}: {
+  children: ReactNode;
+  label: string;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      className={`rounded-lg p-2 transition-colors ${danger ? "text-slate-400 hover:bg-red-50 hover:text-red-600" : "text-slate-400 hover:bg-green-50 hover:text-green-700"}`}
+    >
+      {children}
+    </button>
   );
 }

@@ -7,19 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model almacenes {
-  id_almacen   BigInt       @id @default(autoincrement())
-  nombre       String       @db.VarChar(150)
-  ubicacion    Json         @default("{}")
-  pais_iso2    String?      @db.Char(2)
-  activo       Boolean      @default(true)
-  creado_en    DateTime     @default(now()) @db.Timestamptz(6)
-  eliminado_en DateTime?    @db.Timestamptz(6)
-  inventario   inventario[]
-
-  @@index([ubicacion], map: "idx_almacenes_ubicacion", type: Gin)
-}
-
 model archivos {
   id_archivo   BigInt    @id @default(autoincrement())
   entidad_tipo String    @db.VarChar(30)
@@ -67,20 +54,19 @@ model carrito_item {
 }
 
 model categorias {
-  id_categoria       Int                  @id @default(autoincrement())
-  id_padre           Int?
-  nombre             String               @db.VarChar(150)
-  slug               String               @unique @db.VarChar(150)
-  descripcion        String?
-  tipo               String               @default("general") @db.VarChar(50)
-  orden              Int                  @default(0)
-  imagen_url         String?              @db.VarChar(500)
-  activo             Boolean              @default(true)
-  creado_en          DateTime             @default(now()) @db.Timestamptz(6)
-  categorias         categorias?          @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
-  other_categorias   categorias[]         @relation("categoriasTocategorias")
-  producto_categoria producto_categoria[]
-  tasas_impuesto     tasas_impuesto[]
+  id_categoria     Int              @id @default(autoincrement())
+  id_padre         Int?
+  nombre           String           @db.VarChar(150)
+  slug             String           @unique @db.VarChar(150)
+  descripcion      String?
+  tipo             String           @default("general") @db.VarChar(50)
+  orden            Int              @default(0)
+  imagen_url       String?          @db.VarChar(500)
+  activo           Boolean          @default(true)
+  creado_en        DateTime         @default(now()) @db.Timestamptz(6)
+  categorias       categorias?      @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
+  other_categorias categorias[]     @relation("categoriasTocategorias")
+  tasas_impuesto   tasas_impuesto[]
 
   @@index([id_padre], map: "idx_cat_padre")
 }
@@ -248,16 +234,12 @@ model integraciones_envio {
 model inventario {
   id_inventario          BigInt                   @id @default(autoincrement())
   id_producto            BigInt
-  id_almacen             BigInt
   stock                  Int                      @default(0)
   stock_minimo           Int                      @default(0)
   actualizado_en         DateTime                 @default(now()) @db.Timestamptz(6)
-  almacenes              almacenes                @relation(fields: [id_almacen], references: [id_almacen], onUpdate: NoAction)
   productos              productos                @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
   movimientos_inventario movimientos_inventario[]
 
-  @@unique([id_producto, id_almacen])
-  @@index([id_almacen], map: "idx_inventario_almacen")
   @@index([id_producto], map: "idx_inventario_producto")
 }
 
@@ -301,15 +283,13 @@ model ListaDeseosItem {
   precio_snapshot Decimal?  @db.Decimal(12, 2)
   moneda_snapshot String?   @default("MXN") @db.Char(3)
   nota            String?
-  fecha_agregado  DateTime  @default(now()) @db.Timestamptz
-
-  // Relaciones
-  usuario  usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
-  producto productos @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade)
+  fecha_agregado  DateTime  @default(now()) @db.Timestamptz(6)
+  producto        productos @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade)
+  usuario         usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
 
   @@unique([id_usuario, id_producto])
-  @@index([id_usuario], name: "idx_lista_deseos_usuario")
-  @@index([id_producto], name: "idx_lista_deseos_producto")
+  @@index([id_usuario], map: "idx_lista_deseos_usuario")
+  @@index([id_producto], map: "idx_lista_deseos_producto")
   @@map("lista_deseos_item")
 }
 
@@ -444,16 +424,6 @@ model permisos {
   rol_permiso  rol_permiso[]
 }
 
-model producto_categoria {
-  id_producto  BigInt
-  id_categoria Int
-  categorias   categorias @relation(fields: [id_categoria], references: [id_categoria], onDelete: Cascade, onUpdate: NoAction)
-  productos    productos  @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
-
-  @@id([id_producto, id_categoria])
-  @@index([id_categoria], map: "idx_prod_cat_categoria")
-}
-
 model producto_imagenes {
   id_imagen    BigInt    @id @default(autoincrement())
   id_producto  BigInt
@@ -484,37 +454,36 @@ model productores {
 }
 
 model productos {
-  id_producto                                  BigInt               @id @default(autoincrement())
+  id_producto                                  BigInt              @id @default(autoincrement())
   id_tienda                                    Int
   id_lote                                      Int?
-  nombre                                       String               @db.VarChar(200)
+  nombre                                       String              @db.VarChar(200)
   descripcion                                  String?
-  traducciones                                 Json                 @default("{}")
-  precio_base                                  Decimal              @db.Decimal(12, 2)
-  moneda_base                                  String               @default("MXN") @db.Char(3)
-  metadata                                     Json                 @default("{}")
-  peso_kg                                      Decimal?             @db.Decimal(8, 3)
-  alto_cm                                      Decimal?             @db.Decimal(8, 2)
-  ancho_cm                                     Decimal?             @db.Decimal(8, 2)
-  largo_cm                                     Decimal?             @db.Decimal(8, 2)
-  status                                       String               @default("activo") @db.VarChar(20)
-  creado_por                                   String?              @db.Uuid
-  actualizado_por                              String?              @db.Uuid
-  creado_en                                    DateTime             @default(now()) @db.Timestamptz(6)
-  actualizado_en                               DateTime             @default(now()) @db.Timestamptz(6)
-  eliminado_en                                 DateTime?            @db.Timestamptz(6)
-  imagen_principal_url                         String?              @db.VarChar(500)
+  traducciones                                 Json                @default("{}")
+  precio_base                                  Decimal             @db.Decimal(12, 2)
+  moneda_base                                  String              @default("MXN") @db.Char(3)
+  metadata                                     Json                @default("{}")
+  peso_kg                                      Decimal?            @db.Decimal(8, 3)
+  alto_cm                                      Decimal?            @db.Decimal(8, 2)
+  ancho_cm                                     Decimal?            @db.Decimal(8, 2)
+  largo_cm                                     Decimal?            @db.Decimal(8, 2)
+  status                                       String              @default("activo") @db.VarChar(20)
+  creado_por                                   String?             @db.Uuid
+  actualizado_por                              String?             @db.Uuid
+  creado_en                                    DateTime            @default(now()) @db.Timestamptz(6)
+  actualizado_en                               DateTime            @default(now()) @db.Timestamptz(6)
+  eliminado_en                                 DateTime?           @db.Timestamptz(6)
+  imagen_principal_url                         String?             @db.VarChar(500)
   carrito_item                                 carrito_item[]
   detalle_pedido                               detalle_pedido[]
   inventario                                   inventario[]
   lista_deseos                                 ListaDeseosItem[]
-  producto_categoria                           producto_categoria[]
   producto_imagenes                            producto_imagenes[]
-  usuarios_productos_actualizado_porTousuarios usuarios?            @relation("productos_actualizado_porTousuarios", fields: [actualizado_por], references: [id_usuario], onUpdate: NoAction)
-  usuarios_productos_creado_porTousuarios      usuarios?            @relation("productos_creado_porTousuarios", fields: [creado_por], references: [id_usuario], onUpdate: NoAction)
-  lotes                                        lotes?               @relation(fields: [id_lote], references: [id_lote], onUpdate: NoAction)
-  tiendas                                      tiendas              @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
-  monedas                                      monedas              @relation(fields: [moneda_base], references: [codigo], onUpdate: NoAction)
+  usuarios_productos_actualizado_porTousuarios usuarios?           @relation("productos_actualizado_porTousuarios", fields: [actualizado_por], references: [id_usuario], onUpdate: NoAction)
+  usuarios_productos_creado_porTousuarios      usuarios?           @relation("productos_creado_porTousuarios", fields: [creado_por], references: [id_usuario], onUpdate: NoAction)
+  lotes                                        lotes?              @relation(fields: [id_lote], references: [id_lote], onUpdate: NoAction)
+  tiendas                                      tiendas             @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
+  monedas                                      monedas             @relation(fields: [moneda_base], references: [codigo], onUpdate: NoAction)
   resenas                                      resenas[]
 
   @@index([metadata], map: "idx_productos_metadata", type: Gin)
@@ -666,7 +635,6 @@ model usuario_rol {
 
 model usuarios {
   id_usuario                                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  google_id                                     String?                  @unique @db.VarChar(255)
   nombre                                        String                   @db.VarChar(100)
   foto_url                                      String?                  @db.VarChar(500)
   apellido_paterno                              String?                  @db.VarChar(100)
@@ -682,9 +650,9 @@ model usuarios {
   archivos                                      archivos[]
   auditoria                                     auditoria[]
   carrito_item                                  carrito_item[]
-  lista_deseos                                  ListaDeseosItem[]
   direcciones                                   direcciones[]
   envio_cotizaciones                            envio_cotizaciones[]
+  lista_deseos                                  ListaDeseosItem[]
   movimientos_inventario                        movimientos_inventario[]
   notificaciones                                notificaciones[]
   oauth_cuentas                                 oauth_cuentas[]
