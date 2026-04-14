@@ -34,7 +34,7 @@ export class ProductosService {
             include: {
               productos: {
                 where: { eliminado_en: null },
-                include: { producto_imagenes: true },
+                include: productoInclude,
               },
             },
           },
@@ -58,7 +58,7 @@ export class ProductosService {
         await mapProductoResponse(
           await this.prisma.productos.findMany({
             where: { eliminado_en: null, id_tienda: { in: ids } },
-            include: { producto_imagenes: true },
+            include: productoInclude,
           }),
         ),
       );
@@ -68,12 +68,12 @@ export class ProductosService {
       await mapProductoResponse(
         await this.prisma.productos.findMany({
           where: { eliminado_en: null },
-          include: { producto_imagenes: true },
+          include: productoInclude,
         }),
       ),
     );
   }
-  async findOne(id: string) { const item = await this.prisma.productos.findUnique({ where: { id_producto: toBigIntId(id) }, include: { producto_imagenes: true } }); if (!item || item.eliminado_en) throw new NotFoundException('Producto no encontrado'); return serializeBigInts(mapProductoResponse(item)); }
+  async findOne(id: string) { const item = await this.prisma.productos.findUnique({ where: { id_producto: toBigIntId(id) }, include: productoInclude }); if (!item || item.eliminado_en) throw new NotFoundException('Producto no encontrado'); return serializeBigInts(mapProductoResponse(item)); }
 
   async create(dto: CreateProductoDto) {
     const created = await this.prisma.productos.create({
@@ -98,7 +98,7 @@ export class ProductosService {
           ? { create: dto.imagenes.map((item, index) => ({ url: item.url.trim(), orden: item.orden ?? index, es_principal: item.es_principal ?? index === 0, alt_text: item.alt_text ?? null })) }
           : undefined,
       },
-      include: { producto_imagenes: true },
+      include: productoInclude,
     });
 
     return serializeBigInts(mapProductoResponse(created));
@@ -129,7 +129,7 @@ export class ProductosService {
         actualizado_por: dto.actualizado_por,
         imagen_principal_url: dto.imagen_principal_url ?? dto.imagen_url,
       },
-      include: { producto_imagenes: true },
+      include: productoInclude,
     });
 
     if (dto.imagenes) {
@@ -144,19 +144,42 @@ export class ProductosService {
     const id_producto = toBigIntId(id);
     const current = await this.prisma.productos.findUnique({ where: { id_producto } });
     if (!current || current.eliminado_en) throw new NotFoundException('Producto no encontrado');
-    return serializeBigInts(mapProductoResponse(await this.prisma.productos.update({ where: { id_producto }, data: { eliminado_en: new Date() } })));
+    return serializeBigInts(mapProductoResponse(await this.prisma.productos.update({ where: { id_producto }, data: { eliminado_en: new Date() }, include: productoInclude })));
   }
 }
 
-function mapProductoResponse<T extends { imagen_principal_url?: string | null } | Array<{ imagen_principal_url?: string | null }>>(data: T): T {
+const productoInclude = {
+  producto_imagenes: true,
+  inventario: {
+    select: {
+      stock: true,
+    },
+  },
+} satisfies Prisma.productosInclude;
+
+type ProductoWithRelations = {
+  imagen_principal_url?: string | null;
+  inventario?: Array<{ stock?: number | null }>;
+};
+
+function mapProductoResponse<T extends ProductoWithRelations | Array<ProductoWithRelations>>(data: T): T {
   if (Array.isArray(data)) {
-    return data.map((item) => ({ ...item, imagen_url: item.imagen_principal_url ?? null })) as unknown as T;
+    return data.map((item) => ({
+      ...item,
+      imagen_url: item.imagen_principal_url ?? null,
+      stock: getProductoStock(item.inventario),
+    })) as unknown as T;
   }
 
   return {
     ...data,
     imagen_url: data.imagen_principal_url ?? null,
+    stock: getProductoStock(data.inventario),
   } as T;
+}
+
+function getProductoStock(inventario?: Array<{ stock?: number | null }>) {
+  return (inventario ?? []).reduce((total, item) => total + Number(item.stock ?? 0), 0);
 }
 
 function getUserIdFromAccessToken(token: string) {

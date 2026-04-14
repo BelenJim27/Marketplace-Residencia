@@ -15,7 +15,7 @@ import { getCookie, setCookie, removeCookie } from "@/lib/cookies";
 
 interface Usuario {
   id_usuario?: string;
-  id_productor?: number | null;
+  id_productor?: number | null | undefined;
   sub: string;
   email: string;
   nombre: string;
@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         moneda_preferida: storedUser.moneda_preferida || session.user.moneda_preferida || "MXN",
         roles: session.user.roles || storedUser.roles || [(session.user as any)?.role || "user"],
         permisos: session.user.permisos || storedUser.permisos || [],
-        id_productor: session.user.id_productor ?? storedUser.id_productor ?? null,
+        id_productor: session.user.id_productor ?? storedUser.id_productor ?? undefined,
       });
       setLoading(false);
       return;
@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...usuario,
           roles: Array.isArray(usuario.roles) ? usuario.roles : [],
           permisos: Array.isArray(usuario.permisos) ? usuario.permisos : [],
-          id_productor: usuario.id_productor ?? null,
+          id_productor: usuario.id_productor ?? undefined,
         });
       } catch {
         setUser(null);
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshAuth, session]);
 
   useEffect(() => {
-    if (!user?.id_usuario || user.id_productor != null) return;
+    if (!user?.id_usuario || (user.id_productor != null && user.id_productor !== 0)) return;
 
     let cancelled = false;
 

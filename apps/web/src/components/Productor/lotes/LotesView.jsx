@@ -1,62 +1,32 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { Trash2, Loader2 } from "lucide-react";
 import LotesAcciones from "./LotesAcciones";
-
-const INITIAL_LOTES = [
-  {
-    lote: "LOT-2024-001",
-    producto: "Mezcal Espadín",
-    cantidad: "500 L",
-    fecha: "2024-04-02",
-    estado: "Activo",
-    year: "2024",
-  },
-  {
-    lote: "LOT-2024-002",
-    producto: "Mezcal Tobalá",
-    cantidad: "320 L",
-    fecha: "2024-03-18",
-    estado: "En proceso",
-    year: "2024",
-  },
-  {
-    lote: "LOT-2023-014",
-    producto: "Mezcal Cuishe",
-    cantidad: "410 L",
-    fecha: "2023-11-27",
-    estado: "Finalizado",
-    year: "2023",
-  },
-  {
-    lote: "LOT-2022-009",
-    producto: "Mezcal Madrecuixe",
-    cantidad: "280 L",
-    fecha: "2022-08-09",
-    estado: "Rechazado",
-    year: "2022",
-  },
-];
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
 
 const statusStyles = {
   Activo: "bg-green-100 text-green-700",
   "En proceso": "bg-yellow-100 text-yellow-700",
   Finalizado: "bg-gray-100 text-gray-600",
   Rechazado: "bg-red-100 text-red-700",
+  vendido: "bg-blue-100 text-blue-700",
 };
 
 export default function LotesView() {
+  const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalVer, setModalVer] = useState(false);
   const [modalEditar, setModalEditar] = useState(false);
   const [modalEliminar, setModalEliminar] = useState(false);
   const [loteSeleccionado, setLoteSeleccionado] = useState(null);
-  const [loteOriginal, setLoteOriginal] = useState(null);
-  const [lotes, setLotes] = useState(INITIAL_LOTES);
+  const [lotes, setLotes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("Todos");
-  const [year, setYear] = useState("2024");
+  const [year, setYear] = useState(String(new Date().getFullYear()));
   const [form, setForm] = useState({
     lote: "",
     tipoProducto: "Mezcal Espadín",
@@ -65,6 +35,36 @@ export default function LotesView() {
     descripcion: "",
   });
 
+  const fetchLotes = useCallback(async () => {
+    if (!user?.id_productor) return;
+    try {
+      setLoading(true);
+      const data = await api.lotes.getByProductor(Number(user.id_productor));
+      // Filtrar los que no están eliminados y mapear campos
+      const mappedLotes = data
+        .filter((l) => !l.eliminado_en)
+        .map((l) => ({
+          id_lote: l.id_lote,
+          lote: l.codigo_lote,
+          producto: l.datos_api?.variedad || "Mezcal",
+          cantidad: `${l.volumen_total} L`,
+          fecha: l.fecha_produccion ? l.fecha_produccion.split("T")[0] : "-",
+          estado: l.estado_lote || "Activo",
+          year: l.fecha_produccion ? String(new Date(l.fecha_produccion).getFullYear()) : "-",
+          originalData: l,
+        }));
+      setLotes(mappedLotes);
+    } catch (error) {
+      console.error("Error fetching lotes:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id_productor]);
+
+  useEffect(() => {
+    fetchLotes();
+  }, [fetchLotes]);
+
   const filteredLotes = useMemo(() => {
     return lotes.filter((item) => {
       const matchesSearch = `${item.lote} ${item.producto}`.toLowerCase().includes(search.toLowerCase());
@@ -72,11 +72,88 @@ export default function LotesView() {
       const matchesYear = !year || item.year === year;
       return matchesSearch && matchesStatus && matchesYear;
     });
-  }, [search, status, year]);
+  }, [lotes, search, status, year]);
 
   function abrirVer(lote) {
     setLoteSeleccionado(lote);
     setModalVer(true);
+  }
+
+  function abrirEditar(lote) {
+    setLoteSeleccionado(lote);
+    setForm({
+      lote: lote.lote,
+      tipoProducto: lote.producto,
+      cantidad: parseFloat(lote.cantidad) || "",
+      fechaProduccion: lote.fecha,
+      descripcion: lote.originalData?.datos_api?.descripcion || "",
+    });
+    setModalEditar(true);
+  }
+
+  function abrirEliminar(lote) {
+    setLoteSeleccionado(lote);
+    setModalEliminar(true);
+  }
+
+  function cerrarModales() {
+    setIsModalOpen(false);
+    setModalVer(false);
+    setModalEditar(false);
+    setModalEliminar(false);
+    setLoteSeleccionado(null);
+  }
+
+  async function guardarLote(event) {
+    event.preventDefault();
+    if (!user?.id_productor) return;
+
+    const token = getCookie("token");
+    const payload = {
+      id_productor: Number(user.id_productor),
+      codigo_lote: form.lote,
+      volumen_total: Number(form.cantidad),
+      fecha_produccion: form.fechaProduccion,
+      estado_lote: modalEditar ? loteSeleccionado.estado : "Activo",
+      datos_api: {
+        variedad: form.tipoProducto,
+        descripcion: form.descripcion,
+      },
+    };
+
+    try {
+      if (modalEditar && loteSeleccionado) {
+        await api.lotes.update(token, loteSeleccionado.id_lote, payload);
+      } else {
+        await api.lotes.create(token, payload);
+      }
+      fetchLotes();
+      cerrarModales();
+    } catch (error) {
+      console.error("Error saving lote:", error);
+      alert("Error al guardar el lote");
+    }
+  }
+
+  async function confirmarEliminar() {
+    if (!loteSeleccionado) return;
+    const token = getCookie("token");
+    try {
+      await api.lotes.delete(token, loteSeleccionado.id_lote);
+      fetchLotes();
+      cerrarModales();
+    } catch (error) {
+      console.error("Error deleting lote:", error);
+      alert("Error al eliminar el lote");
+    }
+  }
+
+  if (loading && lotes.length === 0) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-green-500" />
+      </div>
+    );
   }
 
   function abrirEditar(lote) {
@@ -162,7 +239,7 @@ export default function LotesView() {
 
         <div className="mb-6 grid gap-4 rounded-xl bg-white dark:bg-gray-800 p-6 shadow-sm lg:grid-cols-[1.5fr_1fr_1fr]">
           <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">🔍</span>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></span>
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -208,13 +285,13 @@ export default function LotesView() {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
               {filteredLotes.map((item) => (
-                <tr key={item.lote} className="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700">
+                <tr key={item.id_lote || item.lote} className="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 text-sm font-medium text-gray-800 dark:text-gray-200">{item.lote}</td>
                   <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-200">{item.producto}</td>
                   <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-200">{item.cantidad}</td>
                   <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-200">{item.fecha}</td>
                   <td className="px-6 py-4">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[item.estado]}`}>{item.estado}</span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[item.estado] || "bg-gray-100 text-gray-600"}`}>{item.estado}</span>
                   </td>
                   <td className="px-6 py-4">
                     <LotesAcciones lote={item} onVer={abrirVer} onEditar={abrirEditar} onEliminar={abrirEliminar} />
@@ -238,7 +315,7 @@ export default function LotesView() {
         ) : null}
 
         {modalVer && loteSeleccionado ? (
-          <DetalleLoteModal lote={loteSeleccionado} onClose={cerrarModales} />
+          <DetalleLoteModal lote={loteSeleccionado} onClose={cerrarModales} statusStyles={statusStyles} />
         ) : null}
 
         {modalEditar && loteSeleccionado ? (
@@ -317,7 +394,7 @@ function ModalLote({ title, subtitle, onClose, onSubmit, form, setForm, footerAc
   );
 }
 
-function DetalleLoteModal({ lote, onClose }) {
+function DetalleLoteModal({ lote, onClose, statusStyles }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl transition-all duration-200 ease-out dark:bg-gray-800 dark:text-gray-100" onClick={(event) => event.stopPropagation()}>
@@ -335,9 +412,21 @@ function DetalleLoteModal({ lote, onClose }) {
           <Info label="Fecha de registro" value={lote.fecha} />
           <div>
             <p className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Estado</p>
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[lote.estado]}`}>{lote.estado}</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[lote.estado] || "bg-gray-100 text-gray-600"}`}>{lote.estado}</span>
           </div>
         </div>
+
+        {lote.originalData?.sitio && (
+          <div className="mt-4">
+            <Info label="Sitio de producción" value={lote.originalData.sitio} />
+          </div>
+        )}
+
+        {lote.originalData?.datos_api?.descripcion && (
+          <div className="mt-4">
+            <Info label="Descripción" value={lote.originalData.datos_api.descripcion} />
+          </div>
+        )}
 
         <div className="mt-6 flex justify-end">
           <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">Cerrar</button>

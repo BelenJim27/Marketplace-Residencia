@@ -187,7 +187,7 @@ export function ProductorDashboard() {
           Dashboard Productor
         </h1>
         <p className="text-gray-500 dark:text-gray-200">
-          Panel de Maestro Mezcalero con acceso limitado
+          Panel de Maestro Mezcalero
         </p>
       </div>
 
