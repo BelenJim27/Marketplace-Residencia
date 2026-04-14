@@ -87,4 +87,10 @@ export class RolesService {
     const item = await this.prisma.permisos.findUnique({ where: { id_permiso } });
     if (!item || item.eliminado_en) throw new NotFoundException('Permiso no encontrado');
   }
+
+  async getPermisosByRole(id_rol: number) {
+    const role = await this.prisma.roles.findUnique({ where: { id_rol }, include: { rol_permiso: { include: { permisos: true } } } });
+    if (!role || role.eliminado_en) throw new NotFoundException('Rol no encontrado');
+    return serializeBigInts(role.rol_permiso.map(rp => rp.permisos));
+  }
 }

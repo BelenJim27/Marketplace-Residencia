@@ -43,11 +43,22 @@ interface WishlistContextType {
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-const STORAGE_KEY = "wishlist_items";
+const STORAGE_KEY_PREFIX = "wishlist_items";
+
+function getStorageKey(): string {
+  try {
+    const usuario = getCookie("usuario");
+    const usuarioId = usuario ? JSON.parse(usuario).id_usuario || "guest" : "guest";
+    return `${STORAGE_KEY_PREFIX}_${usuarioId}`;
+  } catch {
+    return `${STORAGE_KEY_PREFIX}_guest`;
+  }
+}
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const getUsuarioId = (): string | null => {
     try {
@@ -69,24 +80,46 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         setItems(data as WishlistItem[]);
       } catch (e) {
         console.error("Error loading wishlist from API:", e);
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(getStorageKey());
         if (stored) setItems(JSON.parse(stored));
       }
     } else {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(getStorageKey());
       if (stored) setItems(JSON.parse(stored));
     }
   }, []);
 
   useEffect(() => {
     setMounted(true);
+    try {
+      const usuario = getCookie("usuario");
+      const usuarioId = usuario ? JSON.parse(usuario).id_usuario || "guest" : "guest";
+      setCurrentUserId(usuarioId);
+    } catch {}
     cargarWishlist();
   }, [cargarWishlist]);
+
+  // Detectar cambio de usuario y recargar wishlist
+  useEffect(() => {
+    try {
+      const usuario = getCookie("usuario");
+      const usuarioId = usuario ? JSON.parse(usuario).id_usuario || "guest" : "guest";
+      
+      if (usuarioId !== currentUserId) {
+        console.log(`🔄 Wishlist: cambio de usuario ${currentUserId} → ${usuarioId}`);
+        setCurrentUserId(usuarioId);
+        cargarWishlist();
+      }
+    } catch (e) {
+      console.error("Error detecting user change:", e);
+    }
+  }, [currentUserId, cargarWishlist]);
 
   useEffect(() => {
     if (!mounted) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      const storageKey = getStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify(items));
     } catch (e) {
       console.error("Error saving wishlist:", e);
     }

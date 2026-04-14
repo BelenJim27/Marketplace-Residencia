@@ -59,13 +59,7 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         url: "/Administrador/auditoria",
         icon: FileBarChart,
       },
-      { title: "Roles", url: "/Administrador/roles", icon: Shield },
-      { title: "Permisos", url: "/Administrador/permisos", icon: Key },
-      {
-        title: "Usuarios-Roles",
-        url: "/Administrador/usuarios-roles",
-        icon: UserCog,
-      },
+      {title: "Roles y pemisos", url: "/Administrador/roles-permisos", icon: UserCog},
       {
         title: "Productores",
         url: "/Administrador/tienda/productores",
@@ -124,7 +118,7 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
           },
         ],
       },
-      { title: "Perfil", url: "/profile", icon: UserRound },
+      
     ],
   },
 ];

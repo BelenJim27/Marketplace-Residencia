@@ -9,6 +9,7 @@ import {
   useMemo,
   ReactNode,
 } from "react";
+import { getCookie } from "@/lib/cookies";
 
 export interface ProductoCarrito {
   id_producto: number | bigint;
@@ -35,32 +36,71 @@ interface CarritoContextType {
 
 const CarritoContext = createContext<CarritoContextType | undefined>(undefined);
 
-const STORAGE_KEY = "carrito_items";
+const STORAGE_KEY_PREFIX = "carrito_items";
+
+function getStorageKey(): string {
+  try {
+    const usuario = getCookie("usuario");
+    const usuarioId = usuario ? JSON.parse(usuario).id_usuario || "guest" : "guest";
+    return `${STORAGE_KEY_PREFIX}_${usuarioId}`;
+  } catch {
+    return `${STORAGE_KEY_PREFIX}_guest`;
+  }
+}
 
 export function CarritoProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CarritoItem[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const usuario = getCookie("usuario");
+      const usuarioId = usuario ? JSON.parse(usuario).id_usuario || "guest" : "guest";
+      setCurrentUserId(usuarioId);
+      
+      const storageKey = getStorageKey();
+      const stored = localStorage.getItem(storageKey);
       if (stored) {
         setItems(JSON.parse(stored));
+      } else {
+        setItems([]);
       }
     } catch (e) {
       console.error("Error loading cart:", e);
+      setItems([]);
     }
   }, []);
+
+  // Detectar cambio de usuario y recargar carrito
+  useEffect(() => {
+    try {
+      const usuario = getCookie("usuario");
+      const usuarioId = usuario ? JSON.parse(usuario).id_usuario || "guest" : "guest";
+      
+      if (usuarioId !== currentUserId) {
+        console.log(`🔄 Carrito: cambio de usuario ${currentUserId} → ${usuarioId}`);
+        setCurrentUserId(usuarioId);
+        
+        const storageKey = getStorageKey();
+        const stored = localStorage.getItem(storageKey);
+        setItems(stored ? JSON.parse(stored) : []);
+      }
+    } catch (e) {
+      console.error("Error detecting user change:", e);
+    }
+  }, [currentUserId]);
 
   useEffect(() => {
     if (!mounted) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      const storageKey = getStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify(items));
     } catch (e) {
       console.error("Error saving cart:", e);
     }
-  }, [items]);
+  }, [items, mounted]);
 
   const agregarProducto = useCallback((producto: ProductoCarrito) => {
     setItems((prev) => {

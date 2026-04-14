@@ -13,6 +13,22 @@ const nextConfig = {
         source: "/uploads/:path*",
         destination: "http://localhost:3001/uploads/:path*",
       },
+      {
+        source: "/inventario/:path*",
+        destination: "http://localhost:3001/inventario/:path*",
+      },
+      {
+        source: "/productos/:path*",
+        destination: "http://localhost:3001/productos/:path*",
+      },
+      {
+        source: "/productores/:path*",
+        destination: "http://localhost:3001/productores/:path*",
+      },
+      {
+        source: "/pedidos/:path*",
+        destination: "http://localhost:3001/pedidos/:path*",
+      },
     ];
   },
   images: {
