@@ -53,7 +53,7 @@ export default function InventarioUI() {
       setLoading(true);
 
       try {
-        const response = await fetch("/api/inventario", { cache: "no-store" });
+        const response = await fetch("/inventario", { cache: "no-store" });
         const data = (await response
           .json()
           .catch(() => null)) as InventarioResponse | null;

@@ -1,3 +1,5 @@
+import { getCookie, setCookie } from "@/lib/cookies";
+
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "");
 
 const headers = (token?: string, isFormData = false) => ({
@@ -7,6 +9,59 @@ const headers = (token?: string, isFormData = false) => ({
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
+  
+  // Si es 401 (Unauthorized), intentar refrescar el token
+  if (response.status === 401) {
+    const refreshToken = getCookie("refresh_token");
+    if (refreshToken) {
+      try {
+        console.log("🔄 Token expirado, intentando refrescar...");
+        const refreshResponse = await fetch(endpoint("/auth/refresh"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          const newAccessToken = refreshData.tokens.access_token;
+          
+          // Guardar el nuevo token
+          setCookie("token", newAccessToken, 7);
+          if (refreshData.tokens.refresh_token) {
+            setCookie("refresh_token", refreshData.tokens.refresh_token, 30);
+          }
+          
+          console.log("✅ Token refrescado exitosamente");
+
+          // Reintentar la petición original con el nuevo token
+          if (options?.headers && typeof options.headers === "object") {
+            (options.headers as Record<string, string>)["Authorization"] = `Bearer ${newAccessToken}`;
+          }
+
+          const retryResponse = await fetch(url, options);
+          if (!retryResponse.ok) {
+            const error = await retryResponse.json().catch(() => ({ message: "Error desconocido" }));
+            throw new Error(error.message || `Error ${retryResponse.status}`);
+          }
+          return retryResponse.json() as Promise<T>;
+        }
+      } catch (error) {
+        console.error("❌ Error refrescando token:", error);
+        // Si falla el refresh, remover cookies y dejar que el usuario se loguee de nuevo
+        const cookies = document.cookie.split(";");
+        cookies.forEach((cookie) => {
+          const name = cookie.split("=")[0].trim();
+          if (["token", "refresh_token", "usuario"].includes(name)) {
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+          }
+        });
+        window.location.href = "/auth/sign-in";
+        throw new Error("Sesión expirada. Por favor inicia sesión de nuevo.");
+      }
+    }
+  }
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "Error desconocido" }));
     throw new Error(error.message || `Error ${response.status}`);

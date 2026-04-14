@@ -69,7 +69,7 @@ return (
       {/* DERECHA */}
       <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2 md:gap-4">
         
-        {/* BUSCADOR - ocultar en mobile pequeño */}
+        {/* BUSCADOR - ocultar en mobile pequeño 
         <div className="hidden sm:hidden md:block relative w-full max-w-[200px] lg:max-w-[300px]">
           <input
             type="search"
@@ -79,7 +79,7 @@ return (
           />
 
           <SearchIcon className="pointer-events-none absolute left-3 md:left-5 top-1/2 -translate-y-1/2" />
-        </div>
+        </div>*/}
 
         {/* Icono buscar visible solo en tablet/md */}
         <button style={{ borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)" }} className="md:hidden p-2 rounded-lg border hover:opacity-80 dark:border-gray-700 dark:hover:bg-gray-800">

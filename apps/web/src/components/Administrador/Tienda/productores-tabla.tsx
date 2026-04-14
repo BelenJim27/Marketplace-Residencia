@@ -3,6 +3,9 @@
 import { Edit2, Eye, Plus, Search, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
 import { ProductoresForm, type ProductorAdmin } from "./productores-form";
 
 type Notice = {
@@ -11,6 +14,7 @@ type Notice = {
 };
 
 export function ProductoresTabla() {
+  const { user } = useAuth();
   const [productores, setProductores] = useState<ProductorAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -31,17 +35,22 @@ export function ProductoresTabla() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/productores", { cache: "no-store" });
-      const data = await response.json().catch(() => []);
-
-      if (!response.ok) {
-        throw new Error(
-          data?.message || "No fue posible cargar los productores.",
-        );
-      }
-
-      setProductores(Array.isArray(data) ? data : []);
+      const data = await api.productores.getAll();
+      console.log("API response:", data);
+      const transformed = (Array.isArray(data) ? data : []).map((p: any) => ({
+        id: p.id_productor,
+        nombre: p.usuarios ? `${p.usuarios.nombre} ${p.usuarios.apellido_paterno || ""}`.trim() : "Sin nombre",
+        region: p.regiones?.nombre || "Sin región",
+        stock: p.lotes?.length || 0,
+        total_productos: p.lotes?.length || 0,
+        status: ((p.tiendas && p.tiendas.length > 0 && p.tiendas.some((t: any) => t.status === "activa")) 
+          ? "ACTIVO" 
+          : "PAUSADO") as "ACTIVO" | "PAUSADO" | "INACTIVO",
+      }));
+      console.log("Transformed:", transformed);
+      setProductores(transformed);
     } catch (error) {
+      console.error("Error loading productores:", error);
       setNotice({
         type: "error",
         message:
@@ -62,7 +71,7 @@ export function ProductoresTabla() {
     productor.total_productos ?? productor.stock;
 
   const regionOptions = useMemo(
-    () => [...new Set(productores.map((productor) => productor.region))].sort(),
+    () => [...new Set(productores.map((productor) => productor.region).filter(Boolean))].sort(),
     [productores],
   );
 
@@ -70,7 +79,7 @@ export function ProductoresTabla() {
     const normalizedQuery = query.trim().toLowerCase();
     const normalizedId = idFilter.replace(/[^a-z0-9]/gi, "").toUpperCase();
 
-    return productores.filter((productor) => {
+    const filteredList = productores.filter((productor) => {
       const producerId = `PR${String(productor.id).padStart(4, "0")}`;
       const stock = getStock(productor);
 
@@ -93,6 +102,13 @@ export function ProductoresTabla() {
         matchesId &&
         matchesStock
       );
+    });
+
+    const seen = new Set<number>();
+    return filteredList.filter((productor) => {
+      if (seen.has(productor.id)) return false;
+      seen.add(productor.id);
+      return true;
     });
   }, [idFilter, productores, query, regionFilter, statusFilter, stockFilter]);
 
@@ -133,16 +149,10 @@ export function ProductoresTabla() {
     setDeleteLoading(true);
 
     try {
-      const response = await fetch(`/api/productores/${deleting.id}`, {
-        method: "DELETE",
-      });
-      const data = await response.json().catch(() => null);
+      const token = getCookie("token");
+      if (!token) throw new Error("No autorizado");
 
-      if (!response.ok) {
-        throw new Error(
-          data?.message || "No fue posible eliminar el productor.",
-        );
-      }
+      await api.productores.delete(token, deleting.id);
 
       setProductores((current) =>
         current.filter((item) => item.id !== deleting.id),
@@ -303,7 +313,7 @@ export function ProductoresTabla() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr>
+                <tr key="loading">
                   <td
                     colSpan={6}
                     className="p-10 text-center text-sm text-gray-500"
@@ -312,7 +322,7 @@ export function ProductoresTabla() {
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
-                <tr>
+                <tr key="empty">
                   <td
                     colSpan={6}
                     className="p-10 text-center text-sm text-gray-500"

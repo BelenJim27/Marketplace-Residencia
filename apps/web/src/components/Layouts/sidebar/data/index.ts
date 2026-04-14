@@ -118,7 +118,7 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
           },
         ],
       },
-      { title: "Perfil", url: "/profile", icon: UserRound },
+      
     ],
   },
 ];

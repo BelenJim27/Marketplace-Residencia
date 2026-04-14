@@ -2,7 +2,7 @@ import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "");
+const apiBaseUrl = `${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "")}/api`;
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -104,6 +104,7 @@ export const authOptions: NextAuthOptions = {
               body: JSON.stringify({
                 access_token: account.access_token,
                 refresh_token: account.refresh_token,
+                provider_uid: user.id,
                 email: user.email,
                 nombre: user.name,
                 fotoUrl: user.image,
@@ -141,6 +142,8 @@ export const authOptions: NextAuthOptions = {
             return token;
           } else {
             console.warn("⚠️ Backend auth/oauth/google retornó error:", response.status);
+            const errorText = await response.text();
+            console.error("❌ Error response:", errorText);
             // Aún así, crear el token con la información de Google
             token.email = user.email;
             token.name = user.name;

@@ -3,6 +3,9 @@
 import { Loader2, Save, X } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
 
 export type ProductorAdmin = {
   id: number;
@@ -104,31 +107,28 @@ export function ProductoresForm({
     setSubmitting(true);
 
     try {
-      const endpoint =
-        mode === "create"
-          ? "/api/productores"
-          : `/api/productores/${productor?.id}`;
-      const method = mode === "create" ? "POST" : "PUT";
-      const response = await fetch(endpoint, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const token = getCookie("token");
+      if (!token) throw new Error("No autorizado");
+
+      let result;
+      if (mode === "create") {
+        result = await api.productores.create(token, {
           nombre: form.nombre.trim(),
           region: form.region.trim(),
           stock: Number(form.stock),
           status: form.status,
-        }),
-      });
-
-      const data = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(
-          data?.message || "No fue posible guardar el productor.",
-        );
+        });
+      } else {
+        result = await api.productores.update(token, productor!.id, {
+          nombre: form.nombre.trim(),
+          region: form.region.trim(),
+          stock: Number(form.stock),
+          status: form.status,
+        });
       }
 
       onSaved(
-        data as ProductorAdmin,
+        result as ProductorAdmin,
         mode === "create"
           ? "Productor creado correctamente."
           : "Productor actualizado correctamente.",
