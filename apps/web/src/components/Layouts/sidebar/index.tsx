@@ -22,7 +22,7 @@ export function Sidebar() {
   const [openMenus, setOpenMenus] = useState<string[]>(() =>
     pathname.startsWith("/dashboard/productor/archivos") ? ["Archivos"] : [],
   );
-  const navData = getNavData(isProductor || user?.permisos?.includes("panel_productor") || false, isAdmin || user?.roles?.some((r) => ["administrador", "ADMIN"].includes(r)) || false);
+  const navData = getNavData(isProductor, isAdmin);
   const isFilesRoute = pathname.startsWith("/dashboard/productor/archivos");
 
   const isItemActive = (item: { url?: string; children?: Array<{ url: string }> }) => {

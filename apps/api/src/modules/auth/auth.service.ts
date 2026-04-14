@@ -264,6 +264,38 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
+  async getMe(token: string) {
+    const decoded = verifyJwt<AccessTokenPayload>(token, ACCESS_TOKEN_SECRET);
+    if (!decoded) {
+      throw new UnauthorizedException('Token inválido');
+    }
+
+    const user = await this.prisma.usuarios.findUnique({
+      where: { id_usuario: decoded.sub },
+    });
+
+    if (!user || user.eliminado_en) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    const accessData = await getAccessData(this.prisma, user.id_usuario);
+
+    return {
+      id_usuario: user.id_usuario,
+      nombre: user.nombre,
+      email: user.email,
+      apellido_paterno: user.apellido_paterno,
+      apellido_materno: user.apellido_materno,
+      telefono: user.telefono,
+      foto_url: user.foto_url,
+      idioma_preferido: user.idioma_preferido,
+      moneda_preferida: user.moneda_preferida,
+      roles: accessData.roles,
+      permisos: accessData.permisos,
+      id_productor: accessData.id_productor,
+    };
+  }
+
   private async issueTokens(user: usuarios): Promise<AuthResponseDto> {
     const freshUser = await this.prisma.usuarios.findUnique({
       where: { id_usuario: user.id_usuario },

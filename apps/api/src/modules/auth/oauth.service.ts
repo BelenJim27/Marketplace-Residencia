@@ -103,7 +103,7 @@ export class OAuthService {
         moneda_preferida: 'MXN',
         usuario_rol: {
           create: {
-            id_rol: 6, // Rol cliente
+            id_rol: 1, // Rol cliente
             estado: 'activo',
           },
         },
