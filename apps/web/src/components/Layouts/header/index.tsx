@@ -24,7 +24,7 @@ return (
         borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)", 
         backgroundColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.08)" 
       }} 
-      className="sticky top-0 z-30 flex items-center justify-between border-b px-3 py-3 shadow-1 dark:border-gray-700 dark:bg-gray-900 md:px-5 md:py-5 2xl:px-10">
+      className="sticky top-0 z-30 flex items-center justify-between border-b border-green-200 bg-green-100 px-4 py-4 shadow-sm md:px-8">
       
       {/* BOTÓN MENU HAMBURGUESA */}
       <button

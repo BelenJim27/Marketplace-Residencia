@@ -8,6 +8,7 @@ export class ConfiguracionController {
   @Get('sistema') listSistema() { return this.service.listSistema(); }
   @Get('sistema/mapa') getMapa() { return this.service.getConfigAsMap(); }
   @Get('sistema/seed') seedDefaults() { return this.service.seedDefaults(); }
+  @Get('sistema/seed-all') seedAll() { return this.service.seedAll(); }
   @Get('sistema/:id') getSistema(@Param('id', ParseIntPipe) id: number) { return this.service.getSistema(id); }
   @Post('sistema') createSistema(@Body() dto: CreateConfiguracionSistemaDto) { return this.service.createSistema(dto); }
   @Post('sistema/bulk') upsertBulk(@Body() configs: { clave: string; valor: string; tipo?: string }[]) { return this.service.upsertConfigs(configs); }

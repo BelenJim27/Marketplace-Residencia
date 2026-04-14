@@ -14,6 +14,7 @@ import { PagosModule } from './modules/pagos/pagos.module';
 import { EnviosModule } from './modules/envios/envios.module';
 import { TransportistasModule } from './modules/transportistas/transportistas.module';
 import { CarritoModule } from './modules/carrito/carrito.module';
+import { WishlistModule } from './modules/wishlist/wishlist.module';
 import { TiendasModule } from './modules/tiendas/tiendas.module';
 import { ResenasModule } from './modules/resenas/resenas.module';
 import { NotificacionesModule } from './modules/notificaciones/notificaciones.module';
@@ -39,6 +40,7 @@ import { AuditoriaModule } from './modules/auditoria/auditoria.module';
     EnviosModule,
     TransportistasModule,
     CarritoModule,
+    WishlistModule,
     TiendasModule,
     ResenasModule,
     NotificacionesModule,

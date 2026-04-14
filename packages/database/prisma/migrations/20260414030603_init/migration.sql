@@ -1,17 +1,4 @@
 -- CreateTable
-CREATE TABLE "almacenes" (
-    "id_almacen" BIGSERIAL NOT NULL,
-    "nombre" VARCHAR(150) NOT NULL,
-    "ubicacion" JSONB NOT NULL DEFAULT '{}',
-    "pais_iso2" CHAR(2),
-    "activo" BOOLEAN NOT NULL DEFAULT true,
-    "creado_en" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "eliminado_en" TIMESTAMPTZ(6),
-
-    CONSTRAINT "almacenes_pkey" PRIMARY KEY ("id_almacen")
-);
-
--- CreateTable
 CREATE TABLE "archivos" (
     "id_archivo" BIGSERIAL NOT NULL,
     "entidad_tipo" VARCHAR(30) NOT NULL,
@@ -231,7 +218,6 @@ CREATE TABLE "integraciones_envio" (
 CREATE TABLE "inventario" (
     "id_inventario" BIGSERIAL NOT NULL,
     "id_producto" BIGINT NOT NULL,
-    "id_almacen" BIGINT NOT NULL,
     "stock" INTEGER NOT NULL DEFAULT 0,
     "stock_minimo" INTEGER NOT NULL DEFAULT 0,
     "actualizado_en" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -268,6 +254,19 @@ CREATE TABLE "lotes" (
     "eliminado_en" TIMESTAMPTZ(6),
 
     CONSTRAINT "lotes_pkey" PRIMARY KEY ("id_lote")
+);
+
+-- CreateTable
+CREATE TABLE "lista_deseos_item" (
+    "id_item" BIGSERIAL NOT NULL,
+    "id_usuario" UUID NOT NULL,
+    "id_producto" BIGINT NOT NULL,
+    "precio_snapshot" DECIMAL(12,2),
+    "moneda_snapshot" CHAR(3) DEFAULT 'MXN',
+    "nota" TEXT,
+    "fecha_agregado" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "lista_deseos_item_pkey" PRIMARY KEY ("id_item")
 );
 
 -- CreateTable
@@ -308,6 +307,23 @@ CREATE TABLE "notificaciones" (
     "creado_en" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "notificaciones_pkey" PRIMARY KEY ("id_notificacion")
+);
+
+-- CreateTable
+CREATE TABLE "oauth_cuentas" (
+    "id_cuenta" BIGSERIAL NOT NULL,
+    "id_usuario" UUID NOT NULL,
+    "provider" VARCHAR(30) NOT NULL,
+    "provider_uid" VARCHAR(255) NOT NULL,
+    "email" VARCHAR(255),
+    "foto_url" VARCHAR(500),
+    "acceso_token" TEXT,
+    "refresco_token" TEXT,
+    "expira_en" TIMESTAMPTZ(6),
+    "creado_en" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "actualizado_en" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "oauth_cuentas_pkey" PRIMARY KEY ("id_cuenta")
 );
 
 -- CreateTable
@@ -371,11 +387,16 @@ CREATE TABLE "permisos" (
 );
 
 -- CreateTable
-CREATE TABLE "producto_categoria" (
+CREATE TABLE "producto_imagenes" (
+    "id_imagen" BIGSERIAL NOT NULL,
     "id_producto" BIGINT NOT NULL,
-    "id_categoria" INTEGER NOT NULL,
+    "url" VARCHAR(500) NOT NULL,
+    "orden" INTEGER NOT NULL DEFAULT 0,
+    "es_principal" BOOLEAN NOT NULL DEFAULT false,
+    "alt_text" VARCHAR(255),
+    "creado_en" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "producto_categoria_pkey" PRIMARY KEY ("id_producto","id_categoria")
+    CONSTRAINT "producto_imagenes_pkey" PRIMARY KEY ("id_imagen")
 );
 
 -- CreateTable
@@ -563,7 +584,6 @@ CREATE TABLE "usuarios" (
     "email" VARCHAR(255) NOT NULL,
     "telefono" VARCHAR(30),
     "password_hash" VARCHAR(255),
-    "google_id" VARCHAR(255),
     "idioma_preferido" VARCHAR(10) NOT NULL DEFAULT 'es',
     "moneda_preferida" CHAR(3) NOT NULL DEFAULT 'MXN',
     "version_token" INTEGER NOT NULL DEFAULT 1,
@@ -572,22 +592,6 @@ CREATE TABLE "usuarios" (
 
     CONSTRAINT "usuarios_pkey" PRIMARY KEY ("id_usuario")
 );
-
--- CreateTable
-CREATE TABLE "producto_imagenes" (
-    "id_imagen" BIGSERIAL NOT NULL,
-    "id_producto" BIGINT NOT NULL,
-    "url" VARCHAR(500) NOT NULL,
-    "orden" INTEGER NOT NULL DEFAULT 0,
-    "es_principal" BOOLEAN NOT NULL DEFAULT false,
-    "alt_text" VARCHAR(255),
-    "creado_en" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "producto_imagenes_pkey" PRIMARY KEY ("id_imagen")
-);
-
--- CreateIndex
-CREATE INDEX "idx_almacenes_ubicacion" ON "almacenes" USING GIN ("ubicacion");
 
 -- CreateIndex
 CREATE INDEX "idx_archivos_entidad" ON "archivos"("entidad_tipo", "entidad_id");
@@ -635,13 +639,7 @@ CREATE INDEX "idx_envios_pedido" ON "envios"("id_pedido");
 CREATE UNIQUE INDEX "integraciones_envio_id_transportista_entorno_key" ON "integraciones_envio"("id_transportista", "entorno");
 
 -- CreateIndex
-CREATE INDEX "idx_inventario_almacen" ON "inventario"("id_almacen");
-
--- CreateIndex
 CREATE INDEX "idx_inventario_producto" ON "inventario"("id_producto");
-
--- CreateIndex
-CREATE UNIQUE INDEX "inventario_id_producto_id_almacen_key" ON "inventario"("id_producto", "id_almacen");
 
 -- CreateIndex
 CREATE INDEX "idx_lote_atributos_lote" ON "lote_atributos"("id_lote");
@@ -651,6 +649,15 @@ CREATE UNIQUE INDEX "lote_atributos_id_lote_clave_key" ON "lote_atributos"("id_l
 
 -- CreateIndex
 CREATE UNIQUE INDEX "lotes_codigo_lote_key" ON "lotes"("codigo_lote");
+
+-- CreateIndex
+CREATE INDEX "idx_lista_deseos_usuario" ON "lista_deseos_item"("id_usuario");
+
+-- CreateIndex
+CREATE INDEX "idx_lista_deseos_producto" ON "lista_deseos_item"("id_producto");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "lista_deseos_item_id_usuario_id_producto_key" ON "lista_deseos_item"("id_usuario", "id_producto");
 
 -- CreateIndex
 CREATE INDEX "idx_movimientos_creado_en" ON "movimientos_inventario"("creado_en");
@@ -663,6 +670,12 @@ CREATE INDEX "idx_movimientos_pedido" ON "movimientos_inventario"("id_pedido");
 
 -- CreateIndex
 CREATE INDEX "idx_notificaciones_usuario_leido" ON "notificaciones"("id_usuario", "leido");
+
+-- CreateIndex
+CREATE INDEX "idx_oauth_cuentas_usuario" ON "oauth_cuentas"("id_usuario");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "oauth_cuentas_provider_uid_key" ON "oauth_cuentas"("provider", "provider_uid");
 
 -- CreateIndex
 CREATE INDEX "idx_pagos_estado" ON "pagos"("estado");
@@ -686,7 +699,7 @@ CREATE INDEX "idx_pedidos_usuario" ON "pedidos"("id_usuario");
 CREATE UNIQUE INDEX "permisos_nombre_key" ON "permisos"("nombre");
 
 -- CreateIndex
-CREATE INDEX "idx_prod_cat_categoria" ON "producto_categoria"("id_categoria");
+CREATE INDEX "idx_producto_imagenes_producto" ON "producto_imagenes"("id_producto");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "productores_id_usuario_key" ON "productores"("id_usuario");
@@ -729,12 +742,6 @@ CREATE UNIQUE INDEX "transportistas_codigo_key" ON "transportistas"("codigo");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "usuarios_email_key" ON "usuarios"("email");
-
--- CreateIndex
-CREATE UNIQUE INDEX "usuarios_google_id_key" ON "usuarios"("google_id");
-
--- CreateIndex
-CREATE INDEX "idx_producto_imagenes_producto" ON "producto_imagenes"("id_producto");
 
 -- AddForeignKey
 ALTER TABLE "archivos" ADD CONSTRAINT "archivos_validado_por_fkey" FOREIGN KEY ("validado_por") REFERENCES "usuarios"("id_usuario") ON DELETE SET NULL ON UPDATE NO ACTION;
@@ -803,9 +810,6 @@ ALTER TABLE "facturas" ADD CONSTRAINT "facturas_id_pedido_fkey" FOREIGN KEY ("id
 ALTER TABLE "integraciones_envio" ADD CONSTRAINT "integraciones_envio_id_transportista_fkey" FOREIGN KEY ("id_transportista") REFERENCES "transportistas"("id_transportista") ON DELETE CASCADE ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE "inventario" ADD CONSTRAINT "inventario_id_almacen_fkey" FOREIGN KEY ("id_almacen") REFERENCES "almacenes"("id_almacen") ON DELETE RESTRICT ON UPDATE NO ACTION;
-
--- AddForeignKey
 ALTER TABLE "inventario" ADD CONSTRAINT "inventario_id_producto_fkey" FOREIGN KEY ("id_producto") REFERENCES "productos"("id_producto") ON DELETE RESTRICT ON UPDATE NO ACTION;
 
 -- AddForeignKey
@@ -818,6 +822,12 @@ ALTER TABLE "lotes" ADD CONSTRAINT "lotes_id_productor_fkey" FOREIGN KEY ("id_pr
 ALTER TABLE "lotes" ADD CONSTRAINT "lotes_id_region_fkey" FOREIGN KEY ("id_region") REFERENCES "regiones"("id_region") ON DELETE RESTRICT ON UPDATE NO ACTION;
 
 -- AddForeignKey
+ALTER TABLE "lista_deseos_item" ADD CONSTRAINT "lista_deseos_item_id_usuario_fkey" FOREIGN KEY ("id_usuario") REFERENCES "usuarios"("id_usuario") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "lista_deseos_item" ADD CONSTRAINT "lista_deseos_item_id_producto_fkey" FOREIGN KEY ("id_producto") REFERENCES "productos"("id_producto") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "movimientos_inventario" ADD CONSTRAINT "fk_mov_pedido" FOREIGN KEY ("id_pedido") REFERENCES "pedidos"("id_pedido") ON DELETE SET NULL ON UPDATE NO ACTION;
 
 -- AddForeignKey
@@ -828,6 +838,9 @@ ALTER TABLE "movimientos_inventario" ADD CONSTRAINT "movimientos_inventario_id_u
 
 -- AddForeignKey
 ALTER TABLE "notificaciones" ADD CONSTRAINT "notificaciones_id_usuario_fkey" FOREIGN KEY ("id_usuario") REFERENCES "usuarios"("id_usuario") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE "oauth_cuentas" ADD CONSTRAINT "oauth_cuentas_id_usuario_fkey" FOREIGN KEY ("id_usuario") REFERENCES "usuarios"("id_usuario") ON DELETE CASCADE ON UPDATE NO ACTION;
 
 -- AddForeignKey
 ALTER TABLE "pagos" ADD CONSTRAINT "pagos_id_pedido_fkey" FOREIGN KEY ("id_pedido") REFERENCES "pedidos"("id_pedido") ON DELETE RESTRICT ON UPDATE NO ACTION;
@@ -845,10 +858,7 @@ ALTER TABLE "pedidos" ADD CONSTRAINT "pedidos_id_usuario_fkey" FOREIGN KEY ("id_
 ALTER TABLE "pedidos" ADD CONSTRAINT "pedidos_moneda_fkey" FOREIGN KEY ("moneda") REFERENCES "monedas"("codigo") ON DELETE RESTRICT ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE "producto_categoria" ADD CONSTRAINT "producto_categoria_id_categoria_fkey" FOREIGN KEY ("id_categoria") REFERENCES "categorias"("id_categoria") ON DELETE CASCADE ON UPDATE NO ACTION;
-
--- AddForeignKey
-ALTER TABLE "producto_categoria" ADD CONSTRAINT "producto_categoria_id_producto_fkey" FOREIGN KEY ("id_producto") REFERENCES "productos"("id_producto") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "producto_imagenes" ADD CONSTRAINT "producto_imagenes_id_producto_fkey" FOREIGN KEY ("id_producto") REFERENCES "productos"("id_producto") ON DELETE CASCADE ON UPDATE NO ACTION;
 
 -- AddForeignKey
 ALTER TABLE "productores" ADD CONSTRAINT "productores_id_region_fkey" FOREIGN KEY ("id_region") REFERENCES "regiones"("id_region") ON DELETE RESTRICT ON UPDATE NO ACTION;
@@ -903,6 +913,3 @@ ALTER TABLE "usuario_rol" ADD CONSTRAINT "usuario_rol_id_rol_fkey" FOREIGN KEY (
 
 -- AddForeignKey
 ALTER TABLE "usuario_rol" ADD CONSTRAINT "usuario_rol_id_usuario_fkey" FOREIGN KEY ("id_usuario") REFERENCES "usuarios"("id_usuario") ON DELETE CASCADE ON UPDATE NO ACTION;
-
--- AddForeignKey
-ALTER TABLE "producto_imagenes" ADD CONSTRAINT "producto_imagenes_id_producto_fkey" FOREIGN KEY ("id_producto") REFERENCES "productos"("id_producto") ON DELETE CASCADE ON UPDATE NO ACTION;

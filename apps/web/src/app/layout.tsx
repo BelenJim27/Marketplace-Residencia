@@ -9,7 +9,6 @@ import NextTopLoader from "nextjs-toploader";
 import type { PropsWithChildren } from "react";
 import { Providers } from "./providers";
 import { RootContent } from "./root-content";
-import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: {
@@ -24,10 +23,8 @@ export default function RootLayout({ children }: PropsWithChildren) {
     <html lang="es" suppressHydrationWarning>
       <body>
         <Providers>
-          <AuthProvider>
-            <NextTopLoader color="#5750F1" showSpinner={false} />
-            <RootContent>{children}</RootContent>
-          </AuthProvider>
+          <NextTopLoader color="#5750F1" showSpinner={false} />
+          <RootContent>{children}</RootContent>
         </Providers>
       </body>
     </html>
