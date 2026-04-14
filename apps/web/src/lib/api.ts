@@ -320,6 +320,7 @@ export const api = {
         method: "DELETE",
         headers: headers(token),
       }),
+    getByRole: (id_rol: number) => fetchJson(endpoint(`/roles/${id_rol}/permisos`)),
   },
 
   usuarios: {

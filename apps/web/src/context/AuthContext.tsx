@@ -165,7 +165,15 @@ const resolveProductor = async () => {
     setUser(usuario);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    const refreshToken = getCookie("refresh_token");
+    if (refreshToken) {
+      try {
+        await api.auth.logout(refreshToken);
+      } catch (error) {
+        console.error("Error en logout:", error);
+      }
+    }
     removeCookie("token");
     removeCookie("refresh_token");
     removeCookie("usuario");

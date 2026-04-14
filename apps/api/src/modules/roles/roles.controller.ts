@@ -41,4 +41,7 @@ export class RolesController {
 
   @Delete('permisos/:id')
   removePermiso(@Param('id', ParseIntPipe) id: number) { return this.service.removePermiso(id); }
+
+  @Get(':id/permisos')
+  getPermisosByRole(@Param('id', ParseIntPipe) id: number) { return this.service.getPermisosByRole(id); }
 }
