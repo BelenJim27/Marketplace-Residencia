@@ -37,11 +37,6 @@ export class RegisterAuthDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(255)
-  google_id?: string;
-
-  @IsOptional()
-  @IsString()
   @MaxLength(10)
   idioma_preferido?: string;
 
@@ -101,7 +96,6 @@ export class AuthUserDto {
   apellido_materno!: string | null;
   telefono!: string | null;
   foto_url!: string | null;
-  google_id!: string | null;
   idioma_preferido!: string;
   moneda_preferida!: string;
   version_token!: number;

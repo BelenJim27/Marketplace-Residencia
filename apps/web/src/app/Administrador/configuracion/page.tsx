@@ -26,6 +26,11 @@ const CONFIG_KEYS = {
   NOMBRE_APP: "nombre_app",
 };
 
+// Helper puro: lee desde el array recién cargado (evita closure obsoleto del estado)
+function getFromData(data: ConfigItem[], clave: string): string {
+  return data.find((c) => c.clave === clave)?.valor || "";
+}
+
 export default function Configuracion() {
   const [token, setToken] = useState<string | null>(null);
   const [configs, setConfigs] = useState<ConfigItem[]>([]);
@@ -35,7 +40,15 @@ export default function Configuracion() {
   const [mensaje, setMensaje] = useState<{ tipo: "success" | "error"; texto: string } | null>(null);
   const { refreshAndUpdate } = useConfig();
 
-  const getConfig = (clave: string) => configs.find(c => c.clave === clave)?.valor || "";
+  const [colorPrimario, setColorPrimario] = useState("");
+  const [colorSecundario, setColorSecundario] = useState("");
+  const [colorAcento, setColorAcento] = useState("");
+  const [idiomaDefault, setIdiomaDefault] = useState("es");
+  const [nombreApp, setNombreApp] = useState("");
+  const [logoPrincipal, setLogoPrincipal] = useState("");
+  const [logoAdmin, setLogoAdmin] = useState("");
+  const [favicon, setFavicon] = useState("");
+  const [bannerHome, setBannerHome] = useState("");
 
   useEffect(() => {
     const tokenCookie = getCookie("token");
@@ -47,6 +60,16 @@ export default function Configuracion() {
     try {
       const data = await api.configuracion.getSistema() as ConfigItem[];
       setConfigs(data);
+      // ✅ Lee desde `data` directamente, no desde el estado `configs` (que aún no se actualizó)
+      setColorPrimario(getFromData(data, CONFIG_KEYS.COLOR_PRIMARIO) || "#3b82f6");
+      setColorSecundario(getFromData(data, CONFIG_KEYS.COLOR_SECUNDARIO) || "#8b5cf6");
+      setColorAcento(getFromData(data, CONFIG_KEYS.COLOR_ACENTO) || "#10b981");
+      setIdiomaDefault(getFromData(data, CONFIG_KEYS.IDIOMA_DEFAULT) || "es");
+      setNombreApp(getFromData(data, CONFIG_KEYS.NOMBRE_APP) || "Marketplace Residencia");
+      setLogoPrincipal(getFromData(data, CONFIG_KEYS.LOGO_PRINCIPAL) || "");
+      setLogoAdmin(getFromData(data, CONFIG_KEYS.LOGO_ADMIN) || "");
+      setFavicon(getFromData(data, CONFIG_KEYS.FAVICON) || "");
+      setBannerHome(getFromData(data, CONFIG_KEYS.BANNER_HOME) || "");
     } catch (error) {
       console.error("Error cargando config:", error);
     } finally {
@@ -55,7 +78,7 @@ export default function Configuracion() {
   };
 
   const actualizarConfig = async (clave: string, valor: string, tipo: string = "texto") => {
-    const config = configs.find(c => c.clave === clave);
+    const config = configs.find((c) => c.clave === clave);
     if (!config) {
       if (token) {
         await api.configuracion.createSistema(token, { clave, valor, tipo, descripcion: null });
@@ -73,19 +96,21 @@ export default function Configuracion() {
     setMensaje(null);
     try {
       const allConfigs = [
-        { clave: CONFIG_KEYS.COLOR_PRIMARIO, valor: (document.getElementById("colorPrimario") as HTMLInputElement)?.value || "" },
-        { clave: CONFIG_KEYS.COLOR_SECUNDARIO, valor: (document.getElementById("colorSecundario") as HTMLInputElement)?.value || "" },
-        { clave: CONFIG_KEYS.COLOR_ACENTO, valor: (document.getElementById("colorAcento") as HTMLInputElement)?.value || "" },
-        { clave: CONFIG_KEYS.IDIOMA_DEFAULT, valor: (document.getElementById("idiomaDefault") as HTMLSelectElement)?.value || "es" },
-        { clave: CONFIG_KEYS.NOMBRE_APP, valor: (document.getElementById("nombreApp") as HTMLInputElement)?.value || "" },
-        { clave: CONFIG_KEYS.LOGO_PRINCIPAL, valor: (document.getElementById("logoPrincipal") as HTMLInputElement)?.value || "" },
-        { clave: CONFIG_KEYS.LOGO_ADMIN, valor: (document.getElementById("logoAdmin") as HTMLInputElement)?.value || "" },
-        { clave: CONFIG_KEYS.FAVICON, valor: (document.getElementById("favicon") as HTMLInputElement)?.value || "" },
-        { clave: CONFIG_KEYS.BANNER_HOME, valor: (document.getElementById("bannerHome") as HTMLInputElement)?.value || "" },
+        { clave: CONFIG_KEYS.COLOR_PRIMARIO, valor: colorPrimario },
+        { clave: CONFIG_KEYS.COLOR_SECUNDARIO, valor: colorSecundario },
+        { clave: CONFIG_KEYS.COLOR_ACENTO, valor: colorAcento },
+        { clave: CONFIG_KEYS.IDIOMA_DEFAULT, valor: idiomaDefault },
+        { clave: CONFIG_KEYS.NOMBRE_APP, valor: nombreApp },
+        { clave: CONFIG_KEYS.LOGO_PRINCIPAL, valor: logoPrincipal },
+        { clave: CONFIG_KEYS.LOGO_ADMIN, valor: logoAdmin },
+        { clave: CONFIG_KEYS.FAVICON, valor: favicon },
+        { clave: CONFIG_KEYS.BANNER_HOME, valor: bannerHome },
       ];
 
       for (const config of allConfigs) {
-        await actualizarConfig(config.clave, config.valor);
+        if (config.valor !== undefined && config.valor !== null && config.valor !== "") {
+          await actualizarConfig(config.clave, config.valor);
+        }
       }
 
       await cargarConfiguracion();
@@ -115,7 +140,11 @@ export default function Configuracion() {
       <Breadcrumb pageName="Configuración del Sistema" />
 
       {mensaje && (
-        <div className={`mb-4 p-4 rounded-lg ${mensaje.tipo === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+        <div
+          className={`mb-4 p-4 rounded-lg ${
+            mensaje.tipo === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+          }`}
+        >
           {mensaje.texto}
         </div>
       )}
@@ -176,17 +205,19 @@ export default function Configuracion() {
                   <input
                     id="colorPrimario"
                     type="color"
-                    defaultValue={getConfig(CONFIG_KEYS.COLOR_PRIMARIO) || "#3b82f6"}
+                    value={colorPrimario}
+                    onChange={(e) => setColorPrimario(e.target.value)}
                     className="h-12 w-20 cursor-pointer rounded border border-stroke"
                   />
                   <input
                     type="text"
-                    defaultValue={getConfig(CONFIG_KEYS.COLOR_PRIMARIO) || "#3b82f6"}
+                    value={colorPrimario}
+                    onChange={(e) => setColorPrimario(e.target.value)}
                     className="flex-1 rounded border border-stroke bg-transparent px-3 py-2 outline-none"
                     placeholder="#3b82f6"
                   />
                 </div>
-                <p className="mt-1 text-sm text-bodydark">Color principal de la marca</p>
+                <p className="mt-1 text-sm text-bodydark">Color principal de la interfaz</p>
               </div>
 
               <div>
@@ -197,12 +228,14 @@ export default function Configuracion() {
                   <input
                     id="colorSecundario"
                     type="color"
-                    defaultValue={getConfig(CONFIG_KEYS.COLOR_SECUNDARIO) || "#8b5cf6"}
+                    value={colorSecundario}
+                    onChange={(e) => setColorSecundario(e.target.value)}
                     className="h-12 w-20 cursor-pointer rounded border border-stroke"
                   />
                   <input
                     type="text"
-                    defaultValue={getConfig(CONFIG_KEYS.COLOR_SECUNDARIO) || "#8b5cf6"}
+                    value={colorSecundario}
+                    onChange={(e) => setColorSecundario(e.target.value)}
                     className="flex-1 rounded border border-stroke bg-transparent px-3 py-2 outline-none"
                     placeholder="#8b5cf6"
                   />
@@ -218,12 +251,14 @@ export default function Configuracion() {
                   <input
                     id="colorAcento"
                     type="color"
-                    defaultValue={getConfig(CONFIG_KEYS.COLOR_ACENTO) || "#10b981"}
+                    value={colorAcento}
+                    onChange={(e) => setColorAcento(e.target.value)}
                     className="h-12 w-20 cursor-pointer rounded border border-stroke"
                   />
                   <input
                     type="text"
-                    defaultValue={getConfig(CONFIG_KEYS.COLOR_ACENTO) || "#10b981"}
+                    value={colorAcento}
+                    onChange={(e) => setColorAcento(e.target.value)}
                     className="flex-1 rounded border border-stroke bg-transparent px-3 py-2 outline-none"
                     placeholder="#10b981"
                   />
@@ -237,19 +272,19 @@ export default function Configuracion() {
               <div className="flex gap-4">
                 <button
                   className="px-4 py-2 rounded text-white font-medium"
-                  style={{ backgroundColor: getConfig(CONFIG_KEYS.COLOR_PRIMARIO) || "#3b82f6" }}
+                  style={{ backgroundColor: colorPrimario || "#3b82f6" }}
                 >
                   Botón Primario
                 </button>
                 <button
                   className="px-4 py-2 rounded text-white font-medium"
-                  style={{ backgroundColor: getConfig(CONFIG_KEYS.COLOR_SECUNDARIO) || "#8b5cf6" }}
+                  style={{ backgroundColor: colorSecundario || "#8b5cf6" }}
                 >
                   Botón Secundario
                 </button>
                 <button
                   className="px-4 py-2 rounded text-white font-medium"
-                  style={{ backgroundColor: getConfig(CONFIG_KEYS.COLOR_ACENTO) || "#10b981" }}
+                  style={{ backgroundColor: colorAcento || "#10b981" }}
                 >
                   Botón Acento
                 </button>
@@ -267,7 +302,8 @@ export default function Configuracion() {
               <input
                 id="nombreApp"
                 type="text"
-                defaultValue={getConfig(CONFIG_KEYS.NOMBRE_APP) || "Marketplace Residencia"}
+                value={nombreApp}
+                onChange={(e) => setNombreApp(e.target.value)}
                 className="w-full rounded border border-stroke bg-transparent px-5 py-3 font-medium outline-none transition focus:border-primary"
                 placeholder="Nombre de tu aplicación"
               />
@@ -279,7 +315,8 @@ export default function Configuracion() {
               </label>
               <select
                 id="idiomaDefault"
-                defaultValue={getConfig(CONFIG_KEYS.IDIOMA_DEFAULT) || "es"}
+                value={idiomaDefault}
+                onChange={(e) => setIdiomaDefault(e.target.value)}
                 className="w-full rounded border border-stroke bg-transparent px-5 py-3 font-medium outline-none transition focus:border-primary"
               >
                 <option value="es">Español</option>
@@ -305,7 +342,8 @@ export default function Configuracion() {
                 <input
                   id="logoPrincipal"
                   type="text"
-                  defaultValue={getConfig(CONFIG_KEYS.LOGO_PRINCIPAL) || ""}
+                  value={logoPrincipal}
+                  onChange={(e) => setLogoPrincipal(e.target.value)}
                   className="w-full rounded border border-stroke bg-transparent px-5 py-3 font-medium outline-none transition focus:border-primary"
                   placeholder="https://ejemplo.com/logo.png"
                 />
@@ -319,7 +357,8 @@ export default function Configuracion() {
                 <input
                   id="logoAdmin"
                   type="text"
-                  defaultValue={getConfig(CONFIG_KEYS.LOGO_ADMIN) || ""}
+                  value={logoAdmin}
+                  onChange={(e) => setLogoAdmin(e.target.value)}
                   className="w-full rounded border border-stroke bg-transparent px-5 py-3 font-medium outline-none transition focus:border-primary"
                   placeholder="https://ejemplo.com/logo-admin.png"
                 />
@@ -333,7 +372,8 @@ export default function Configuracion() {
                 <input
                   id="favicon"
                   type="text"
-                  defaultValue={getConfig(CONFIG_KEYS.FAVICON) || ""}
+                  value={favicon}
+                  onChange={(e) => setFavicon(e.target.value)}
                   className="w-full rounded border border-stroke bg-transparent px-5 py-3 font-medium outline-none transition focus:border-primary"
                   placeholder="https://ejemplo.com/favicon.ico"
                 />
@@ -347,7 +387,8 @@ export default function Configuracion() {
                 <input
                   id="bannerHome"
                   type="text"
-                  defaultValue={getConfig(CONFIG_KEYS.BANNER_HOME) || ""}
+                  value={bannerHome}
+                  onChange={(e) => setBannerHome(e.target.value)}
                   className="w-full rounded border border-stroke bg-transparent px-5 py-3 font-medium outline-none transition focus:border-primary"
                   placeholder="https://ejemplo.com/banner.jpg"
                 />
@@ -355,20 +396,20 @@ export default function Configuracion() {
               </div>
             </div>
 
-            {(getConfig(CONFIG_KEYS.LOGO_PRINCIPAL) || getConfig(CONFIG_KEYS.BANNER_HOME)) && (
+            {(logoPrincipal || bannerHome) && (
               <div className="p-4 bg-gray-50 dark:bg-dark-2 rounded-lg">
                 <h4 className="font-medium text-black dark:text-white mb-3">Vista Previa</h4>
                 <div className="flex flex-wrap gap-4">
-                  {getConfig(CONFIG_KEYS.LOGO_PRINCIPAL) && (
+                  {logoPrincipal && (
                     <div className="text-center">
                       <p className="text-sm text-bodydark mb-1">Logo Principal</p>
-                      <img src={getConfig(CONFIG_KEYS.LOGO_PRINCIPAL)} alt="Logo" className="h-16 object-contain" />
+                      <img src={logoPrincipal} alt="Logo" className="h-16 object-contain" />
                     </div>
                   )}
-                  {getConfig(CONFIG_KEYS.BANNER_HOME) && (
+                  {bannerHome && (
                     <div className="text-center">
                       <p className="text-sm text-bodydark mb-1">Banner Home</p>
-                      <img src={getConfig(CONFIG_KEYS.BANNER_HOME)} alt="Banner" className="h-24 object-cover rounded" />
+                      <img src={bannerHome} alt="Banner" className="h-24 object-cover rounded" />
                     </div>
                   )}
                 </div>

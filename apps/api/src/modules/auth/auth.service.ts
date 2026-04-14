@@ -1,21 +1,9 @@
-import {
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-  UnauthorizedException,
-} from "@nestjs/common";
-import { Prisma, usuarios } from "@prisma/client";
-import {
-  createHash,
-  createHmac,
-  randomBytes,
-  timingSafeEqual,
-  scrypt,
-} from "crypto";
-import * as bcrypt from "bcrypt";
-import { PrismaService } from "../../prisma/prisma.service";
-import { EmailService } from "../email/email.service";
+import { ConflictException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Prisma, usuarios } from '@prisma/client';
+import { createHash, createHmac, randomBytes, timingSafeEqual, scrypt } from 'crypto';
+import * as bcrypt from 'bcrypt';
+import { PrismaService } from '../../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import {
   AuthResponseDto,
   AuthUserDto,
@@ -25,18 +13,15 @@ import {
   RegisterAuthDto,
   RequestPasswordResetDto,
   ResetPasswordDto,
-} from "./dto/auth.dto";
+} from './dto/auth.dto';
 
-type JwtPayload = Record<
-  string,
-  string | number | boolean | null | undefined | string[]
->;
+type JwtPayload = Record<string, string | number | boolean | null | undefined | string[]>;
 
 interface AccessTokenPayload extends JwtPayload {
   sub: string;
   email: string;
   version_token: number;
-  token_type: "access";
+  token_type: 'access';
   roles: string[];
   permisos: string[];
   id_productor: number | null;
@@ -44,36 +29,24 @@ interface AccessTokenPayload extends JwtPayload {
 
 interface RefreshTokenPayload extends JwtPayload {
   sub: string;
-  token_type: "refresh";
+  token_type: 'refresh';
   version_token: number;
   jti: string;
 }
 
 interface PasswordResetPayload extends JwtPayload {
   sub: string;
-  token_type: "password_reset";
+  token_type: 'password_reset';
   jti: string;
 }
 
-const ACCESS_TOKEN_SECRET =
-  process.env.JWT_ACCESS_SECRET ?? "change-me-access-secret";
-const REFRESH_TOKEN_SECRET =
-  process.env.JWT_REFRESH_SECRET ?? "change-me-refresh-secret";
-const PASSWORD_RESET_SECRET =
-  process.env.PASSWORD_RESET_SECRET ?? "change-me-password-reset-secret";
+const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET ?? 'change-me-access-secret';
+const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET ?? 'change-me-refresh-secret';
+const PASSWORD_RESET_SECRET = process.env.PASSWORD_RESET_SECRET ?? 'change-me-password-reset-secret';
 
-const ACCESS_TOKEN_EXPIRES_IN = parseDurationToSeconds(
-  process.env.JWT_ACCESS_EXPIRES_IN,
-  15 * 60,
-);
-const REFRESH_TOKEN_EXPIRES_IN = parseDurationToSeconds(
-  process.env.JWT_REFRESH_EXPIRES_IN,
-  30 * 24 * 60 * 60,
-);
-const PASSWORD_RESET_EXPIRES_IN = parseDurationToSeconds(
-  process.env.PASSWORD_RESET_EXPIRES_IN,
-  30 * 60,
-);
+const ACCESS_TOKEN_EXPIRES_IN = parseDurationToSeconds(process.env.JWT_ACCESS_EXPIRES_IN, 15 * 60);
+const REFRESH_TOKEN_EXPIRES_IN = parseDurationToSeconds(process.env.JWT_REFRESH_EXPIRES_IN, 30 * 24 * 60 * 60);
+const PASSWORD_RESET_EXPIRES_IN = parseDurationToSeconds(process.env.PASSWORD_RESET_EXPIRES_IN, 30 * 60);
 
 @Injectable()
 export class AuthService {
@@ -91,7 +64,7 @@ export class AuthService {
     });
 
     if (existing) {
-      throw new ConflictException("Ya existe un usuario con ese email");
+      throw new ConflictException('Ya existe un usuario con ese email');
     }
 
     const passwordHash = await hashPassword(dto.password);
@@ -106,8 +79,8 @@ export class AuthService {
           apellido_materno: dto.apellido_materno?.trim() || null,
           telefono: dto.telefono?.trim() || null,
           foto_url: dto.foto_url?.trim() || null,
-          idioma_preferido: dto.idioma_preferido?.trim() || "es",
-          moneda_preferida: dto.moneda_preferida?.trim() || "MXN",
+          idioma_preferido: dto.idioma_preferido?.trim() || 'es',
+          moneda_preferida: dto.moneda_preferida?.trim() || 'MXN',
         },
       });
 
@@ -115,26 +88,19 @@ export class AuthService {
       try {
         await this.emailService.sendWelcomeEmail(user.email, user.nombre);
       } catch (emailError) {
-        console.error("Error sending welcome email:", emailError);
+        console.error('Error sending welcome email:', emailError);
         // No lanzar error si falla el email, el usuario ya está registrado
       }
 
-      await this.logAuthEvent("register", user.id_usuario, {
-        email: user.email,
-      });
+      await this.logAuthEvent('register', user.id_usuario, { email: user.email });
 
       return this.issueTokens(user);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
-        throw new ConflictException("No fue posible registrar el usuario");
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('No fue posible registrar el usuario');
       }
 
-      throw new InternalServerErrorException(
-        "No fue posible registrar el usuario",
-      );
+      throw new InternalServerErrorException('No fue posible registrar el usuario');
     }
   }
 
@@ -146,31 +112,28 @@ export class AuthService {
     });
 
     if (!user || user.eliminado_en) {
-      throw new UnauthorizedException("Credenciales inválidas");
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
     if (!user.password_hash) {
-      throw new UnauthorizedException("El usuario no tiene contraseña local");
+      throw new UnauthorizedException('El usuario no tiene contraseña local');
     }
 
     const valid = await verifyPassword(dto.password, user.password_hash);
     if (!valid) {
-      throw new UnauthorizedException("Credenciales inválidas");
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    await this.logAuthEvent("login", user.id_usuario, { email: user.email });
+    await this.logAuthEvent('login', user.id_usuario, { email: user.email });
 
     return this.issueTokens(user);
   }
 
   async refresh(dto: RefreshAuthDto): Promise<AuthResponseDto> {
-    const payload = verifyJwt<RefreshTokenPayload>(
-      dto.refresh_token,
-      REFRESH_TOKEN_SECRET,
-    );
+    const payload = verifyJwt<RefreshTokenPayload>(dto.refresh_token, REFRESH_TOKEN_SECRET);
 
-    if (payload.token_type !== "refresh") {
-      throw new UnauthorizedException("Token inválido");
+    if (payload.token_type !== 'refresh') {
+      throw new UnauthorizedException('Token inválido');
     }
 
     const tokenHash = hashToken(dto.refresh_token);
@@ -183,7 +146,7 @@ export class AuthService {
     });
 
     if (!storedToken) {
-      throw new UnauthorizedException("Token inválido o ya usado");
+      throw new UnauthorizedException('Token inválido o ya usado');
     }
 
     const user = await this.prisma.usuarios.findUnique({
@@ -191,11 +154,11 @@ export class AuthService {
     });
 
     if (!user || user.eliminado_en) {
-      throw new UnauthorizedException("Usuario no encontrado o eliminado");
+      throw new UnauthorizedException('Usuario no encontrado o eliminado');
     }
 
     if (user.version_token !== payload.version_token) {
-      throw new UnauthorizedException("Token invalidado");
+      throw new UnauthorizedException('Token invalidado');
     }
 
     await this.prisma.refresh_tokens.update({
@@ -207,10 +170,7 @@ export class AuthService {
   }
 
   async logout(dto: LogoutAuthDto): Promise<{ message: string }> {
-    const payload = verifyJwt<RefreshTokenPayload>(
-      dto.refresh_token,
-      REFRESH_TOKEN_SECRET,
-    );
+    const payload = verifyJwt<RefreshTokenPayload>(dto.refresh_token, REFRESH_TOKEN_SECRET);
 
     const tokenHash = hashToken(dto.refresh_token);
     await this.prisma.refresh_tokens.updateMany({
@@ -222,14 +182,12 @@ export class AuthService {
       data: { revocado_en: new Date() },
     });
 
-    await this.logAuthEvent("logout", payload.sub, {});
+    await this.logAuthEvent('logout', payload.sub, {});
 
-    return { message: "Logout exitoso" };
+    return { message: 'Logout exitoso' };
   }
 
-  async requestPasswordReset(
-    dto: RequestPasswordResetDto,
-  ): Promise<{ message: string }> {
+  async requestPasswordReset(dto: RequestPasswordResetDto): Promise<{ message: string }> {
     const email = dto.email.toLowerCase().trim();
 
     const user = await this.prisma.usuarios.findUnique({
@@ -237,16 +195,14 @@ export class AuthService {
     });
 
     if (!user || user.eliminado_en) {
-      return {
-        message: "Si el email existe, se enviará un enlace de recuperación",
-      };
+      return { message: 'Si el email existe, se enviará un enlace de recuperación' };
     }
 
     const resetToken = createSignedJwt<PasswordResetPayload>(
       {
         sub: user.id_usuario,
-        token_type: "password_reset",
-        jti: randomBytes(16).toString("hex"),
+        token_type: 'password_reset',
+        jti: randomBytes(16).toString('hex'),
       },
       PASSWORD_RESET_SECRET,
       PASSWORD_RESET_EXPIRES_IN,
@@ -254,23 +210,16 @@ export class AuthService {
 
     await this.emailService.sendPasswordResetEmail(email, resetToken);
 
-    await this.logAuthEvent("password_reset_request", user.id_usuario, {
-      email: user.email,
-    });
+    await this.logAuthEvent('password_reset_request', user.id_usuario, { email: user.email });
 
-    return {
-      message: "Si el email existe, se enviará un enlace de recuperación",
-    };
+    return { message: 'Si el email existe, se enviará un enlace de recuperación' };
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
-    const payload = verifyJwt<PasswordResetPayload>(
-      dto.token,
-      PASSWORD_RESET_SECRET,
-    );
+    const payload = verifyJwt<PasswordResetPayload>(dto.token, PASSWORD_RESET_SECRET);
 
-    if (payload.token_type !== "password_reset") {
-      throw new UnauthorizedException("Token inválido");
+    if (payload.token_type !== 'password_reset') {
+      throw new UnauthorizedException('Token inválido');
     }
 
     const user = await this.prisma.usuarios.findUnique({
@@ -278,7 +227,7 @@ export class AuthService {
     });
 
     if (!user || user.eliminado_en) {
-      throw new UnauthorizedException("Usuario no encontrado o eliminado");
+      throw new UnauthorizedException('Usuario no encontrado o eliminado');
     }
 
     const passwordHash = await hashPassword(dto.password);
@@ -296,9 +245,9 @@ export class AuthService {
       data: { revocado_en: new Date() },
     });
 
-    await this.logAuthEvent("password_reset_complete", user.id_usuario, {});
+    await this.logAuthEvent('password_reset_complete', user.id_usuario, {});
 
-    return { message: "Password actualizado exitosamente" };
+    return { message: 'Password actualizado exitosamente' };
   }
 
   async loginWithOAuth(idUsuario: string): Promise<AuthResponseDto> {
@@ -307,77 +256,21 @@ export class AuthService {
     });
 
     if (!user || user.eliminado_en) {
-      throw new UnauthorizedException("Usuario no encontrado o eliminado");
+      throw new UnauthorizedException('Usuario no encontrado o eliminado');
     }
 
-    await this.logAuthEvent("oauth_login", user.id_usuario, {
-      email: user.email,
-    });
+    await this.logAuthEvent('oauth_login', user.id_usuario, { email: user.email });
 
     return this.issueTokens(user);
-  }
-
-  async getMe(accessToken: string): Promise<AuthUserDto> {
-    const payload = verifyJwt<AccessTokenPayload>(
-      accessToken,
-      ACCESS_TOKEN_SECRET,
-    );
-
-    if (payload.token_type !== "access") {
-      throw new UnauthorizedException("Token inválido");
-    }
-
-    const freshUser = await this.prisma.usuarios.findUnique({
-      where: { id_usuario: payload.sub },
-      include: {
-        oauth_cuentas: {
-          where: { provider: "google" },
-          select: { provider_uid: true },
-          take: 1,
-        },
-      },
-    });
-
-    if (!freshUser || freshUser.eliminado_en) {
-      throw new UnauthorizedException("Usuario no encontrado o eliminado");
-    }
-
-    const accessData = await getAccessData(this.prisma, freshUser.id_usuario);
-
-    return {
-      id_usuario: freshUser.id_usuario,
-      nombre: freshUser.nombre,
-      email: freshUser.email,
-      apellido_paterno: freshUser.apellido_paterno,
-      apellido_materno: freshUser.apellido_materno,
-      telefono: freshUser.telefono,
-      foto_url: freshUser.foto_url,
-      google_id: freshUser.oauth_cuentas[0]?.provider_uid ?? null,
-      idioma_preferido: freshUser.idioma_preferido,
-      moneda_preferida: freshUser.moneda_preferida,
-      version_token: freshUser.version_token,
-      fecha_registro: freshUser.fecha_registro,
-      eliminado_en: freshUser.eliminado_en,
-      roles: accessData.roles,
-      permisos: accessData.permisos,
-      id_productor: accessData.id_productor,
-    };
   }
 
   private async issueTokens(user: usuarios): Promise<AuthResponseDto> {
     const freshUser = await this.prisma.usuarios.findUnique({
       where: { id_usuario: user.id_usuario },
-      include: {
-        oauth_cuentas: {
-          where: { provider: "google" },
-          select: { provider_uid: true },
-          take: 1,
-        },
-      },
     });
 
     if (!freshUser || freshUser.eliminado_en) {
-      throw new NotFoundException("Usuario no encontrado");
+      throw new NotFoundException('Usuario no encontrado');
     }
 
     const accessData = await getAccessData(this.prisma, freshUser.id_usuario);
@@ -387,7 +280,7 @@ export class AuthService {
         sub: freshUser.id_usuario,
         email: freshUser.email,
         version_token: freshUser.version_token,
-        token_type: "access",
+        token_type: 'access',
         roles: accessData.roles,
         permisos: accessData.permisos,
         id_productor: accessData.id_productor,
@@ -400,8 +293,8 @@ export class AuthService {
       {
         sub: freshUser.id_usuario,
         version_token: freshUser.version_token,
-        token_type: "refresh",
-        jti: randomBytes(16).toString("hex"),
+        token_type: 'refresh',
+        jti: randomBytes(16).toString('hex'),
       },
       REFRESH_TOKEN_SECRET,
       REFRESH_TOKEN_EXPIRES_IN,
@@ -423,7 +316,6 @@ export class AuthService {
         apellido_materno: freshUser.apellido_materno,
         telefono: freshUser.telefono,
         foto_url: freshUser.foto_url,
-        google_id: freshUser.oauth_cuentas[0]?.provider_uid ?? null,
         idioma_preferido: freshUser.idioma_preferido,
         moneda_preferida: freshUser.moneda_preferida,
         version_token: freshUser.version_token,
@@ -440,17 +332,13 @@ export class AuthService {
     };
   }
 
-  private async logAuthEvent(
-    action: string,
-    idUsuario?: string,
-    metadata?: Record<string, unknown>,
-  ) {
+  private async logAuthEvent(action: string, idUsuario?: string, metadata?: Record<string, unknown>) {
     try {
       await this.prisma.auditoria.create({
         data: {
           id_usuario: idUsuario || undefined,
           accion: `auth.${action}`,
-          tabla_afectada: "usuarios",
+          tabla_afectada: 'usuarios',
           registro_id: idUsuario || undefined,
           valor_anterior: metadata as Prisma.InputJsonValue | undefined,
           valor_nuevo: { success: true },
@@ -458,25 +346,18 @@ export class AuthService {
         },
       });
     } catch (error) {
-      console.error("Error logging auth event:", error);
+      console.error('Error logging auth event:', error);
     }
   }
 }
 
-async function getAccessData(
-  prisma: PrismaService,
-  id_usuario: string,
-): Promise<{
-  roles: string[];
-  permisos: string[];
-  id_productor: number | null;
-}> {
+async function getAccessData(prisma: PrismaService, id_usuario: string): Promise<{ roles: string[]; permisos: string[]; id_productor: number | null }> {
   const user = await prisma.usuarios.findUnique({
     where: { id_usuario },
     include: {
       productores: { select: { id_productor: true } },
       usuario_rol: {
-        where: { estado: "activo" },
+        where: { estado: 'activo' },
         include: {
           roles: {
             include: {
@@ -489,7 +370,7 @@ async function getAccessData(
   });
 
   if (!user) {
-    throw new NotFoundException("Usuario no encontrado");
+    throw new NotFoundException('Usuario no encontrado');
   }
 
   const roles = user.usuario_rol
@@ -498,11 +379,10 @@ async function getAccessData(
 
   const permisos = Array.from(
     new Set(
-      user.usuario_rol.flatMap(
-        (relation) =>
-          relation.roles?.rol_permiso
-            .map((permiso) => permiso.permisos?.nombre)
-            .filter((permiso): permiso is string => Boolean(permiso)) ?? [],
+      user.usuario_rol.flatMap((relation) =>
+        relation.roles?.rol_permiso
+          .map((permiso) => permiso.permisos?.nombre)
+          .filter((permiso): permiso is string => Boolean(permiso)) ?? [],
       ),
     ),
   );
@@ -515,40 +395,29 @@ async function getAccessData(
 }
 
 function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16).toString("hex");
+  const salt = randomBytes(16).toString('hex');
   const iterations = 16384;
   const keyLength = 64;
 
   return new Promise((resolve, reject) => {
-    scrypt(
-      password,
-      salt,
-      keyLength,
-      { N: iterations, r: 8, p: 1, maxmem: 128 * 1024 * 1024 },
-      (error: Error | null, derivedKey: Buffer) => {
-        if (error) {
-          reject(error);
-          return;
-        }
+    scrypt(password, salt, keyLength, { N: iterations, r: 8, p: 1, maxmem: 128 * 1024 * 1024 }, (error: Error | null, derivedKey: Buffer) => {
+      if (error) {
+        reject(error);
+        return;
+      }
 
-        resolve(
-          `scrypt$${iterations}$8$1$${salt}$${derivedKey.toString("hex")}$sha512`,
-        );
-      },
-    );
+      resolve(`scrypt$${iterations}$8$1$${salt}$${derivedKey.toString('hex')}$sha512`);
+    });
   });
 }
 
-function verifyPassword(
-  password: string,
-  storedHash: string,
-): Promise<boolean> {
-  if (storedHash.startsWith("$2b$") || storedHash.startsWith("$2a$")) {
+function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  if (storedHash.startsWith('$2b$') || storedHash.startsWith('$2a$')) {
     return bcrypt.compare(password, storedHash);
   }
 
-  const parts = storedHash.split("$");
-  if (parts.length !== 7 || parts[0] !== "scrypt") {
+  const parts = storedHash.split('$');
+  if (parts.length !== 7 || parts[0] !== 'scrypt') {
     return Promise.resolve(false);
   }
 
@@ -557,60 +426,41 @@ function verifyPassword(
   const p = Number(parts[3]);
   const salt = parts[4];
   const hashHex = parts[5];
-  const keyLength = Buffer.from(hashHex, "hex").length;
+  const keyLength = Buffer.from(hashHex, 'hex').length;
 
   return new Promise((resolve) => {
-    scrypt(
-      password,
-      salt,
-      keyLength,
-      { N: iterations, r, p, maxmem: 128 * 1024 * 1024 },
-      (error: Error | null, derivedKey: Buffer) => {
-        if (error) {
-          resolve(false);
-          return;
-        }
+    scrypt(password, salt, keyLength, { N: iterations, r, p, maxmem: 128 * 1024 * 1024 }, (error: Error | null, derivedKey: Buffer) => {
+      if (error) {
+        resolve(false);
+        return;
+      }
 
-        const expected = Buffer.from(hashHex, "hex");
-        resolve(
-          expected.length === derivedKey.length &&
-            timingSafeEqual(expected, derivedKey),
-        );
-      },
-    );
+      const expected = Buffer.from(hashHex, 'hex');
+      resolve(expected.length === derivedKey.length && timingSafeEqual(expected, derivedKey));
+    });
   });
 }
 
-function createSignedJwt<T extends JwtPayload>(
-  payload: T,
-  secret: string,
-  expiresInSeconds: number,
-): string {
-  const header = base64UrlEncode(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+function createSignedJwt<T extends JwtPayload>(payload: T, secret: string, expiresInSeconds: number): string {
+  const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const now = Math.floor(Date.now() / 1000);
-  const body = base64UrlEncode(
-    JSON.stringify({ ...payload, iat: now, exp: now + expiresInSeconds }),
-  );
+  const body = base64UrlEncode(JSON.stringify({ ...payload, iat: now, exp: now + expiresInSeconds }));
   const data = `${header}.${body}`;
-  const signature = createHmac("sha256", secret)
-    .update(data)
-    .digest("base64url");
+  const signature = createHmac('sha256', secret).update(data).digest('base64url');
   return `${data}.${signature}`;
 }
 
 function verifyJwt<T extends JwtPayload>(token: string, secret: string): T {
-  const parts = token.split(".");
+  const parts = token.split('.');
   if (parts.length !== 3) {
-    throw new UnauthorizedException("Token inválido");
+    throw new UnauthorizedException('Token inválido');
   }
 
   const [header, body, signature] = parts;
-  const expectedSignature = createHmac("sha256", secret)
-    .update(`${header}.${body}`)
-    .digest("base64url");
+  const expectedSignature = createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
 
   if (!safeEquals(signature, expectedSignature)) {
-    throw new UnauthorizedException("Token inválido");
+    throw new UnauthorizedException('Token inválido');
   }
 
   let payload: T & { exp?: number };
@@ -618,21 +468,18 @@ function verifyJwt<T extends JwtPayload>(token: string, secret: string): T {
   try {
     payload = JSON.parse(base64UrlDecode(body)) as T & { exp?: number };
   } catch {
-    throw new UnauthorizedException("Token inválido");
+    throw new UnauthorizedException('Token inválido');
   }
 
-  if (
-    typeof payload.exp !== "number" ||
-    payload.exp <= Math.floor(Date.now() / 1000)
-  ) {
-    throw new UnauthorizedException("Token expirado");
+  if (typeof payload.exp !== 'number' || payload.exp <= Math.floor(Date.now() / 1000)) {
+    throw new UnauthorizedException('Token expirado');
   }
 
   return payload;
 }
 
 function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
+  return createHash('sha256').update(token).digest('hex');
 }
 
 function safeEquals(a: string, b: string): boolean {
@@ -647,17 +494,14 @@ function safeEquals(a: string, b: string): boolean {
 }
 
 function base64UrlEncode(value: string): string {
-  return Buffer.from(value).toString("base64url");
+  return Buffer.from(value).toString('base64url');
 }
 
 function base64UrlDecode(value: string): string {
-  return Buffer.from(value, "base64url").toString("utf8");
+  return Buffer.from(value, 'base64url').toString('utf8');
 }
 
-function parseDurationToSeconds(
-  value: string | undefined,
-  fallback: number,
-): number {
+function parseDurationToSeconds(value: string | undefined, fallback: number): number {
   if (!value) {
     return fallback;
   }
@@ -668,17 +512,17 @@ function parseDurationToSeconds(
   }
 
   const amount = Number(match[1]);
-  const unit = match[2]?.toLowerCase() ?? "s";
+  const unit = match[2]?.toLowerCase() ?? 's';
 
-  if (unit === "m") {
+  if (unit === 'm') {
     return amount * 60;
   }
 
-  if (unit === "h") {
+  if (unit === 'h') {
     return amount * 60 * 60;
   }
 
-  if (unit === "d") {
+  if (unit === 'd') {
     return amount * 24 * 60 * 60;
   }
 

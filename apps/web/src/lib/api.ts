@@ -395,4 +395,16 @@ export const api = {
   auditoria: {
     getAll: () => fetchJson(endpoint("/auditoria")),
   },
+
+  wishlist: {
+    getByUsuario: (id_usuario: string) => fetchJson(endpoint(`/wishlist/${id_usuario}`)),
+    add: (token: string, data: { id_usuario: string; id_producto: string }) =>
+      fetchJson(endpoint("/wishlist"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+    remove: (token: string, id_usuario: string, id_producto: string) =>
+      fetchJson(endpoint(`/wishlist/${id_usuario}/${id_producto}`), { method: "DELETE", headers: headers(token) }),
+    removeById: (token: string, id: string) =>
+      fetchJson(endpoint(`/wishlist/item/${id}`), { method: "DELETE", headers: headers(token) }),
+    check: (id_usuario: string, id_producto: string) =>
+      fetchJson(endpoint(`/wishlist/check/${id_usuario}/${id_producto}`)),
+  },
 };

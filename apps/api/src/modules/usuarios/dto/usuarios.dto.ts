@@ -48,11 +48,6 @@ export class CreateUsuarioDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(255)
-  google_id?: string;
-
-  @IsOptional()
-  @IsString()
   @MaxLength(10)
   idioma_preferido?: string;
 
