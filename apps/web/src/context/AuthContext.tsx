@@ -178,10 +178,7 @@ const resolveProductor = async () => {
     [user],
   );
   const isProductor = useMemo(
-    () =>
-      (user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r)) ?? false) ||
-      user?.permisos?.includes("panel_productor") ||
-      false,
+    () => user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r)) ?? false,
     [user],
   );
 
