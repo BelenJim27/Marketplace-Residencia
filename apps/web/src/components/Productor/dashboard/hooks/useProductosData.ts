@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
 import type { DashboardPeriod, VentasAnalytics } from "./useVentasData";
 
 const PERIOD_MAP: Record<DashboardPeriod, "week" | "month" | "year"> = {
@@ -19,7 +20,16 @@ export function useProductosData(periodo: DashboardPeriod) {
   const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
-    if (authLoading || !user?.id_productor) return;
+    if (authLoading) return;
+
+    const token = getCookie("token") ?? "";
+
+    if (!user?.id_productor || !token) {
+      setIsLoading(false);
+      setError("No fue posible identificar el productor autenticado.");
+      setData(null);
+      return;
+    }
 
     let cancelled = false;
 
@@ -28,10 +38,15 @@ export function useProductosData(periodo: DashboardPeriod) {
       setError(null);
 
       try {
-        const response = (await api.pedidos.getAnalytics(user.id_productor as number, PERIOD_MAP[periodo])) as VentasAnalytics;
+        const response = (await api.pedidos.getAnalytics(token, PERIOD_MAP[periodo])) as VentasAnalytics;
         if (!cancelled) setData(response);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "No fue posible cargar los productos");
+        if (!cancelled)
+          setError(
+            err instanceof Error
+              ? err.message
+              : "No fue posible cargar los productos",
+          );
       } finally {
         if (!cancelled) setIsLoading(false);
       }

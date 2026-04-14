@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
-import { Eye, Pencil, Plus, Store, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   appendImagenProducto,
   EMPTY_IMAGEN_PRODUCTO,
@@ -76,7 +76,9 @@ export function ProductorProductos() {
   const [mode, setMode] = useState<"create" | "edit" | "view">("create");
   const [selected, setSelected] = useState<ProductItem | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [imagen, setImagen] = useState<ImagenProductoState>(EMPTY_IMAGEN_PRODUCTO);
+  const [imagen, setImagen] = useState<ImagenProductoState>(
+    EMPTY_IMAGEN_PRODUCTO,
+  );
   const [selectionEnabled, setSelectionEnabled] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
@@ -91,24 +93,29 @@ export function ProductorProductos() {
     setError(null);
 
     try {
-      const [producerData, productsData] = await Promise.all([
+      const [producerData, productsData, storesData] = await Promise.all([
         api.productores.getOne(user.id_productor),
-        api.productos.getByProductor(user.id_productor),
+        api.productos.getMine(token),
+        api.tiendas.getByProductor(user.id_productor),
       ]);
 
       const detail = producerData as ProducerDetail;
-      const storesData = (detail.tiendas || []) as StoreItem[];
       setProducer(detail);
-      setStores(storesData);
+      setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);
       setProducts(
         (productsData as ProductItem[]).map((product) => ({
           ...product,
-          imagen_url: product.imagen_url ?? product.imagen_principal_url ?? null,
+          imagen_url:
+            product.imagen_url ?? product.imagen_principal_url ?? null,
           stock: product.stock ?? 0,
         })),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible cargar los productos");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No fue posible cargar los productos",
+      );
     } finally {
       setLoading(false);
     }
@@ -118,31 +125,70 @@ export function ProductorProductos() {
     loadData();
   }, [user?.id_productor]);
 
-  const storeMap = useMemo(() => new Map(stores.map((store) => [store.id_tienda, store.nombre])), [stores]);
-  const storeIds = useMemo(() => new Set(stores.map((store) => Number(store.id_tienda))), [stores]);
-
+  const storeMap = useMemo(
+    () => new Map(stores.map((store) => [store.id_tienda, store.nombre])),
+    [stores],
+  );
   const visibleProducts = useMemo(() => {
     const q = query.toLowerCase().trim();
     const min = minPrice === "" ? null : Number(minPrice);
     const max = maxPrice === "" ? null : Number(maxPrice);
 
-    return products
-      .filter((product) => storeIds.has(Number(product.id_tienda)))
-      .filter((product) => {
-        const productName = product.nombre.toLowerCase();
-        const productStatus = String(product.status || "activo").toLowerCase();
-        const storeName = String(storeMap.get(Number(product.id_tienda)) || "").toLowerCase();
-        const price = Number(product.precio_base || 0);
+    return products.filter((product) => {
+      const productName = product.nombre.toLowerCase();
+      const productStatus = String(product.status || "activo").toLowerCase();
+      const storeName = String(
+        storeMap.get(Number(product.id_tienda)) || "",
+      ).toLowerCase();
+      const price = Number(product.precio_base || 0);
 
-        const matchesQuery = !q || productName.includes(q) || productStatus.includes(q) || storeName.includes(q);
-        const matchesStatus = statusFilter === "todos" || productStatus === statusFilter;
-        const matchesStore = storeFilter === "todos" || String(product.id_tienda) === storeFilter;
-        const matchesMin = min === null || Number.isNaN(min) ? true : price >= min;
-        const matchesMax = max === null || Number.isNaN(max) ? true : price <= max;
+      const matchesQuery =
+        !q ||
+        productName.includes(q) ||
+        productStatus.includes(q) ||
+        storeName.includes(q);
+      const matchesStatus =
+        statusFilter === "todos" || productStatus === statusFilter;
+      const matchesStore =
+        storeFilter === "todos" || String(product.id_tienda) === storeFilter;
+      const matchesMin =
+        min === null || Number.isNaN(min) ? true : price >= min;
+      const matchesMax =
+        max === null || Number.isNaN(max) ? true : price <= max;
 
-        return matchesQuery && matchesStatus && matchesStore && matchesMin && matchesMax;
-      });
-  }, [products, storeIds, query, storeMap, statusFilter, storeFilter, minPrice, maxPrice]);
+      return (
+        matchesQuery &&
+        matchesStatus &&
+        matchesStore &&
+        matchesMin &&
+        matchesMax
+      );
+    });
+  }, [
+    products,
+    query,
+    storeMap,
+    statusFilter,
+    storeFilter,
+    minPrice,
+    maxPrice,
+  ]);
+
+  const activeProductsCount = useMemo(
+    () =>
+      products.filter(
+        (product) => String(product.status ?? "activo").toLowerCase() === "activo",
+      ).length,
+    [products],
+  );
+
+  const inactiveProductsCount = useMemo(
+    () =>
+      products.filter(
+        (product) => String(product.status ?? "activo").toLowerCase() !== "activo",
+      ).length,
+    [products],
+  );
 
   const clearFilters = () => {
     setQuery("");
@@ -152,9 +198,14 @@ export function ProductorProductos() {
     setMaxPrice("");
   };
 
-  const visibleProductIds = useMemo(() => visibleProducts.map((product) => product.id_producto), [visibleProducts]);
+  const visibleProductIds = useMemo(
+    () => visibleProducts.map((product) => product.id_producto),
+    [visibleProducts],
+  );
 
-  const allVisibleSelected = visibleProductIds.length > 0 && visibleProductIds.every((id) => selectedIds.includes(id));
+  const allVisibleSelected =
+    visibleProductIds.length > 0 &&
+    visibleProductIds.every((id) => selectedIds.includes(id));
 
   const toggleSelectionMode = (enabled: boolean) => {
     setSelectionEnabled(enabled);
@@ -164,7 +215,11 @@ export function ProductorProductos() {
   };
 
   const toggleProductSelection = (productId: number, checked: boolean) => {
-    setSelectedIds((current) => (checked ? Array.from(new Set([...current, productId])) : current.filter((id) => id !== productId)));
+    setSelectedIds((current) =>
+      checked
+        ? Array.from(new Set([...current, productId]))
+        : current.filter((id) => id !== productId),
+    );
   };
 
   const toggleSelectAllVisible = (checked: boolean) => {
@@ -190,7 +245,12 @@ export function ProductorProductos() {
 
   const openEdit = (product: ProductItem) => {
     setSelected(product);
-    setImagen(resetImagenProductoState(imagen, product.imagen_url ?? product.imagen_principal_url ?? null));
+    setImagen(
+      resetImagenProductoState(
+        imagen,
+        product.imagen_url ?? product.imagen_principal_url ?? null,
+      ),
+    );
     setForm({
       nombre: product.nombre,
       descripcion: product.descripcion ?? "",
@@ -205,7 +265,12 @@ export function ProductorProductos() {
 
   const openView = (product: ProductItem) => {
     setSelected(product);
-    setImagen(resetImagenProductoState(imagen, product.imagen_url ?? product.imagen_principal_url ?? null));
+    setImagen(
+      resetImagenProductoState(
+        imagen,
+        product.imagen_url ?? product.imagen_principal_url ?? null,
+      ),
+    );
     setForm({
       nombre: product.nombre,
       descripcion: product.descripcion ?? "",
@@ -239,7 +304,11 @@ export function ProductorProductos() {
       appendImagenProducto(payload, imagen);
 
       if (mode === "edit" && selected) {
-        await api.productos.update(token, String(selected.id_producto), payload);
+        await api.productos.update(
+          token,
+          String(selected.id_producto),
+          payload,
+        );
       } else {
         await api.productos.create(token, payload);
       }
@@ -248,7 +317,11 @@ export function ProductorProductos() {
       setImagen(resetImagenProductoState(imagen));
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible guardar el producto");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No fue posible guardar el producto",
+      );
     } finally {
       setSaving(false);
     }
@@ -261,21 +334,32 @@ export function ProductorProductos() {
       await api.productos.delete(token, String(product.id_producto));
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible eliminar el producto");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No fue posible eliminar el producto",
+      );
     }
   };
 
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`¿Eliminar ${selectedIds.length} producto(s) seleccionados?`)) return;
+    if (!confirm(`¿Eliminar ${selectedIds.length} producto(s) seleccionados?`))
+      return;
 
     try {
-      await Promise.all(selectedIds.map((id) => api.productos.delete(token, String(id))));
+      await Promise.all(
+        selectedIds.map((id) => api.productos.delete(token, String(id))),
+      );
       setSelectedIds([]);
       setSelectionEnabled(false);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible eliminar los productos seleccionados");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No fue posible eliminar los productos seleccionados",
+      );
     }
   };
 
@@ -289,22 +373,34 @@ export function ProductorProductos() {
 
   return (
     <div className="mx-auto w-full max-w-[1200px]">
-
       <div className="mb-6 flex items-center justify-between gap-4 rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark">
         <div>
-          <h1 className="text-2xl font-bold text-dark dark:text-white">Gestión de productos</h1>
-          <p className="text-sm text-gray-500">Solo se muestran productos de tus tiendas</p>
+          <h1 className="text-2xl font-bold text-dark dark:text-white">
+            Gestión de productos
+          </h1>
+          <p className="text-sm text-gray-500">
+            Solo se muestran productos de tus tiendas
+          </p>
         </div>
-        <button onClick={openCreate} disabled={stores.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-medium text-white transition hover:bg-opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+        <button
+          onClick={openCreate}
+          disabled={stores.length === 0}
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-medium text-white transition hover:bg-opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        >
           <Plus size={18} /> Nuevo producto
         </button>
       </div>
 
-      {error && <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-600">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-600">
+          {error}
+        </div>
+      )}
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card title="Productos" value={visibleProducts.length} />
-        <Card title="Tiendas" value={stores.length} />
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card title="Productos" value={products.length} />
+        <Card title="Productos Activos" value={activeProductsCount} />
+        <Card title="Productos Inactivos" value={inactiveProductsCount} />
         <Card title="Productor" value={producer?.id_productor ?? "-"} />
       </div>
 
@@ -320,7 +416,9 @@ export function ProductorProductos() {
       <div className="mb-6 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-4 xl:grid-cols-5">
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Filtro por Estatus</span>
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">
+              Filtro por Estatus
+            </span>
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
@@ -334,7 +432,9 @@ export function ProductorProductos() {
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Filtro por Tienda</span>
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">
+              Filtro por Tienda
+            </span>
             <select
               value={storeFilter}
               onChange={(event) => setStoreFilter(event.target.value)}
@@ -350,7 +450,9 @@ export function ProductorProductos() {
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Precio mín</span>
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">
+              Precio mín
+            </span>
             <input
               type="number"
               value={minPrice}
@@ -361,7 +463,9 @@ export function ProductorProductos() {
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">Precio máx</span>
+            <span className="mb-2 block text-sm font-medium text-dark dark:text-white">
+              Precio máx
+            </span>
             <input
               type="number"
               value={maxPrice}
@@ -415,7 +519,9 @@ export function ProductorProductos() {
                     <input
                       type="checkbox"
                       checked={allVisibleSelected}
-                      onChange={(event) => toggleSelectAllVisible(event.target.checked)}
+                      onChange={(event) =>
+                        toggleSelectAllVisible(event.target.checked)
+                      }
                       className="h-4 w-4 rounded border-stroke text-primary focus:ring-primary"
                     />
                   </th>
@@ -425,33 +531,47 @@ export function ProductorProductos() {
                 <th className="w-[10%] px-5 py-4">Moneda</th>
                 <th className="w-[13%] px-5 py-4">Status</th>
                 <th className="w-[10%] px-5 py-4">Stock</th>
-                <th className="w-[18%] px-5 py-4">Tienda</th>
                 <th className="w-[16%] px-5 py-4 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {visibleProducts.map((product) => (
-                <tr key={product.id_producto} className="border-t border-stroke text-sm dark:border-dark-3">
+                <tr
+                  key={product.id_producto}
+                  className="border-t border-stroke text-sm dark:border-dark-3"
+                >
                   {selectionEnabled ? (
                     <td className="px-4 py-4 text-center">
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(product.id_producto)}
-                        onChange={(event) => toggleProductSelection(product.id_producto, event.target.checked)}
+                        onChange={(event) =>
+                          toggleProductSelection(
+                            product.id_producto,
+                            event.target.checked,
+                          )
+                        }
                         className="h-4 w-4 rounded border-stroke text-primary focus:ring-primary"
                       />
                     </td>
                   ) : null}
                   <td className="px-5 py-4 font-medium text-dark dark:text-white">
                     <div className="flex items-center gap-3">
-                      <ProductoThumbnail src={product.imagen_url} alt={product.nombre} />
+                      <ProductoThumbnail
+                        src={product.imagen_url}
+                        alt={product.nombre}
+                      />
                       <span>{product.nombre}</span>
                     </div>
                   </td>
-                  <td className="px-5 py-4">{Number(product.precio_base || 0).toFixed(2)}</td>
+                  <td className="px-5 py-4">
+                    {Number(product.precio_base || 0).toFixed(2)}
+                  </td>
                   <td className="px-5 py-4">{product.moneda_base || "MXN"}</td>
                   <td className="px-5 py-4">
-                    <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">{product.status || "activo"}</span>
+                    <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+                      {product.status || "activo"}
+                    </span>
                   </td>
                   <td className="px-5 py-4">
                     <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
@@ -459,23 +579,37 @@ export function ProductorProductos() {
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <Store size={16} className="text-gray-400" />
-                      {storeMap.get(Number(product.id_tienda)) || `#${product.id_tienda}`}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => openView(product)} className="rounded-lg p-2 text-gray-500 hover:bg-green-50 hover:text-green-600"><Eye size={16} /></button>
-                      <button onClick={() => openEdit(product)} className="rounded-lg p-2 text-gray-500 hover:bg-blue-50 hover:text-blue-600"><Pencil size={16} /></button>
-                      <button onClick={() => handleDelete(product)} className="rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"><Trash2 size={16} /></button>
+                      <button
+                        onClick={() => openView(product)}
+                        className="rounded-lg p-2 text-gray-500 hover:bg-green-50 hover:text-green-600"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => openEdit(product)}
+                        className="rounded-lg p-2 text-gray-500 hover:bg-blue-50 hover:text-blue-600"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(product)}
+                        className="rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
               {visibleProducts.length === 0 && (
                 <tr>
-                  <td colSpan={selectionEnabled ? 7 : 6} className="px-5 py-10 text-center text-gray-500">No hay productos para mostrar</td>
+                  <td
+                    colSpan={selectionEnabled ? 6 : 5}
+                    className="px-5 py-10 text-center text-gray-500"
+                  >
+                    No hay productos para mostrar
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -488,39 +622,120 @@ export function ProductorProductos() {
           <div className="w-full max-w-2xl rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark">
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-xl font-bold text-dark dark:text-white">
-                {mode === "create" ? "Nuevo producto" : mode === "edit" ? "Editar producto" : "Detalle de producto"}
+                {mode === "create"
+                  ? "Nuevo producto"
+                  : mode === "edit"
+                    ? "Editar producto"
+                    : "Detalle de producto"}
               </h2>
-              <button onClick={() => { setModalOpen(false); setImagen(resetImagenProductoState(imagen)); }} className="text-gray-400 hover:text-gray-600">✕</button>
+              <button
+                onClick={() => {
+                  setModalOpen(false);
+                  setImagen(resetImagenProductoState(imagen));
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Nombre" value={form.nombre} onChange={(value) => setForm((current) => ({ ...current, nombre: value }))} disabled={mode === "view"} />
-                <Field label="Precio base" value={form.precio_base} onChange={(value) => setForm((current) => ({ ...current, precio_base: value }))} disabled={mode === "view"} type="number" />
+                <Field
+                  label="Nombre"
+                  value={form.nombre}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...current, nombre: value }))
+                  }
+                  disabled={mode === "view"}
+                />
+                <Field
+                  label="Precio base"
+                  value={form.precio_base}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...current, precio_base: value }))
+                  }
+                  disabled={mode === "view"}
+                  type="number"
+                />
               </div>
 
-              <Field label="Descripción" value={form.descripcion} onChange={(value) => setForm((current) => ({ ...current, descripcion: value }))} disabled={mode === "view"} textarea />
+              <Field
+                label="Descripción"
+                value={form.descripcion}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, descripcion: value }))
+                }
+                disabled={mode === "view"}
+                textarea
+              />
 
               <ImagenProducto
                 label="Imagen"
                 disabled={mode === "view"}
                 imagen={imagen}
-                fallbackPreview={selected?.imagen_url ?? selected?.imagen_principal_url ?? null}
+                fallbackPreview={
+                  selected?.imagen_url ?? selected?.imagen_principal_url ?? null
+                }
                 onChange={setImagen}
               />
 
               <div className="grid gap-4 md:grid-cols-3">
-                <SelectField label="Tienda" value={form.id_tienda} onChange={(value) => setForm((current) => ({ ...current, id_tienda: value }))} disabled={mode === "view"} options={stores.map((store) => ({ label: store.nombre, value: String(store.id_tienda) }))} />
-                <SelectField label="Moneda" value={form.moneda_base} onChange={(value) => setForm((current) => ({ ...current, moneda_base: value }))} disabled={mode === "view"} options={[{ label: "MXN", value: "MXN" }, { label: "USD", value: "USD" }]} />
-                <SelectField label="Status" value={form.status} onChange={(value) => setForm((current) => ({ ...current, status: value }))} disabled={mode === "view"} options={[{ label: "activo", value: "activo" }, { label: "inactivo", value: "inactivo" }]} />
+                <SelectField
+                  label="Tienda"
+                  value={form.id_tienda}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...current, id_tienda: value }))
+                  }
+                  disabled={mode === "view"}
+                  options={stores.map((store) => ({
+                    label: store.nombre,
+                    value: String(store.id_tienda),
+                  }))}
+                />
+                <SelectField
+                  label="Moneda"
+                  value={form.moneda_base}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...current, moneda_base: value }))
+                  }
+                  disabled={mode === "view"}
+                  options={[
+                    { label: "MXN", value: "MXN" },
+                    { label: "USD", value: "USD" },
+                  ]}
+                />
+                <SelectField
+                  label="Status"
+                  value={form.status}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...current, status: value }))
+                  }
+                  disabled={mode === "view"}
+                  options={[
+                    { label: "activo", value: "activo" },
+                    { label: "inactivo", value: "inactivo" },
+                  ]}
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => { setModalOpen(false); setImagen(resetImagenProductoState(imagen)); }} className="rounded-lg border border-stroke px-5 py-3 font-medium text-dark dark:border-dark-3 dark:text-white">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalOpen(false);
+                    setImagen(resetImagenProductoState(imagen));
+                  }}
+                  className="rounded-lg border border-stroke px-5 py-3 font-medium text-dark dark:border-dark-3 dark:text-white"
+                >
                   Cerrar
                 </button>
                 {mode !== "view" && (
-                  <button type="submit" disabled={saving} className="rounded-lg bg-primary px-5 py-3 font-medium text-white hover:bg-opacity-90 disabled:opacity-60">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="rounded-lg bg-primary px-5 py-3 font-medium text-white hover:bg-opacity-90 disabled:opacity-60"
+                  >
                     {saving ? "Guardando..." : "Guardar"}
                   </button>
                 )}
@@ -537,22 +752,40 @@ function Card({ title, value }: { title: string; value: number | string }) {
   return (
     <div className="rounded-[10px] bg-white p-5 shadow-1 dark:bg-gray-dark">
       <p className="text-sm text-gray-500">{title}</p>
-      <div className="mt-2 text-2xl font-bold text-dark dark:text-white">{value}</div>
+      <div className="mt-2 text-2xl font-bold text-dark dark:text-white">
+        {value}
+      </div>
     </div>
   );
 }
 
-function Field({ label, value, onChange, disabled, textarea, type = "text" }: { label: string; value: string; onChange: (value: string) => void; disabled?: boolean; textarea?: boolean; type?: string }) {
+function Field({
+  label,
+  value,
+  onChange,
+  disabled,
+  textarea,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  textarea?: boolean;
+  type?: string;
+}) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-dark dark:text-white">{label}</span>
+      <span className="mb-2 block text-sm font-medium text-dark dark:text-white">
+        {label}
+      </span>
       {textarea ? (
         <textarea
           value={value}
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
           rows={4}
-          className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2 disabled:opacity-60"
+          className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary disabled:opacity-60 dark:border-dark-3 dark:bg-dark-2"
         />
       ) : (
         <input
@@ -560,7 +793,7 @@ function Field({ label, value, onChange, disabled, textarea, type = "text" }: { 
           value={value}
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
-          className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2 disabled:opacity-60"
+          className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary disabled:opacity-60 dark:border-dark-3 dark:bg-dark-2"
         />
       )}
     </label>
@@ -582,12 +815,14 @@ function SelectField({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-dark dark:text-white">{label}</span>
+      <span className="mb-2 block text-sm font-medium text-dark dark:text-white">
+        {label}
+      </span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
-        className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2 disabled:opacity-60"
+        className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary disabled:opacity-60 dark:border-dark-3 dark:bg-dark-2"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

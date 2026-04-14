@@ -95,6 +95,8 @@ export const api = {
       return fetchJson(endpoint("/productos" + (query ? `?${query}` : "")));
     },
     getByProductor: (id_productor: number) => fetchJson(endpoint(`/productos?id_productor=${id_productor}`)),
+    getMine: (token: string) =>
+      fetchJson(endpoint("/productos"), { headers: headers(token) }),
     getOne: (id: string) => fetchJson(endpoint(`/productos/${id}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/productos"), {
@@ -151,8 +153,10 @@ export const api = {
   pedidos: {
     getAll: () => fetchJson(endpoint("/pedidos")),
     getOne: (id: string) => fetchJson(endpoint(`/pedidos/${id}`)),
-    getAnalytics: (id_productor: number, periodo: string) =>
-      fetchJson(endpoint(`/pedidos/estadisticas?id_productor=${id_productor}&periodo=${periodo}`)),
+    getMineSales: (token: string) =>
+      fetchJson(endpoint("/pedidos/mis-ventas"), { headers: headers(token) }),
+    getAnalytics: (token: string, periodo: string) =>
+      fetchJson(endpoint(`/pedidos/estadisticas?periodo=${periodo}`), { headers: headers(token) }),
     getByUsuario: (usuarioId: string) => fetchJson(endpoint(`/pedidos?usuario=${usuarioId}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/pedidos"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
@@ -369,9 +373,23 @@ export const api = {
   },
 
   archivos: {
-    getAll: () => fetchJson(endpoint("/archivos")),
+    getAll: (params?: { entidad_tipo?: string; entidad_id?: number | string }) => {
+      const query = new URLSearchParams();
+      if (params?.entidad_tipo) query.append("entidad_tipo", params.entidad_tipo);
+      if (params?.entidad_id != null) query.append("entidad_id", String(params.entidad_id));
+      return fetchJson(endpoint(`/archivos${query.toString() ? `?${query.toString()}` : ""}`));
+    },
+    getOne: (id: string) => fetchJson(endpoint(`/archivos/${id}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/archivos"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+    upload: (token: string, data: FormData) =>
+      fetchJson(endpoint("/archivos/upload"), { method: "POST", headers: headers(token, true), body: data }),
+    update: (token: string, id: string, data: any) =>
+      fetchJson(endpoint(`/archivos/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
+    replace: (token: string, id: string, data: FormData) =>
+      fetchJson(endpoint(`/archivos/${id}/upload`), { method: "PATCH", headers: headers(token, true), body: data }),
+    delete: (token: string, id: string) =>
+      fetchJson(endpoint(`/archivos/${id}`), { method: "DELETE", headers: headers(token) }),
   },
 
   auditoria: {

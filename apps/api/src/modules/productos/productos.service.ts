@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
+import { AuthService } from "../auth/auth.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
 import { CreateProductoDto, UpdateProductoDto } from "./dto/productos.dto";
 
@@ -17,22 +18,51 @@ export interface FiltrosProducto {
 
 @Injectable()
 export class ProductosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authService: AuthService,
+  ) {}
 
-  async findAll(id_productor?: number, filtros?: FiltrosProducto) {
-    const where: Prisma.productosWhereInput = { eliminado_en: null };
+  async findAll(
+    accessToken?: string,
+    id_productor?: number,
+    _filtros?: FiltrosProducto,
+  ) {
+    if (accessToken) {
+      const user = await this.authService.getMe(accessToken);
+      const productor = await this.prisma.productores.findFirst({
+        where: { id_usuario: user.id_usuario, eliminado_en: null },
+        include: {
+          lotes: {
+            where: { eliminado_en: null },
+            include: {
+              productos: {
+                where: { eliminado_en: null },
+                include: { producto_imagenes: true },
+              },
+            },
+          },
+        },
+      });
+
+      const productos = productor?.lotes.flatMap((lote) => lote.productos) ?? [];
+
+      return serializeBigInts(
+        await mapProductoResponse(this.prisma, productos),
+      );
+    }
 
     if (id_productor) {
-      const stores = await this.prisma.tiendas.findMany({
+      const lotes = await this.prisma.lotes.findMany({
         where: { id_productor, eliminado_en: null },
-        select: { id_tienda: true },
+        select: { id_lote: true },
       });
-      const ids = stores.map((store) => store.id_tienda);
+      const ids = lotes.map((lote) => lote.id_lote);
       return serializeBigInts(
         await mapProductoResponse(
           this.prisma,
           await this.prisma.productos.findMany({
-            where: { eliminado_en: null, id_tienda: { in: ids } },
+            where: { eliminado_en: null, id_lote: { in: ids } },
             include: { producto_imagenes: true },
           }),
         ),

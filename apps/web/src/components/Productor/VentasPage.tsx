@@ -1,22 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
 import { Eye, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 
-type SaleStatus = "completada" | "pendiente" | "cancelada";
-
 type SaleItem = {
-  id: number;
+  id_pedido: number;
+  id_detalle: number;
   producto: string;
   tienda: string;
   precio_unitario: number;
   cantidad: number;
-  status: SaleStatus;
+  total: number;
+  status: string;
   fecha: string;
+  moneda: string;
+  moneda_referencia: string;
+  pais_destino_iso2?: string | null;
+  tipo_cambio?: number | null;
+  pedido_total: number;
 };
 
 type StoreItem = {
@@ -24,47 +29,18 @@ type StoreItem = {
   nombre: string;
 };
 
-const MOCK_SALES: SaleItem[] = [
-  {
-    id: 1,
-    producto: "Mezcal Espadín Joven 750ml",
-    tienda: "Casa Ramirez Mezcal",
-    precio_unitario: 680,
-    cantidad: 2,
-    status: "completada",
-    fecha: "2026-04-01T12:30:00",
-  },
-  {
-    id: 2,
-    producto: "Mezcal Tobalá Reserva",
-    tienda: "Destilados del Valle",
-    precio_unitario: 1800,
-    cantidad: 1,
-    status: "pendiente",
-    fecha: "2026-04-02T09:10:00",
-  },
-  {
-    id: 3,
-    producto: "Mezcal Ensamble Artesanal",
-    tienda: "Casa Ramirez Mezcal",
-    precio_unitario: 420,
-    cantidad: 4,
-    status: "cancelada",
-    fecha: "2026-04-03T18:00:00",
-  },
-  {
-    id: 4,
-    producto: "Mezcal Cuishe Edición Limitada",
-    tienda: "Destilados del Valle",
-    precio_unitario: 320,
-    cantidad: 3,
-    status: "completada",
-    fecha: "2026-04-04T14:40:00",
-  },
-];
+type SalesResponse = {
+  resumen: {
+    totalVentas: number;
+    ingresosTotales: number;
+    pendientes: number;
+  };
+  ventas: SaleItem[];
+};
 
 export function VentasPage() {
   const { user, loading: authLoading } = useAuth();
+  const token = getCookie("token") ?? "";
   const [query, setQuery] = useState("");
   const [storeFilter, setStoreFilter] = useState("todos");
   const [minQuantity, setMinQuantity] = useState("");
@@ -73,32 +49,70 @@ export function VentasPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [stores, setStores] = useState<StoreItem[]>([]);
+  const [sales, setSales] = useState<SaleItem[]>([]);
+  const [summary, setSummary] = useState<SalesResponse["resumen"]>({
+    totalVentas: 0,
+    ingresosTotales: 0,
+    pendientes: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [ventaSeleccionada, setVentaSeleccionada] = useState<SaleItem | null>(null);
   const [modalAbierto, setModalAbierto] = useState(false);
 
   useEffect(() => {
-    if (authLoading || !user?.id_productor) return;
+    if (authLoading) return;
+
+    if (!user?.id_productor || !token) {
+      setLoading(false);
+      setError("No fue posible identificar el productor autenticado.");
+      setStores([]);
+      setSales([]);
+      setSummary({ totalVentas: 0, ingresosTotales: 0, pendientes: 0 });
+      return;
+    }
 
     let cancelled = false;
 
-    const loadStores = async () => {
+    const loadData = async () => {
       if (!user?.id_productor) return;
 
       try {
-        const data = await api.tiendas.getByProductor(user.id_productor);
+        setLoading(true);
+        setError(null);
+
+        const [storesData, salesData] = await Promise.all([
+          api.tiendas.getByProductor(user.id_productor),
+          api.pedidos.getMineSales(token),
+        ]);
+
         if (cancelled) return;
-        setStores(Array.isArray(data) ? (data as StoreItem[]) : []);
-      } catch {
-        if (!cancelled) setStores([]);
+        setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);
+        setSales(Array.isArray((salesData as SalesResponse).ventas) ? (salesData as SalesResponse).ventas : []);
+        setSummary((salesData as SalesResponse).resumen ?? { totalVentas: 0, ingresosTotales: 0, pendientes: 0 });
+      } catch (err) {
+        if (!cancelled) {
+          setStores([]);
+          setSales([]);
+          setSummary({ totalVentas: 0, ingresosTotales: 0, pendientes: 0 });
+          setError(err instanceof Error ? err.message : "No fue posible cargar las ventas");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     };
 
-    loadStores();
+    loadData();
 
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user?.id_productor]);
+  }, [authLoading, token, user?.id_productor]);
+
+  const availableStatuses = useMemo(
+    () => Array.from(new Set(sales.map((sale) => normalizeStatus(sale.status)))).sort(),
+    [sales],
+  );
 
   const filteredSales = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -107,7 +121,7 @@ export function VentasPage() {
     const fromDate = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
     const toDate = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
 
-    return MOCK_SALES.filter((sale) => {
+    return sales.filter((sale) => {
       const saleDate = new Date(sale.fecha);
       const matchesQuery =
         !normalized ||
@@ -117,14 +131,15 @@ export function VentasPage() {
       const matchesQuantity =
         (minQty === null || Number.isNaN(minQty) ? true : sale.cantidad >= minQty) &&
         (maxQty === null || Number.isNaN(maxQty) ? true : sale.cantidad <= maxQty);
-      const matchesStatus = statusFilter === "todos" || sale.status === statusFilter;
+      const matchesStatus =
+        statusFilter === "todos" || normalizeStatus(sale.status) === statusFilter;
       const matchesDate =
         (!fromDate || saleDate >= fromDate) &&
         (!toDate || saleDate <= toDate);
 
       return matchesQuery && matchesStore && matchesQuantity && matchesStatus && matchesDate;
     });
-  }, [query, storeFilter, minQuantity, maxQuantity, statusFilter, dateFrom, dateTo]);
+  }, [query, sales, storeFilter, minQuantity, maxQuantity, statusFilter, dateFrom, dateTo]);
 
   const clearFilters = () => {
     setQuery("");
@@ -146,22 +161,28 @@ export function VentasPage() {
     setVentaSeleccionada(null);
   }
 
-  const totals = useMemo(() => {
-    const totalVentas = filteredSales.length;
-    const ingresos = filteredSales.reduce((sum, sale) => sum + sale.precio_unitario * sale.cantidad, 0);
-    const pendientes = filteredSales.filter((sale) => sale.status === "pendiente").length;
-
-    return { totalVentas, ingresos, pendientes };
-  }, [filteredSales]);
-
   const stats = [
-    { label: "Total Ventas", value: totals.totalVentas },
-    { label: "Ingresos Totales (MXN)", value: formatCurrency(totals.ingresos) },
-    { label: "Pendientes", value: totals.pendientes },
+    { label: "Total Ventas", value: summary.totalVentas },
+    { label: "Ingresos Totales", value: formatCurrency(summary.ingresosTotales) },
+    { label: "Pendientes", value: summary.pendientes },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[320px] items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-[1200px] overflow-hidden">
+
+      {error ? (
+        <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-600">
+          {error}
+        </div>
+      ) : null}
 
       <div className="mb-6 flex flex-col gap-4 rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark lg:flex-row lg:items-center lg:justify-between">
         <div>
@@ -236,9 +257,11 @@ export function VentasPage() {
               className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
             >
               <option value="todos">Todos</option>
-              <option value="completada">Completada</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="cancelada">Cancelada</option>
+              {availableStatuses.map((status) => (
+                <option key={status} value={status}>
+                  {formatStatusLabel(status)}
+                </option>
+              ))}
             </select>
           </label>
 
@@ -292,19 +315,17 @@ export function VentasPage() {
 
             <tbody>
               {filteredSales.map((sale) => {
-                const total = sale.precio_unitario * sale.cantidad;
-
                 return (
-                  <tr key={sale.id} className="border-t border-stroke text-xs dark:border-dark-3">
+                  <tr key={`${sale.id_pedido}-${sale.id_detalle}`} className="border-t border-stroke text-xs dark:border-dark-3">
                     <td className="px-3 py-3 font-medium text-dark dark:text-white">
                       <span className="block truncate" title={sale.producto}>{sale.producto}</span>
                     </td>
                     <td className="px-3 py-3 text-gray-600 dark:text-gray-3">
                       <span className="block truncate" title={sale.tienda}>{sale.tienda}</span>
                     </td>
-                    <td className="px-3 py-3 text-gray-600 dark:text-gray-3 whitespace-nowrap">{formatCurrency(sale.precio_unitario)}</td>
+                    <td className="px-3 py-3 text-gray-600 dark:text-gray-3 whitespace-nowrap">{formatCurrency(sale.precio_unitario, sale.moneda)}</td>
                     <td className="px-3 py-3 text-gray-600 dark:text-gray-3">{sale.cantidad}</td>
-                    <td className="px-3 py-3 font-medium text-dark dark:text-white whitespace-nowrap">{formatCurrency(total)}</td>
+                    <td className="px-3 py-3 font-medium text-dark dark:text-white whitespace-nowrap">{formatCurrency(sale.total, sale.moneda)}</td>
                     <td className="px-3 py-3">
                       <Badge status={sale.status} />
                     </td>
@@ -342,7 +363,7 @@ export function VentasPage() {
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Detalle de Venta</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Venta #{ventaSeleccionada.id}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Pedido #{ventaSeleccionada.id_pedido}</p>
               </div>
 
               <button
@@ -360,11 +381,11 @@ export function VentasPage() {
                 <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Información del producto</p>
                 <div className="mt-4 space-y-3 text-sm text-gray-700 dark:text-gray-200">
                   <DetailRow label="Producto" value={ventaSeleccionada.producto} />
-                  <DetailRow label="Precio unitario" value={formatCurrency(ventaSeleccionada.precio_unitario)} />
+                  <DetailRow label="Precio unitario" value={formatCurrency(ventaSeleccionada.precio_unitario, ventaSeleccionada.moneda)} />
                   <DetailRow label="Cantidad" value={String(ventaSeleccionada.cantidad)} />
                   <div className="pt-2">
                     <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</p>
-                    <p className="text-2xl font-bold text-green-600">{formatCurrency(ventaSeleccionada.precio_unitario * ventaSeleccionada.cantidad)}</p>
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(ventaSeleccionada.total, ventaSeleccionada.moneda)}</p>
                   </div>
                 </div>
               </div>
@@ -374,6 +395,8 @@ export function VentasPage() {
                 <div className="mt-4 space-y-3 text-sm text-gray-700 dark:text-gray-200">
                   <DetailRow label="Tienda" value={ventaSeleccionada.tienda} />
                   <DetailRow label="Fecha" value={formatDateTime(ventaSeleccionada.fecha)} />
+                  <DetailRow label="Moneda" value={ventaSeleccionada.moneda} />
+                  <DetailRow label="Total del pedido" value={formatCurrency(ventaSeleccionada.pedido_total, ventaSeleccionada.moneda)} />
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-gray-500 dark:text-gray-400">Status</span>
                     <SaleStatusBadge status={ventaSeleccionada.status} />
@@ -394,20 +417,20 @@ export function VentasPage() {
                 <TimelineStep
                   title="En proceso"
                   date=""
-                  active={ventaSeleccionada.status !== "cancelada"}
-                  done={ventaSeleccionada.status === "completada"}
+                  active={!isCancelledStatus(ventaSeleccionada.status)}
+                  done={isCompletedStatus(ventaSeleccionada.status)}
                 />
                 <TimelineStep
                   title="Completado"
                   date=""
-                  active={ventaSeleccionada.status === "completada"}
-                  done={ventaSeleccionada.status === "completada"}
+                  active={isCompletedStatus(ventaSeleccionada.status)}
+                  done={isCompletedStatus(ventaSeleccionada.status)}
                 />
               </div>
             </div>
 
-            <div className="mt-5 flex items-center justify-between gap-3">
-              {ventaSeleccionada.status === "pendiente" ? (
+              <div className="mt-5 flex items-center justify-between gap-3">
+              {normalizeStatus(ventaSeleccionada.status) === "pendiente" ? (
                 <>
                   <button
                     type="button"
@@ -422,7 +445,7 @@ export function VentasPage() {
                     Cancelar venta
                   </button>
                 </>
-              ) : ventaSeleccionada.status === "completada" ? (
+              ) : isCompletedStatus(ventaSeleccionada.status) ? (
                 <p className="text-sm font-medium text-green-600">✓ Venta completada</p>
               ) : (
                 <p className="text-sm font-medium text-red-600">✗ Venta cancelada</p>
@@ -444,15 +467,17 @@ function Card({ title, value }: { title: string; value: number | string }) {
   );
 }
 
-function Badge({ status }: { status: SaleStatus }) {
-  const className =
-    status === "completada"
-      ? "bg-green-50 text-green-700"
-      : status === "pendiente"
-        ? "bg-amber-50 text-amber-700"
-        : "bg-red-50 text-red-700";
+ function Badge({ status }: { status: string }) {
+  const normalized = normalizeStatus(status);
+  const className = isCompletedStatus(normalized)
+    ? "bg-green-50 text-green-700"
+    : normalized === "pendiente"
+      ? "bg-amber-50 text-amber-700"
+      : isCancelledStatus(normalized)
+        ? "bg-red-50 text-red-700"
+        : "bg-slate-100 text-slate-700";
 
-  return <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-medium capitalize ${className}`}>{status}</span>;
+  return <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-medium capitalize ${className}`}>{formatStatusLabel(normalized)}</span>;
 }
 
 function ActionButton({ label, icon, onClick }: { label: string; icon: ReactNode; onClick?: () => void }) {
@@ -477,15 +502,17 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SaleStatusBadge({ status }: { status: SaleStatus }) {
-  const className =
-    status === "completada"
-      ? "bg-green-100 text-green-700"
-      : status === "pendiente"
-        ? "bg-amber-100 text-amber-700"
-        : "bg-red-100 text-red-700";
+function SaleStatusBadge({ status }: { status: string }) {
+  const normalized = normalizeStatus(status);
+  const className = isCompletedStatus(normalized)
+    ? "bg-green-100 text-green-700"
+    : normalized === "pendiente"
+      ? "bg-amber-100 text-amber-700"
+      : isCancelledStatus(normalized)
+        ? "bg-red-100 text-red-700"
+        : "bg-slate-100 text-slate-700";
 
-  const label = status === "completada" ? "Completada" : status === "pendiente" ? "Pendiente" : "Cancelada";
+  const label = formatStatusLabel(normalized);
 
   return <span className={`rounded-full px-3 py-1 text-xs font-medium ${className}`}>{label}</span>;
 }
@@ -526,14 +553,30 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
-function formatCurrency(value: number) {
+function formatCurrency(value: number, currency = "MXN") {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
-    currency: "MXN",
+    currency,
     maximumFractionDigits: 0,
   }).format(value);
 }
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium" }).format(new Date(value));
+}
+
+function normalizeStatus(status: string) {
+  return status.trim().toLowerCase();
+}
+
+function formatStatusLabel(status: string) {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function isCompletedStatus(status: string) {
+  return ["completada", "completado", "pagado", "entregado"].includes(normalizeStatus(status));
+}
+
+function isCancelledStatus(status: string) {
+  return ["cancelada", "cancelado", "rechazado"].includes(normalizeStatus(status));
 }

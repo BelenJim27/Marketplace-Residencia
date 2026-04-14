@@ -5,9 +5,10 @@ import { IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
 export class CreateArchivoDto {
   @IsString() @MaxLength(30) entidad_tipo!: string;
   @IsInt() @Type(() => Number) entidad_id!: number;
-  @IsString() url!: string;
+  @IsOptional() @IsString() url?: string;
   @IsOptional() @IsString() @MaxLength(50) tipo?: string;
   @IsOptional() @IsString() @MaxLength(20) estado?: string;
   @IsOptional() @IsString() validado_por?: string;
+  @IsOptional() @IsString() @MaxLength(120) nombre?: string;
 }
 export class UpdateArchivoDto extends PartialType(CreateArchivoDto) {}

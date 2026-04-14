@@ -102,7 +102,6 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
         url: "/dashboard/productor",
         icon: LayoutDashboard,
       },
-      { title: "Tienda", url: "/dashboard/productor/tienda", icon: Store },
       {
         title: "Productos",
         url: "/dashboard/productor/productos",

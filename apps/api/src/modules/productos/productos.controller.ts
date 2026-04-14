@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage, StorageEngine } from 'multer';
 import { extname, join } from 'path';
@@ -29,6 +29,7 @@ const productoImageStorage: StorageEngine = diskStorage({
 export class ProductosController {
   constructor(private readonly service: ProductosService) {}
   @Get() findAll(
+    @Headers('authorization') authorization?: string,
     @Query('id_productor') idProductor?: string,
     @Query('busqueda') busqueda?: string,
     @Query('tipo_mezcal') tipoMezcal?: string,
@@ -39,7 +40,10 @@ export class ProductosController {
     @Query('molienda') molienda?: string,
     @Query('maestro_mezcalero') maestroMezcalero?: string,
   ) {
+    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined;
+
     return this.service.findAll(
+      token,
       idProductor ? Number(idProductor) : undefined,
       { busqueda, tipoMezcal, maguey, precioMin, precioMax, destilacion, molienda, maestroMezcalero },
     );

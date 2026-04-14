@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuthService } from '../auth/auth.service';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 import { CreateDetallePedidoDto, CreateFacturaDto, CreatePedidoDto, UpdateDetallePedidoDto, UpdateFacturaDto, UpdatePedidoDto } from './dto/pedidos.dto';
 
@@ -8,43 +9,76 @@ type Periodo = 'week' | 'month' | 'year';
 
 @Injectable()
 export class PedidosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authService: AuthService,
+  ) {}
   async findAll() { return serializeBigInts(await this.prisma.pedidos.findMany({ include: { detalle_pedido: true, facturas: true, usuarios: true, monedas: true } })); }
   async findOne(id: string) { const item = await this.prisma.pedidos.findUnique({ where: { id_pedido: toBigIntId(id) }, include: { detalle_pedido: true, facturas: true, usuarios: true, monedas: true } }); if (!item || item.eliminado_en) throw new NotFoundException('Pedido no encontrado'); return serializeBigInts(item); }
 
-  async getEstadisticas(id_productor: number, periodoRaw: string) {
+  async getMisVentas(accessToken: string) {
+    const id_productor = await this.resolveProductorId(accessToken);
+
+    if (!id_productor) {
+      return { resumen: { totalVentas: 0, ingresosTotales: 0, pendientes: 0 }, ventas: [] };
+    }
+
+    const pedidos = await this.findPedidosByProductor(id_productor);
+    const ventas = pedidos.flatMap((pedido) =>
+      pedido.detalle_pedido.map((detalle) => ({
+        id_pedido: pedido.id_pedido,
+        id_detalle: detalle.id_detalle,
+        producto: detalle.productos.nombre,
+        tienda: detalle.productos.tiendas?.nombre ?? 'Sin tienda',
+        precio_unitario: Number(detalle.precio_compra),
+        cantidad: Number(detalle.cantidad),
+        total: Number((Number(detalle.precio_compra) * Number(detalle.cantidad)).toFixed(2)),
+        status: pedido.estado,
+        fecha: pedido.fecha_creacion,
+        moneda: pedido.moneda,
+        moneda_referencia: pedido.moneda_referencia,
+        pais_destino_iso2: pedido.pais_destino_iso2,
+        tipo_cambio: pedido.tipo_cambio,
+        pedido_total: Number(pedido.total),
+      })),
+    );
+
+    return serializeBigInts({
+      resumen: {
+        totalVentas: pedidos.length,
+        ingresosTotales: Number(pedidos.reduce((sum, pedido) => sum + Number(pedido.total), 0).toFixed(2)),
+        pendientes: pedidos.filter((pedido) => normalizeEstado(pedido.estado) === 'pendiente').length,
+      },
+      ventas,
+    });
+  }
+
+  async getEstadisticas(periodoRaw: string, accessToken?: string, fallbackProductorId?: number) {
+    const id_productor = await this.resolveProductorId(accessToken, fallbackProductorId);
+    if (!id_productor) {
+      const periodo = normalizePeriodo(periodoRaw);
+      const { start, bucketSize } = getRangeConfig(periodo);
+      const buckets = buildBuckets(start, periodo, bucketSize);
+      return {
+        periodo,
+        resumen: {
+          pedidos: 0,
+          productosVendidos: 0,
+          ingresos: 0,
+        },
+        ventas: buckets.map((bucket) => ({ x: bucket.label, y: 0 })),
+        productos: [],
+        rawRows: [],
+      };
+    }
+
     const periodo = normalizePeriodo(periodoRaw);
     const { start, bucketSize, formatBucketLabel } = getRangeConfig(periodo);
 
-    const pedidos = await this.prisma.pedidos.findMany({
-      where: {
-        eliminado_en: null,
-        fecha_creacion: { gte: start },
-        detalle_pedido: {
-          some: {
-            productos: {
-              tiendas: { id_productor },
-            },
-          },
-        },
-      },
-      include: {
-        detalle_pedido: {
-          include: {
-            productos: {
-              include: {
-                tiendas: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { fecha_creacion: 'asc' },
-    });
+    const pedidos = await this.findPedidosByProductor(id_productor, start, 'asc');
 
     const rawRows = pedidos.flatMap((pedido) =>
       pedido.detalle_pedido
-        .filter((detalle) => detalle.productos?.tiendas?.id_productor === id_productor)
         .map((detalle) => {
           const amount = Number(detalle.precio_compra) * Number(detalle.cantidad);
           return {
@@ -52,7 +86,7 @@ export class PedidosService {
             producto: detalle.productos.nombre,
             cantidad: Number(detalle.cantidad),
             monto: amount,
-            tienda: detalle.productos.tiendas.nombre,
+            tienda: detalle.productos.tiendas?.nombre ?? 'Sin tienda',
             status: pedido.estado,
           };
         }),
@@ -101,6 +135,59 @@ export class PedidosService {
   async addFactura(id: string, dto: CreateFacturaDto) { return serializeBigInts(await this.prisma.facturas.create({ data: { id_pedido: toBigIntId(id), uuid_fiscal: dto.uuid_fiscal ?? null, pdf_url: dto.pdf_url ?? null, xml_url: dto.xml_url ?? null, rfc_emisor: dto.rfc_emisor ?? null, rfc_receptor: dto.rfc_receptor ?? null, uso_cfdi: dto.uso_cfdi ?? null, regimen_fiscal: dto.regimen_fiscal ?? null, subtotal: dto.subtotal ?? null, impuestos_total: dto.impuestos_total ?? null, total: dto.total ?? null, moneda: dto.moneda ?? null, estado: dto.estado?.trim() ?? 'pendiente' } })); }
   async updateFactura(id_factura: string, dto: UpdateFacturaDto) { return serializeBigInts(await this.prisma.facturas.update({ where: { id_factura: toBigIntId(id_factura) }, data: { uuid_fiscal: dto.uuid_fiscal, pdf_url: dto.pdf_url, xml_url: dto.xml_url, rfc_emisor: dto.rfc_emisor, rfc_receptor: dto.rfc_receptor, uso_cfdi: dto.uso_cfdi, regimen_fiscal: dto.regimen_fiscal, subtotal: dto.subtotal, impuestos_total: dto.impuestos_total, total: dto.total, moneda: dto.moneda, estado: dto.estado } })); }
   async removeFactura(id_factura: string) { await this.prisma.facturas.delete({ where: { id_factura: toBigIntId(id_factura) } }); return { message: 'Factura eliminada' }; }
+
+  private async resolveProductorId(accessToken?: string, fallbackProductorId?: number) {
+    if (accessToken) {
+      const user = await this.authService.getMe(accessToken);
+      const productor = await this.prisma.productores.findFirst({
+        where: { id_usuario: user.id_usuario, eliminado_en: null },
+        select: { id_productor: true },
+      });
+
+      return productor?.id_productor ?? null;
+    }
+
+    return fallbackProductorId ?? null;
+  }
+
+  private findPedidosByProductor(
+    id_productor: number,
+    start?: Date,
+    direction: 'asc' | 'desc' = 'desc',
+  ) {
+    const relationWhere = {
+      productos: {
+        lotes: {
+          id_productor,
+          eliminado_en: null,
+        },
+      },
+    };
+
+    return this.prisma.pedidos.findMany({
+      where: {
+        eliminado_en: null,
+        ...(start ? { fecha_creacion: { gte: start } } : {}),
+        detalle_pedido: {
+          some: relationWhere,
+        },
+      },
+      include: {
+        detalle_pedido: {
+          where: relationWhere,
+          include: {
+            productos: {
+              include: {
+                lotes: true,
+                tiendas: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { fecha_creacion: direction },
+    });
+  }
 }
 
 function normalizePeriodo(periodo: string): Periodo {
@@ -169,4 +256,8 @@ function formatDateBucket(date: Date) {
 
 function formatMonthBucket(date: Date) {
   return date.toLocaleString('es-MX', { month: 'short', year: '2-digit' });
+}
+
+function normalizeEstado(estado: string) {
+  return estado.trim().toLowerCase();
 }
