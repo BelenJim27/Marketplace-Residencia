@@ -1,6 +1,7 @@
 "use client";
 
 import { Edit2, Eye, Plus, Search, Trash2 } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -19,7 +20,6 @@ export function ProductoresTabla() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
-  const [stockFilter, setStockFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [idFilter, setIdFilter] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -43,8 +43,8 @@ export function ProductoresTabla() {
         region: p.regiones?.nombre || "Sin región",
         stock: p.lotes?.length || 0,
         total_productos: p.lotes?.length || 0,
-        status: ((p.tiendas && p.tiendas.length > 0 && p.tiendas.some((t: any) => t.status === "activa")) 
-          ? "ACTIVO" 
+        status: ((p.tiendas && p.tiendas.length > 0 && p.tiendas.some((t: any) => t.status === "activa"))
+          ? "ACTIVO"
           : "PAUSADO") as "ACTIVO" | "PAUSADO" | "INACTIVO",
       }));
       console.log("Transformed:", transformed);
@@ -81,7 +81,6 @@ export function ProductoresTabla() {
 
     const filteredList = productores.filter((productor) => {
       const producerId = `PR${String(productor.id).padStart(4, "0")}`;
-      const stock = getStock(productor);
 
       const matchesQuery =
         !normalizedQuery ||
@@ -89,19 +88,8 @@ export function ProductoresTabla() {
       const matchesRegion = !regionFilter || productor.region === regionFilter;
       const matchesStatus = !statusFilter || productor.status === statusFilter;
       const matchesId = !normalizedId || producerId === normalizedId;
-      const matchesStock =
-        !stockFilter ||
-        (stockFilter === "WITH_STOCK" && stock > 0) ||
-        (stockFilter === "WITHOUT_STOCK" && stock === 0) ||
-        (stockFilter === "LOW_STOCK" && stock < 5);
 
-      return (
-        matchesQuery &&
-        matchesRegion &&
-        matchesStatus &&
-        matchesId &&
-        matchesStock
-      );
+      return matchesQuery && matchesRegion && matchesStatus && matchesId;
     });
 
     const seen = new Set<number>();
@@ -110,7 +98,7 @@ export function ProductoresTabla() {
       seen.add(productor.id);
       return true;
     });
-  }, [idFilter, productores, query, regionFilter, statusFilter, stockFilter]);
+  }, [idFilter, productores, query, regionFilter, statusFilter]);
 
   const stats = [
     {
@@ -138,7 +126,6 @@ export function ProductoresTabla() {
   function clearFilters() {
     setQuery("");
     setRegionFilter("");
-    setStockFilter("");
     setStatusFilter("");
     setIdFilter("");
   }
@@ -235,17 +222,17 @@ export function ProductoresTabla() {
       </div>
 
       <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar por nombre..."
-            className="w-full rounded-xl border border-gray-100 bg-gray-50 py-3 pl-12 pr-4 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-          />
-        </div>
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar por nombre..."
+              className="w-full rounded-xl border border-gray-100 bg-gray-50 py-3 pl-12 pr-4 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+            />
+          </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
           <select
             value={regionFilter}
             onChange={(event) => setRegionFilter(event.target.value)}
@@ -257,17 +244,6 @@ export function ProductoresTabla() {
                 {region}
               </option>
             ))}
-          </select>
-
-          <select
-            value={stockFilter}
-            onChange={(event) => setStockFilter(event.target.value)}
-            className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-slate-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-          >
-            <option value="">Cualquier stock</option>
-            <option value="WITH_STOCK">Con stock (&gt;0)</option>
-            <option value="WITHOUT_STOCK">Sin stock (=0)</option>
-            <option value="LOW_STOCK">Bajo stock (&lt;5)</option>
           </select>
 
           <select
@@ -306,7 +282,6 @@ export function ProductoresTabla() {
                 <th className="p-4">ID</th>
                 <th className="p-4">Nombre</th>
                 <th className="p-4">Región</th>
-                <th className="p-4 text-center">Stock</th>
                 <th className="p-4 text-center">Status</th>
                 <th className="p-4 text-right">Acciones</th>
               </tr>
@@ -315,7 +290,7 @@ export function ProductoresTabla() {
               {loading ? (
                 <tr key="loading">
                   <td
-                    colSpan={6}
+                    colSpan={5}
                     className="p-10 text-center text-sm text-gray-500"
                   >
                     Cargando productores...
@@ -324,7 +299,7 @@ export function ProductoresTabla() {
               ) : filtered.length === 0 ? (
                 <tr key="empty">
                   <td
-                    colSpan={6}
+                    colSpan={5}
                     className="p-10 text-center text-sm text-gray-500"
                   >
                     No hay productores para mostrar.
@@ -345,22 +320,17 @@ export function ProductoresTabla() {
                     <td className="p-4 text-sm text-slate-600">
                       {productor.region}
                     </td>
-                    <td className="p-4 text-center text-sm font-semibold">
-                      <span
-                        className={
-                          getStock(productor) < 20
-                            ? "text-red-600"
-                            : "text-slate-700"
-                        }
-                      >
-                        {getStock(productor)}
-                      </span>
-                    </td>
                     <td className="p-4 text-center">
                       <StatusBadge status={productor.status} />
                     </td>
                     <td className="p-4">
                       <div className="flex justify-end gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+                        <Link
+                          href={`/dashboard/admin/productores/${productor.id}/productos`}
+                          className="inline-flex items-center rounded-lg border border-gray-200 px-2.5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-gray-50 hover:text-slate-900"
+                        >
+                          Ver productos
+                        </Link>
                         <ActionButton
                           label="Ver"
                           onClick={() => openModal("view", productor)}
