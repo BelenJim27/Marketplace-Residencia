@@ -22,8 +22,46 @@ export class ProductosService {
   async findAll(
     accessToken?: string,
     id_productor?: number,
-    _filtros?: FiltrosProducto,
+    filtros?: FiltrosProducto,
   ) {
+    const where: Prisma.productosWhereInput = { eliminado_en: null };
+    
+    if (filtros) {
+      if (filtros.busqueda) {
+        where.OR = [
+          { nombre: { contains: filtros.busqueda, mode: 'insensitive' } },
+          { descripcion: { contains: filtros.busqueda, mode: 'insensitive' } },
+        ];
+      }
+      if (filtros.tipoMezcal || filtros.maguey || filtros.destilacion || filtros.molienda || filtros.maestroMezcalero) {
+        where.id_lote = { not: null };
+      }
+      if (filtros.precioMin || filtros.precioMax) {
+        where.precio_base = {};
+        if (filtros.precioMin) where.precio_base.gte = new Prisma.Decimal(filtros.precioMin);
+        if (filtros.precioMax) where.precio_base.lte = new Prisma.Decimal(filtros.precioMax);
+      }
+    }
+
+    const applyFiltersToProductos = (productos: any[]) => {
+      if (!filtros) return productos;
+      
+      return productos.filter((p) => {
+        const datosApi = p.lotes?.datos_api as Record<string, any> | undefined;
+        
+        if (filtros.tipoMezcal && datosApi?.tipo_mezcal !== filtros.tipoMezcal) return false;
+        if (filtros.maguey && datosApi?.maguey !== filtros.maguey) return false;
+        if (filtros.destilacion && datosApi?.destilacion !== filtros.destilacion) return false;
+        if (filtros.molienda && datosApi?.molienda !== filtros.molienda) return false;
+        if (filtros.maestroMezcalero) {
+          const maestro = datosApi?.maestro_mezcalero || datosApi?.maestro || '';
+          if (!maestro.toLowerCase().includes(filtros.maestroMezcalero.toLowerCase())) return false;
+        }
+        
+        return true;
+      });
+    };
+
     if (accessToken) {
       const id_usuario = getUserIdFromAccessToken(accessToken);
       const productor = await this.prisma.productores.findFirst({
@@ -41,7 +79,7 @@ export class ProductosService {
         },
       });
 
-      const productos = productor?.lotes.flatMap((lote) => lote.productos) ?? [];
+      const productos = applyFiltersToProductos(productor?.lotes.flatMap((lote) => lote.productos) ?? []);
 
       return serializeBigInts(
         await mapProductoResponse(productos),
@@ -54,24 +92,18 @@ export class ProductosService {
         select: { id_tienda: true },
       });
       const ids = stores.map((store) => store.id_tienda);
-      return serializeBigInts(
-        await mapProductoResponse(
-          await this.prisma.productos.findMany({
-            where: { eliminado_en: null, id_tienda: { in: ids } },
-            include: productoInclude,
-          }),
-        ),
-      );
+      const productosRaw = await this.prisma.productos.findMany({
+        where: { ...where, id_tienda: { in: ids } },
+        include: { lotes: { where: { eliminado_en: null } }, producto_imagenes: true },
+      });
+      return serializeBigInts(await mapProductoResponse(applyFiltersToProductos(productosRaw)));
     }
 
-    return serializeBigInts(
-      await mapProductoResponse(
-        await this.prisma.productos.findMany({
-          where: { eliminado_en: null },
-          include: productoInclude,
-        }),
-      ),
-    );
+    const productosRaw = await this.prisma.productos.findMany({
+      where,
+      include: { lotes: { where: { eliminado_en: null } }, producto_imagenes: true },
+    });
+    return serializeBigInts(await mapProductoResponse(applyFiltersToProductos(productosRaw)));
   }
   async findOne(id: string) { const item = await this.prisma.productos.findUnique({ where: { id_producto: toBigIntId(id) }, include: productoInclude }); if (!item || item.eliminado_en) throw new NotFoundException('Producto no encontrado'); return serializeBigInts(mapProductoResponse(item)); }
 

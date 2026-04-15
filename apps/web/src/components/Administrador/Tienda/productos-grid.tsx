@@ -100,20 +100,44 @@ export function ProductosGrid() {
     fetchProductos(filtros);
   }, [filtros, fetchProductos]);
 
-  // Búsqueda con debounce automático al escribir
+  // Aplicar filtros automáticamente - búsqueda con debounce, resto instantáneo
+  const [debouncedBusqueda, setDebouncedBusqueda] = useState("");
+  
   useEffect(() => {
     const timer = setTimeout(() => {
-      setFiltros((prev) => ({ ...prev, busqueda: filtrosPendientes.busqueda }));
-    }, 400);
+      setDebouncedBusqueda(filtrosPendientes.busqueda);
+    }, 200);
     return () => clearTimeout(timer);
   }, [filtrosPendientes.busqueda]);
+  
+  useEffect(() => {
+    const nuevos: Filtros = {
+      busqueda: debouncedBusqueda,
+      tipo_mezcal: filtrosPendientes.tipo_mezcal,
+      maguey: filtrosPendientes.maguey,
+      precio_min: filtrosPendientes.precio_min,
+      precio_max: filtrosPendientes.precio_max,
+      destilacion: filtrosPendientes.destilacion,
+      molienda: filtrosPendientes.molienda,
+      maestro_mezcalero: filtrosPendientes.maestro_mezcalero,
+    };
+    setFiltros(nuevos);
+  }, [debouncedBusqueda, filtrosPendientes.tipo_mezcal, filtrosPendientes.maguey, filtrosPendientes.precio_min, filtrosPendientes.precio_max, filtrosPendientes.destilacion, filtrosPendientes.molienda, filtrosPendientes.maestro_mezcalero]);
 
   const handleBusquedaChange = (valor: string) => {
     setFiltrosPendientes((prev) => ({ ...prev, busqueda: valor }));
   };
 
   const handleFiltroChange = (campo: keyof Filtros, valor: string) => {
-    setFiltrosPendientes((prev) => ({ ...prev, [campo]: valor }));
+    setFiltrosPendientes((prev) => {
+      const nuevos = { ...prev, [campo]: valor };
+      if (campo === "tipo_mezcal" && valor && TIPOS_MAGUEY.includes(valor)) {
+        nuevos.maguey = valor;
+      } else if (campo === "maguey" && valor && TIPOS_MEZCAL.includes(valor)) {
+        nuevos.tipo_mezcal = valor;
+      }
+      return nuevos;
+    });
   };
 
   const aplicarFiltros = () => {
