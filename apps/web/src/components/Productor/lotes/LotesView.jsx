@@ -35,12 +35,12 @@ export default function LotesView() {
     descripcion: "",
   });
 
+  // CARGAR LOTES DESDE API
   const fetchLotes = useCallback(async () => {
     if (!user?.id_productor) return;
     try {
       setLoading(true);
       const data = await api.lotes.getByProductor(Number(user.id_productor));
-      // Filtrar los que no están eliminados y mapear campos
       const mappedLotes = data
         .filter((l) => !l.eliminado_en)
         .map((l) => ({
@@ -65,6 +65,7 @@ export default function LotesView() {
     fetchLotes();
   }, [fetchLotes]);
 
+  // FILTROS
   const filteredLotes = useMemo(() => {
     return lotes.filter((item) => {
       const matchesSearch = `${item.lote} ${item.producto}`.toLowerCase().includes(search.toLowerCase());
@@ -74,6 +75,7 @@ export default function LotesView() {
     });
   }, [lotes, search, status, year]);
 
+  // FUNCIONES DE MODALES (CORREGIDAS)
   function abrirVer(lote) {
     setLoteSeleccionado(lote);
     setModalVer(true);
@@ -104,6 +106,7 @@ export default function LotesView() {
     setLoteSeleccionado(null);
   }
 
+  // GUARDAR EN BD
   async function guardarLote(event) {
     event.preventDefault();
     if (!user?.id_productor) return;
@@ -135,6 +138,7 @@ export default function LotesView() {
     }
   }
 
+  // ELIMINAR EN BD
   async function confirmarEliminar() {
     if (!loteSeleccionado) return;
     const token = getCookie("token");
@@ -156,59 +160,6 @@ export default function LotesView() {
     );
   }
 
-  function abrirEditar(lote) {
-    setLoteSeleccionado(lote);
-    setLoteOriginal(lote.lote);
-    setForm({
-      lote: lote.lote,
-      tipoProducto: lote.producto,
-      cantidad: lote.cantidad,
-      fechaProduccion: lote.fecha,
-      descripcion: "",
-    });
-    setModalEditar(true);
-  }
-
-  function abrirEliminar(lote) {
-    setLoteSeleccionado(lote);
-    setModalEliminar(true);
-  }
-
-  function cerrarModales() {
-    setIsModalOpen(false);
-    setModalVer(false);
-    setModalEditar(false);
-    setModalEliminar(false);
-    setLoteSeleccionado(null);
-    setLoteOriginal(null);
-  }
-
-  function guardarLote(event) {
-    event.preventDefault();
-    const nextLote = {
-      lote: form.lote,
-      producto: form.tipoProducto,
-      cantidad: form.cantidad,
-      fecha: form.fechaProduccion,
-      estado: "Activo",
-      year: form.fechaProduccion ? String(new Date(form.fechaProduccion).getFullYear()) : year,
-    };
-
-    if (modalEditar && loteOriginal) {
-      setLotes((current) => current.map((item) => (item.lote === loteOriginal ? { ...item, ...nextLote } : item)));
-    } else {
-      setLotes((current) => [nextLote, ...current]);
-    }
-
-    cerrarModales();
-  }
-
-  function confirmarEliminar() {
-    if (!loteSeleccionado) return;
-    setLotes((current) => current.filter((item) => item.lote !== loteSeleccionado.lote));
-    cerrarModales();
-  }
-
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100">
       <div className="mx-auto max-w-7xl p-6">
@@ -228,7 +179,6 @@ export default function LotesView() {
                 descripcion: "",
               });
               setModalEditar(false);
-              setLoteOriginal(null);
               setIsModalOpen(true);
             }}
             className="rounded-lg bg-green-500 px-4 py-2 text-white hover:bg-green-600"
@@ -237,17 +187,14 @@ export default function LotesView() {
           </button>
         </div>
 
+        {/* BUSCADOR Y FILTROS */}
         <div className="mb-6 grid gap-4 rounded-xl bg-white dark:bg-gray-800 p-6 shadow-sm lg:grid-cols-[1.5fr_1fr_1fr]">
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></span>
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 py-2 pl-10 pr-3 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400"
-              placeholder="Buscar lote..."
-            />
-          </div>
-
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 py-2 px-3 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-400"
+            placeholder="Buscar lote..."
+          />
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value)}
@@ -259,33 +206,33 @@ export default function LotesView() {
             <option>Finalizado</option>
             <option>Rechazado</option>
           </select>
-
           <select
             value={year}
             onChange={(event) => setYear(event.target.value)}
             className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-400"
           >
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
             <option value="2024">2024</option>
-            <option value="2023">2023</option>
-            <option value="2022">2022</option>
           </select>
         </div>
 
+        {/* TABLA */}
         <div className="overflow-hidden rounded-xl bg-white dark:bg-gray-800 shadow-sm">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300"># Lote</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Producto</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Cantidad</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Fecha de registro</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Estado</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Acciones</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-300"># Lote</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-300">Producto</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-300">Cantidad</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-300">Fecha</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-300">Estado</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-300">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
               {filteredLotes.map((item) => (
-                <tr key={item.id_lote || item.lote} className="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700">
+                <tr key={item.id_lote} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 text-sm font-medium text-gray-800 dark:text-gray-200">{item.lote}</td>
                   <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-200">{item.producto}</td>
                   <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-200">{item.cantidad}</td>
@@ -302,91 +249,54 @@ export default function LotesView() {
           </table>
         </div>
 
-        {isModalOpen ? (
+        {/* MODALES */}
+        {(isModalOpen || modalEditar) && (
           <ModalLote
-            title="Nuevo Lote"
-            subtitle="Registra un nuevo lote de producción"
+            title={modalEditar ? "Editar Lote" : "Nuevo Lote"}
+            subtitle={modalEditar ? `Actualiza los datos de ${loteSeleccionado?.lote}` : "Registra un nuevo lote"}
             onClose={cerrarModales}
             onSubmit={guardarLote}
             form={form}
             setForm={setForm}
-            footerActionLabel="Guardar Lote"
+            footerActionLabel={modalEditar ? "Guardar cambios" : "Guardar Lote"}
           />
-        ) : null}
+        )}
 
-        {modalVer && loteSeleccionado ? (
+        {modalVer && loteSeleccionado && (
           <DetalleLoteModal lote={loteSeleccionado} onClose={cerrarModales} statusStyles={statusStyles} />
-        ) : null}
+        )}
 
-        {modalEditar && loteSeleccionado ? (
-          <ModalLote
-            title="Editar Lote"
-            subtitle={`Actualiza los datos de ${loteSeleccionado.lote}`}
-            onClose={cerrarModales}
-            onSubmit={guardarLote}
-            form={form}
-            setForm={setForm}
-            footerActionLabel="Guardar cambios"
-          />
-        ) : null}
-
-        {modalEliminar && loteSeleccionado ? (
+        {modalEliminar && loteSeleccionado && (
           <EliminarLoteModal lote={loteSeleccionado} onClose={cerrarModales} onConfirm={confirmarEliminar} />
-        ) : null}
+        )}
       </div>
     </div>
   );
 }
 
+// COMPONENTES AUXILIARES (MODALES)
 function ModalLote({ title, subtitle, onClose, onSubmit, form, setForm, footerActionLabel }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl transition-all duration-200 ease-out dark:bg-gray-800 dark:text-gray-100"
-        onClick={(event) => event.stopPropagation()}
+        className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800"
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-5 flex items-start justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
-          </div>
-          <button type="button" onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600">✕</button>
-        </div>
-
-        <form className="grid gap-4 md:grid-cols-2" onSubmit={onSubmit}>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Nombre del lote</label>
-            <input value={form.lote} onChange={(event) => setForm((current) => ({ ...current, lote: event.target.value }))} className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400" />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Tipo de producto</label>
-            <select value={form.tipoProducto} onChange={(event) => setForm((current) => ({ ...current, tipoProducto: event.target.value }))} className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-400">
-              <option>Mezcal Espadín</option>
-              <option>Tobalá</option>
-              <option>Cuishe</option>
-              <option>Madrecuixe</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Cantidad en litros</label>
-            <input type="number" value={form.cantidad} onChange={(event) => setForm((current) => ({ ...current, cantidad: event.target.value }))} className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400" />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Fecha de producción</label>
-            <input type="date" value={form.fechaProduccion} onChange={(event) => setForm((current) => ({ ...current, fechaProduccion: event.target.value }))} className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400" />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Descripción</label>
-            <textarea rows={4} value={form.descripcion} onChange={(event) => setForm((current) => ({ ...current, descripcion: event.target.value }))} className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400" />
-          </div>
-
-          <div className="md:col-span-2 mt-2 flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">Cancelar</button>
-            <button type="submit" className="rounded-lg bg-green-500 px-4 py-2 text-white hover:bg-green-600">{footerActionLabel}</button>
+        <h2 className="text-xl font-semibold dark:text-white">{title}</h2>
+        <p className="mb-5 text-sm text-gray-500">{subtitle}</p>
+        <form className="grid gap-4" onSubmit={onSubmit}>
+          <input placeholder="Código del lote" value={form.lote} onChange={(e) => setForm({...form, lote: e.target.value})} className="w-full rounded-lg border p-2 dark:bg-gray-700" />
+          <select value={form.tipoProducto} onChange={(e) => setForm({...form, tipoProducto: e.target.value})} className="w-full rounded-lg border p-2 dark:bg-gray-700">
+            <option>Mezcal Espadín</option>
+            <option>Tobalá</option>
+            <option>Cuishe</option>
+          </select>
+          <input type="number" placeholder="Litros" value={form.cantidad} onChange={(e) => setForm({...form, cantidad: e.target.value})} className="w-full rounded-lg border p-2 dark:bg-gray-700" />
+          <input type="date" value={form.fechaProduccion} onChange={(e) => setForm({...form, fechaProduccion: e.target.value})} className="w-full rounded-lg border p-2 dark:bg-gray-700" />
+          <textarea placeholder="Descripción" value={form.descripcion} onChange={(e) => setForm({...form, descripcion: e.target.value})} className="w-full rounded-lg border p-2 dark:bg-gray-700" />
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg">Cancelar</button>
+            <button type="submit" className="px-4 py-2 bg-green-500 text-white rounded-lg">{footerActionLabel}</button>
           </div>
         </form>
       </div>
@@ -397,40 +307,15 @@ function ModalLote({ title, subtitle, onClose, onSubmit, form, setForm, footerAc
 function DetalleLoteModal({ lote, onClose, statusStyles }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl transition-all duration-200 ease-out dark:bg-gray-800 dark:text-gray-100" onClick={(event) => event.stopPropagation()}>
-        <div className="mb-5 flex items-start justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Detalle del Lote</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{lote.lote}</p>
-          </div>
-          <button type="button" onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600">✕</button>
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-xl font-semibold">{lote.lote}</h2>
+        <div className="mt-4 space-y-2">
+          <p><strong>Producto:</strong> {lote.producto}</p>
+          <p><strong>Cantidad:</strong> {lote.cantidad}</p>
+          <p><strong>Fecha:</strong> {lote.fecha}</p>
+          <p><strong>Estado:</strong> <span className={statusStyles[lote.estado]}>{lote.estado}</span></p>
         </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <Info label="Producto" value={lote.producto} />
-          <Info label="Cantidad" value={lote.cantidad} />
-          <Info label="Fecha de registro" value={lote.fecha} />
-          <div>
-            <p className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Estado</p>
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[lote.estado] || "bg-gray-100 text-gray-600"}`}>{lote.estado}</span>
-          </div>
-        </div>
-
-        {lote.originalData?.sitio && (
-          <div className="mt-4">
-            <Info label="Sitio de producción" value={lote.originalData.sitio} />
-          </div>
-        )}
-
-        {lote.originalData?.datos_api?.descripcion && (
-          <div className="mt-4">
-            <Info label="Descripción" value={lote.originalData.datos_api.descripcion} />
-          </div>
-        )}
-
-        <div className="mt-6 flex justify-end">
-          <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">Cerrar</button>
-        </div>
+        <button onClick={onClose} className="mt-6 w-full bg-gray-200 py-2 rounded-lg">Cerrar</button>
       </div>
     </div>
   );
@@ -438,32 +323,15 @@ function DetalleLoteModal({ lote, onClose, statusStyles }) {
 
 function EliminarLoteModal({ lote, onClose, onConfirm }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl transition-all duration-200 ease-out dark:bg-gray-800 dark:text-gray-100" onClick={(event) => event.stopPropagation()}>
-        <div className="mb-5 flex items-start justify-between">
-          <div className="grid size-12 place-items-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-300">
-            <Trash2 className="size-6" />
-          </div>
-          <button type="button" onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600">✕</button>
-        </div>
-
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">¿Eliminar este lote?</h2>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Esta acción no se puede deshacer. El lote {lote.lote} será eliminado permanentemente.</p>
-
-        <div className="mt-6 flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">Cancelar</button>
-          <button type="button" onClick={onConfirm} className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700">Sí, eliminar</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white p-6 rounded-2xl dark:bg-gray-800 max-w-sm w-full text-center">
+        <Trash2 className="mx-auto h-12 w-12 text-red-500 mb-4" />
+        <h2 className="text-lg font-bold">¿Eliminar lote {lote.lote}?</h2>
+        <div className="mt-6 flex justify-center gap-4">
+          <button onClick={onClose} className="px-4 py-2 border rounded-lg">No, cancelar</button>
+          <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded-lg">Sí, eliminar</button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Info({ label, value }) {
-  return (
-    <div>
-      <p className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">{label}</p>
-      <p className="text-sm text-gray-600 dark:text-gray-300">{value}</p>
     </div>
   );
 }

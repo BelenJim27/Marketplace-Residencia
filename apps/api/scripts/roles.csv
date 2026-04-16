@@ -1,0 +1,4 @@
+"id_rol","nombre","estado","fecha_creacion","eliminado_en"
+1,"cliente","activo","2026-04-14",NULL
+2,"productor","activo","2026-04-14",NULL
+3,"administrador","activo","2026-04-14",NULL

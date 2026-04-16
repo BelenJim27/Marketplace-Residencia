@@ -1,0 +1,8 @@
+"id_productor","id_usuario","id_region","descripcion","biografia","otras_caracteristicas","creado_en","actualizado_en","eliminado_en"
+1,"589ca8d8-75b4-497c-85d1-b6576aa20608",1,NULL,"Maestro mezcalero con más de 20 años de experiencia",NULL,"2026-04-14 03:45:59.966+00","2026-04-14 03:45:59.966+00",NULL
+2,"f75899ea-d89f-44a4-99fb-6ffec5786b9e",1,NULL,"Productora de mezcal artesanal tradicional",NULL,"2026-04-14 03:46:00.251+00","2026-04-14 03:46:00.251+00",NULL
+3,"929e2334-bb29-4749-82dc-1ff584591bb9",1,"Productora de mezcal artesanal con agave espadín","María lleva 15 años elaborando mezcal en los Valles Centrales de Oaxaca",NULL,"2026-04-14 05:51:35.42055+00","2026-04-14 05:51:35.42055+00",NULL
+4,"43ca1d6a-b724-42c5-94c1-4798db93b932",2,"Productor de mezcal tobalá de la Sierra Sur","Roberto especialista en agaves silvestres de la Sierra Sur oaxaqueña",NULL,"2026-04-14 05:51:35.42055+00","2026-04-14 05:51:35.42055+00",NULL
+5,"4e05a8b2-1d83-4a15-8350-49c46b59ff93",3,"Productora de mezcal ensamble de la Mixteca","Lucía elabora mezcales de ensamble con técnicas ancestrales de la Mixteca",NULL,"2026-04-14 05:51:35.42055+00","2026-04-14 05:51:35.42055+00",NULL
+6,"b3e3d4da-e0a5-43a1-a4f8-37a2001d49cb",8,NULL,NULL,"{""stock"":5}","2026-04-14 06:38:58.559+00","2026-04-14 06:38:58.559+00",NULL
+7,"7d225d11-904c-49ea-9a38-1f8cb5a5db96",1,"Productor de mezcal artesanal","Productor con experiencia en elaboración de mezcal oaxaqueño",NULL,"2026-04-14 07:17:41.594096+00","2026-04-14 07:17:41.594096+00",NULL
