@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = "postgresql://neondb_owner:npg_updn5JAzas7O@ep-tiny-band-am08zkiv.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
 }
 
 model archivos {
@@ -450,11 +450,12 @@ model productores {
   id_productor          Int       @id @default(autoincrement())
   id_usuario            String    @unique @db.Uuid
   id_region             Int?
+  descripcion           String?
   biografia             String?
+  otras_caracteristicas String?   @db.VarChar(255)
   creado_en             DateTime  @default(now()) @db.Timestamptz(6)
   actualizado_en        DateTime  @default(now()) @db.Timestamptz(6)
   eliminado_en          DateTime? @db.Timestamptz(6)
-  otras_caracteristicas String?   @db.VarChar(255)
   lotes                 lotes[]
   regiones              regiones? @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
   usuarios              usuarios  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
@@ -645,6 +646,7 @@ model usuario_rol {
 model usuarios {
   id_usuario                                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre                                        String                   @db.VarChar(100)
+  nombre_usuario                                String?                  @unique @db.VarChar(50)
   foto_url                                      String?                  @db.VarChar(500)
   apellido_paterno                              String?                  @db.VarChar(100)
   apellido_materno                              String?                  @db.VarChar(100)
@@ -657,7 +659,6 @@ model usuarios {
   version_token                                 Int                      @default(1)
   fecha_registro                                DateTime                 @default(now()) @db.Timestamptz(6)
   eliminado_en                                  DateTime?                @db.Timestamptz(6)
-  nombre_usuario                                String?                  @unique @db.VarChar(50)
   archivos                                      archivos[]
   auditoria                                     auditoria[]
   carrito_item                                  carrito_item[]

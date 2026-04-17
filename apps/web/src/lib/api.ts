@@ -12,7 +12,10 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   
   // Si es 401 (Unauthorized), intentar refrescar el token
   if (response.status === 401) {
+    console.log("🔴 401 recibido, intentando refresh...");
     const refreshToken = getCookie("refresh_token");
+    console.log("📦 Refresh token existe:", !!refreshToken);
+    
     if (refreshToken) {
       try {
         console.log("🔄 Token expirado, intentando refrescar...");
@@ -22,8 +25,11 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
           body: JSON.stringify({ refresh_token: refreshToken }),
         });
 
+        console.log("📬 Refresh response status:", refreshResponse.status);
+
         if (refreshResponse.ok) {
           const refreshData = await refreshResponse.json();
+          console.log("📬 Refresh data:", refreshData);
           const newAccessToken = refreshData.tokens.access_token;
           
           // Guardar el nuevo token
@@ -35,31 +41,35 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
           console.log("✅ Token refrescado exitosamente");
 
           // Reintentar la petición original con el nuevo token
-          if (options?.headers && typeof options.headers === "object") {
-            (options.headers as Record<string, string>)["Authorization"] = `Bearer ${newAccessToken}`;
+          const newHeaders = { ...options?.headers } as Record<string, string>;
+          if (newHeaders["Authorization"]) {
+            newHeaders["Authorization"] = `Bearer ${newAccessToken}`;
           }
 
-          const retryResponse = await fetch(url, options);
+          const retryResponse = await fetch(url, { ...options, headers: newHeaders });
           if (!retryResponse.ok) {
             const error = await retryResponse.json().catch(() => ({ message: "Error desconocido" }));
             throw new Error(error.message || `Error ${retryResponse.status}`);
           }
           return retryResponse.json() as Promise<T>;
+        } else {
+          console.error("❌ Refresh falló:", refreshResponse.status);
         }
       } catch (error) {
-        console.error(" Error refrescando token:", error);
-        // Si falla el refresh, remover cookies y dejar que el usuario se loguee de nuevo
-        const cookies = document.cookie.split(";");
-        cookies.forEach((cookie) => {
-          const name = cookie.split("=")[0].trim();
-          if (["token", "refresh_token", "usuario"].includes(name)) {
-            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-          }
-        });
-        window.location.href = "/auth/sign-in";
-        throw new Error("Sesión expirada. Por favor inicia sesión de nuevo.");
+        console.error("❌ Error refrescando token:", error);
       }
     }
+    
+    // Si no se pudo refresh, limpiar y redirigir
+    const cookies = document.cookie.split(";");
+    cookies.forEach((cookie) => {
+      const name = cookie.split("=")[0].trim();
+      if (["token", "refresh_token", "usuario"].includes(name)) {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00: UTC; path=/;`;
+      }
+    });
+    window.location.href = "/auth/sign-in";
+    throw new Error("Sesión expirada. Por favor inicia sesión de nuevo.");
   }
 
   if (!response.ok) {
@@ -332,8 +342,8 @@ export const api = {
   },
 
   roles: {
-    getAll: () => fetchJson(endpoint("/roles")),
-    getOne: (id: number) => fetchJson(endpoint(`/roles/${id}`)),
+    getAll: (token: string) => fetchJson(endpoint("/roles"), { headers: headers(token) }),
+    getOne: (token: string, id: number) => fetchJson(endpoint(`/roles/${id}`), { headers: headers(token) }),
     create: (token: string, data: { nombre: string }) =>
       fetchJson(endpoint("/roles"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: number, data: { nombre?: string; estado?: string }) =>
@@ -343,10 +353,12 @@ export const api = {
   },
 
   permisos: {
-    getAll: () => fetchJson(endpoint("/roles/permisos")),
-    getOne: (id: number) => fetchJson(endpoint(`/roles/permisos/${id}`)),
+    getAll: (token: string) => fetchJson(endpoint("/roles/permisos"), { headers: headers(token) }),
+    getOne: (token: string, id: number) => fetchJson(endpoint(`/roles/permisos/${id}`), { headers: headers(token) }),
     create: (token: string, data: { nombre: string }) =>
       fetchJson(endpoint("/roles/permisos"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+    update: (token: string, id: number, data: { nombre: string }) =>
+      fetchJson(endpoint(`/roles/permisos/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
     delete: (token: string, id: number) =>
       fetchJson(endpoint(`/roles/permisos/${id}`), { method: "DELETE", headers: headers(token) }),
   },
@@ -377,12 +389,12 @@ export const api = {
         method: "DELETE",
         headers: headers(token),
       }),
-    getByRole: (id_rol: number) => fetchJson(endpoint(`/roles/${id_rol}/permisos`)),
+    getByRole: (token: string, id_rol: number) => fetchJson(endpoint(`/roles/${id_rol}/permisos`), { headers: headers(token) }),
   },
 
   usuarios: {
-    getAll: () => fetchJson(endpoint("/usuarios")),
-    getOne: (id: string) => fetchJson(endpoint(`/usuarios/${id}`)),
+    getAll: (token: string) => fetchJson(endpoint("/usuarios"), { headers: headers(token) }),
+    getOne: (token: string, id: string) => fetchJson(endpoint(`/usuarios/${id}`), { headers: headers(token) }),
     update: (token: string, id: string, data: any) =>
       fetchJson(endpoint(`/usuarios/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
     uploadPhoto: (token: string, id: string, data: FormData) =>

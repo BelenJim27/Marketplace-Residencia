@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 
 interface OAuthProfile {
   provider: string;
@@ -20,7 +21,10 @@ interface OAuthProfile {
 
 @Injectable()
 export class OAuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+  ) {}
 
   async upsertOAuthAccount(profile: OAuthProfile) {
     console.log('🔍 [OAuthService] upsertOAuthAccount:', {
@@ -123,6 +127,14 @@ export class OAuthService {
     });
 
     console.log('✅ [OAuthService] Usuario nuevo creado:', user.id_usuario);
+
+    if (profile.email) {
+      try {
+        await this.emailService.sendWelcomeEmail(profile.email, user.nombre);
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+      }
+    }
 
     await this.prisma.oauth_cuentas.create({
       data: {

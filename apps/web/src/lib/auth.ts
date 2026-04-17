@@ -2,7 +2,7 @@ import { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 
-const apiBaseUrl = `${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "")}/api`;
+const apiBaseUrl = `${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "")}`;
 
 export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -171,7 +171,6 @@ export const authOptions: AuthOptions = {
           return token;
         }
       }
-
       if (user) {
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
@@ -191,6 +190,36 @@ export const authOptions: AuthOptions = {
         token.roles = user.roles;
         token.permisos = user.permisos;
         token.id_productor = user.id_productor;
+        return token;
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      if (!token.exp || token.exp - now > 60) {
+        return token;
+      }
+
+      if (!token.refreshToken) {
+        return token;
+      }
+
+      try {
+        const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            refresh_token: token.refreshToken,
+          }),
+        });
+
+        if (!response.ok) {
+          return token;
+        }
+
+        const data = await response.json();
+        token.accessToken = data.tokens.access_token;
+        token.refreshToken = data.tokens.refresh_token;
+      } catch (err) {
+        console.error("Error refreshing token:", err);
       }
 
       return token;
