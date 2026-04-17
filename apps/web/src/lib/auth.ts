@@ -2,7 +2,7 @@ import { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 
-const apiBaseUrl = `${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "")}/api`;
+const apiBaseUrl = `${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "")}`;
 
 export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -97,79 +97,6 @@ export const authOptions: AuthOptions = {
       return true;
     },
     async jwt({ token, user, account }: any) {
-      console.log("jwt callback", {
-        provider: account?.provider,
-        hasUser: !!user,
-        hasToken: !!token,
-      });
-
-      if (account && account.provider === "google") {
-        console.log("Processing Google OAuth...");
-        try {
-          const response = await fetch(`${apiBaseUrl}/auth/oauth/google`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              access_token: account.access_token,
-              refresh_token: account.refresh_token,
-              provider_uid: user.id,
-              email: user.email,
-              nombre: user.name,
-              fotoUrl: user.image,
-            }),
-          });
-
-          console.log("Backend response status:", response.status);
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log("Backend OAuth response:", {
-              hasTokens: !!data.tokens,
-              userId: data.user?.id_usuario,
-            });
-
-            token.accessToken = data.tokens.access_token;
-            token.refreshToken = data.tokens.refresh_token;
-            token.id = data.user.id_usuario;
-            token.id_usuario = data.user.id_usuario;
-            token.email = user.email;
-            token.name = user.name;
-            token.picture = data.user.foto_url || user.image;
-            token.nombre = data.user.nombre;
-            token.apellido_paterno = data.user.apellido_paterno;
-            token.apellido_materno = data.user.apellido_materno;
-            token.telefono = data.user.telefono;
-            token.foto_url = data.user.foto_url;
-            token.idioma_preferido = data.user.idioma_preferido;
-            token.moneda_preferida = data.user.moneda_preferida;
-            token.roles = data.user.roles;
-            token.permisos = data.user.permisos;
-            token.id_productor = data.user.id_productor;
-
-            console.log("Token actualizado con datos de backend");
-            return token;
-          }
-
-          console.warn("Backend auth/oauth/google retorno error:", response.status);
-          const errorText = await response.text();
-          console.error("Error response:", errorText);
-          token.email = user.email;
-          token.name = user.name;
-          token.id = user.id;
-          token.picture = user.image;
-          return token;
-        } catch (err) {
-          console.error("Error en jwt callback:", err);
-          token.email = user.email;
-          token.name = user.name;
-          token.id = user.id;
-          token.picture = user.image;
-          return token;
-        }
-      }
-
       if (user) {
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
@@ -188,6 +115,36 @@ export const authOptions: AuthOptions = {
         token.roles = user.roles;
         token.permisos = user.permisos;
         token.id_productor = user.id_productor;
+        return token;
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      if (!token.exp || token.exp - now > 60) {
+        return token;
+      }
+
+      if (!token.refreshToken) {
+        return token;
+      }
+
+      try {
+        const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            refresh_token: token.refreshToken,
+          }),
+        });
+
+        if (!response.ok) {
+          return token;
+        }
+
+        const data = await response.json();
+        token.accessToken = data.tokens.access_token;
+        token.refreshToken = data.tokens.refresh_token;
+      } catch (err) {
+        console.error("Error refreshing token:", err);
       }
 
       return token;

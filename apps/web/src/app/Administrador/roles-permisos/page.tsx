@@ -20,9 +20,15 @@ interface Rol {
 
 interface Usuario {
   id_usuario: string;
+  nombre_usuario?: string;
   nombre: string;
+  foto_url?: string;
+  apellido_paterno?: string;
+  apellido_materno?: string;
   email: string;
   telefono?: string;
+  idioma_preferido?: string;
+  moneda_preferida?: string;
   fecha_registro?: string;
   usuario_rol?: { id_rol: number; estado?: string; roles?: { nombre: string } }[];
 }
@@ -56,18 +62,28 @@ export default function RolesPermisosPage() {
     "panel_productor"
   ];
   
-  const [editingRol, setEditingRol] = useState<Rol | null>(null);
-  const [selectedRol, setSelectedRol] = useState<Rol | null>(null);
-  
   const [formDataRol, setFormDataRol] = useState({ nombre: "" });
   const [formDataPermiso, setFormDataPermiso] = useState({ nombre: "" });
   const [selectedPermisos, setSelectedPermisos] = useState<number[]>([]);
+  const [editingRol, setEditingRol] = useState<Rol | null>(null);
+  const [editingPermiso, setEditingPermiso] = useState<Permiso | null>(null);
+  const [selectedRol, setSelectedRol] = useState<Rol | null>(null);
+  
+  const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null);
   const [userFormData, setUserFormData] = useState({
+    nombre_usuario: "",
     nombre: "",
+    foto_url: "",
+    apellido_paterno: "",
+    apellido_materno: "",
     email: "",
     password: "",
     telefono: "",
+    idioma_preferido: "es",
+    moneda_preferida: "MXN",
+    id_rol: 0,
   });
+  const [selectedFotoFile, setSelectedFotoFile] = useState<File | null>(null);
   
   const [saving, setSaving] = useState(false);
 
@@ -91,9 +107,9 @@ export default function RolesPermisosPage() {
       if (!token) throw new Error("No hay sesión activa");
 
       const [rolesRes, permisosRes, usuariosRes] = await Promise.all([
-        api.roles.getAll(),
-        api.permisos.getAll(),
-        api.usuarios.getAll(),
+        api.roles.getAll(token),
+        api.permisos.getAll(token),
+        api.usuarios.getAll(token),
       ]);
 
       setRoles(rolesRes as Rol[]);
@@ -110,6 +126,7 @@ export default function RolesPermisosPage() {
     e.preventDefault();
     try {
       setSaving(true);
+      setError(null);
       const token = getToken();
       if (!token) throw new Error("No hay sesión activa");
 
@@ -118,7 +135,9 @@ export default function RolesPermisosPage() {
       setFormDataRol({ nombre: "" });
       fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al crear rol");
+      const errorMsg = err instanceof Error ? err.message : "Error al crear rol";
+      console.error("❌ Error:", errorMsg);
+      setError(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -163,15 +182,20 @@ export default function RolesPermisosPage() {
 
   const handleCreatePermiso = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("📝 handleCreatePermiso llamado", formDataPermiso);
     try {
       setSaving(true);
       const token = getToken();
+      console.log("🔑 Token:", token);
       if (!token) throw new Error("No hay sesión activa");
-      await api.permisos.create(token, { nombre: formDataPermiso.nombre });
+
+      const result = await api.permisos.create(token, { nombre: formDataPermiso.nombre });
+      console.log("✅ Resultado:", result);
       setShowModalPermiso(false);
       setFormDataPermiso({ nombre: "" });
       fetchData();
     } catch (err) {
+      console.error("❌ Error:", err);
       setError(err instanceof Error ? err.message : "Error al crear");
     } finally {
       setSaving(false);
@@ -187,6 +211,31 @@ export default function RolesPermisosPage() {
       fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al eliminar");
+    }
+  };
+
+  const handleEditPermiso = (permiso: Permiso) => {
+    setEditingPermiso(permiso);
+    setFormDataPermiso({ nombre: permiso.nombre });
+    setShowModalPermiso(true);
+  };
+
+  const handleUpdatePermiso = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPermiso) return;
+    try {
+      setSaving(true);
+      const token = getToken();
+      if (!token) throw new Error("No hay sesión activa");
+      await api.permisos.update(token, editingPermiso.id_permiso, { nombre: formDataPermiso.nombre });
+      setShowModalPermiso(false);
+      setEditingPermiso(null);
+      setFormDataPermiso({ nombre: "" });
+      fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al actualizar");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -288,17 +337,146 @@ export default function RolesPermisosPage() {
   };
 
   const handleCreateUsuario = async (e: React.FormEvent) => {
-    e.preventDefault();
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    console.log("📝 Creando usuario...", userFormData);
+    try {
+      setSaving(true);
+      setError(null);
+      const token = getToken();
+      if (!token) throw new Error("No hay sesión activa");
+      
+      const payload = {
+        nombre: userFormData.nombre,
+        email: userFormData.email,
+        password: userFormData.password || undefined,
+        apellido_paterno: userFormData.apellido_paterno || undefined,
+        apellido_materno: userFormData.apellido_materno || undefined,
+        telefono: userFormData.telefono || undefined,
+        idioma_preferido: userFormData.idioma_preferido,
+        moneda_preferida: userFormData.moneda_preferida,
+      };
+      
+      console.log("📤 Payload:", payload);
+      const response = await api.usuarios.create(token, payload) as { id_usuario: string };
+      console.log("✅ Usuario creado:", response);
+      
+      if (selectedFotoFile) {
+        const formData = new FormData();
+        formData.append("foto", selectedFotoFile);
+        await api.usuarios.uploadPhoto(token, response.id_usuario, formData);
+      }
+      
+      if (userFormData.id_rol) {
+        await api.usuariosRoles.assign(token, { id_usuario: response.id_usuario, id_rol: userFormData.id_rol });
+      }
+      
+      setShowModalUsuario(false);
+      setSelectedFotoFile(null);
+      setUserFormData({
+        nombre_usuario: "",
+        nombre: "",
+        foto_url: "",
+        apellido_paterno: "",
+        apellido_materno: "",
+        email: "",
+        password: "",
+        telefono: "",
+        idioma_preferido: "es",
+        moneda_preferida: "MXN",
+        id_rol: 0,
+      });
+      fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al crear usuario");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditUsuario = (usuario: Usuario) => {
+    const rolAsignado = usuario.usuario_rol?.find(ur => ur.estado === "activo");
+    setEditingUsuario(usuario);
+    setSelectedFotoFile(null);
+    setUserFormData({
+      nombre_usuario: usuario.nombre_usuario || "",
+      nombre: usuario.nombre || "",
+      foto_url: usuario.foto_url || "",
+      apellido_paterno: usuario.apellido_paterno || "",
+      apellido_materno: usuario.apellido_materno || "",
+      email: usuario.email || "",
+      password: "",
+      telefono: usuario.telefono || "",
+      idioma_preferido: usuario.idioma_preferido || "es",
+      moneda_preferida: usuario.moneda_preferida || "MXN",
+      id_rol: rolAsignado?.id_rol || 0,
+    });
+    setShowModalUsuario(true);
+  };
+
+  const handleUpdateUsuario = async (e: React.FormEvent) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    if (!editingUsuario) return;
     try {
       setSaving(true);
       const token = getToken();
       if (!token) throw new Error("No hay sesión activa");
-      await api.usuarios.create(token, userFormData);
+      
+      const payload: Record<string, unknown> = {
+        nombre: userFormData.nombre,
+        apellido_paterno: userFormData.apellido_paterno || undefined,
+        apellido_materno: userFormData.apellido_materno || undefined,
+        email: userFormData.email,
+        telefono: userFormData.telefono || undefined,
+        idioma_preferido: userFormData.idioma_preferido,
+        moneda_preferida: userFormData.moneda_preferida,
+      };
+      
+      if (userFormData.password) {
+        payload.password = userFormData.password;
+      }
+      
+      await api.usuarios.update(token, editingUsuario.id_usuario, payload);
+      
+      if (selectedFotoFile) {
+        const formData = new FormData();
+        formData.append("foto", selectedFotoFile);
+        await api.usuarios.uploadPhoto(token, editingUsuario.id_usuario, formData);
+      }
+      
+      const currentRoles = editingUsuario.usuario_rol?.filter(ur => ur.estado === "activo").map(ur => ur.id_rol) || [];
+      const newRoleId = userFormData.id_rol;
+      
+      if (newRoleId && !currentRoles.includes(newRoleId)) {
+        await api.usuariosRoles.assign(token, { id_usuario: editingUsuario.id_usuario, id_rol: newRoleId });
+      } else if (newRoleId === 0 && currentRoles.length > 0) {
+        for (const idRol of currentRoles) {
+          await api.usuariosRoles.remove(token, editingUsuario.id_usuario, idRol);
+        }
+      }
+      
       setShowModalUsuario(false);
-      setUserFormData({ nombre: "", email: "", password: "", telefono: "" });
+      setEditingUsuario(null);
+      setSelectedFotoFile(null);
+      setUserFormData({
+        nombre_usuario: "",
+        nombre: "",
+        foto_url: "",
+        apellido_paterno: "",
+        apellido_materno: "",
+        email: "",
+        password: "",
+        telefono: "",
+        idioma_preferido: "es",
+        moneda_preferida: "MXN",
+        id_rol: 0,
+      });
       fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al crear usuario");
+      setError(err instanceof Error ? err.message : "Error al actualizar usuario");
     } finally {
       setSaving(false);
     }
@@ -457,7 +635,11 @@ export default function RolesPermisosPage() {
         <div className="space-y-4">
           <div className="flex justify-end">
             <button
-              onClick={() => setShowModalPermiso(true)}
+              onClick={() => {
+                setEditingPermiso(null);
+                setFormDataPermiso({ nombre: "" });
+                setShowModalPermiso(true);
+              }}
               className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700"
             >
               <Plus size={18} /> Nuevo Permiso
@@ -474,12 +656,20 @@ export default function RolesPermisosPage() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
                     <Key size={20} />
                   </div>
-                  <button
-                    onClick={() => handleDeletePermiso(permiso.id_permiso)}
-                    className="rounded-lg p-2 text-gray-300 opacity-0 transition-colors hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleEditPermiso(permiso)}
+                      className="rounded-lg p-2 text-gray-300 opacity-0 transition-colors hover:bg-blue-50 hover:text-blue-600 group-hover:opacity-100"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeletePermiso(permiso.id_permiso)}
+                      className="rounded-lg p-2 text-gray-300 opacity-0 transition-colors hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
                 <h3 className="mt-3 text-sm font-bold text-slate-800">{permiso.nombre}</h3>
                 <p className="mt-1 text-xs text-gray-400">ID: #{permiso.id_permiso}</p>
@@ -542,12 +732,20 @@ export default function RolesPermisosPage() {
                         : "-"}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => openAsignarRoles(usuario)}
-                        className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                      >
-                        <Pencil size={16} />
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleEditUsuario(usuario)}
+                          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={() => openAsignarRoles(usuario)}
+                          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-green-50 hover:text-green-600"
+                        >
+                          <Shield size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -608,12 +806,21 @@ export default function RolesPermisosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-100 p-6">
-              <h3 className="text-lg font-bold text-slate-800">Nuevo Permiso</h3>
-              <button onClick={() => setShowModalPermiso(false)} className="text-gray-400 hover:text-slate-600">
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleCreatePermiso} className="p-6">
+              <h3 className="text-lg font-bold text-slate-800">
+                {editingPermiso ? "Editar Permiso" : "Nuevo Permiso"}
+              </h3>
+<button
+              onClick={() => {
+                setShowModalPermiso(false);
+                setEditingPermiso(null);
+                setFormDataPermiso({ nombre: "" });
+              }}
+              className="text-gray-400 hover:text-slate-600"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <form onSubmit={editingPermiso ? handleUpdatePermiso : handleCreatePermiso} className="p-6">
               <div className="mb-4">
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Nombre del Permiso
@@ -633,7 +840,11 @@ export default function RolesPermisosPage() {
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowModalPermiso(false)}
+                  onClick={() => {
+                    setShowModalPermiso(false);
+                    setEditingPermiso(null);
+                    setFormDataPermiso({ nombre: "" });
+                  }}
                   className="flex-1 rounded-xl border border-gray-200 py-3 font-medium text-slate-600 transition-colors hover:bg-gray-50"
                 >
                   Cancelar
@@ -644,7 +855,7 @@ export default function RolesPermisosPage() {
                   className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 py-3 font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
                 >
                   {saving && <Loader2 className="animate-spin" size={16} />}
-                  Crear
+                  {editingPermiso ? "Actualizar" : "Crear"}
                 </button>
               </div>
             </form>
@@ -760,90 +971,264 @@ export default function RolesPermisosPage() {
 
       {showModalUsuario && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between border-b border-gray-100 p-6">
-              <h3 className="text-lg font-bold text-slate-800">Nuevo Usuario</h3>
+              <h3 className="text-lg font-bold text-slate-800">
+                {editingUsuario ? "Editar Usuario" : "Nuevo Usuario"}
+              </h3>
               <button
-                onClick={() => setShowModalUsuario(false)}
+                onClick={() => {
+                  setShowModalUsuario(false);
+                  setEditingUsuario(null);
+                  setSelectedFotoFile(null);
+                  setUserFormData({
+                    nombre_usuario: "",
+                    nombre: "",
+                    foto_url: "",
+                    apellido_paterno: "",
+                    apellido_materno: "",
+                    email: "",
+                    password: "",
+                    telefono: "",
+                    idioma_preferido: "es",
+                    moneda_preferida: "MXN",
+                    id_rol: 0,
+                  });
+                }}
                 className="text-gray-400 hover:text-slate-600"
               >
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleCreateUsuario} className="p-6">
-              <div className="mb-4 space-y-4">
+            <form onSubmit={editingUsuario ? handleUpdateUsuario : handleCreateUsuario} className="p-6 space-y-4 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Nombre de Usuario</label>
+                  <input
+                    type="text"
+                    value={userFormData.nombre_usuario}
+                    onChange={(e) => setUserFormData({ ...userFormData, nombre_usuario: e.target.value })}
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                    required
+                  />
+                </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">Nombre</label>
                   <input
                     type="text"
                     value={userFormData.nombre}
-                    onChange={(e) =>
-                      setUserFormData({ ...userFormData, nombre: e.target.value })
-                    }
+                    onChange={(e) => setUserFormData({ ...userFormData, nombre: e.target.value })}
                     className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                     required
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Email
-                  </label>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Apellido Paterno</label>
                   <input
-                    type="email"
-                    value={userFormData.email}
-                    onChange={(e) =>
-                      setUserFormData({ ...userFormData, email: e.target.value })
-                    }
+                    type="text"
+                    value={userFormData.apellido_paterno}
+                    onChange={(e) => setUserFormData({ ...userFormData, apellido_paterno: e.target.value })}
                     className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                    required
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Password
-                  </label>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Apellido Materno</label>
+                  <input
+                    type="text"
+                    value={userFormData.apellido_materno}
+                    onChange={(e) => setUserFormData({ ...userFormData, apellido_materno: e.target.value })}
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Foto</label>
+                <div className="flex items-center gap-4">
+                  {userFormData.foto_url || selectedFotoFile ? (
+                    <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-green-500">
+                      <img 
+                        src={selectedFotoFile ? URL.createObjectURL(selectedFotoFile) : userFormData.foto_url} 
+                        alt="Preview" 
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedFotoFile(null);
+                          setUserFormData({ ...userFormData, foto_url: "" });
+                        }}
+                        className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-gray-300 bg-gray-50">
+                      <User size={24} className="text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-gray-50">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) setSelectedFotoFile(file);
+                        }}
+                        className="hidden"
+                      />
+                      Subir foto
+                    </label>
+                    {selectedFotoFile && (
+                      <p className="mt-1 text-xs text-gray-500">{selectedFotoFile.name}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Email</label>
+                <input
+                  type="email"
+                  value={userFormData.email}
+                  onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+                  className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                  required
+                />
+              </div>
+
+              {!editingUsuario && (
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Password</label>
                   <input
                     type="password"
                     value={userFormData.password}
-                    onChange={(e) =>
-                      setUserFormData({ ...userFormData, password: e.target.value })
-                    }
+                    onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
                     className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                    required
+                    required={!editingUsuario}
+                    placeholder={editingUsuario ? "Dejar vacío para mantener" : ""}
                   />
+                </div>
+              )}
+
+              {editingUsuario && (
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Password (opcional)</label>
+                  <input
+                    type="password"
+                    value={userFormData.password}
+                    onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                    placeholder="Dejar vacío para mantener actual"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Teléfono</label>
+                <input
+                  type="text"
+                  value={userFormData.telefono}
+                  onChange={(e) => setUserFormData({ ...userFormData, telefono: e.target.value })}
+                  className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Idioma Preferido</label>
+                  <select
+                    value={userFormData.idioma_preferido}
+                    onChange={(e) => setUserFormData({ ...userFormData, idioma_preferido: e.target.value })}
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                  >
+                    <option value="es">Español</option>
+                    <option value="en">English</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                    <option value="pt">Português</option>
+                  </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Teléfono
-                  </label>
-                  <input
-                    type="text"
-                    value={userFormData.telefono}
-                    onChange={(e) =>
-                      setUserFormData({ ...userFormData, telefono: e.target.value })
-                    }
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Moneda Preferida</label>
+                  <select
+                    value={userFormData.moneda_preferida}
+                    onChange={(e) => setUserFormData({ ...userFormData, moneda_preferida: e.target.value })}
                     className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                  />
+                  >
+                    <option value="MXN">MXN - Peso Mexicano</option>
+                    <option value="USD">USD - Dólar Estadounidense</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - Libra Esterlina</option>
+                    <option value="BRL">BRL - Real Brasileño</option>
+                  </select>
                 </div>
               </div>
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowModalUsuario(false)}
-                  className="flex-1 rounded-xl border border-gray-200 py-3 font-medium text-slate-600 transition-colors hover:bg-gray-50"
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Asignar Rol</label>
+                <select
+                  value={userFormData.id_rol}
+                  onChange={(e) => setUserFormData({ ...userFormData, id_rol: parseInt(e.target.value) || 0 })}
+                  className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 py-3 font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
-                >
-                  {saving && <Loader2 className="animate-spin" size={16} />}
-                  Crear
-                </button>
+                  <option value={0}>Seleccionar rol...</option>
+                  {roles.map((rol) => (
+                    <option key={rol.id_rol} value={rol.id_rol}>
+                      {rol.nombre}
+                    </option>
+                  ))}
+                </select>
               </div>
             </form>
+            <div className="flex gap-3 border-t border-gray-100 p-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowModalUsuario(false);
+                  setEditingUsuario(null);
+                  setSelectedFotoFile(null);
+                  setUserFormData({
+                    nombre_usuario: "",
+                    nombre: "",
+                    foto_url: "",
+                    apellido_paterno: "",
+                    apellido_materno: "",
+                    email: "",
+                    password: "",
+                    telefono: "",
+                    idioma_preferido: "es",
+                    moneda_preferida: "MXN",
+                    id_rol: 0,
+                  });
+                }}
+                className="flex-1 rounded-xl border border-gray-200 py-3 font-medium text-slate-600 transition-colors hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (editingUsuario) {
+                    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                    handleUpdateUsuario(fakeEvent);
+                  } else {
+                    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                    handleCreateUsuario(fakeEvent);
+                  }
+                }}
+                disabled={saving}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 py-3 font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+              >
+                {saving && <Loader2 className="animate-spin" size={16} />}
+                {editingUsuario ? "Actualizar" : "Crear"}
+              </button>
+            </div>
           </div>
         </div>
       )}

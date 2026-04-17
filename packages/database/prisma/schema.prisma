@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = "postgresql://neondb_owner:npg_updn5JAzas7O@ep-tiny-band-am08zkiv.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
 }
 
 
@@ -68,6 +68,7 @@ model categorias {
   categorias         categorias?          @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
   other_categorias   categorias[]         @relation("categoriasTocategorias")
   tasas_impuesto     tasas_impuesto[]
+  categorias_productos categorias_productos[]
 
   @@index([id_padre], map: "idx_cat_padre")
 }
@@ -429,6 +430,17 @@ model permisos {
 
 
 
+model categorias_productos {
+  id_categoria Int
+  id_producto  BigInt
+  creado_en    DateTime @default(now()) @db.Timestamptz(6)
+  categorias   categorias @relation(fields: [id_categoria], references: [id_categoria], onDelete: Cascade, onUpdate: NoAction)
+  productos    productos   @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([id_categoria, id_producto])
+  @@index([id_producto], map: "idx_cat_prod_producto")
+}
+
 model producto_imagenes {
   id_imagen    BigInt    @id @default(autoincrement())
   id_producto  BigInt
@@ -446,8 +458,8 @@ model productores {
   id_productor          Int       @id @default(autoincrement())
   id_usuario            String    @unique @db.Uuid
   id_region             Int?
-  descripcion           String?
-  biografia             String?
+  descripcion          String?
+  biografia            String?
   otras_caracteristicas String?   @db.VarChar(255)
   creado_en             DateTime  @default(now()) @db.Timestamptz(6)
   actualizado_en        DateTime  @default(now()) @db.Timestamptz(6)
@@ -484,6 +496,7 @@ model productos {
   inventario                                   inventario[]
   producto_imagenes                            producto_imagenes[]
   lista_deseos_item                            ListaDeseosItem[]
+  categorias_productos                        categorias_productos[]
   usuarios_productos_actualizado_porTousuarios usuarios?            @relation("productos_actualizado_porTousuarios", fields: [actualizado_por], references: [id_usuario], onUpdate: NoAction)
   usuarios_productos_creado_porTousuarios      usuarios?            @relation("productos_creado_porTousuarios", fields: [creado_por], references: [id_usuario], onUpdate: NoAction)
   lotes                                        lotes?               @relation(fields: [id_lote], references: [id_lote], onUpdate: NoAction)
@@ -641,6 +654,7 @@ model usuario_rol {
 model usuarios {
   id_usuario                                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre                                        String                   @db.VarChar(100)
+  nombre_usuario                                String?                  @unique @db.VarChar(50)
   foto_url                                      String?                  @db.VarChar(500)
   apellido_paterno                              String?                  @db.VarChar(100)
   apellido_materno                              String?                  @db.VarChar(100)

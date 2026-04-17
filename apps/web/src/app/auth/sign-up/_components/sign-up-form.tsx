@@ -126,11 +126,24 @@ export function SignUpForm() {
             {error}
           </div>
         )}
-
+        {/* NOMBRE DE USUARIO*/}
+        <div>
+          <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
+            Nombre de usuario
+          </label>
+          <input
+            type="text"
+            required
+            className="w-full rounded-lg border border-green-200 bg-white p-3 outline-none focus:border-green-400 dark:bg-gray-dark"
+            placeholder="Ingresa tu nombre de usuario"
+            value={formData.nombre}
+            onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+          />
+        </div>
         {/* NOMBRE */}
         <div>
           <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
-            Nombre completo
+            Nombres
           </label>
           <input
             type="text"

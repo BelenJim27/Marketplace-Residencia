@@ -482,7 +482,7 @@ function createSignedJwt<T extends JwtPayload>(payload: T, secret: string, expir
   return `${data}.${signature}`;
 }
 
-function verifyJwt<T extends JwtPayload>(token: string, secret: string): T {
+export function verifyJwt<T extends JwtPayload>(token: string, secret: string): T {
   const parts = token.split('.');
   if (parts.length !== 3) {
     throw new UnauthorizedException('Token inválido');
