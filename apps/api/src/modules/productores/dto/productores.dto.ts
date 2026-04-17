@@ -5,9 +5,7 @@ import { IsBoolean, IsInt, IsOptional, IsString, MaxLength } from 'class-validat
 export class CreateProductorDto {
   @IsString() id_usuario!: string;
   @IsOptional() @IsInt() @Type(() => Number) id_region?: number;
-  @IsOptional() @IsString() descripcion?: string;
   @IsOptional() @IsString() biografia?: string;
-  @IsOptional() @IsString() @MaxLength(255) otras_caracteristicas?: string;
 }
 
 export class UpdateProductorDto extends PartialType(CreateProductorDto) {}

@@ -19,6 +19,7 @@ interface UserData {
   apellido_materno: string;
   email: string;
   telefono: string;
+  biografia: string;
   idioma_preferido: string;
   moneda_preferida: string;
   foto_url: string;
@@ -66,19 +67,23 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  const { className = "", ...rest } = props;
+
   return (
     <input
-      {...props}
-      className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-dark-3 dark:bg-dark-2 sm:px-4 sm:py-3"
+      {...rest}
+      className={`w-full rounded-lg border border-stroke bg-transparent px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-dark-3 dark:bg-dark-2 sm:px-4 sm:py-3 ${className}`.trim()}
     />
   );
 }
 
 function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  const { className = "", ...rest } = props;
+
   return (
     <select
-      {...props}
-      className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-dark-3 dark:bg-dark-2 sm:px-4 sm:py-3"
+      {...rest}
+      className={`w-full rounded-lg border border-stroke bg-transparent px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-dark-3 dark:bg-dark-2 sm:px-4 sm:py-3 ${className}`.trim()}
     />
   );
 }
@@ -100,6 +105,7 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
     apellido_materno: "",
     email: "",
     telefono: "",
+    biografia: "",
     idioma_preferido: "es",
     moneda_preferida: "MXN",
     foto_url: "",
@@ -113,6 +119,7 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
         apellido_materno: authUser.apellido_materno || "",
         email: authUser.email || "",
         telefono: (authUser as unknown as UserData).telefono || "",
+        biografia: (authUser as unknown as UserData).biografia || "",
         idioma_preferido: (authUser as unknown as UserData).idioma_preferido || "es",
         moneda_preferida: (authUser as unknown as UserData).moneda_preferida || "MXN",
         foto_url: (authUser as unknown as UserData).foto_url || "",
@@ -160,6 +167,7 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
         apellido_paterno: form.apellido_paterno || null,
         apellido_materno: form.apellido_materno || null,
         telefono: form.telefono || null,
+        biografia: form.biografia.trim() || null,
         idioma_preferido: form.idioma_preferido,
         moneda_preferida: form.moneda_preferida,
         foto_url: form.foto_url || null,
@@ -296,6 +304,26 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
           <Field label="Email">
             <Input type="email" value={form.email} disabled className="cursor-not-allowed opacity-60" />
             <p className="mt-1 text-xs text-gray-400">El email no puede ser modificado</p>
+          </Field>
+
+          <Field label="Biografía">
+            <div className="space-y-2">
+              <textarea
+                name="biografia"
+                value={form.biografia}
+                onChange={(e) => {
+                  const nextValue = e.target.value.slice(0, 500);
+                  setForm((prev) => ({ ...prev, biografia: nextValue }));
+                }}
+                maxLength={500}
+                rows={5}
+                placeholder="Cuéntanos sobre ti y tu experiencia con el mezcal..."
+                className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-violet-500/20 dark:border-dark-3 dark:bg-dark-2 sm:px-4 sm:py-3"
+              />
+              <div className="text-right text-xs text-gray-400">
+                {form.biografia.length}/500
+              </div>
+            </div>
           </Field>
         </div>
 

@@ -59,7 +59,7 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         url: "/Administrador/auditoria",
         icon: FileBarChart,
       },
-      {title: "Roles y pemisos", url: "/Administrador/roles-permisos", icon: UserCog},
+      { title: "Roles y pemisos", url: "/Administrador/roles-permisos", icon: UserCog },
       {
         title: "Productores",
         url: "/Administrador/tienda/productores",
@@ -97,11 +97,15 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
         icon: LayoutDashboard,
       },
       {
+        title: "Lotes",
+        url: "/dashboard/productor/lotes",
+        icon: Layers
+      },
+      {
         title: "Productos",
         url: "/dashboard/productor/productos",
         icon: Package,
       },
-      { title: "Lotes", url: "/dashboard/productor/lotes", icon: Layers },
       {
         title: "Ventas",
         url: "/dashboard/productor/ventas",
@@ -118,7 +122,7 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
           },
         ],
       },
-      
+
     ],
   },
 ];

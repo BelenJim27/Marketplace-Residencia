@@ -33,6 +33,11 @@ export class RegisterAuthDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
+  biografia?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
   foto_url?: string;
 
   @IsOptional()
@@ -95,6 +100,7 @@ export class AuthUserDto {
   apellido_paterno!: string | null;
   apellido_materno!: string | null;
   telefono!: string | null;
+  biografia!: string | null;
   foto_url!: string | null;
   idioma_preferido!: string;
   moneda_preferida!: string;

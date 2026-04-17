@@ -280,6 +280,8 @@ export class AuthService {
 
     const accessData = await getAccessData(this.prisma, user.id_usuario);
 
+    const biografia = (user as usuarios & { biografia?: string | null }).biografia ?? null;
+
     return {
       id_usuario: user.id_usuario,
       nombre: user.nombre,
@@ -287,6 +289,7 @@ export class AuthService {
       apellido_paterno: user.apellido_paterno,
       apellido_materno: user.apellido_materno,
       telefono: user.telefono,
+      biografia,
       foto_url: user.foto_url,
       idioma_preferido: user.idioma_preferido,
       moneda_preferida: user.moneda_preferida,
@@ -339,6 +342,8 @@ export class AuthService {
       },
     });
 
+    const biografia = (freshUser as usuarios & { biografia?: string | null }).biografia ?? null;
+
     return {
       user: {
         id_usuario: freshUser.id_usuario,
@@ -347,6 +352,7 @@ export class AuthService {
         apellido_paterno: freshUser.apellido_paterno,
         apellido_materno: freshUser.apellido_materno,
         telefono: freshUser.telefono,
+        biografia,
         foto_url: freshUser.foto_url,
         idioma_preferido: freshUser.idioma_preferido,
         moneda_preferida: freshUser.moneda_preferida,

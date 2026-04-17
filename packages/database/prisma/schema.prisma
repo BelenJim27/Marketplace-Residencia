@@ -7,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model archivos {
   id_archivo   BigInt    @id @default(autoincrement())
   entidad_tipo String    @db.VarChar(30)
@@ -55,19 +54,20 @@ model carrito_item {
 }
 
 model categorias {
-  id_categoria       Int                  @id @default(autoincrement())
-  id_padre           Int?
-  nombre             String               @db.VarChar(150)
-  slug               String               @unique @db.VarChar(150)
-  descripcion        String?
-  tipo               String               @default("general") @db.VarChar(50)
-  orden              Int                  @default(0)
-  imagen_url         String?              @db.VarChar(500)
-  activo             Boolean              @default(true)
-  creado_en          DateTime             @default(now()) @db.Timestamptz(6)
-  categorias         categorias?          @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
-  other_categorias   categorias[]         @relation("categoriasTocategorias")
-  tasas_impuesto     tasas_impuesto[]
+  id_categoria         Int                    @id @default(autoincrement())
+  id_padre             Int?
+  nombre               String                 @db.VarChar(150)
+  slug                 String                 @unique @db.VarChar(150)
+  descripcion          String?
+  tipo                 String                 @default("general") @db.VarChar(50)
+  orden                Int                    @default(0)
+  imagen_url           String?                @db.VarChar(500)
+  activo               Boolean                @default(true)
+  creado_en            DateTime               @default(now()) @db.Timestamptz(6)
+  categorias           categorias?            @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
+  other_categorias     categorias[]           @relation("categoriasTocategorias")
+  categorias_productos categorias_productos[]
+  tasas_impuesto       tasas_impuesto[]
 
   @@index([id_padre], map: "idx_cat_padre")
 }
@@ -259,22 +259,30 @@ model lote_atributos {
 }
 
 model lotes {
-  id_lote          Int              @id @default(autoincrement())
-  id_productor     Int
-  id_region        Int?
-  codigo_lote      String           @unique @db.VarChar(100)
-  sitio            String?          @db.VarChar(200)
-  fecha_produccion DateTime?        @db.Date
-  volumen_total    Int?
-  estado_lote      String           @default("disponible") @db.VarChar(30)
-  datos_api        Json             @default("{}")
-  creado_en        DateTime         @default(now()) @db.Timestamptz(6)
-  actualizado_en   DateTime         @default(now()) @db.Timestamptz(6)
-  eliminado_en     DateTime?        @db.Timestamptz(6)
-  lote_atributos   lote_atributos[]
-  productores      productores      @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
-  regiones         regiones?        @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
-  productos        productos[]
+  id_lote           Int              @id @default(autoincrement())
+  id_productor      Int
+  id_region         Int?
+  codigo_lote       String           @unique @db.VarChar(100)
+  sitio             String?          @db.VarChar(200)
+  fecha_produccion  DateTime?        @db.Date
+  volumen_total     Int?
+  estado_lote       String           @default("disponible") @db.VarChar(30)
+  datos_api         Json             @default("{}")
+  creado_en         DateTime         @default(now()) @db.Timestamptz(6)
+  actualizado_en    DateTime         @default(now()) @db.Timestamptz(6)
+  eliminado_en      DateTime?        @db.Timestamptz(6)
+  unidades          Int?
+  grado_alcohol     Float?
+  marca             String?          @db.VarChar(100)
+  descripcion       String?
+  nombre_comun      String?          @db.VarChar(100)
+  nombre_cientifico String?          @db.VarChar(150)
+  url_foto_especie  String?          @db.VarChar(255)
+  fecha_elaboracion DateTime?        @db.Date
+  lote_atributos    lote_atributos[]
+  productores       productores      @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  regiones          regiones?        @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
+  productos         productos[]
 }
 
 model ListaDeseosItem {
@@ -284,15 +292,13 @@ model ListaDeseosItem {
   precio_snapshot Decimal?  @db.Decimal(12, 2)
   moneda_snapshot String?   @default("MXN") @db.Char(3)
   nota            String?
-  fecha_agregado  DateTime  @default(now()) @db.Timestamptz
-
-  // Relaciones
-  usuario  usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
-  producto productos @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade)
+  fecha_agregado  DateTime  @default(now()) @db.Timestamptz(6)
+  producto        productos @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade)
+  usuario         usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
 
   @@unique([id_usuario, id_producto])
-  @@index([id_usuario], name: "idx_lista_deseos_usuario")
-  @@index([id_producto], name: "idx_lista_deseos_producto")
+  @@index([id_usuario], map: "idx_lista_deseos_usuario")
+  @@index([id_producto], map: "idx_lista_deseos_producto")
   @@map("lista_deseos_item")
 }
 
@@ -427,8 +433,6 @@ model permisos {
   rol_permiso  rol_permiso[]
 }
 
-
-
 model producto_imagenes {
   id_imagen    BigInt    @id @default(autoincrement())
   id_producto  BigInt
@@ -446,12 +450,11 @@ model productores {
   id_productor          Int       @id @default(autoincrement())
   id_usuario            String    @unique @db.Uuid
   id_region             Int?
-  descripcion           String?
   biografia             String?
-  otras_caracteristicas String?   @db.VarChar(255)
   creado_en             DateTime  @default(now()) @db.Timestamptz(6)
   actualizado_en        DateTime  @default(now()) @db.Timestamptz(6)
   eliminado_en          DateTime? @db.Timestamptz(6)
+  otras_caracteristicas String?   @db.VarChar(255)
   lotes                 lotes[]
   regiones              regiones? @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
   usuarios              usuarios  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
@@ -459,36 +462,37 @@ model productores {
 }
 
 model productos {
-  id_producto                                  BigInt               @id @default(autoincrement())
+  id_producto                                  BigInt                 @id @default(autoincrement())
   id_tienda                                    Int
   id_lote                                      Int?
-  nombre                                       String               @db.VarChar(200)
+  nombre                                       String                 @db.VarChar(200)
   descripcion                                  String?
-  traducciones                                 Json                 @default("{}")
-  precio_base                                  Decimal              @db.Decimal(12, 2)
-  moneda_base                                  String               @default("MXN") @db.Char(3)
-  metadata                                     Json                 @default("{}")
-  peso_kg                                      Decimal?             @db.Decimal(8, 3)
-  alto_cm                                      Decimal?             @db.Decimal(8, 2)
-  ancho_cm                                     Decimal?             @db.Decimal(8, 2)
-  largo_cm                                     Decimal?             @db.Decimal(8, 2)
-  status                                       String               @default("activo") @db.VarChar(20)
-  creado_por                                   String?              @db.Uuid
-  actualizado_por                              String?              @db.Uuid
-  creado_en                                    DateTime             @default(now()) @db.Timestamptz(6)
-  actualizado_en                               DateTime             @default(now()) @db.Timestamptz(6)
-  eliminado_en                                 DateTime?            @db.Timestamptz(6)
-  imagen_principal_url                         String?              @db.VarChar(500)
+  traducciones                                 Json                   @default("{}")
+  precio_base                                  Decimal                @db.Decimal(12, 2)
+  moneda_base                                  String                 @default("MXN") @db.Char(3)
+  metadata                                     Json                   @default("{}")
+  peso_kg                                      Decimal?               @db.Decimal(8, 3)
+  alto_cm                                      Decimal?               @db.Decimal(8, 2)
+  ancho_cm                                     Decimal?               @db.Decimal(8, 2)
+  largo_cm                                     Decimal?               @db.Decimal(8, 2)
+  status                                       String                 @default("activo") @db.VarChar(20)
+  creado_por                                   String?                @db.Uuid
+  actualizado_por                              String?                @db.Uuid
+  creado_en                                    DateTime               @default(now()) @db.Timestamptz(6)
+  actualizado_en                               DateTime               @default(now()) @db.Timestamptz(6)
+  eliminado_en                                 DateTime?              @db.Timestamptz(6)
+  imagen_principal_url                         String?                @db.VarChar(500)
   carrito_item                                 carrito_item[]
+  categorias_productos                         categorias_productos[]
   detalle_pedido                               detalle_pedido[]
   inventario                                   inventario[]
-  producto_imagenes                            producto_imagenes[]
   lista_deseos_item                            ListaDeseosItem[]
-  usuarios_productos_actualizado_porTousuarios usuarios?            @relation("productos_actualizado_porTousuarios", fields: [actualizado_por], references: [id_usuario], onUpdate: NoAction)
-  usuarios_productos_creado_porTousuarios      usuarios?            @relation("productos_creado_porTousuarios", fields: [creado_por], references: [id_usuario], onUpdate: NoAction)
-  lotes                                        lotes?               @relation(fields: [id_lote], references: [id_lote], onUpdate: NoAction)
-  tiendas                                      tiendas              @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
-  monedas                                      monedas              @relation(fields: [moneda_base], references: [codigo], onUpdate: NoAction)
+  producto_imagenes                            producto_imagenes[]
+  usuarios_productos_actualizado_porTousuarios usuarios?              @relation("productos_actualizado_porTousuarios", fields: [actualizado_por], references: [id_usuario], onUpdate: NoAction)
+  usuarios_productos_creado_porTousuarios      usuarios?              @relation("productos_creado_porTousuarios", fields: [creado_por], references: [id_usuario], onUpdate: NoAction)
+  lotes                                        lotes?                 @relation(fields: [id_lote], references: [id_lote], onUpdate: NoAction)
+  tiendas                                      tiendas                @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
+  monedas                                      monedas                @relation(fields: [moneda_base], references: [codigo], onUpdate: NoAction)
   resenas                                      resenas[]
 
   @@index([metadata], map: "idx_productos_metadata", type: Gin)
@@ -646,18 +650,20 @@ model usuarios {
   apellido_materno                              String?                  @db.VarChar(100)
   email                                         String                   @unique @db.VarChar(255)
   telefono                                      String?                  @db.VarChar(30)
+  biografia                                     String?
   password_hash                                 String?                  @db.VarChar(255)
   idioma_preferido                              String                   @default("es") @db.VarChar(10)
   moneda_preferida                              String                   @default("MXN") @db.Char(3)
   version_token                                 Int                      @default(1)
   fecha_registro                                DateTime                 @default(now()) @db.Timestamptz(6)
   eliminado_en                                  DateTime?                @db.Timestamptz(6)
+  nombre_usuario                                String?                  @unique @db.VarChar(50)
   archivos                                      archivos[]
   auditoria                                     auditoria[]
   carrito_item                                  carrito_item[]
-  lista_deseos                                  ListaDeseosItem[]
   direcciones                                   direcciones[]
   envio_cotizaciones                            envio_cotizaciones[]
+  lista_deseos                                  ListaDeseosItem[]
   movimientos_inventario                        movimientos_inventario[]
   notificaciones                                notificaciones[]
   oauth_cuentas                                 oauth_cuentas[]
@@ -669,4 +675,15 @@ model usuarios {
   refresh_tokens                                refresh_tokens[]
   resenas                                       resenas[]
   usuario_rol                                   usuario_rol[]
+}
+
+model categorias_productos {
+  id_categoria Int
+  id_producto  BigInt
+  creado_en    DateTime   @default(now()) @db.Timestamptz(6)
+  categorias   categorias @relation(fields: [id_categoria], references: [id_categoria], onDelete: Cascade, onUpdate: NoAction)
+  productos    productos  @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([id_categoria, id_producto])
+  @@index([id_producto], map: "idx_cat_prod_producto")
 }

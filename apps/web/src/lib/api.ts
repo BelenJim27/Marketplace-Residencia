@@ -47,7 +47,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
           return retryResponse.json() as Promise<T>;
         }
       } catch (error) {
-        console.error("❌ Error refrescando token:", error);
+        console.error(" Error refrescando token:", error);
         // Si falla el refresh, remover cookies y dejar que el usuario se loguee de nuevo
         const cookies = document.cookie.split(";");
         cookies.forEach((cookie) => {
@@ -309,7 +309,8 @@ export const api = {
 
   lotes: {
     getAll: () => fetchJson(endpoint("/lotes")),
-    getByProductor: (id_productor: number) => fetchJson(endpoint(`/lotes?id_productor=${id_productor}`)),
+    getByProductor: (id_productor: number) =>
+      fetchJson(`/api/lotes?${new URLSearchParams({ id_productor: String(id_productor) }).toString()}`),
     getOne: (id: number) => fetchJson(endpoint(`/lotes/${id}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/lotes"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),

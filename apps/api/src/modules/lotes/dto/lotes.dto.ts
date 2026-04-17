@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsInt, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsInt, IsNumber, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateLoteDto {
   @IsInt() @Type(() => Number) id_productor!: number;
@@ -10,6 +10,10 @@ export class CreateLoteDto {
   @IsOptional() @IsString() fecha_produccion?: string;
   @IsOptional() @IsInt() @Type(() => Number) volumen_total?: number;
   @IsOptional() @IsString() @MaxLength(30) estado_lote?: string;
+  @IsOptional() @IsInt() @Type(() => Number) unidades?: number;
+  @IsOptional() @IsNumber() @Type(() => Number) grado_alcohol?: number;
+  @IsOptional() @IsString() @MaxLength(100) nombre_comun?: string;
+  @IsOptional() @IsString() @MaxLength(150) nombre_cientifico?: string;
   @IsOptional() @IsObject() datos_api?: Record<string, unknown>;
 }
 export class UpdateLoteDto extends PartialType(CreateLoteDto) {}

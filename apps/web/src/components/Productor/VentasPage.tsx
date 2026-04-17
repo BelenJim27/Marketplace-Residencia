@@ -189,11 +189,6 @@ export function VentasPage() {
           <h1 className="text-2xl font-bold text-dark dark:text-white">Ventas</h1>
           <p className="text-sm text-gray-500">Consulta el estado de tus movimientos comerciales.</p>
         </div>
-
-        <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 font-medium text-white transition hover:bg-opacity-90">
-          <Plus size={18} />
-          Nueva Venta
-        </button>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">

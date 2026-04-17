@@ -57,6 +57,7 @@ export const authOptions: AuthOptions = {
             apellido_paterno: data.user.apellido_paterno,
             apellido_materno: data.user.apellido_materno,
             telefono: data.user.telefono,
+            biografia: data.user.biografia,
             foto_url: data.user.foto_url,
             idioma_preferido: data.user.idioma_preferido,
             moneda_preferida: data.user.moneda_preferida,
@@ -141,6 +142,7 @@ export const authOptions: AuthOptions = {
             token.apellido_paterno = data.user.apellido_paterno;
             token.apellido_materno = data.user.apellido_materno;
             token.telefono = data.user.telefono;
+            token.biografia = data.user.biografia;
             token.foto_url = data.user.foto_url;
             token.idioma_preferido = data.user.idioma_preferido;
             token.moneda_preferida = data.user.moneda_preferida;
@@ -182,6 +184,7 @@ export const authOptions: AuthOptions = {
         token.apellido_paterno = user.apellido_paterno;
         token.apellido_materno = user.apellido_materno;
         token.telefono = user.telefono;
+        token.biografia = user.biografia;
         token.foto_url = user.foto_url;
         token.idioma_preferido = user.idioma_preferido;
         token.moneda_preferida = user.moneda_preferida;
@@ -210,6 +213,7 @@ export const authOptions: AuthOptions = {
         session.user.apellido_paterno = token.apellido_paterno;
         session.user.apellido_materno = token.apellido_materno;
         session.user.telefono = token.telefono;
+        session.user.biografia = token.biografia;
         session.user.foto_url = token.foto_url || token.picture || null;
         session.user.idioma_preferido = token.idioma_preferido;
         session.user.moneda_preferida = token.moneda_preferida;

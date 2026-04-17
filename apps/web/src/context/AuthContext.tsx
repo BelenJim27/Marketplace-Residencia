@@ -22,6 +22,7 @@ interface Usuario {
   apellido_paterno?: string;
   apellido_materno?: string;
   telefono?: string | null;
+  biografia?: string | null;
   foto_url?: string | null;
   idioma_preferido?: string;
   moneda_preferida?: string;
@@ -71,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         apellido_paterno: storedUser.apellido_paterno ?? session.user.apellido_paterno ?? undefined,
         apellido_materno: storedUser.apellido_materno ?? session.user.apellido_materno ?? undefined,
         telefono: storedUser.telefono ?? session.user.telefono ?? null,
+        biografia: storedUser.biografia ?? session.user.biografia ?? null,
         foto_url: storedUser.foto_url ?? session.user.foto_url ?? session.user.image ?? null,
         idioma_preferido: storedUser.idioma_preferido || session.user.idioma_preferido || "es",
         moneda_preferida: storedUser.moneda_preferida || session.user.moneda_preferida || "MXN",
@@ -94,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           roles: Array.isArray(usuario.roles) ? usuario.roles : [],
           permisos: Array.isArray(usuario.permisos) ? usuario.permisos : [],
           id_productor: usuario.id_productor ?? undefined,
+          biografia: usuario.biografia ?? null,
         });
       } catch {
         setUser(null);

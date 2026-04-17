@@ -2,18 +2,54 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 
+const { Client } = require('pg');
+
 @Injectable()
 export class WishlistService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listByUsuario(id_usuario: string) {
-    return serializeBigInts(
-      await this.prisma.listaDeseosItem.findMany({
-        where: { id_usuario },
-        include: { producto: true },
-        orderBy: { fecha_agregado: 'desc' },
-      })
-    );
+    const client = this.createPgClient();
+
+    try {
+      await client.connect();
+      const result = await client.query(
+        `
+          SELECT
+            ldi.id_item,
+            ldi.id_producto,
+            ldi.fecha_agregado,
+            p.nombre AS producto_nombre,
+            p.precio_base,
+            p.imagen_principal_url,
+            COALESCE(
+              json_agg(json_build_object('url', pi.url) ORDER BY pi.orden) FILTER (WHERE pi.id_imagen IS NOT NULL),
+              '[]'::json
+            ) AS producto_imagenes
+          FROM lista_deseos_item ldi
+          INNER JOIN productos p ON p.id_producto = ldi.id_producto
+          LEFT JOIN producto_imagenes pi ON pi.id_producto = p.id_producto
+          WHERE ldi.id_usuario = $1
+          GROUP BY ldi.id_item, ldi.id_producto, ldi.fecha_agregado, p.id_producto
+          ORDER BY ldi.fecha_agregado DESC
+        `,
+        [id_usuario],
+      );
+
+      return result.rows.map((row: any) => ({
+        id_item: row.id_item,
+        id_producto: row.id_producto,
+        fecha_agregado: row.fecha_agregado,
+        producto: {
+          nombre: row.producto_nombre,
+          precio_base: row.precio_base,
+          imagen_principal_url: row.imagen_principal_url,
+          producto_imagenes: row.producto_imagenes,
+        },
+      }));
+    } finally {
+      await client.end();
+    }
   }
 
   async add(id_usuario: string, id_producto: string) {
@@ -75,5 +111,13 @@ export class WishlistService {
     });
 
     return { inWishlist: !!item };
+  }
+
+  private createPgClient() {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL no está configurada');
+    }
+
+    return new Client({ connectionString: process.env.DATABASE_URL }) as any;
   }
 }

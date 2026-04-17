@@ -15,9 +15,7 @@ import { useProductosData } from "./hooks/useProductosData";
 type Producer = {
   id_productor: number;
   id_usuario: string;
-  descripcion?: string | null;
   biografia?: string | null;
-  otras_caracteristicas?: string | null;
   usuarios?: { nombre?: string; email?: string; id_usuario?: string };
 };
 

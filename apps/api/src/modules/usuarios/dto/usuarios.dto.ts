@@ -44,6 +44,11 @@ export class CreateUsuarioDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
+  biografia?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
   foto_url?: string;
 
   @IsOptional()

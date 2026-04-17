@@ -10,6 +10,7 @@ declare module "next-auth" {
       apellido_paterno?: string | null;
       apellido_materno?: string | null;
       telefono?: string | null;
+      biografia?: string | null;
       foto_url?: string | null;
       idioma_preferido?: string;
       moneda_preferida?: string;
@@ -28,6 +29,7 @@ declare module "next-auth" {
     apellido_paterno?: string | null;
     apellido_materno?: string | null;
     telefono?: string | null;
+    biografia?: string | null;
     foto_url?: string | null;
     idioma_preferido?: string;
     moneda_preferida?: string;
@@ -51,6 +53,7 @@ declare module "next-auth/jwt" {
     apellido_paterno?: string | null;
     apellido_materno?: string | null;
     telefono?: string | null;
+    biografia?: string | null;
     foto_url?: string | null;
     idioma_preferido?: string;
     moneda_preferida?: string;

@@ -15,12 +15,14 @@ import { getMediaUrl } from "@/lib/media";
 
 interface StoredUser {
   id_usuario?: string;
+  id_productor?: number | null;
   email: string;
   nombre: string;
   apellido_paterno?: string;
   apellido_materno?: string;
   foto_url?: string;
   telefono?: string;
+  biografia?: string | null;
   idioma_preferido?: string;
   moneda_preferida?: string;
   roles: string[];
@@ -240,8 +242,7 @@ export default function Page() {
                 </div>
                 <div>
                   <p className="text-body-sm text-gray-500">Email</p>
-            <p className="font-medium">{data.email}</p>
-            
+                  <p className="font-medium">{data.email}</p>
                 </div>
                 <div>
                   <p className="text-body-sm text-gray-500">Teléfono</p>
@@ -252,8 +253,16 @@ export default function Page() {
                   <p className="font-medium">{data.moneda}</p>
                 </div>
               </div>
+              <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-5 py-4 text-left shadow-sm dark:border-dark-3 dark:bg-dark-2">
+                <h5 className="text-sm font-semibold text-dark dark:text-white">
+                  Biografía
+                </h5>
+                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-gray-300">
+                  {user?.biografia?.trim() || "Sin biografía disponible"}
+                </p>
+              </div>
             </div>
-<button
+            <button
               onClick={() => setIsModalOpen(true)}
               className="mt-2 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-opacity-90"
             >
@@ -265,8 +274,8 @@ export default function Page() {
         </div>
       </div>
 
-      <ModalEditarPerfil 
-        isOpen={isModalOpen} 
+      <ModalEditarPerfil
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => {
           const usuarioStr = getCookie("usuario");

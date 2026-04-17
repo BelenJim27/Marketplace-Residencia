@@ -18,7 +18,7 @@ interface Producto {
   producto_imagenes?: { url: string }[];
   lotes?: {
     datos_api?: Record<string, string>;
-    productores?: { biografia?: string; otras_caracteristicas?: string };
+    productores?: { biografia?: string };
   };
 }
 

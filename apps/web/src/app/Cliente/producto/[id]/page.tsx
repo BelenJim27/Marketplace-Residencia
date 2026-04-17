@@ -30,7 +30,6 @@ interface Producto {
       nombre: string;
       biografia?: string;
       ubicacion?: string;
-      otras_caracteristicas?: string;
     };
   }[];
 }
