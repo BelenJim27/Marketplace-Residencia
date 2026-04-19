@@ -39,15 +39,19 @@ export default function SigninWithPassword() {
       const roles = response.user.roles || [];
       const permisos = response.user.permisos || [];
 
-      login(response.tokens.access_token, {
-        id_usuario: response.user.id_usuario,
-        sub: response.user.id_usuario ?? response.user.sub,
-        email: response.user.email || data.email,
-        id_productor: response.user.id_productor ?? null,
-        nombre: response.user.nombre || "",
-        roles,
-        permisos,
-      }, response.tokens.refresh_token);
+      login(
+        response.tokens.access_token,
+        {
+          id_usuario: response.user.id_usuario,
+          sub: response.user.id_usuario ?? response.user.sub,
+          email: response.user.email || data.email,
+          id_productor: response.user.id_productor ?? null,
+          nombre: response.user.nombre || "",
+          roles,
+          permisos,
+        },
+        data.remember ? response.tokens.refresh_token : undefined,
+      );
 
       if (permisos.includes("panel_productor") || roles.some((rol: string) => ["PRODUCTOR", "productor"].includes(rol))) {
         router.push("/dashboard/productor");

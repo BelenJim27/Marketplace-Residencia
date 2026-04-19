@@ -23,6 +23,7 @@ interface UserData {
   idioma_preferido: string;
   moneda_preferida: string;
   foto_url: string;
+  roles?: string[];
 }
 
 const IDIOMA_OPTIONS = [
@@ -99,6 +100,7 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
   const [photoPreview, setPhotoPreview] = useState("");
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const isProductor = (authUser as unknown as UserData)?.roles?.some((r: string) => ["PRODUCTOR", "productor"].includes(r)) ?? false;
   const [form, setForm] = useState<UserData>({
     nombre: "",
     apellido_paterno: "",
@@ -306,25 +308,27 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
             <p className="mt-1 text-xs text-gray-400">El email no puede ser modificado</p>
           </Field>
 
-          <Field label="Biografía">
-            <div className="space-y-2">
-              <textarea
-                name="biografia"
-                value={form.biografia}
-                onChange={(e) => {
-                  const nextValue = e.target.value.slice(0, 500);
-                  setForm((prev) => ({ ...prev, biografia: nextValue }));
-                }}
-                maxLength={500}
-                rows={5}
-                placeholder="Cuéntanos sobre ti y tu experiencia con el mezcal..."
-                className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-violet-500/20 dark:border-dark-3 dark:bg-dark-2 sm:px-4 sm:py-3"
-              />
-              <div className="text-right text-xs text-gray-400">
-                {form.biografia.length}/500
+          {isProductor && (
+            <Field label="Biografía">
+              <div className="space-y-2">
+                <textarea
+                  name="biografia"
+                  value={form.biografia}
+                  onChange={(e) => {
+                    const nextValue = e.target.value.slice(0, 500);
+                    setForm((prev) => ({ ...prev, biografia: nextValue }));
+                  }}
+                  maxLength={500}
+                  rows={5}
+                  placeholder="Cuéntanos sobre ti y tu experiencia con el mezcal..."
+                  className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-violet-500/20 dark:border-dark-3 dark:bg-dark-2 sm:px-4 sm:py-3"
+                />
+                <div className="text-right text-xs text-gray-400">
+                  {form.biografia.length}/500
+                </div>
               </div>
-            </div>
-          </Field>
+            </Field>
+          )}
         </div>
 
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
