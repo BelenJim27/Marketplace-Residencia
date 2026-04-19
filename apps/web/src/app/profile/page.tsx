@@ -253,14 +253,16 @@ export default function Page() {
                   <p className="font-medium">{data.moneda}</p>
                 </div>
               </div>
-              <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-5 py-4 text-left shadow-sm dark:border-dark-3 dark:bg-dark-2">
-                <h5 className="text-sm font-semibold text-dark dark:text-white">
-                  Biografía
-                </h5>
-                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-gray-300">
-                  {user?.biografia?.trim() || "Sin biografía disponible"}
-                </p>
-              </div>
+              {user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r)) && (
+                <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 px-5 py-4 text-left shadow-sm dark:border-dark-3 dark:bg-dark-2">
+                  <h5 className="text-sm font-semibold text-dark dark:text-white">
+                    Biografía
+                  </h5>
+                  <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-gray-300">
+                    {user?.biografia?.trim() || "Sin biografía disponible"}
+                  </p>
+                </div>
+              )}
             </div>
             <button
               onClick={() => setIsModalOpen(true)}

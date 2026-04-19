@@ -31,13 +31,13 @@ export class UsuariosService {
     await this.ensureEmailAvailable(dto.email);
 
     const data = {
+      nombre_usuario: dto.nombre_usuario.trim(),
       nombre: dto.nombre.trim(),
       email: dto.email.trim().toLowerCase(),
       password_hash: dto.password ? await hashPassword(dto.password) : null,
       apellido_paterno: dto.apellido_paterno?.trim() ?? null,
       apellido_materno: dto.apellido_materno?.trim() ?? null,
       telefono: dto.telefono?.trim() ?? null,
-      biografia: dto.biografia?.trim() ?? null,
       foto_url: dto.foto_url?.trim() ?? null,
       idioma_preferido: dto.idioma_preferido?.trim() ?? 'es',
       moneda_preferida: dto.moneda_preferida?.trim() ?? 'MXN',

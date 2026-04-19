@@ -12,11 +12,18 @@ import { StatsCards } from "./StatsCards";
 import { DashboardPeriod, useVentasData } from "./hooks/useVentasData";
 import { useProductosData } from "./hooks/useProductosData";
 
+// Definición de tipos sin duplicados
 type Producer = {
   id_productor: number;
-  id_usuario?: string;
+  id_usuario: string;
+  descripcion?: string | null;
   biografia?: string | null;
-  usuarios?: { nombre?: string; email?: string; id_usuario?: string };
+  otras_caracteristicas?: string | null;
+  usuarios?: { 
+    nombre?: string; 
+    email?: string; 
+    id_usuario?: string 
+  };
 };
 
 type Product = {
@@ -33,12 +40,14 @@ export function ProductorDashboard() {
   const [productsPeriod, setProductsPeriod] = useState<DashboardPeriod>("mes");
   const chartsRef = useRef<HTMLDivElement | null>(null);
 
+  // Hooks de datos para las gráficas
   const {
     data: salesData,
     isLoading: salesLoading,
     error: salesError,
     refetch: retrySales,
   } = useVentasData(salesPeriod);
+
   const {
     data: productsData,
     isLoading: productsLoading,
@@ -49,6 +58,7 @@ export function ProductorDashboard() {
   useEffect(() => {
     if (authLoading) return;
 
+    // Validación de usuario productor
     if (!user?.id_productor) {
       setLoading(false);
       setError("No fue posible identificar el productor autenticado.");
@@ -64,29 +74,36 @@ export function ProductorDashboard() {
       setError(null);
 
       try {
-        const productsRes = await api.productos.getByProductor(user.id_productor as number);
+        // Llamada paralela a la API para productos e información del productor
+        const [productsRes, producerRes] = await Promise.all([
+          api.productos.getByProductor(user.id_productor as number),
+          api.productores.getOne(user.id_productor as number),
+        ]);
 
         if (cancelled) return;
+
+        // Guardar productos (asegurando que sea un arreglo)
         setProducts(Array.isArray(productsRes) ? productsRes : []);
-        setProducer({
-          id_productor: user.id_productor as number,
-        });
+        
+        // Guardar productor usando Type Casting para evitar el error de 'unknown'
+        setProducer(producerRes as Producer);
+
       } catch (err) {
-        if (!cancelled)
-          setError(
-            err instanceof Error ? err.message : "Error al cargar el dashboard",
-          );
+        if (cancelled) return;
+        setError("Error al cargar los datos del dashboard.");
+        console.error("Error cargando dashboard:", err);
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
     load();
-
+    
+    // Limpieza al desmontar el componente
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user?.id_productor]);
+  }, [user, authLoading]);
 
   const ownedProducts = products;
   const activeProducts = useMemo(

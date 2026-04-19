@@ -14,6 +14,11 @@ export class CreateUsuarioDto {
   @IsString()
   @MinLength(2)
   @MaxLength(100)
+  nombre_usuario!: string;
+
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
   nombre!: string;
 
   @IsEmail()

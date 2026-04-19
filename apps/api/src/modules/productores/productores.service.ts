@@ -1,36 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { serializeBigInts } from '../shared/serialize';
-import { CreateProductorDto, CreateRegionDto, UpdateProductorDto, UpdateRegionDto } from './dto/productores.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../../prisma/prisma.service";
+import { serializeBigInts } from "../shared/serialize";
+import {
+  CreateProductorDto,
+  CreateRegionDto,
+  UpdateProductorDto,
+  UpdateRegionDto,
+} from "./dto/productores.dto";
 
 @Injectable()
 export class ProductoresService {
   constructor(private readonly prisma: PrismaService) {}
-  async findAll() {
-    return serializeBigInts(
-      await this.prisma.productores.findMany({
-        where: { eliminado_en: null },
-        select: productorSelect,
-      }),
-    );
-  }
-
-  async findOne(id_productor: number) {
-    const item = await this.prisma.productores.findUnique({
-      where: { id_productor },
-      select: productorSelect,
-    });
-    if (!item || item.eliminado_en) throw new NotFoundException('Productor no encontrado');
-    return serializeBigInts(item);
-  }
-
-  async findByUsuario(id_usuario: string) {
-    const item = await this.prisma.productores.findFirst({
-      where: { id_usuario, eliminado_en: null },
-      select: productorSelect,
-    });
-    return item ? serializeBigInts(item) : null;
-  }
+  async findAll() { return serializeBigInts(await this.prisma.productores.findMany({ where: { eliminado_en: null }, include: { usuarios: true, regiones: true, lotes: true, tiendas: true } })); }
+  async findOne(id_productor: number) { const item = await this.prisma.productores.findUnique({ where: { id_productor }, include: { usuarios: true, regiones: true, lotes: true, tiendas: true } }); if (!item || item.eliminado_en) throw new NotFoundException('Productor no encontrado'); return serializeBigInts(item); }
+  async findByUsuario(id_usuario: string) { const item = await this.prisma.productores.findFirst({ where: { id_usuario, eliminado_en: null }, include: { usuarios: true, regiones: true, lotes: true, tiendas: true } }); return item ? serializeBigInts(item) : null; }
   async create(dto: CreateProductorDto) { return serializeBigInts(await this.prisma.productores.create({ data: { id_usuario: dto.id_usuario, id_region: dto.id_region ?? null, biografia: dto.biografia ?? null } })); }
   async update(id_productor: number, dto: UpdateProductorDto) { return serializeBigInts(await this.prisma.productores.update({ where: { id_productor }, data: { id_usuario: dto.id_usuario, id_region: dto.id_region ?? undefined, biografia: dto.biografia } })); }
   async remove(id_productor: number) { return serializeBigInts(await this.prisma.productores.update({ where: { id_productor }, data: { eliminado_en: new Date() } })); }

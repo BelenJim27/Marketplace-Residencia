@@ -477,4 +477,10 @@ export const api = {
     check: (id_usuario: string, id_producto: string) =>
       fetchJson(endpoint(`/wishlist/check/${id_usuario}/${id_producto}`)),
   },
+
+  admin: {
+    getStats: () => fetchJson(endpoint("/admin/stats")),
+    getRecentOrders: () => fetchJson(endpoint("/admin/pedidos/recientes")),
+    getTopProductores: () => fetchJson(endpoint("/admin/productores/top")),
+  },
 };

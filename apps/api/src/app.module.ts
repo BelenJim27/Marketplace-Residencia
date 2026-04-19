@@ -22,6 +22,7 @@ import { DireccionesModule } from './modules/direcciones/direcciones.module';
 import { ConfiguracionModule } from './modules/configuracion/configuracion.module';
 import { ArchivosModule } from './modules/archivos/archivos.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { AuditoriaModule } from './modules/auditoria/auditoria.module';
     ConfiguracionModule,
     ArchivosModule,
     AuditoriaModule,
+    AdminModule,
   ],
   controllers: [],
   providers: [],
