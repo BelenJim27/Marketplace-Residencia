@@ -14,6 +14,7 @@ import dayjs from "dayjs";
 import { DownloadIcon, PreviewIcon } from "./icons";
 import { Pagination } from "@/components/ui/pagination";
 import { useState } from "react";
+import { formatPrice } from "@/lib/format-number";
 
 const DATA = [
   { name: "Free package", price: 0.0, date: "2023-01-13T18:00:00.000Z", status: "Paid" },
@@ -57,7 +58,7 @@ export function InvoiceTable() {
               <TableCell className="min-w-[155px] xl:pl-7.5">
                 <h5 className="text-dark dark:text-white">{item.name}</h5>
                 <p className="mt-[3px] text-body-sm font-medium">
-                  ${item.price.toFixed(2)}
+                  $ {Number(item.price).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </TableCell>
 

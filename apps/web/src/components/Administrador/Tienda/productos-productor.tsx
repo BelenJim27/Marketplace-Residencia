@@ -97,7 +97,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
     setError(null);
 
     try {
-      const response = await fetch(`/api/admin/productos/por-productor/${idProductor}`);
+      const response = await fetch(`/api/productos?id_productor=${idProductor}`);
 
       if (!response.ok) {
         const payload = await response

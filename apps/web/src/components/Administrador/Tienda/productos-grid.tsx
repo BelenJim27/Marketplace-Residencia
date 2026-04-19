@@ -7,6 +7,7 @@ import Image from "next/image";
 import { ShoppingCart, Search, X, Heart, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { formatPrice } from "@/lib/format-number";
 
 interface Producto {
   id: number;
@@ -240,7 +241,7 @@ export function ProductosGrid() {
               key={campo}
               className="flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-300"
             >
-              {ETIQUETAS_FILTRO[campo]}: {campo.startsWith("precio") ? `$${filtros[campo]}` : filtros[campo]}
+              {ETIQUETAS_FILTRO[campo]}: {campo.startsWith("precio") ? `$ ${Number(filtros[campo]).toLocaleString("es-MX")}` : filtros[campo]}
               <button onClick={() => quitarFiltro(campo)} className="hover:text-green-600">
                 <X className="h-3 w-3" />
               </button>
@@ -487,7 +488,7 @@ export function ProductosGrid() {
 
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-bold text-green-600">
-                    ${Number(producto.precio_base || 0).toFixed(2)}
+                    ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
                   </span>
                   <button
                     onClick={(e) => {

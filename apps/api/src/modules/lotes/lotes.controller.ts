@@ -1,11 +1,13 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { CreateLoteAtributoDto, CreateLoteDto, UpdateLoteAtributoDto, UpdateLoteDto } from './dto/lotes.dto';
 import { LotesService } from './lotes.service';
 
 @Controller('lotes')
 export class LotesController {
   constructor(private readonly service: LotesService) {}
-  @Get() findAll() { return this.service.findAll(); }
+  @Get() findAll(@Query('id_productor') id_productor?: string) { 
+    return id_productor ? this.service.findByProductor(Number(id_productor)) : this.service.findAll(); 
+  }
   @Get(':id') findOne(@Param('id', ParseIntPipe) id: number) { return this.service.findOne(id); }
   @Post() create(@Body() dto: CreateLoteDto) { return this.service.create(dto); }
   @Patch(':id') update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateLoteDto) { return this.service.update(id, dto); }

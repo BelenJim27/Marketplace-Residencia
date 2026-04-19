@@ -129,6 +129,9 @@ export class ProductosService {
         producto_imagenes: dto.imagenes?.length
           ? { create: dto.imagenes.map((item, index) => ({ url: item.url.trim(), orden: item.orden ?? index, es_principal: item.es_principal ?? index === 0, alt_text: item.alt_text ?? null })) }
           : undefined,
+        categorias_productos: dto.categorias?.length
+          ? { create: dto.categorias.map((id_cat) => ({ id_categoria: id_cat })) }
+          : undefined,
       },
       include: productoInclude,
     });
@@ -169,6 +172,13 @@ export class ProductosService {
       await this.prisma.producto_imagenes.createMany({ data: dto.imagenes.map((item: { url: string; orden?: number; es_principal?: boolean; alt_text?: string }, index: number) => ({ id_producto, url: item.url.trim(), orden: item.orden ?? index, es_principal: item.es_principal ?? index === 0, alt_text: item.alt_text ?? null })) });
     }
 
+    if (dto.categorias) {
+      await this.prisma.categorias_productos.deleteMany({ where: { id_producto } });
+      if (dto.categorias.length > 0) {
+        await this.prisma.categorias_productos.createMany({ data: dto.categorias.map((id_cat) => ({ id_producto, id_categoria: id_cat })) });
+      }
+    }
+
     return serializeBigInts(mapProductoResponse(updated));
   }
 
@@ -187,11 +197,32 @@ const productoInclude = {
       stock: true,
     },
   },
+  tiendas: {
+    include: {
+      productores: {
+        include: {
+          usuarios: {
+            select: {
+              nombre: true,
+            },
+          },
+        },
+      },
+    },
+  },
 } satisfies Prisma.productosInclude;
 
 type ProductoWithRelations = {
   imagen_principal_url?: string | null;
   inventario?: Array<{ stock?: number | null }>;
+  tiendas?: {
+    nombre?: string | null;
+    productores?: {
+      usuarios?: {
+        nombre?: string | null;
+      } | null;
+    } | null;
+  } | null;
 };
 
 function mapProductoResponse<T extends ProductoWithRelations | Array<ProductoWithRelations>>(data: T): T {
@@ -200,6 +231,8 @@ function mapProductoResponse<T extends ProductoWithRelations | Array<ProductoWit
       ...item,
       imagen_url: item.imagen_principal_url ?? null,
       stock: getProductoStock(item.inventario),
+      nombre_productor: item.tiendas?.productores?.usuarios?.nombre ?? null,
+      nombre_tienda: item.tiendas?.nombre ?? null,
     })) as unknown as T;
   }
 
@@ -207,6 +240,8 @@ function mapProductoResponse<T extends ProductoWithRelations | Array<ProductoWit
     ...data,
     imagen_url: data.imagen_principal_url ?? null,
     stock: getProductoStock(data.inventario),
+    nombre_productor: data.tiendas?.productores?.usuarios?.nombre ?? null,
+    nombre_tienda: data.tiendas?.nombre ?? null,
   } as T;
 }
 

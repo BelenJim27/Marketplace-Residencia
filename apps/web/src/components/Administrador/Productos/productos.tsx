@@ -5,11 +5,13 @@ import ModalNuevoProducto from './nuevoProducto';
 // Importamos el componente para Ver/Editar (asegúrate de que el nombre del archivo coincida)
 import ModalEditarVer from './acciones';
 import { Eye, Pencil, Trash2, Search, Plus } from "lucide-react";
+import { formatPrice } from "@/lib/format-number";
 
 interface Producto {
     id_producto: number;
     nombre: string;
-    productor: string;
+    nombre_productor: string | null;
+    nombre_tienda: string | null;
     categoria: string | null;
     stock: number;
     precio: number;
@@ -93,7 +95,8 @@ export default function ProductosAdmin() {
         const query = busqueda.toLowerCase();
         const matchesSearch =
             p.nombre.toLowerCase().includes(query) ||
-            p.productor.toLowerCase().includes(query);
+            (p.nombre_productor?.toLowerCase().includes(query) ?? false) ||
+            (p.nombre_tienda?.toLowerCase().includes(query) ?? false);
 
         const matchesStatus = filtroEstado === "todos" || p.estado.toLowerCase() === filtroEstado.toLowerCase();
         const matchesTipo = filtroTipo === "todos" ||
@@ -203,6 +206,7 @@ export default function ProductosAdmin() {
                             <tr>
                                 <th className="p-4">Producto</th>
                                 <th className="p-4">Productor</th>
+                                <th className="p-4">Tienda</th>
                                 <th className="p-4">Categoría</th>
                                 <th className="p-4 text-center">Stock</th>
                                 <th className="p-4">Precio</th>
@@ -214,7 +218,8 @@ export default function ProductosAdmin() {
                             {filtered.map((p) => (
                                 <tr key={p.id_producto} className="hover:bg-gray-50/50 transition group">
                                     <td className="p-4 font-semibold text-gray-800">{p.nombre}</td>
-                                    <td className="p-4 text-sm text-gray-600">{p.productor}</td>
+                                    <td className="p-4 text-sm text-gray-600">{p.nombre_productor || "Sin productor"}</td>
+                                    <td className="p-4 text-sm text-gray-600">{p.nombre_tienda || "Sin tienda"}</td>
                                     <td className="p-4">
                                         <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-bold border border-blue-100 uppercase">
                                             {p.categoria || "Sin categoría"}
@@ -226,7 +231,7 @@ export default function ProductosAdmin() {
                                         </span>
                                     </td>
                                     <td className="p-4 font-bold text-gray-700">
-                                        ${Number(p.precio).toFixed(2)}
+                                        ${formatPrice(Number(p.precio), { showCurrency: false })}
                                         <span className="text-[10px] text-gray-400 ml-1 font-normal">{p.moneda}</span>
                                     </td>
                                     <td className="p-4 text-center">

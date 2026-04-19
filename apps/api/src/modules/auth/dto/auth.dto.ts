@@ -3,6 +3,11 @@ import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-valid
 export class RegisterAuthDto {
   @IsString()
   @MinLength(2)
+  @MaxLength(50)
+  nombre_usuario!: string;
+
+  @IsString()
+  @MinLength(2)
   @MaxLength(100)
   nombre!: string;
 

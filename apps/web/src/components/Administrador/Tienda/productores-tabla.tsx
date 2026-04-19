@@ -46,6 +46,9 @@ export function ProductoresTabla() {
         status: ((p.tiendas && p.tiendas.length > 0 && p.tiendas.some((t: any) => t.status === "activa"))
           ? "ACTIVO"
           : "PAUSADO") as "ACTIVO" | "PAUSADO" | "INACTIVO",
+        biografia: p.biografia || "",
+        otras_caracteristicas: p.otras_caracteristicas || "",
+        foto_url: p.foto_url || "",
       }));
       console.log("Transformed:", transformed);
       setProductores(transformed);
@@ -283,14 +286,13 @@ export function ProductoresTabla() {
                 <th className="p-4">Nombre</th>
                 <th className="p-4">Región</th>
                 <th className="p-4 text-center">Status</th>
-                <th className="p-4 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr key="loading">
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="p-10 text-center text-sm text-gray-500"
                   >
                     Cargando productores...
@@ -299,7 +301,7 @@ export function ProductoresTabla() {
               ) : filtered.length === 0 ? (
                 <tr key="empty">
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="p-10 text-center text-sm text-gray-500"
                   >
                     No hay productores para mostrar.
@@ -322,6 +324,30 @@ export function ProductoresTabla() {
                     </td>
                     <td className="p-4 text-center">
                       <StatusBadge status={productor.status} />
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {productor.foto_url && (
+                          <div
+                            className="h-8 w-8 rounded-full bg-cover bg-center border border-gray-200"
+                            style={{ backgroundImage: `url(${productor.foto_url})` }}
+                            title="Tiene foto"
+                          />
+                        )}
+                        
+                      </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {productor.foto_url && (
+                          <div
+                            className="h-8 w-8 rounded-full bg-cover bg-center"
+                            style={{ backgroundImage: `url(${productor.foto_url})` }}
+                            title="Tiene foto"
+                          />
+                        )}
+                        
+                      </div>
                     </td>
                     <td className="p-4">
                       <div className="flex justify-end gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
@@ -376,26 +402,26 @@ export function ProductoresTabla() {
       />
 
       {deleting ? (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-2xl">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
-              <Trash2 className="h-8 w-8" />
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 sm:p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-3 sm:mb-4 flex h-14 sm:h-16 w-14 sm:w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
+              <Trash2 className="h-7 sm:h-8 w-7 sm:w-8" />
             </div>
-            <h3 className="text-xl font-bold text-gray-800">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-800">
               ¿Eliminar productor?
             </h3>
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-2 text-xs sm:text-sm text-gray-500">
               Vas a eliminar a{" "}
-              <span className="font-semibold text-gray-700">
+              <span className="font-semibold text-gray-700 truncate">
                 {deleting.nombre}
               </span>
               . Esta acción lo ocultará del panel.
             </p>
-            <div className="mt-6 flex gap-3">
+            <div className="mt-5 sm:mt-6 flex flex-col-reverse gap-2 sm:gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={() => setDeleting(null)}
-                className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+                className="flex-1 rounded-lg sm:rounded-xl border border-gray-200 px-3 py-2 sm:px-4 sm:py-3 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
               >
                 Cancelar
               </button>
@@ -403,7 +429,7 @@ export function ProductoresTabla() {
                 type="button"
                 disabled={deleteLoading}
                 onClick={handleDelete}
-                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex-1 rounded-lg sm:rounded-xl bg-red-600 px-3 py-2 sm:px-4 sm:py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {deleteLoading ? "Eliminando..." : "Sí, eliminar"}
               </button>
