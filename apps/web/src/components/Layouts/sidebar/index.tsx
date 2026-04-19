@@ -19,9 +19,12 @@ export function Sidebar() {
     useSidebarContext();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [openMenus, setOpenMenus] = useState<string[]>(() =>
-    pathname.startsWith("/dashboard/productor/archivos") ? ["Archivos"] : [],
-  );
+  const [openMenus, setOpenMenus] = useState<string[]>(() => {
+    const menus: string[] = [];
+    if (pathname.startsWith("/dashboard/productor/archivos")) menus.push("Archivos");
+    if (pathname.includes("/categorias") || pathname.includes("/productos")) menus.push("Inventario");
+    return menus;
+  });
   const navData = getNavData(isProductor, isAdmin);
   const isFilesRoute = pathname.startsWith("/dashboard/productor/archivos");
 

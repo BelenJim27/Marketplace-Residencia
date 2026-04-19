@@ -55,6 +55,7 @@ export class InventarioService {
           region,
           stock: inv.stock,
           status: inv.productos?.status || "inactivo",
+          imagen: inv.productos?.imagen_principal_url || null,
         };
       }),
     );

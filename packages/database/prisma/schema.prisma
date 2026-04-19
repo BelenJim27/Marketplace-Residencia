@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://neondb_owner:npg_updn5JAzas7O@ep-tiny-band-am08zkiv.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
+  url      = env("DATABASE_URL")
 }
 
 model archivos {
@@ -450,7 +450,6 @@ model productores {
   id_productor          Int       @id @default(autoincrement())
   id_usuario            String    @unique @db.Uuid
   id_region             Int?
-  descripcion           String?
   biografia             String?
   otras_caracteristicas String?   @db.VarChar(255)
   creado_en             DateTime  @default(now()) @db.Timestamptz(6)
@@ -652,7 +651,6 @@ model usuarios {
   apellido_materno                              String?                  @db.VarChar(100)
   email                                         String                   @unique @db.VarChar(255)
   telefono                                      String?                  @db.VarChar(30)
-  biografia                                     String?
   password_hash                                 String?                  @db.VarChar(255)
   idioma_preferido                              String                   @default("es") @db.VarChar(10)
   moneda_preferida                              String                   @default("MXN") @db.Char(3)

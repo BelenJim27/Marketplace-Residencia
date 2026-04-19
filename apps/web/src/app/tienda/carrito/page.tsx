@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {Minus, Plus, Trash2, ShoppingBag, ArrowRight} from "lucide-react";
 import {useCarrito} from "@/context/CarritoContext";
+import { formatPrice } from "@/lib/format-number";
 
 export default function CarritoPage() {
   const {items, cantidadTotal, precioTotal, actualizarCantidad, eliminarProducto} = useCarrito();
@@ -79,7 +80,7 @@ export default function CarritoPage() {
                       {item.nombre}
                     </Link>
                     <p className="text-sm text-gray-500">
-                      ${Number(item.precio_base).toFixed(2)} each
+                      ${formatPrice(Number(item.precio_base), { showCurrency: false })} each
                     </p>
                   </div>
 
@@ -115,7 +116,7 @@ export default function CarritoPage() {
 
                 <div className="text-right">
                   <p className="font-bold text-gray-900 dark:text-white">
-                    ${(Number(item.precio_base) * item.cantidad).toFixed(2)}
+                    ${formatPrice(Number(item.precio_base) * item.cantidad, { showCurrency: false })}
                   </p>
                 </div>
               </div>
@@ -140,7 +141,7 @@ export default function CarritoPage() {
             <div className="space-y-2 border-b border-gray-200 pb-4 dark:border-gray-700">
               <div className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
                 <span>Subtotal ({cantidadTotal} items)</span>
-                <span>${precioTotal.toFixed(2)}</span>
+                <span>$ ${precioTotal.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
                 <span>Envío</span>
@@ -151,7 +152,7 @@ export default function CarritoPage() {
             <div className="flex justify-between py-4">
               <span className="font-semibold text-gray-900 dark:text-white">Total</span>
               <span className="text-xl font-bold text-green-600">
-                ${precioTotal.toFixed(2)}
+                ${precioTotal.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
 

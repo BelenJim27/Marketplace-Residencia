@@ -18,7 +18,15 @@ const nextConfig = {
         destination: "http://localhost:3001/inventario/:path*",
       },
       {
+        source: "/api/inventario/:path*",
+        destination: "http://localhost:3001/inventario/:path*",
+      },
+      {
         source: "/productos/:path*",
+        destination: "http://localhost:3001/productos/:path*",
+      },
+      {
+        source: "/api/productos/:path*",
         destination: "http://localhost:3001/productos/:path*",
       },
       {
@@ -28,6 +36,14 @@ const nextConfig = {
       {
         source: "/pedidos/:path*",
         destination: "http://localhost:3001/pedidos/:path*",
+      },
+      {
+        source: "/categorias/:path*",
+        destination: "http://localhost:3001/categorias/:path*",
+      },
+      {
+        source: "/api/categorias/:path*",
+        destination: "http://localhost:3001/categorias/:path*",
       },
     ];
   },

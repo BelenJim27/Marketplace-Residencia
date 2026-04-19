@@ -66,7 +66,22 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         icon: Users,
       },
       { title: "Reportes", url: "/Administrador/reportes", icon: BarChart3 },
-      { title: "Inventario", url: "/Administrador/inventario", icon: Boxes },
+      {
+        title: "Inventario",
+        icon: Boxes,
+        children: [
+          {
+            title: "Categorías",
+            url: "/Administrador/categorias",
+            icon: Layers,
+          },
+          {
+            title: "Productos",
+            url: "/Administrador/productos",
+            icon: Package,
+          },
+        ],
+      },
       { title: "Pedidos", url: "/Administrador/pedidos", icon: ShoppingCart },
       {
         title: "Certificaciones",
@@ -102,9 +117,20 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
         icon: Layers
       },
       {
-        title: "Productos",
-        url: "/dashboard/productor/productos",
-        icon: Package,
+        title: "Inventario",
+        icon: Boxes,
+        children: [
+          {
+            title: "Categorías",
+            url: "/dashboard/productor/categorias",
+            icon: Layers,
+          },
+          {
+            title: "Productos",
+            url: "/dashboard/productor/productos",
+            icon: Package,
+          },
+        ],
       },
       {
         title: "Ventas",

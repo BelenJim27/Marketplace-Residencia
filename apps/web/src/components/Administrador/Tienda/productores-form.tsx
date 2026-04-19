@@ -14,6 +14,9 @@ export type ProductorAdmin = {
   stock: number;
   total_productos?: number;
   status: "ACTIVO" | "INACTIVO" | "PAUSADO";
+  biografia?: string;
+  otras_caracteristicas?: string;
+  foto_url?: string;
 };
 
 type ProductorFormProps = {
@@ -30,6 +33,9 @@ type FormState = {
   region: string;
   stock: string;
   status: ProductorAdmin["status"];
+  biografia: string;
+  otras_caracteristicas: string;
+  foto: File | null;
 };
 
 const INITIAL_STATE: FormState = {
@@ -37,6 +43,9 @@ const INITIAL_STATE: FormState = {
   region: "",
   stock: "0",
   status: "ACTIVO",
+  biografia: "",
+  otras_caracteristicas: "",
+  foto: null,
 };
 
 export function ProductoresForm({
@@ -62,6 +71,9 @@ export function ProductoresForm({
         region: productor.region,
         stock: String(productor.stock),
         status: productor.status,
+        biografia: productor.biografia || "",
+        otras_caracteristicas: productor.otras_caracteristicas || "",
+        foto: null,
       });
       setErrors({});
       return;
@@ -112,19 +124,27 @@ export function ProductoresForm({
 
       let result;
       if (mode === "create") {
-        result = await api.productores.create(token, {
-          nombre: form.nombre.trim(),
-          region: form.region.trim(),
-          stock: Number(form.stock),
-          status: form.status,
-        });
+        const payload = new FormData();
+        payload.append("nombre", form.nombre.trim());
+        payload.append("region", form.region.trim());
+        payload.append("stock", String(Number(form.stock)));
+        payload.append("status", form.status);
+        if (form.biografia.trim()) payload.append("biografia", form.biografia.trim());
+        if (form.otras_caracteristicas.trim()) payload.append("otras_caracteristicas", form.otras_caracteristicas.trim());
+        if (form.foto) payload.append("foto", form.foto);
+
+        result = await api.productores.create(token, payload);
       } else {
-        result = await api.productores.update(token, productor!.id, {
-          nombre: form.nombre.trim(),
-          region: form.region.trim(),
-          stock: Number(form.stock),
-          status: form.status,
-        });
+        const payload = new FormData();
+        payload.append("nombre", form.nombre.trim());
+        payload.append("region", form.region.trim());
+        payload.append("stock", String(Number(form.stock)));
+        payload.append("status", form.status);
+        if (form.biografia.trim()) payload.append("biografia", form.biografia.trim());
+        if (form.otras_caracteristicas.trim()) payload.append("otras_caracteristicas", form.otras_caracteristicas.trim());
+        if (form.foto) payload.append("foto", form.foto);
+
+        result = await api.productores.update(token, productor!.id, payload);
       }
 
       onSaved(
@@ -146,18 +166,18 @@ export function ProductoresForm({
   }
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-5">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-sm">
+      <div className="w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl sm:max-w-2xl">
+        <div className="sticky top-0 flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-4 sm:px-6 sm:py-5">
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-lg sm:text-xl font-bold text-gray-800">
               {mode === "create"
                 ? "Nuevo productor"
                 : mode === "edit"
                   ? "Editar productor"
                   : "Detalle del productor"}
             </h2>
-            <p className="text-xs text-gray-400">
+            <p className="truncate text-xs sm:text-xs text-gray-400">
               {productor
                 ? `ID: #PR-${String(productor.id).padStart(4, "0")}`
                 : "Completa la información requerida"}
@@ -167,20 +187,20 @@ export function ProductoresForm({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-gray-400 transition-colors hover:bg-white hover:text-gray-600"
+            className="ml-2 flex-shrink-0 rounded-full p-2 text-gray-400 transition-colors hover:bg-white hover:text-gray-600"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 p-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <form onSubmit={handleSubmit} className="space-y-4 p-4 sm:space-y-5 sm:p-6">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
             <Field label="Nombre" error={errors.nombre}>
               <input
                 value={form.nombre}
                 onChange={(event) => handleChange("nombre", event.target.value)}
                 disabled={isReadOnly}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
                 placeholder="Nombre del productor"
               />
             </Field>
@@ -190,7 +210,7 @@ export function ProductoresForm({
                 value={form.region}
                 onChange={(event) => handleChange("region", event.target.value)}
                 disabled={isReadOnly}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
                 placeholder="Ej. Sierra Sur"
               />
             </Field>
@@ -202,7 +222,7 @@ export function ProductoresForm({
                 value={form.stock}
                 onChange={(event) => handleChange("stock", event.target.value)}
                 disabled={isReadOnly}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
                 placeholder="0"
               />
             </Field>
@@ -218,7 +238,7 @@ export function ProductoresForm({
                 )
               }
               disabled={isReadOnly}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <option value="ACTIVO">ACTIVO</option>
               <option value="PAUSADO">PAUSADO</option>
@@ -226,11 +246,63 @@ export function ProductoresForm({
             </select>
           </Field>
 
-          <div className="flex gap-3 border-t border-gray-100 pt-5">
+          <Field label="Biografía">
+            <textarea
+              value={form.biografia}
+              onChange={(event) => handleChange("biografia", event.target.value)}
+              disabled={isReadOnly}
+              className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70 resize-none"
+              placeholder="Cuéntanos sobre el productor, su historia y experiencia..."
+              rows={2}
+            />
+          </Field>
+
+          <Field label="Otras características">
+            <textarea
+              value={form.otras_caracteristicas}
+              onChange={(event) => handleChange("otras_caracteristicas", event.target.value)}
+              disabled={isReadOnly}
+              className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70 resize-none"
+              placeholder="Ej. Certificaciones, especializaciones, métodos tradicionales..."
+              rows={2}
+            />
+          </Field>
+
+          <Field label="Foto del productor">
+            <div className="space-y-2 sm:space-y-3">
+              {!isReadOnly && (
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      handleChange("foto", file);
+                    }
+                  }}
+                  className="block w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm file:mr-2 sm:file:mr-4 file:rounded-md sm:file:rounded-lg file:border-0 file:bg-green-100 file:px-2 sm:file:px-3 file:py-1 file:text-xs sm:file:text-sm file:font-semibold file:text-green-700 hover:file:bg-green-200"
+                />
+              )}
+              {form.foto && (
+                <div className="rounded-lg border border-gray-200 p-2 sm:p-3">
+                  <p className="text-xs font-medium text-gray-600">Archivo seleccionado:</p>
+                  <p className="truncate text-xs sm:text-sm text-gray-700">{form.foto.name}</p>
+                </div>
+              )}
+              {productor?.foto_url && !form.foto && (
+                <div className="overflow-hidden rounded-lg border border-gray-200">
+                  <img src={productor.foto_url} alt="Foto actual" className="h-24 sm:h-32 w-full object-cover" />
+                  <p className="bg-gray-50 px-2 py-1 sm:px-3 sm:py-2 text-xs text-gray-600">Foto actual del productor</p>
+                </div>
+              )}
+            </div>
+          </Field>
+
+          <div className="flex flex-col-reverse gap-2 sm:gap-3 border-t border-gray-100 pt-4 sm:pt-5 sm:flex-row">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+              className="rounded-lg sm:rounded-xl border border-gray-200 px-3 py-2 sm:px-4 sm:py-3 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
             >
               {isReadOnly ? "Cerrar" : "Cancelar"}
             </button>
@@ -239,18 +311,20 @@ export function ProductoresForm({
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex flex-[1.4] items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex w-full sm:flex-1 items-center justify-center gap-2 rounded-lg sm:rounded-xl bg-green-600 px-3 py-2 sm:px-4 sm:py-3 text-sm font-semibold text-white transition-all hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
-                {submitting
-                  ? "Guardando..."
-                  : mode === "create"
-                    ? "Crear productor"
-                    : "Guardar cambios"}
+                <span className="truncate">
+                  {submitting
+                    ? "Guardando..."
+                    : mode === "create"
+                      ? "Crear productor"
+                      : "Guardar cambios"}
+                </span>
               </button>
             )}
           </div>

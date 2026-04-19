@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
@@ -79,16 +79,15 @@ function normalizeProduct(product: ProductItem): ProductItem {
   };
 }
 
-export function ProductosProductor({
-  idProductor,
-}: ProductosProductorProps) {
+export function ProductosProductor({ idProductor }: ProductosProductorProps) {
   const { user } = useAuth();
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [selected, setSelected] = useState<ProductItem | null>(null);
-  const [mode, setMode] = useState<"view" | "edit" | null>(null);
+  const [mode, setMode] = useState<"view" | "edit" | "create" | null>(null);
   const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
 
   const token = getCookie("token") ?? "";
@@ -98,15 +97,13 @@ export function ProductosProductor({
     setError(null);
 
     try {
-      const response = await fetch(`/api/admin/productos/por-productor/${idProductor}`);
+      const response = await fetch(`/api/productos?id_productor=${idProductor}`);
 
       if (!response.ok) {
         const payload = await response
           .json()
           .catch(() => ({ message: "No fue posible cargar los productos del productor." }));
-        throw new Error(
-          payload.message || "No fue posible cargar los productos del productor.",
-        );
+        throw new Error(payload.message || "No fue posible cargar los productos del productor.");
       }
 
       const data = await response.json();
@@ -130,27 +127,29 @@ export function ProductosProductor({
   }, [idProductor]);
 
   const activeCount = useMemo(
-    () =>
-      products.filter((product) => String(product.status).toLowerCase() === "activo")
-        .length,
+    () => products.filter((p) => String(p.status).toLowerCase() === "activo").length,
     [products],
   );
 
   const totalStock = useMemo(
-    () => products.reduce((acc, product) => acc + Number(product.stock ?? 0), 0),
+    () => products.reduce((acc, p) => acc + Number(p.stock ?? 0), 0),
     [products],
   );
 
-  const openModal = (nextMode: "view" | "edit", product: ProductItem) => {
-    setSelected(product);
+  const openModal = (nextMode: "view" | "edit" | "create", product?: ProductItem) => {
+    setSelected(product ?? null);
     setMode(nextMode);
-    setForm({
-      nombre: product.nombre,
-      descripcion: product.descripcion ?? "",
-      precio_base: String(product.precio_base ?? "0"),
-      moneda_base: product.moneda_base ?? product.moneda ?? "MXN",
-      status: String(product.status ?? "activo").toLowerCase(),
-    });
+    setForm(
+      product
+        ? {
+          nombre: product.nombre,
+          descripcion: product.descripcion ?? "",
+          precio_base: String(product.precio_base ?? "0"),
+          moneda_base: product.moneda_base ?? product.moneda ?? "MXN",
+          status: String(product.status ?? "activo").toLowerCase(),
+        }
+        : EMPTY_FORM,
+    );
   };
 
   const closeModal = () => {
@@ -165,19 +164,14 @@ export function ProductosProductor({
       return;
     }
 
-    if (!confirm(`¿Eliminar ${product.nombre}?`)) {
-      return;
-    }
+    if (!confirm(`¿Eliminar ${product.nombre}?`)) return;
 
     try {
       await api.productos.delete(token, String(product.id_producto));
+      setSuccess("Producto eliminado correctamente.");
       await loadProducts();
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "No fue posible eliminar el producto.",
-      );
+      setError(err instanceof Error ? err.message : "No fue posible eliminar el producto.");
     }
   };
 
@@ -203,20 +197,49 @@ export function ProductosProductor({
       payload.append("precio_base", form.precio_base);
       payload.append("moneda_base", form.moneda_base);
       payload.append("status", form.status);
-
-      if (user?.id_usuario) {
-        payload.append("actualizado_por", user.id_usuario);
-      }
+      if (user?.id_usuario) payload.append("actualizado_por", user.id_usuario);
 
       await api.productos.update(token, String(selected.id_producto), payload);
+      setSuccess("Producto actualizado correctamente.");
       closeModal();
       await loadProducts();
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "No fue posible actualizar el producto.",
-      );
+      setError(err instanceof Error ? err.message : "No fue posible actualizar el producto.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!token) {
+      setError("No autorizado para crear productos.");
+      return;
+    }
+
+    if (!form.nombre.trim()) {
+      setError("El nombre del producto es obligatorio.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const payload = new FormData();
+      payload.append("id_productor", String(idProductor));
+      payload.append("nombre", form.nombre);
+      payload.append("descripcion", form.descripcion);
+      payload.append("precio_base", form.precio_base);
+      payload.append("moneda_base", form.moneda_base);
+      payload.append("status", form.status);
+      if (user?.id_usuario) payload.append("creado_por", user.id_usuario);
+
+      await api.productos.create(token, payload);
+      setSuccess("Producto creado correctamente.");
+      closeModal();
+      await loadProducts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No fue posible crear el producto.");
     } finally {
       setSaving(false);
     }
@@ -224,18 +247,39 @@ export function ProductosProductor({
 
   return (
     <div className="space-y-6">
+      {/* ── Encabezado con botón Nuevo Producto ── */}
+      <div className="flex justify-end mb-6">
+        <button
+          type="button"
+          onClick={() => openModal("create")}
+          className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700"
+        >
+          <Plus className="h-4 w-4" />
+          Nuevo Producto
+        </button>
+      </div>
+
+      {/* ── Tarjetas de resumen ── */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <SummaryCard label="Total productos" value={products.length} />
         <SummaryCard label="Activos" value={activeCount} accent="text-green-600" />
         <SummaryCard label="Stock total" value={totalStock} accent="text-blue-600" />
       </div>
 
+      {/* ── Notificaciones ── */}
       {error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       ) : null}
 
+      {success ? (
+        <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          {success}
+        </div>
+      ) : null}
+
+      {/* ── Tabla ── */}
       <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] text-left">
@@ -270,10 +314,7 @@ export function ProductosProductor({
                     className="border-t border-stroke text-sm dark:border-dark-3"
                   >
                     <td className="px-5 py-4">
-                      <ProductThumbnail
-                        src={product.imagen_url ?? null}
-                        alt={product.nombre}
-                      />
+                      <ProductThumbnail src={product.imagen_url ?? null} alt={product.nombre} />
                     </td>
                     <td className="px-5 py-4 font-medium text-dark dark:text-white">
                       {product.nombre}
@@ -326,17 +367,22 @@ export function ProductosProductor({
         </div>
       </div>
 
-      {selected && mode ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-[10px] bg-white p-6 shadow-1">
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-dark">
-                {mode === "edit" ? "Editar producto" : "Detalle de producto"}
+      {/* ── Modal Ver / Editar / Crear ── */}
+      {mode ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-8 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-800">
+                {mode === "create"
+                  ? "Nuevo Producto"
+                  : mode === "edit"
+                    ? "Editar producto"
+                    : "Detalle de producto"}
               </h2>
               <button
                 type="button"
                 onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600"
+                className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
               >
                 ✕
               </button>
@@ -347,15 +393,13 @@ export function ProductosProductor({
                 <Field
                   label="Nombre"
                   value={form.nombre}
-                  onChange={(value) => setForm((current) => ({ ...current, nombre: value }))}
+                  onChange={(value) => setForm((c) => ({ ...c, nombre: value }))}
                   disabled={mode === "view"}
                 />
                 <Field
                   label="Precio base"
                   value={form.precio_base}
-                  onChange={(value) =>
-                    setForm((current) => ({ ...current, precio_base: value }))
-                  }
+                  onChange={(value) => setForm((c) => ({ ...c, precio_base: value }))}
                   disabled={mode === "view"}
                   type="number"
                 />
@@ -364,29 +408,33 @@ export function ProductosProductor({
               <Field
                 label="Descripción"
                 value={form.descripcion}
-                onChange={(value) =>
-                  setForm((current) => ({ ...current, descripcion: value }))
-                }
+                onChange={(value) => setForm((c) => ({ ...c, descripcion: value }))}
                 disabled={mode === "view"}
                 textarea
               />
 
               <div className="grid gap-4 md:grid-cols-3">
-                <Field
+                <SelectField
                   label="Moneda"
                   value={form.moneda_base}
-                  onChange={(value) =>
-                    setForm((current) => ({ ...current, moneda_base: value }))
-                  }
+                  onChange={(value) => setForm((c) => ({ ...c, moneda_base: value }))}
                   disabled={mode === "view"}
+                  options={[
+                    { label: "MXN", value: "MXN" },
+                    { label: "USD", value: "USD" },
+                  ]}
                 />
-                <Field label="Stock" value={String(selected.stock ?? 0)} disabled />
+                {mode !== "create" && (
+                  <Field
+                    label="Stock"
+                    value={String(selected?.stock ?? 0)}
+                    disabled
+                  />
+                )}
                 <SelectField
                   label="Status"
                   value={form.status}
-                  onChange={(value) =>
-                    setForm((current) => ({ ...current, status: value }))
-                  }
+                  onChange={(value) => setForm((c) => ({ ...c, status: value }))}
                   disabled={mode === "view"}
                   options={[
                     { label: "activo", value: "activo" },
@@ -400,20 +448,32 @@ export function ProductosProductor({
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-lg border border-stroke px-5 py-3 font-medium text-dark"
+                className="rounded-xl border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
               >
-                Cerrar
+                Cancelar
               </button>
-              {mode === "edit" ? (
+
+              {mode === "edit" && (
                 <button
                   type="button"
                   onClick={() => void handleSave()}
                   disabled={saving}
-                  className="rounded-lg bg-primary px-5 py-3 font-medium text-white hover:bg-opacity-90 disabled:opacity-60"
+                  className="rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-60"
                 >
                   {saving ? "Guardando..." : "Guardar cambios"}
                 </button>
-              ) : null}
+              )}
+
+              {mode === "create" && (
+                <button
+                  type="button"
+                  onClick={() => void handleCreate()}
+                  disabled={saving}
+                  className="rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-60"
+                >
+                  {saving ? "Creando..." : "Crear producto"}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -421,6 +481,8 @@ export function ProductosProductor({
     </div>
   );
 }
+
+// ── Sub-componentes ──────────────────────────────────────────────────────────
 
 function SummaryCard({
   label,
@@ -433,9 +495,7 @@ function SummaryCard({
 }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-        {label}
-      </p>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</p>
       <h2 className={`mt-1 text-2xl font-black ${accent}`}>{value}</h2>
     </div>
   );
@@ -449,23 +509,13 @@ function ProductThumbnail({ src, alt }: { src: string | null; alt: string }) {
       </div>
     );
   }
-
-  return (
-    <img
-      src={src}
-      alt={alt}
-      className="h-12 w-12 rounded-xl object-cover"
-    />
-  );
+  return <img src={src} alt={alt} className="h-12 w-12 rounded-xl object-cover" />;
 }
 
 function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
   const className =
-    normalized === "activo"
-      ? "bg-green-50 text-green-700"
-      : "bg-gray-100 text-gray-600";
-
+    normalized === "activo" ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600";
   return (
     <span className={`rounded-full px-3 py-1 text-xs font-medium ${className}`}>
       {normalized}
@@ -489,7 +539,7 @@ function Field({
   type?: string;
 }) {
   const className =
-    "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 outline-none transition-all focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60";
+    "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <label className="block space-y-1">
@@ -499,7 +549,7 @@ function Field({
       {textarea ? (
         <textarea
           value={value}
-          onChange={(event) => onChange?.(event.target.value)}
+          onChange={(e) => onChange?.(e.target.value)}
           disabled={disabled}
           rows={4}
           className={className}
@@ -508,7 +558,7 @@ function Field({
         <input
           type={type}
           value={value}
-          onChange={(event) => onChange?.(event.target.value)}
+          onChange={(e) => onChange?.(e.target.value)}
           disabled={disabled}
           className={className}
         />
@@ -537,13 +587,13 @@ function SelectField({
       </span>
       <select
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 outline-none transition-all focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
           </option>
         ))}
       </select>

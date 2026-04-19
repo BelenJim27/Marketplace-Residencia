@@ -1,14 +1,25 @@
 "use client";
 
-import { Edit2, Eye, Search, Trash2 } from "lucide-react";
+import { Edit2, Eye, Plus, Search, Trash2, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { ModalProducto } from "./modal-producto";
 
 type InventarioSummary = {
   productos_activos: number;
   productos_inactivos: number;
   total_productos: number;
   total_productores: number;
+};
+
+type Productor = {
+  id: string;
+  nombre: string;
+};
+
+type Tienda = {
+  id: string;
+  nombre: string;
 };
 
 type InventarioItem = {
@@ -18,6 +29,7 @@ type InventarioItem = {
   region: string;
   stock: number;
   status: string;
+  imagen: string | null;
 };
 
 type InventarioResponse = {
@@ -47,13 +59,20 @@ export default function InventarioUI() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [summary, setSummary] = useState<InventarioSummary>(EMPTY_SUMMARY);
   const [items, setItems] = useState<InventarioItem[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventarioItem | null>(null);
+  const [productores, setProductores] = useState<Productor[]>([]);
+  const [tiendas, setTiendas] = useState<Tienda[]>([]);
+  const [selectedProductor, setSelectedProductor] = useState("");
+  const [selectedTienda, setSelectedTienda] = useState("");
+  const [loadingTiendas, setLoadingTiendas] = useState(false);
 
   useEffect(() => {
     async function loadInventario() {
       setLoading(true);
 
       try {
-        const response = await fetch("/inventario", { cache: "no-store" });
+        const response = await fetch("/api/inventario", { cache: "no-store" });
         const data = (await response
           .json()
           .catch(() => null)) as InventarioResponse | null;
@@ -83,6 +102,51 @@ export default function InventarioUI() {
 
     loadInventario();
   }, []);
+
+  useEffect(() => {
+    async function loadProductores() {
+      try {
+        console.log("Cargando productores desde /api/productores");
+        const response = await fetch("/api/productores", { cache: "no-store" });
+        console.log("Respuesta del endpoint productores:", response.status);
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Productores cargados:", data);
+          setProductores(Array.isArray(data) ? data : []);
+        } else {
+          console.error("Error en respuesta:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error loading productores:", error);
+      }
+    }
+    loadProductores();
+  }, []);
+
+  useEffect(() => {
+    async function loadTiendas() {
+      if (!selectedProductor) {
+        setTiendas([]);
+        return;
+      }
+      setLoadingTiendas(true);
+      try {
+        console.log("Cargando tiendas para productor:", selectedProductor);
+        const response = await fetch(`/api/tiendas?id_productor=${selectedProductor}`, { cache: "no-store" });
+        console.log("Respuesta del endpoint tiendas:", response.status);
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Tiendas cargadas:", data);
+          setTiendas(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error("Error loading tiendas:", error);
+      } finally {
+        setLoadingTiendas(false);
+      }
+    }
+    loadTiendas();
+  }, [selectedProductor]);
 
   const filteredItems = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -166,6 +230,16 @@ export default function InventarioUI() {
             Administra el stock real de productos y productores.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            setEditingItem(null);
+            setShowModal(true);
+          }}
+          className="rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+        >
+          + Nuevo Producto
+        </button>
       </div>
 
       {notice ? (
@@ -268,6 +342,7 @@ export default function InventarioUI() {
           <table className="w-full min-w-[980px] text-left">
             <thead className="bg-gray-50 text-[11px] font-bold uppercase tracking-wider text-gray-400">
               <tr>
+                <th className="p-4">Imagen</th>
                 <th className="p-4">ID</th>
                 <th className="p-4">Nombre Producto</th>
                 <th className="p-4">Productor</th>
@@ -281,7 +356,7 @@ export default function InventarioUI() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="p-10 text-center text-sm text-gray-500"
                   >
                     Cargando inventario...
@@ -290,7 +365,7 @@ export default function InventarioUI() {
               ) : filteredItems.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="p-10 text-center text-sm text-gray-500"
                   >
                     No hay productos para mostrar.
@@ -302,6 +377,19 @@ export default function InventarioUI() {
                     key={item.id_producto}
                     className="group transition-colors hover:bg-gray-50/60"
                   >
+                    <td className="p-4">
+                      {item.imagen ? (
+                        <img
+                          src={item.imagen}
+                          alt={item.nombre_producto}
+                          className="h-10 w-10 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">
+                          N/A
+                        </div>
+                      )}
+                    </td>
                     <td className="p-4 font-mono text-xs text-gray-400">
                       #PRD-{item.id_producto}
                     </td>
@@ -331,7 +419,13 @@ export default function InventarioUI() {
                         <ActionButton label="Ver">
                           <Eye className="h-4 w-4" />
                         </ActionButton>
-                        <ActionButton label="Editar">
+                        <ActionButton
+                          label="Editar"
+                          onClick={() => {
+                            setEditingItem(item);
+                            setShowModal(true);
+                          }}
+                        >
                           <Edit2 className="h-4 w-4" />
                         </ActionButton>
                         <ActionButton label="Eliminar" danger>
@@ -346,6 +440,32 @@ export default function InventarioUI() {
           </table>
         </div>
       </div>
+
+      {showModal && (
+        <ModalProducto
+          editingItem={editingItem}
+          productores={productores}
+          tiendas={tiendas}
+          selectedProductor={selectedProductor}
+          selectedTienda={selectedTienda}
+          setSelectedProductor={setSelectedProductor}
+          setSelectedTienda={setSelectedTienda}
+          loadingTiendas={loadingTiendas}
+          onClose={() => {
+            setShowModal(false);
+            setEditingItem(null);
+            setSelectedProductor("");
+            setSelectedTienda("");
+          }}
+          onSuccess={() => {
+            setShowModal(false);
+            setEditingItem(null);
+            setSelectedProductor("");
+            setSelectedTienda("");
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -372,15 +492,18 @@ function ActionButton({
   children,
   label,
   danger = false,
+  onClick,
 }: {
   children: ReactNode;
   label: string;
   danger?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
       type="button"
       title={label}
+      onClick={onClick}
       className={`rounded-lg p-2 transition-colors ${danger ? "text-slate-400 hover:bg-red-50 hover:text-red-600" : "text-slate-400 hover:bg-green-50 hover:text-green-700"}`}
     >
       {children}

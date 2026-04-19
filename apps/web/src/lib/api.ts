@@ -320,7 +320,7 @@ export const api = {
   lotes: {
     getAll: () => fetchJson(endpoint("/lotes")),
     getByProductor: (id_productor: number) =>
-      fetchJson(`/api/lotes?${new URLSearchParams({ id_productor: String(id_productor) }).toString()}`),
+      fetchJson(endpoint(`/lotes?${new URLSearchParams({ id_productor: String(id_productor) }).toString()}`)),
     getOne: (id: number) => fetchJson(endpoint(`/lotes/${id}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/lotes"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),

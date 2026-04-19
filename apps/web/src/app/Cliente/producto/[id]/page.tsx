@@ -7,6 +7,7 @@ import { ShoppingCart, ArrowLeft, Star, MapPin, Heart } from "lucide-react";
 import { api } from "@/lib/api";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { formatPrice } from "@/lib/format-number";
 
 interface Producto {
   id: number;
@@ -171,7 +172,7 @@ export default function ProductoDetallePage() {
               {producto.nombre}
             </h1>
             <p className="text-2xl font-bold text-green-600">
-              ${Number(producto.precio_base || 0).toFixed(2)}
+              ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
             </p>
           </div>
 

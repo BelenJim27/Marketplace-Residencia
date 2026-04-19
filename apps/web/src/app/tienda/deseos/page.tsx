@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Heart, ShoppingBag, Trash2, ArrowRight } from "lucide-react";
 import { useWishlist } from "@/context/WishlistContext";
 import { useCarrito } from "@/context/CarritoContext";
+import { formatPrice } from "@/lib/format-number";
 
 export default function WishlistPage() {
   const { items, eliminarProducto } = useWishlist();
@@ -79,7 +80,7 @@ export default function WishlistPage() {
               </Link>
 
               <p className="mb-4 mt-auto pt-2 text-xl font-bold text-green-600">
-                ${Number(item.producto.precio_base).toFixed(2)}
+                ${formatPrice(Number(item.producto.precio_base), { showCurrency: false })}
               </p>
 
               <div className="flex gap-2">
