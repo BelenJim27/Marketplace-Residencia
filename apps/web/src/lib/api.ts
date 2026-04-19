@@ -204,7 +204,7 @@ export const api = {
 
   productores: {
     getAll: () => fetchJson(endpoint("/productores")),
-    getOne: (id: number) => fetchJson(endpoint(`/productores/${id}`)),
+    getOne: (id: number) => fetchJson(`/api/productores/${id}`),
     getByUsuario: (id_usuario: string) => fetchJson(endpoint(`/productores/by-usuario/${id_usuario}`)),
     getByUbicacion: (ubicacion: string) => fetchJson(endpoint(`/productores?ubicacion=${ubicacion}`)),
     create: (token: string, data: any) =>

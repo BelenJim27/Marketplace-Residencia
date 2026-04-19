@@ -14,7 +14,7 @@ import { useProductosData } from "./hooks/useProductosData";
 
 type Producer = {
   id_productor: number;
-  id_usuario: string;
+  id_usuario?: string;
   biografia?: string | null;
   usuarios?: { nombre?: string; email?: string; id_usuario?: string };
 };
@@ -64,14 +64,13 @@ export function ProductorDashboard() {
       setError(null);
 
       try {
-        const [productsRes, producerRes] = await Promise.all([
-          api.productos.getByProductor(user.id_productor as number),
-          api.productores.getOne(user.id_productor as number),
-        ]);
+        const productsRes = await api.productos.getByProductor(user.id_productor as number);
 
         if (cancelled) return;
         setProducts(Array.isArray(productsRes) ? productsRes : []);
-        setProducer(producerRes as Producer);
+        setProducer({
+          id_productor: user.id_productor as number,
+        });
       } catch (err) {
         if (!cancelled)
           setError(

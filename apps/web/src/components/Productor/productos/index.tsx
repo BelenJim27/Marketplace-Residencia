@@ -93,14 +93,12 @@ export function ProductorProductos() {
     setError(null);
 
     try {
-      const [producerData, productsData, storesData] = await Promise.all([
-        api.productores.getOne(user.id_productor),
+      const [productsData, storesData] = await Promise.all([
         api.productos.getMine(token),
         api.tiendas.getByProductor(user.id_productor),
       ]);
 
-      const detail = producerData as ProducerDetail;
-      setProducer(detail);
+      setProducer({ id_productor: user.id_productor });
       setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);
       setProducts(
         (productsData as ProductItem[]).map((product) => ({

@@ -51,9 +51,13 @@ export async function GET(
 
     return NextResponse.json(result.rows);
   } catch (error) {
-    console.error("Error cargando productos por productor:", error);
+    console.error("ERROR EN API PRODUCTOS:", {
+      route: "/api/admin/productos/por-productor/[id]",
+      idProductor,
+      error,
+    });
     return NextResponse.json(
-      { message: "No fue posible obtener los productos del productor." },
+      { error: String(error) },
       { status: 500 },
     );
   } finally {

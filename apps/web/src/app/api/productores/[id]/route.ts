@@ -42,9 +42,13 @@ export async function GET(_: Request, { params }: RouteContext) {
 
     return NextResponse.json(productor);
   } catch (error) {
-    console.error("Error cargando productor:", error);
+    console.error("ERROR EN API PRODUCTOR:", {
+      route: "/api/productores/[id]",
+      idProductor,
+      error,
+    });
     return NextResponse.json(
-      { message: "No fue posible obtener el productor." },
+      { error: String(error) },
       { status: 500 },
     );
   }
