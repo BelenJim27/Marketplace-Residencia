@@ -59,7 +59,7 @@ export default function SigninWithPassword() {
       }
 
       const isAdmin = roles.some((rol: string) => ["ADMIN", "administrador", "admin"].includes(rol));
-      router.push(isAdmin ? "/Administrador/dashboard" : "/Cliente/producto");
+      router.push(isAdmin ? "/Administrator/dashboard" : "/Cliente/producto");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión");
     } finally {
