@@ -3,8 +3,8 @@
 import { Loader2, Save, X } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import { getCookie } from "@/lib/cookies";
+import { api } from "../../../lib/api";
+import { getCookie } from "../../../lib/cookies";
 
 export type ProductorAdmin = {
   id: number;

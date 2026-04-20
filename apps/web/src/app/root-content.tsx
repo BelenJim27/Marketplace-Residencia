@@ -5,7 +5,7 @@ import type { PropsWithChildren } from "react";
 import { Header } from "@/components/Layouts/header";
 import { Sidebar } from "@/components/Layouts/sidebar";
 import { SidebarProvider } from "@/components/Layouts/sidebar/sidebar-context";
-import { TiendaHeader } from "@/components/Administrador/Tienda/tienda-header";
+import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
 import { useAuth } from "@/context/AuthContext";
 
 export function RootContent({ children }: PropsWithChildren) {
@@ -99,3 +99,4 @@ export function RootContent({ children }: PropsWithChildren) {
     </div>
   );
 }
+

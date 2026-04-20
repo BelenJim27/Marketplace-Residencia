@@ -13,7 +13,7 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "paths": {
-      "@/*": ["./*"],
+      "@/*": ["./apps/web/src/*"],  // ← apunta a src de web
       "@shared/*": ["./packages/*/src"]
     }
   }

@@ -1,5 +1,6 @@
-import {ProductorDashboard} from "@/components/Productor/dashboard/ProductorDashboard";
+import {ProductorDashboard} from "@/components/Producer/dashboard/ProductorDashboard";
 
 export default function Page() {
   return <ProductorDashboard />;
 }
+

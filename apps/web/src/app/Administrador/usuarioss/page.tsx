@@ -1,5 +1,6 @@
-import UsuariosUI from '@/components/Administrador/Usuarios/usuarios';
+import UsuariosUI from '@/components/Administrator/Users/usuarios';
 
 export default function Page() {
   return <UsuariosUI />;
 }
+

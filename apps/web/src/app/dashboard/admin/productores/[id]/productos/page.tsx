@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ProductosProductor } from "@/components/Administrador/Tienda/productos-productor";
+import { ProductosProductor } from "@/components/Administrator/Store/productos-productor";
 
 type ProductosProductorPageProps = {
   params: Promise<{

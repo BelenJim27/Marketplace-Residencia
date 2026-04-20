@@ -1,4 +1,4 @@
-import Signin from "@/components/Administrador/Auth/Signin";
+import Signin from "@/components/Administrator/Auth/Signin";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import type { Metadata } from "next";
 import Image from "next/image";

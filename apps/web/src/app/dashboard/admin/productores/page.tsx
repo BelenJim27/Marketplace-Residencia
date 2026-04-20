@@ -1,5 +1,6 @@
-import { ProductoresTabla } from "@/components/Administrador/Tienda/productores-tabla";
+import { ProductoresTabla } from "@/components/Administrator/Store/productores-tabla";
 
 export default function DashboardAdminProductoresPage() {
   return <ProductoresTabla />;
 }
+

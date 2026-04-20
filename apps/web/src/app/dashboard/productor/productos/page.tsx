@@ -1,5 +1,6 @@
-import ProductorProductos from "@/components/Productor/productos";
+import ProductorProductos from "@/components/Producer/Products";
 
 export default function Page() {
   return <ProductorProductos />;
 }
+

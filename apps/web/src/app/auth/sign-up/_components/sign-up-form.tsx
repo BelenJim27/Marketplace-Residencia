@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
-import GoogleSigninButton from "@/components/Administrador/Auth/GoogleSigninButton";
+import GoogleSigninButton from "@/components/Administrator/Auth/GoogleSigninButton";
 import { useAuth } from "@/context/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
 

@@ -4,9 +4,9 @@ import { Edit2, Eye, Plus, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { api } from "@/lib/api";
-import { getCookie } from "@/lib/cookies";
+import { useAuth } from "../../../context/AuthContext";
+import { api } from "../../../lib/api";
+import { getCookie } from "../../../lib/cookies";
 import { ProductoresForm, type ProductorAdmin } from "./productores-form";
 
 type Notice = {
