@@ -3,10 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { ShoppingCart, ArrowLeft, Star, MapPin, Heart } from "lucide-react";
+import { ShoppingCart, ArrowLeft, MapPin } from "lucide-react";
 import { api } from "@/lib/api";
 import { useCarrito } from "@/context/CarritoContext";
-import { useWishlist } from "@/context/WishlistContext";
 import { formatPrice } from "@/lib/format-number";
 
 interface LoteData {
@@ -58,7 +57,6 @@ export default function ProductoDetallePage() {
   const params = useParams();
   const router = useRouter();
   const { agregarProducto } = useCarrito();
-  const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
   
   const [producto, setProducto] = useState<Producto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -381,44 +379,18 @@ export default function ProductoDetallePage() {
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  if (!producto) return;
-                  if (isInWishlist(producto.id_producto)) {
-                    eliminarWishlist(producto.id_producto);
-                  } else {
-                    agregarWishlist({
-                      id_producto: producto.id_producto,
-                      nombre: producto.nombre,
-                      precio_base: producto.precio_base,
-                      imagen_principal_url: producto.imagen_principal_url,
-                      producto_imagenes: producto.producto_imagenes,
-                    });
-                  }
-                }}
-                className={`flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${
-                  producto && isInWishlist(producto.id_producto)
-                    ? "bg-red-100 text-red-600 border border-red-300 hover:bg-red-200"
-                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-dark dark:border-gray-600 dark:text-gray-300"
-                }`}
-              >
-                <Heart size={20} fill={producto && isInWishlist(producto.id_producto) ? "currentColor" : "none"} />
-                {producto && isInWishlist(producto.id_producto) ? "En favoritos" : "Agregar a favoritos"}
-              </button>
-              <button
-                onClick={handleAgregar}
-                disabled={agregado}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${
-                  agregado
-                    ? "bg-green-700 text-white"
-                    : "bg-green-600 text-white hover:bg-green-700"
-                }`}
-              >
-                <ShoppingCart size={20} />
-                {agregado ? "Agregado al carrito" : "Agregar al carrito"}
-              </button>
-            </div>
+            <button
+              onClick={handleAgregar}
+              disabled={agregado}
+              className={`flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${
+                agregado
+                  ? "bg-green-700 text-white"
+                  : "bg-green-600 text-white hover:bg-green-700"
+              }`}
+            >
+              <ShoppingCart size={20} />
+              {agregado ? "Agregado al carrito" : "Agregar al carrito"}
+            </button>
           </div>
         </div>
       </div>

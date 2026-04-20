@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { ProductosGrid } from "@/components/Administrator/Store/productos-grid";
+import ProductCatalogPublic from "@/components/catalog/Public";
 
 export const metadata: Metadata = {
   title: {
@@ -21,7 +21,7 @@ export default function ProductoPage() {
         </div>
       </div>
 
-      <ProductosGrid />
+      <ProductCatalogPublic />
     </div>
   );
 }

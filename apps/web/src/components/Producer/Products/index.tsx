@@ -56,6 +56,7 @@ const EMPTY_FORM: FormState = {
   moneda_base: "MXN",
   status: "activo",
 };
+
 export default function ProductorProductos() {
   const { user } = useAuth();
   const token = getCookie("token") ?? "";
@@ -99,6 +100,7 @@ export default function ProductorProductos() {
       ]);
 
       setProducer({ id_productor: user.id_productor });
+
       const detail = producerData as ProducerDetail;
       setProducer(detail);
       setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);

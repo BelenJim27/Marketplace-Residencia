@@ -213,6 +213,9 @@ export const api = {
       fetchJson(endpoint(`/productores/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
     delete: (token: string, id: number) =>
       fetchJson(endpoint(`/productores/${id}`), { method: "DELETE", headers: headers(token) }),
+    getRegiones: () => fetchJson(endpoint("/productores/regiones")),
+    solicitar: (token: string, data: { id_region?: number; biografia: string; certificado_url: string }) =>
+      fetchJson(endpoint("/productores/solicitar"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
   },
 
   pedidos: {

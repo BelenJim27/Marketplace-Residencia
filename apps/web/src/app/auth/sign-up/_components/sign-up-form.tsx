@@ -2,18 +2,21 @@
 
 import { useState, useMemo } from "react";
 import { api } from "@/lib/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import GoogleSigninButton from "@/components/Administrator/Auth/GoogleSigninButton";
 import { useAuth } from "@/context/AuthContext";
+import { SolicitarVendedor } from "@/components/Administrator/Auth/SolicitarVendedor";
 import { Eye, EyeOff } from "lucide-react";
 
 export function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const wantToSellDefault = searchParams.get("vender") === "true";
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -22,6 +25,7 @@ export function SignUpForm() {
     email: "",
     password: "",
     confirmarPassword: "",
+    wantToSell: wantToSellDefault,
   });
 
   // --- Validaciones de Password ---
@@ -100,7 +104,11 @@ export function SignUpForm() {
         result.tokens.refresh_token,
       );
 
-      router.push("/producto");
+      if (formData.wantToSell) {
+        router.push("/Productor/solicitar");
+      } else {
+        router.push("/producto");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al registrar usuario");
     } finally {
@@ -277,6 +285,8 @@ export function SignUpForm() {
             <p className="mt-1 text-[11px] text-red-500">Las contraseñas no coinciden</p>
           )}
         </div>
+
+        <SolicitarVendedor mode="checkbox" />
 
         <button
           type="submit"

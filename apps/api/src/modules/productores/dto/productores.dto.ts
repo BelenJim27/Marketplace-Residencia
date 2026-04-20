@@ -10,6 +10,18 @@ export class CreateProductorDto {
 
 export class UpdateProductorDto extends PartialType(CreateProductorDto) {}
 
+export class SolicitarProductorDto {
+  @IsString() id_usuario!: string;
+  @IsOptional() @IsInt() @Type(() => Number) id_region?: number;
+  @IsOptional() @IsString() biografia?: string;
+  @IsString() certificado_url!: string;
+}
+
+export class RevisarSolicitudDto {
+  @IsString() estado!: 'aprobado' | 'rechazado';
+  @IsOptional() @IsString() motivo_rechazo?: string;
+}
+
 export class CreateRegionDto {
   @IsString() @MaxLength(150) nombre!: string;
   @IsOptional() @IsString() @MaxLength(100) estado_prov?: string;

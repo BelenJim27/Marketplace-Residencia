@@ -16,6 +16,7 @@ export function RootContent({ children }: PropsWithChildren) {
   const isAdminOrProductor = isAdmin || isProductor;
 
   const isAuthRoute = pathname.startsWith("/auth/");
+  const isClientOnlyRoute = pathname.startsWith("/tienda/") || pathname.startsWith("/Cliente/");
 
   if (loading) {
     return (
@@ -39,20 +40,20 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
-  const isTiendaRoute = pathname === "/" || pathname === "/producto";
+  if (isClientOnlyRoute) {
+    return (
+      <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+        <TiendaHeader />
+        <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
+  const isTiendaRoute = pathname === "/" || pathname === "/producto" || pathname.startsWith("/producto/");
 
   if (isTiendaRoute) {
-    if (isLoggedIn && !isAdminOrProductor) {
-      return (
-        <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
-          <TiendaHeader />
-          <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
-            {children}
-          </main>
-        </div>
-      );
-    }
-
     return (
       <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
