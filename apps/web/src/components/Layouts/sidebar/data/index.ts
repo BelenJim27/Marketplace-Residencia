@@ -49,7 +49,7 @@ export const ADMIN_NAV_DATA: NavSection[] = [
     items: [
       {
         title: "Dashboard",
-        url: "/Administrator/dashboard",
+        url: "/dashboard/administrador",
         icon: LayoutDashboard,
       },
       { title: "Perfil", url: "/profile", icon: UserRound },
@@ -62,7 +62,7 @@ export const ADMIN_NAV_DATA: NavSection[] = [
       { title: "Roles y pemisos", url: "/Administrador/roles-permisos", icon: UserCog },
       {
         title: "Productores",
-        url: "/Administrator/Store/productores",
+        url: "/Administrador/tienda/productores",
         icon: Users,
       },
       { title: "Reportes", url: "/Administrador/reportes", icon: BarChart3 },
@@ -76,9 +76,9 @@ export const ADMIN_NAV_DATA: NavSection[] = [
             icon: Layers,
           },
           {
-            title: "Productos",
+            title: "Productores",
             url: "/Administrador/productos",
-            icon: Package,
+            icon: Users,
           },
         ],
       },

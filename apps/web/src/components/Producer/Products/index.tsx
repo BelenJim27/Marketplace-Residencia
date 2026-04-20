@@ -56,12 +56,7 @@ const EMPTY_FORM: FormState = {
   moneda_base: "MXN",
   status: "activo",
 };
-
-<<<<<<< HEAD
-export function ProductorProductos() {
-=======
 export default function ProductorProductos() {
->>>>>>> 33cea339a4926de8902da1e966d917d6634a01d2
   const { user } = useAuth();
   const token = getCookie("token") ?? "";
   const [loading, setLoading] = useState(true);
@@ -97,22 +92,15 @@ export default function ProductorProductos() {
     setError(null);
 
     try {
-<<<<<<< HEAD
-      const [productsData, storesData] = await Promise.all([
-=======
       const [producerData, productsData, storesData] = await Promise.all([
         api.productores.getOne(user.id_productor),
->>>>>>> 33cea339a4926de8902da1e966d917d6634a01d2
         api.productos.getMine(token),
         api.tiendas.getByProductor(user.id_productor),
       ]);
 
-<<<<<<< HEAD
       setProducer({ id_productor: user.id_productor });
-=======
       const detail = producerData as ProducerDetail;
       setProducer(detail);
->>>>>>> 33cea339a4926de8902da1e966d917d6634a01d2
       setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);
       setProducts(
         (productsData as ProductItem[]).map((product) => ({

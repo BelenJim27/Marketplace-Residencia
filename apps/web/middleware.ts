@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 const ACCESS_SECRET =
   process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET ?? "change-me-access-secret";
-const REQUIRED_PERMISSION = "panel_productor";
 
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
+  const { pathname } = request.nextUrl;
 
   if (!token) {
     return redirectToSignIn(request);
@@ -18,8 +18,13 @@ export async function middleware(request: NextRequest) {
       return redirectToSignIn(request);
     }
 
+    let requiredPermission = "panel_productor";
+    if (pathname.startsWith("/dashboard/administrador")) {
+      requiredPermission = "panel_admin";
+    }
+
     const permisos = Array.isArray(payload.permisos) ? payload.permisos : [];
-    if (!permisos.includes(REQUIRED_PERMISSION)) {
+    if (!permisos.includes(requiredPermission)) {
       return redirectToSignIn(request);
     }
 
@@ -30,8 +35,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/productor/:path*"],
+  matcher: ["/dashboard/productor/:path*", "/dashboard/administrador/:path*"],
 };
+
 
 interface JwtPayload {
   token_type?: string;

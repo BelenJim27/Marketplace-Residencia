@@ -5,39 +5,39 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class AdminService {
   constructor(private prisma: PrismaService) {}
 
-  async getStats() {
-    const [
-      totalUsuarios,
-      totalProductores,
-      totalPedidos,
-      totalIngresos,
-      pedidosPendientes,
-      productoresActivos,
-    ] = await Promise.all([
-      this.prisma.usuarios.count({ where: { eliminado_en: null } }),
-      this.prisma.productores.count({ where: { eliminado_en: null } }),
-      this.prisma.pedidos.count({ where: { eliminado_en: null } }),
-      this.prisma.pedidos.aggregate({
-        where: { eliminado_en: null, estado: { in: ['completado', 'enviado'] } },
-        _sum: { total: true },
-      }),
-      this.prisma.pedidos.count({
-        where: { estado: 'pendiente', eliminado_en: null },
-      }),
-      this.prisma.productores.count({
-        where: { eliminado_en: null },
-      }),
-    ]);
+async getStats() {
+  const [
+    totalUsuarios,
+    totalProductores,
+    totalPedidos,
+    totalIngresos,
+    pedidosPendientes,
+    productoresActivos,
+  ] = await Promise.all([
+    this.prisma.usuarios.count({ where: { eliminado_en: null } }),
+    this.prisma.productores.count({ where: { eliminado_en: null } }),
+    this.prisma.pedidos.count({ where: { eliminado_en: null } }),
+    this.prisma.pedidos.aggregate({
+      where: { eliminado_en: null, estado: { in: ['completado', 'enviado'] } },
+      _sum: { total: true },
+    }),
+    this.prisma.pedidos.count({
+      where: { estado: 'pendiente', eliminado_en: null },
+    }),
+    this.prisma.productores.count({
+      where: { eliminado_en: null },
+    }),
+  ]);
 
-    return {
-      totalUsuarios,
-      totalProductores,
-      totalPedidos,
-      totalIngresos: totalIngresos._sum.total || 0,
-      pedidosPendientes,
-      productoresActivos,
-    };
-  }
+  return {
+    totalUsuarios: Number(totalUsuarios),
+    totalProductores: Number(totalProductores),
+    totalPedidos: Number(totalPedidos),
+    totalIngresos: Number(totalIngresos._sum.total ?? 0),  // ← convierte Decimal/BigInt
+    pedidosPendientes: Number(pedidosPendientes),
+    productoresActivos: Number(productoresActivos),
+  };
+}
 
   async getRecentOrders(limit = 10) {
     return this.prisma.pedidos.findMany({

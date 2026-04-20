@@ -26,7 +26,6 @@ interface ConfigContextType {
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
-// Aplica colores recibiendo el map directamente (evita closure obsoleto)
 function applyColors(map: Record<string, string>) {
   if (typeof document === "undefined") return;
   const primary = map.color_primario || defaultPrimary;
@@ -46,33 +45,44 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchConfig = async () => {
+    // 1. Carga caché inmediatamente para no bloquear la UI
+    try {
+      const cached = localStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        const cachedMap = JSON.parse(cached);
+        setConfig(cachedMap);
+        applyColors(cachedMap);
+      }
+    } catch {
+      // ignorar errores de localStorage
+    }
+
+    // 2. Intenta cargar desde la API
     try {
       const data = (await api.configuracion.getSistema()) as { clave: string; valor: string }[];
+      if (!Array.isArray(data)) throw new Error("Respuesta inválida");
+
       const map: Record<string, string> = {};
       data.forEach((item) => {
-        if (item.valor) map[item.clave] = item.valor;
+        if (item.clave && item.valor) map[item.clave] = item.valor;
       });
+
       setConfig(map);
       applyColors(map);
-      // Persiste en localStorage para el próximo refresh
+
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
       } catch {
-        // Ignorar errores de cuota
+        // ignorar errores de cuota
       }
-    } catch (error) {
-      console.error("Error cargando config:", error);
-      // Si falla, intenta usar el caché como fallback
-      try {
-        const cached = localStorage.getItem(STORAGE_KEY);
-        if (cached) {
-          const cachedMap = JSON.parse(cached);
-          setConfig(cachedMap);
-          applyColors(cachedMap);
-        }
-      } catch {
-        // Ignorar
-      }
+    } catch {
+      // Si falla la API, ya tenemos el caché aplicado arriba
+      // Aplicar defaults si no había caché
+      applyColors({
+        color_primario: defaultPrimary,
+        color_secundario: defaultSecondary,
+        color_acento: defaultAccent,
+      });
     } finally {
       setLoading(false);
     }
@@ -83,15 +93,17 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     await fetchConfig();
   };
 
-  // ✅ Solo aplica colores default si no hay config cargada y noch hay loading
   useEffect(() => {
     if (typeof document === "undefined") return;
     if (!loading && Object.keys(config).length === 0) {
-      applyColors({ color_primario: defaultPrimary, color_secundario: defaultSecondary, color_acento: defaultAccent });
+      applyColors({
+        color_primario: defaultPrimary,
+        color_secundario: defaultSecondary,
+        color_acento: defaultAccent,
+      });
     }
   }, [loading]);
 
-  // ✅ Carga la config desde la API al montar
   useEffect(() => {
     fetchConfig();
   }, []);

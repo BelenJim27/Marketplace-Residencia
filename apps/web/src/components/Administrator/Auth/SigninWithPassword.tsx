@@ -53,13 +53,18 @@ export default function SigninWithPassword() {
         data.remember ? response.tokens.refresh_token : undefined,
       );
 
+      const isAdmin = roles.some((rol: string) => ["ADMIN", "administrador", "admin"].includes(rol));
+      if (isAdmin) {
+        router.push("/dashboard/administrador");
+        return;
+      }
+
       if (permisos.includes("panel_productor") || roles.some((rol: string) => ["PRODUCTOR", "productor"].includes(rol))) {
         router.push("/dashboard/productor");
         return;
       }
 
-      const isAdmin = roles.some((rol: string) => ["ADMIN", "administrador", "admin"].includes(rol));
-      router.push(isAdmin ? "/Administrator/dashboard" : "/Cliente/producto");
+      router.push("/Cliente/producto");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión");
     } finally {

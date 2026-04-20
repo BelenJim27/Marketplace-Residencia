@@ -5,6 +5,11 @@ import { static as expressStatic } from 'express';
 import { AppModule } from './app.module';
 import 'dotenv/config';
 
+// ← Línea 8: parche global para BigInt
+(BigInt.prototype as any).toJSON = function () {
+  return Number(this);
+};
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use('/uploads', expressStatic(join(process.cwd(), 'uploads')));

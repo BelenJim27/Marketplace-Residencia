@@ -12,24 +12,24 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   
   // Si es 401 (Unauthorized), intentar refrescar el token
   if (response.status === 401) {
-    console.log("🔴 401 recibido, intentando refresh...");
+    console.log(" 401 recibido, intentando refresh...");
     const refreshToken = getCookie("refresh_token");
-    console.log("📦 Refresh token existe:", !!refreshToken);
+    console.log(" Refresh token existe:", !!refreshToken);
     
     if (refreshToken) {
       try {
-        console.log("🔄 Token expirado, intentando refrescar...");
+        console.log(" Token expirado, intentando refrescar...");
         const refreshResponse = await fetch(endpoint("/auth/refresh"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refresh_token: refreshToken }),
         });
 
-        console.log("📬 Refresh response status:", refreshResponse.status);
+        console.log(" Refresh response status:", refreshResponse.status);
 
         if (refreshResponse.ok) {
           const refreshData = await refreshResponse.json();
-          console.log("📬 Refresh data:", refreshData);
+          console.log(" Refresh data:", refreshData);
           const newAccessToken = refreshData.tokens.access_token;
           
           // Guardar el nuevo token
@@ -38,7 +38,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
             setCookie("refresh_token", refreshData.tokens.refresh_token, 30);
           }
           
-          console.log("✅ Token refrescado exitosamente");
+          console.log(" Token refrescado exitosamente");
 
           // Reintentar la petición original con el nuevo token
           const newHeaders = { ...options?.headers } as Record<string, string>;
@@ -53,10 +53,10 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
           }
           return retryResponse.json() as Promise<T>;
         } else {
-          console.error("❌ Refresh falló:", refreshResponse.status);
+          console.error(" Refresh falló:", refreshResponse.status);
         }
       } catch (error) {
-        console.error("❌ Error refrescando token:", error);
+        console.error(" Error refrescando token:", error);
       }
     }
     
@@ -479,8 +479,11 @@ export const api = {
   },
 
   admin: {
-    getStats: () => fetchJson(endpoint("/admin/stats")),
-    getRecentOrders: () => fetchJson(endpoint("/admin/pedidos/recientes")),
-    getTopProductores: () => fetchJson(endpoint("/admin/productores/top")),
-  },
+  getStats: (token?: string) =>
+    fetchJson(endpoint("/admin/stats"), { headers: headers(token) }),
+  getRecentOrders: (token?: string) =>
+    fetchJson(endpoint("/admin/pedidos/recientes"), { headers: headers(token) }),
+  getTopProductores: (token?: string) =>
+    fetchJson(endpoint("/admin/productores/top"), { headers: headers(token) }),
+},
 };
