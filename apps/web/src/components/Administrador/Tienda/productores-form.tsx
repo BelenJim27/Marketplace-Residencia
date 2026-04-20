@@ -3,20 +3,21 @@
 import { Loader2, Save, X } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 
 export type ProductorAdmin = {
   id: number;
   nombre: string;
+  apellido_paterno: string;
+  apellido_materno: string;
   region: string;
-  stock: number;
   total_productos?: number;
   status: "ACTIVO" | "INACTIVO" | "PAUSADO";
   biografia?: string;
   otras_caracteristicas?: string;
   foto_url?: string;
+  tienda?: string | null;
 };
 
 type ProductorFormProps = {
@@ -30,8 +31,9 @@ type ProductorFormProps = {
 
 type FormState = {
   nombre: string;
+  apellido_paterno: string;
+  apellido_materno: string;
   region: string;
-  stock: string;
   status: ProductorAdmin["status"];
   biografia: string;
   otras_caracteristicas: string;
@@ -40,8 +42,9 @@ type FormState = {
 
 const INITIAL_STATE: FormState = {
   nombre: "",
+  apellido_paterno: "",
+  apellido_materno: "",
   region: "",
-  stock: "0",
   status: "ACTIVO",
   biografia: "",
   otras_caracteristicas: "",
@@ -57,9 +60,7 @@ export function ProductoresForm({
   onError,
 }: ProductorFormProps) {
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof FormState, string>>
-  >({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -68,8 +69,9 @@ export function ProductoresForm({
     if (productor) {
       setForm({
         nombre: productor.nombre,
+        apellido_paterno: productor.apellido_paterno || "",
+        apellido_materno: productor.apellido_materno || "",
         region: productor.region,
-        stock: String(productor.stock),
         status: productor.status,
         biografia: productor.biografia || "",
         otras_caracteristicas: productor.otras_caracteristicas || "",
@@ -87,27 +89,16 @@ export function ProductoresForm({
 
   const isReadOnly = mode === "view";
 
-  function handleChange<K extends keyof FormState>(
-    field: K,
-    value: FormState[K],
-  ) {
+  function handleChange<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
   }
 
   function validate() {
     const nextErrors: Partial<Record<keyof FormState, string>> = {};
-
     if (!form.nombre.trim()) nextErrors.nombre = "El nombre es obligatorio.";
+    if (!form.apellido_paterno.trim()) nextErrors.apellido_paterno = "El apellido paterno es obligatorio.";
     if (!form.region.trim()) nextErrors.region = "La región es obligatoria.";
-
-    const stock = Number(form.stock);
-    if (!form.stock.trim()) {
-      nextErrors.stock = "El stock es obligatorio.";
-    } else if (!Number.isFinite(stock) || stock < 0) {
-      nextErrors.stock = "El stock debe ser 0 o mayor.";
-    }
-
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }
@@ -122,28 +113,20 @@ export function ProductoresForm({
       const token = getCookie("token");
       if (!token) throw new Error("No autorizado");
 
+      const payload = new FormData();
+      payload.append("nombre", form.nombre.trim());
+      payload.append("apellido_paterno", form.apellido_paterno.trim());
+      payload.append("apellido_materno", form.apellido_materno.trim());
+      payload.append("region", form.region.trim());
+      payload.append("status", form.status);
+      if (form.biografia.trim()) payload.append("biografia", form.biografia.trim());
+      if (form.otras_caracteristicas.trim()) payload.append("otras_caracteristicas", form.otras_caracteristicas.trim());
+      if (form.foto) payload.append("foto", form.foto);
+
       let result;
       if (mode === "create") {
-        const payload = new FormData();
-        payload.append("nombre", form.nombre.trim());
-        payload.append("region", form.region.trim());
-        payload.append("stock", String(Number(form.stock)));
-        payload.append("status", form.status);
-        if (form.biografia.trim()) payload.append("biografia", form.biografia.trim());
-        if (form.otras_caracteristicas.trim()) payload.append("otras_caracteristicas", form.otras_caracteristicas.trim());
-        if (form.foto) payload.append("foto", form.foto);
-
         result = await api.productores.create(token, payload);
       } else {
-        const payload = new FormData();
-        payload.append("nombre", form.nombre.trim());
-        payload.append("region", form.region.trim());
-        payload.append("stock", String(Number(form.stock)));
-        payload.append("status", form.status);
-        if (form.biografia.trim()) payload.append("biografia", form.biografia.trim());
-        if (form.otras_caracteristicas.trim()) payload.append("otras_caracteristicas", form.otras_caracteristicas.trim());
-        if (form.foto) payload.append("foto", form.foto);
-
         result = await api.productores.update(token, productor!.id, payload);
       }
 
@@ -177,7 +160,7 @@ export function ProductoresForm({
                   ? "Editar productor"
                   : "Detalle del productor"}
             </h2>
-            <p className="truncate text-xs sm:text-xs text-gray-400">
+            <p className="truncate text-xs text-gray-400">
               {productor
                 ? `ID: #PR-${String(productor.id).padStart(4, "0")}`
                 : "Completa la información requerida"}
@@ -194,48 +177,58 @@ export function ProductoresForm({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-4 sm:space-y-5 sm:p-6">
+
+          {/* Fila 1: Nombre solo */}
+          <Field label="Nombre" error={errors.nombre}>
+            <input
+              value={form.nombre}
+              onChange={(event) => handleChange("nombre", event.target.value)}
+              disabled={isReadOnly}
+              className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+              placeholder="Nombre del productor"
+            />
+          </Field>
+
+          {/* Fila 2: Apellido Paterno y Materno */}
           <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
-            <Field label="Nombre" error={errors.nombre}>
+            <Field label="Apellido Paterno" error={errors.apellido_paterno}>
               <input
-                value={form.nombre}
-                onChange={(event) => handleChange("nombre", event.target.value)}
+                value={form.apellido_paterno}
+                onChange={(event) => handleChange("apellido_paterno", event.target.value)}
                 disabled={isReadOnly}
                 className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
-                placeholder="Nombre del productor"
+                placeholder="Apellido paterno"
               />
             </Field>
 
-            <Field label="Región" error={errors.region}>
+            <Field label="Apellido Materno" error={errors.apellido_materno}>
               <input
-                value={form.region}
-                onChange={(event) => handleChange("region", event.target.value)}
+                value={form.apellido_materno}
+                onChange={(event) => handleChange("apellido_materno", event.target.value)}
                 disabled={isReadOnly}
                 className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
-                placeholder="Ej. Sierra Sur"
-              />
-            </Field>
-
-            <Field label="Stock" error={errors.stock}>
-              <input
-                type="number"
-                min="0"
-                value={form.stock}
-                onChange={(event) => handleChange("stock", event.target.value)}
-                disabled={isReadOnly}
-                className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
-                placeholder="0"
+                placeholder="Apellido materno"
               />
             </Field>
           </div>
 
+          {/* Fila 3: Región sola */}
+          <Field label="Región" error={errors.region}>
+            <input
+              value={form.region}
+              onChange={(event) => handleChange("region", event.target.value)}
+              disabled={isReadOnly}
+              className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+              placeholder="Ej. Sierra Sur"
+            />
+          </Field>
+
+          {/* Status */}
           <Field label="Status">
             <select
               value={form.status}
               onChange={(event) =>
-                handleChange(
-                  "status",
-                  event.target.value as ProductorAdmin["status"],
-                )
+                handleChange("status", event.target.value as ProductorAdmin["status"])
               }
               disabled={isReadOnly}
               className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
@@ -246,6 +239,7 @@ export function ProductoresForm({
             </select>
           </Field>
 
+          {/* Biografía */}
           <Field label="Biografía">
             <textarea
               value={form.biografia}
@@ -257,6 +251,7 @@ export function ProductoresForm({
             />
           </Field>
 
+          {/* Otras características */}
           <Field label="Otras características">
             <textarea
               value={form.otras_caracteristicas}
@@ -268,6 +263,7 @@ export function ProductoresForm({
             />
           </Field>
 
+          {/* Foto */}
           <Field label="Foto del productor">
             <div className="space-y-2 sm:space-y-3">
               {!isReadOnly && (
@@ -276,9 +272,7 @@ export function ProductoresForm({
                   accept="image/*"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
-                    if (file) {
-                      handleChange("foto", file);
-                    }
+                    if (file) handleChange("foto", file);
                   }}
                   className="block w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm file:mr-2 sm:file:mr-4 file:rounded-md sm:file:rounded-lg file:border-0 file:bg-green-100 file:px-2 sm:file:px-3 file:py-1 file:text-xs sm:file:text-sm file:font-semibold file:text-green-700 hover:file:bg-green-200"
                 />

@@ -23,33 +23,41 @@ export function ProductoresTabla() {
   const [statusFilter, setStatusFilter] = useState("");
   const [idFilter, setIdFilter] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [activeMode, setActiveMode] = useState<
-    "create" | "edit" | "view" | null
-  >(null);
-  const [selectedProductor, setSelectedProductor] =
-    useState<ProductorAdmin | null>(null);
+  const [activeMode, setActiveMode] = useState<"create" | "edit" | "view" | null>(null);
+  const [selectedProductor, setSelectedProductor] = useState<ProductorAdmin | null>(null);
   const [deleting, setDeleting] = useState<ProductorAdmin | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   async function loadProductores() {
     setLoading(true);
-
     try {
       const data = await api.productores.getAll();
       console.log("API response:", data);
-      const transformed = (Array.isArray(data) ? data : []).map((p: any) => ({
-        id: p.id_productor,
-        nombre: p.usuarios ? `${p.usuarios.nombre} ${p.usuarios.apellido_paterno || ""}`.trim() : "Sin nombre",
-        region: p.regiones?.nombre || "Sin región",
-        stock: p.lotes?.length || 0,
-        total_productos: p.lotes?.length || 0,
-        status: ((p.tiendas && p.tiendas.length > 0 && p.tiendas.some((t: any) => t.status === "activa"))
-          ? "ACTIVO"
-          : "PAUSADO") as "ACTIVO" | "PAUSADO" | "INACTIVO",
-        biografia: p.biografia || "",
-        otras_caracteristicas: p.otras_caracteristicas || "",
-        foto_url: p.foto_url || "",
-      }));
+      console.log("IDs recibidos:", (Array.isArray(data) ? data : []).map((p: any) => p.id_productor));
+
+      const transformed = (Array.isArray(data) ? data : []).map((p: any) => {
+        console.log("Tiendas del productor:", p.tiendas);
+        return {
+          id: p.id_productor as number,
+          nombre: p.usuarios?.nombre || "Sin nombre",
+          apellido_paterno: p.usuarios?.apellido_paterno || "",
+          apellido_materno: p.usuarios?.apellido_materno || "",
+          region: p.regiones?.nombre || "Sin región",
+          total_productos: p.lotes?.length || 0,
+          status: (
+            p.tiendas &&
+            p.tiendas.length > 0 &&
+            p.tiendas.some((t: any) => t.status === "activa")
+              ? "ACTIVO"
+              : "PAUSADO"
+          ) as "ACTIVO" | "PAUSADO" | "INACTIVO",
+          biografia: p.biografia || "",
+          otras_caracteristicas: p.otras_caracteristicas || "",
+          foto_url: p.foto_url || "",
+          tienda: (p.tiendas?.[0]?.nombre as string) || null,
+        };
+      });
+
       console.log("Transformed:", transformed);
       setProductores(transformed);
     } catch (error) {
@@ -70,12 +78,14 @@ export function ProductoresTabla() {
     loadProductores();
   }, []);
 
-  const getStock = (productor: ProductorAdmin) =>
-    productor.total_productos ?? productor.stock;
-
   const regionOptions = useMemo(
-    () => [...new Set(productores.map((productor) => productor.region).filter(Boolean))].sort(),
-    [productores],
+    () =>
+      [
+        ...new Set(
+          productores.map((productor) => productor.region).filter(Boolean)
+        ),
+      ].sort(),
+    [productores]
   );
 
   const filtered = useMemo(() => {
@@ -84,14 +94,11 @@ export function ProductoresTabla() {
 
     const filteredList = productores.filter((productor) => {
       const producerId = `PR${String(productor.id).padStart(4, "0")}`;
-
-      const matchesQuery =
-        !normalizedQuery ||
-        productor.nombre.toLowerCase().includes(normalizedQuery);
+      const fullName = `${productor.nombre} ${productor.apellido_paterno} ${productor.apellido_materno}`.toLowerCase();
+      const matchesQuery = !normalizedQuery || fullName.includes(normalizedQuery);
       const matchesRegion = !regionFilter || productor.region === regionFilter;
       const matchesStatus = !statusFilter || productor.status === statusFilter;
       const matchesId = !normalizedId || producerId === normalizedId;
-
       return matchesQuery && matchesRegion && matchesStatus && matchesId;
     });
 
@@ -119,11 +126,6 @@ export function ProductoresTabla() {
       value: productores.filter((item) => item.status === "PAUSADO").length,
       color: "text-amber-500",
     },
-    {
-      label: "Stock Total",
-      value: productores.reduce((acc, item) => acc + getStock(item), 0),
-      color: "text-blue-600",
-    },
   ];
 
   function clearFilters() {
@@ -135,22 +137,15 @@ export function ProductoresTabla() {
 
   async function handleDelete() {
     if (!deleting) return;
-
     setDeleteLoading(true);
-
     try {
       const token = getCookie("token");
       if (!token) throw new Error("No autorizado");
-
       await api.productores.delete(token, deleting.id);
-
       setProductores((current) =>
-        current.filter((item) => item.id !== deleting.id),
+        current.filter((item) => item.id !== deleting.id)
       );
-      setNotice({
-        type: "success",
-        message: "Productor eliminado correctamente.",
-      });
+      setNotice({ type: "success", message: "Productor eliminado correctamente." });
       setDeleting(null);
     } catch (error) {
       setNotice({
@@ -165,10 +160,7 @@ export function ProductoresTabla() {
     }
   }
 
-  function openModal(
-    mode: "create" | "edit" | "view",
-    productor?: ProductorAdmin,
-  ) {
+  function openModal(mode: "create" | "edit" | "view", productor?: ProductorAdmin) {
     setSelectedProductor(productor ?? null);
     setActiveMode(mode);
   }
@@ -189,7 +181,6 @@ export function ProductoresTabla() {
             Administra productores y el estado operativo.
           </p>
         </div>
-
         <button
           type="button"
           onClick={() => openModal("create")}
@@ -202,13 +193,17 @@ export function ProductoresTabla() {
 
       {notice ? (
         <div
-          className={`rounded-2xl border px-4 py-3 text-sm ${notice.type === "success" ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}
+          className={`rounded-2xl border px-4 py-3 text-sm ${
+            notice.type === "success"
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
         >
           {notice.message}
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {stats.map((item) => (
           <div
             key={item.label}
@@ -285,25 +280,21 @@ export function ProductoresTabla() {
                 <th className="p-4">ID</th>
                 <th className="p-4">Nombre</th>
                 <th className="p-4">Región</th>
+                <th className="p-4 text-center">Tienda</th>
                 <th className="p-4 text-center">Status</th>
+                <th className="p-4 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr key="loading">
-                  <td
-                    colSpan={6}
-                    className="p-10 text-center text-sm text-gray-500"
-                  >
+                  <td colSpan={6} className="p-10 text-center text-sm text-gray-500">
                     Cargando productores...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr key="empty">
-                  <td
-                    colSpan={6}
-                    className="p-10 text-center text-sm text-gray-500"
-                  >
+                  <td colSpan={6} className="p-10 text-center text-sm text-gray-500">
                     No hay productores para mostrar.
                   </td>
                 </tr>
@@ -317,40 +308,19 @@ export function ProductoresTabla() {
                       #PR-{String(productor.id).padStart(4, "0")}
                     </td>
                     <td className="p-4 font-semibold text-slate-800">
-                      {productor.nombre}
+                      {`${productor.nombre} ${productor.apellido_paterno} ${productor.apellido_materno}`.trim()}
                     </td>
                     <td className="p-4 text-sm text-slate-600">
                       {productor.region}
                     </td>
+                    <td className="p-4 text-sm text-slate-600 text-center">
+                      {productor.tienda ?? "—"}
+                    </td>
                     <td className="p-4 text-center">
                       <StatusBadge status={productor.status} />
                     </td>
-                    <td className="p-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {productor.foto_url && (
-                          <div
-                            className="h-8 w-8 rounded-full bg-cover bg-center border border-gray-200"
-                            style={{ backgroundImage: `url(${productor.foto_url})` }}
-                            title="Tiene foto"
-                          />
-                        )}
-                        
-                      </div>
-                    </td>
-                    <td className="p-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {productor.foto_url && (
-                          <div
-                            className="h-8 w-8 rounded-full bg-cover bg-center"
-                            style={{ backgroundImage: `url(${productor.foto_url})` }}
-                            title="Tiene foto"
-                          />
-                        )}
-                        
-                      </div>
-                    </td>
                     <td className="p-4">
-                      <div className="flex justify-end gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+                      <div className="flex justify-center gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                         <Link
                           href={`/dashboard/admin/productores/${productor.id}/productos`}
                           className="inline-flex items-center rounded-lg border border-gray-200 px-2.5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-gray-50 hover:text-slate-900"
@@ -412,8 +382,8 @@ export function ProductoresTabla() {
             </h3>
             <p className="mt-2 text-xs sm:text-sm text-gray-500">
               Vas a eliminar a{" "}
-              <span className="font-semibold text-gray-700 truncate">
-                {deleting.nombre}
+              <span className="font-semibold text-gray-700">
+                {`${deleting.nombre} ${deleting.apellido_paterno}`.trim()}
               </span>
               . Esta acción lo ocultará del panel.
             </p>
@@ -446,8 +416,8 @@ function StatusBadge({ status }: { status: ProductorAdmin["status"] }) {
     status === "ACTIVO"
       ? "bg-green-50 text-green-700 border-green-100"
       : status === "PAUSADO"
-        ? "bg-amber-50 text-amber-700 border-amber-100"
-        : "bg-gray-100 text-gray-600 border-gray-200";
+      ? "bg-amber-50 text-amber-700 border-amber-100"
+      : "bg-gray-100 text-gray-600 border-gray-200";
   return (
     <span
       className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${className}`}
@@ -473,7 +443,11 @@ function ActionButton({
       type="button"
       title={label}
       onClick={onClick}
-      className={`rounded-lg p-2 transition-colors ${danger ? "text-slate-400 hover:bg-red-50 hover:text-red-600" : "text-slate-400 hover:bg-green-50 hover:text-green-700"}`}
+      className={`rounded-lg p-2 transition-colors ${
+        danger
+          ? "text-slate-400 hover:bg-red-50 hover:text-red-600"
+          : "text-slate-400 hover:bg-green-50 hover:text-green-700"
+      }`}
     >
       {children}
     </button>
