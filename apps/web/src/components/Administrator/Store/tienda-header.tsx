@@ -2,18 +2,48 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart, Package, User, UserPlus, Heart } from "lucide-react";
+import { useState } from "react";
+import { ShoppingCart, Package, User, UserPlus, Heart, Store, ChevronDown } from "lucide-react";
 import { UserInfo } from "@/components/Layouts/header/user-info";
 import { useAuth } from "@/context/AuthContext";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useRouter } from "next/navigation";
 
 export function TiendaHeader() {
   const { user, isAuthenticated, isAdmin, isProductor } = useAuth();
   const { cantidadTotal } = useCarrito();
   const { cantidadTotal: wishlistCount } = useWishlist();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const router = useRouter();
 
   const isClient = isAuthenticated && !isAdmin && !isProductor;
+
+  const handleCartClick = () => {
+    if (!isAuthenticated) {
+      router.push("/auth/sign-in");
+    } else {
+      router.push("/tienda/carrito");
+    }
+  };
+
+  const handleMyPurchasesClick = () => {
+    if (!isAuthenticated) {
+      router.push("/auth/sign-in");
+    } else {
+      router.push("/tienda/compras");
+    }
+  };
+
+  const handleSellClick = () => {
+    if (!isAuthenticated) {
+      router.push("/Productor");
+    } else if (isProductor) {
+      router.push("/Productor/productor");
+    } else {
+      router.push("/Productor/solicitar");
+    }
+  };
 
   return (
     <header 
@@ -32,78 +62,113 @@ export function TiendaHeader() {
         />
       </Link>
 
-      <nav className="flex items-center gap-4">
+      <nav className="flex items-center gap-6">
         {isClient ? (
           <>
-            <Link
-              href="/tienda/compras"
-              className="flex items-center gap-2 rounded-lg px-4 py-2 text-green-700 transition-colors hover:bg-green-50"
+            <button
+              onClick={handleMyPurchasesClick}
+              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
-              <Package size={18} />
-              <span className="hidden sm:inline">Mis compras</span>
-            </Link>
+              <Package size={24} />
+              <span className="hidden sm:inline text-xs">Mis compras</span>
+            </button>
 
             <Link
               href="/tienda/deseos"
-              className="relative flex items-center gap-2 rounded-lg px-4 py-2 text-green-700 transition-colors hover:bg-green-50"
+              className="relative flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
-              <Heart size={18} />
-              <span className="hidden sm:inline">Favoritos</span>
+              <Heart size={24} />
+              <span className="hidden sm:inline text-xs">Favoritos</span>
               {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                <span className="absolute top-0 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                   {wishlistCount > 9 ? "9+" : wishlistCount}
                 </span>
               )}
             </Link>
 
-            <Link
-              href="/tienda/carrito"
-              className="relative flex items-center gap-2 rounded-lg px-4 py-2 text-green-700 transition-colors hover:bg-green-50"
+            <button
+              onClick={handleCartClick}
+              className="relative flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
-              <ShoppingCart size={18} />
-              <span className="hidden sm:inline">Carrito</span>
+              <ShoppingCart size={24} />
+              <span className="hidden sm:inline text-xs">Carrito</span>
               {cantidadTotal > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                <span className="absolute top-0 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                   {cantidadTotal > 9 ? "9+" : cantidadTotal}
                 </span>
               )}
-            </Link>
+            </button>
+
+            <button
+              onClick={handleSellClick}
+              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
+            >
+              <Store size={24} />
+              <span className="hidden sm:inline text-xs">Vender</span>
+            </button>
 
             <UserInfo />
           </>
         ) : (
           <>
-            <Link
-              href="/auth/sign-up"
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700"
+            <button
+              onClick={handleMyPurchasesClick}
+              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
-              <UserPlus size={18} />
-              <span className="hidden sm:inline">Crear cuenta</span>
-            </Link>
+              <Package size={24} />
+              <span className="hidden sm:inline text-xs">Mis compras</span>
+            </button>
 
-            <Link
-              href="/auth/sign-in"
-              className="flex items-center gap-2 rounded-lg border border-green-600 px-4 py-2 text-green-700 transition-colors hover:bg-green-50"
+            <button
+              onClick={handleCartClick}
+              className="relative flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
-              <User size={18} />
-              <span className="hidden sm:inline">Ingresar</span>
-            </Link>
+              <ShoppingCart size={24} />
+              <span className="hidden sm:inline text-xs">Carrito</span>
+            </button>
 
-            <Link
-              href="/tienda/compras"
-              className="flex items-center gap-2 rounded-lg px-4 py-2 text-green-700 transition-colors hover:bg-green-50"
+            <button
+              onClick={handleSellClick}
+              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
-              <Package size={18} />
-              <span className="hidden sm:inline">Mis compras</span>
-            </Link>
+              <Store size={24} />
+              <span className="hidden sm:inline text-xs">Vender</span>
+            </button>
 
-            <Link
-              href="/tienda/carrito"
-              className="flex items-center gap-2 rounded-lg px-4 py-2 text-green-700 transition-colors hover:bg-green-50"
-            >
-              <ShoppingCart size={18} />
-              <span className="hidden sm:inline">Carrito</span>
-            </Link>
+            <div className="relative">
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
+              >
+                <User size={24} />
+                <span className="hidden sm:inline text-xs">Perfil</span>
+              </button>
+
+              {showProfileMenu && (
+                <div className="absolute right-0 mt-2 w-48 rounded-lg border border-green-200 bg-white shadow-lg">
+                  <Link
+                    href="/auth/sign-in"
+                    className="block px-4 py-2 text-green-700 transition-colors hover:bg-green-50 rounded-t-lg"
+                    onClick={() => setShowProfileMenu(false)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <User size={16} />
+                      <span>Ingresar</span>
+                    </div>
+                  </Link>
+                  <Link
+                    href="/auth/sign-up"
+                    className="block px-4 py-2 text-green-700 transition-colors hover:bg-green-50 rounded-b-lg border-t border-green-200"
+                    onClick={() => setShowProfileMenu(false)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <UserPlus size={16} />
+                      <span>Crear cuenta</span>
+                    </div>
+                  </Link>
+                </div>
+              )}
+            </div>
           </>
         )}
       </nav>

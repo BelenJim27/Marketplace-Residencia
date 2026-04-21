@@ -1,9 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RevisarSolicitudDto } from '../productores/dto/productores.dto';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificaciones: NotificacionesService,
+  ) {}
 
 async getStats() {
   const [
@@ -87,5 +92,62 @@ async getStats() {
       .map(([id_productor, data]) => ({ id_productor, ...data }))
       .sort((a, b) => b.totalVentas - a.totalVentas)
       .slice(0, limit);
+  }
+
+  async getSolicitudesPendientes() {
+    return this.prisma.productores.findMany({
+      where: { estado: 'pendiente', eliminado_en: null },
+      include: {
+        usuarios: { select: { id_usuario: true, nombre: true, email: true, telefono: true } },
+        regiones: true,
+      },
+      orderBy: { solicitado_en: 'desc' },
+    });
+  }
+
+  async revisarSolicitud(id_productor: number, dto: RevisarSolicitudDto, revisor_id: string) {
+    const productor = await this.prisma.productores.findUnique({ where: { id_productor } });
+    if (!productor || productor.eliminado_en) throw new NotFoundException('Solicitud no encontrada');
+    if (productor.estado !== 'pendiente') throw new BadRequestException('Esta solicitud ya fue procesada');
+
+    const usuario = await this.prisma.usuarios.findUnique({ where: { id_usuario: productor.id_usuario } });
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    let rolProductor = null;
+
+    if (dto.estado === 'aprobado') {
+      rolProductor = await this.prisma.roles.findUnique({ where: { nombre: 'PRODUCTOR' } });
+      if (rolProductor) {
+        await this.prisma.usuario_rol.upsert({
+          where: { id_usuario_id_rol: { id_usuario: usuario.id_usuario, id_rol: rolProductor.id_rol } },
+          create: { id_usuario: usuario.id_usuario, id_rol: rolProductor.id_rol, estado: 'activo' },
+          update: { estado: 'activo' },
+        });
+      }
+    }
+
+    const actualizado = await this.prisma.productores.update({
+      where: { id_productor },
+      data: {
+        estado: dto.estado,
+        revisado_por: revisor_id,
+        revisado_en: new Date(),
+        motivo_rechazo: dto.motivo_rechazo ?? null,
+      },
+    });
+
+    const titulo = dto.estado === 'aprobado' ? 'Solicitud aprobada' : 'Solicitud rechazada';
+    const cuerpo = dto.estado === 'aprobado'
+      ? '¡Felicidades! Tu solicitud para convertirte en productor ha sido aprobada. Ahora puedes publicar tus productos.'
+      : `Tu solicitud ha sido rechazada. Motivo: ${dto.motivo_rechazo || 'No especificado'}`;
+
+    await this.notificaciones.create({
+      id_usuario: usuario.id_usuario,
+      tipo: `solicitud_${dto.estado}`,
+      titulo,
+      cuerpo,
+    });
+
+    return actualizado;
   }
 }

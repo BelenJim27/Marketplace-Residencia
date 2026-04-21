@@ -94,6 +94,11 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         icon: ShieldCheck,
       },
       {
+        title: "Solicitudes Productores",
+        url: "/Administrador/solicitudes-productores",
+        icon: UserRound,
+      },
+      {
         title: "Configuración",
         url: "/Administrador/configuracion",
         icon: Settings,

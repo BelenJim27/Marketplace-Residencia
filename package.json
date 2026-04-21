@@ -10,9 +10,15 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "build:web": "turbo run build --filter=web",
+    "build:api": "turbo run build --filter=api",
+    "start": "turbo run start",
+    "start:web": "turbo run start --filter=web",
+    "start:api": "turbo run start:prod --filter=api",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "db:generate": "turbo run generate"
+    "db:generate": "turbo run generate",
+    "postinstall": "npm run db:generate"
   },
   "devDependencies": {
     "@types/multer": "^2.1.0",

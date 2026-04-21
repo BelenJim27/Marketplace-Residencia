@@ -94,14 +94,14 @@ export class ProductosService {
       const ids = stores.map((store) => store.id_tienda);
       const productosRaw = await this.prisma.productos.findMany({
         where: { ...where, id_tienda: { in: ids } },
-        include: { lotes: { where: { eliminado_en: null } }, producto_imagenes: true },
+        include: productoInclude,
       });
       return serializeBigInts(await mapProductoResponse(applyFiltersToProductos(productosRaw)));
     }
 
     const productosRaw = await this.prisma.productos.findMany({
       where,
-      include: { lotes: { where: { eliminado_en: null } }, producto_imagenes: true },
+      include: productoInclude,
     });
     return serializeBigInts(await mapProductoResponse(applyFiltersToProductos(productosRaw)));
   }
@@ -191,16 +191,25 @@ export class ProductosService {
 }
 
 const productoInclude = {
-  producto_imagenes: true,
   inventario: {
     select: {
       stock: true,
     },
   },
-  tiendas: {
+  categorias_productos: {
     include: {
+      categorias: {
+        select: {
+          nombre: true,
+        },
+      },
+    },
+  },
+  lotes: {
+    select: {
+      datos_api: true,
       productores: {
-        include: {
+        select: {
           usuarios: {
             select: {
               nombre: true,
@@ -210,29 +219,44 @@ const productoInclude = {
       },
     },
   },
+  tiendas: {
+    select: {
+      nombre: true,
+    },
+  },
 } satisfies Prisma.productosInclude;
 
 type ProductoWithRelations = {
   imagen_principal_url?: string | null;
   inventario?: Array<{ stock?: number | null }>;
-  tiendas?: {
-    nombre?: string | null;
+  categorias_productos?: Array<{ categorias?: { nombre?: string | null } }>;
+  lotes?: {
     productores?: {
       usuarios?: {
         nombre?: string | null;
       } | null;
     } | null;
   } | null;
+  tiendas?: {
+    nombre?: string | null;
+  } | null;
 };
 
 function mapProductoResponse<T extends ProductoWithRelations | Array<ProductoWithRelations>>(data: T): T {
+  const getCategoria = (item: ProductoWithRelations) => {
+    const cats = item.categorias_productos;
+    if (!cats || cats.length === 0) return null;
+    return cats[0]?.categorias?.nombre ?? null;
+  };
+
   if (Array.isArray(data)) {
     return data.map((item) => ({
       ...item,
       imagen_url: item.imagen_principal_url ?? null,
       stock: getProductoStock(item.inventario),
-      nombre_productor: item.tiendas?.productores?.usuarios?.nombre ?? null,
+      nombre_productor: item.lotes?.productores?.usuarios?.nombre ?? null,
       nombre_tienda: item.tiendas?.nombre ?? null,
+      categoria: getCategoria(item),
     })) as unknown as T;
   }
 
@@ -240,8 +264,9 @@ function mapProductoResponse<T extends ProductoWithRelations | Array<ProductoWit
     ...data,
     imagen_url: data.imagen_principal_url ?? null,
     stock: getProductoStock(data.inventario),
-    nombre_productor: data.tiendas?.productores?.usuarios?.nombre ?? null,
+    nombre_productor: data.lotes?.productores?.usuarios?.nombre ?? null,
     nombre_tienda: data.tiendas?.nombre ?? null,
+    categoria: getCategoria(data),
   } as T;
 }
 
