@@ -1,0 +1,343 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
+import {
+  type ImagenProductoState,
+  EMPTY_IMAGEN_PRODUCTO,
+  resetImagenProductoState,
+  appendImagenProducto,
+} from "@/components/Producer/Products/ImagenProducto";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type StoreItem = {
+  id_tienda: number;
+  id_productor: number;
+  nombre: string;
+  status?: string | null;
+};
+
+export type CategoriaItem = {
+  id_categoria: number;
+  nombre: string;
+};
+
+export type ProductItem = {
+  id_producto: number;
+  id_tienda: number;
+  nombre: string;
+  descripcion?: string | null;
+  imagen_url?: string | null;
+  imagen_principal_url?: string | null;
+  precio_base?: string | number | null;
+  moneda_base?: string | null;
+  stock: number;
+  status?: string | null;
+  peso_kg?: number | null;
+  alto_cm?: number | null;
+  ancho_cm?: number | null;
+  largo_cm?: number | null;
+  id_categoria?: number | null;
+};
+
+export type ProducerDetail = {
+  id_productor: number;
+  tiendas?: StoreItem[];
+};
+
+export type FormState = {
+  nombre: string;
+  descripcion: string;
+  id_tienda: string;
+  precio_base: string;
+  moneda_base: string;
+  status: string;
+  id_categoria: string;
+  peso_kg: string;
+  alto_cm: string;
+  ancho_cm: string;
+  largo_cm: string;
+};
+
+export type ModalMode = "create" | "edit" | "view";
+
+export const EMPTY_FORM: FormState = {
+  nombre: "",
+  descripcion: "",
+  id_tienda: "",
+  precio_base: "",
+  moneda_base: "MXN",
+  status: "activo",
+  id_categoria: "",
+  peso_kg: "",
+  alto_cm: "",
+  ancho_cm: "",
+  largo_cm: "",
+};
+
+// ─── Hook principal ───────────────────────────────────────────────────────────
+
+export function useProductos() {
+  const { user } = useAuth();
+  const token = getCookie("token") ?? "";
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [producer, setProducer] = useState<ProducerDetail | null>(null);
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [stores, setStores] = useState<StoreItem[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaItem[]>([]);
+
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [storeFilter, setStoreFilter] = useState("todos");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [mode, setMode] = useState<ModalMode>("create");
+  const [selected, setSelected] = useState<ProductItem | null>(null);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [imagen, setImagen] = useState<ImagenProductoState>(EMPTY_IMAGEN_PRODUCTO);
+
+  const [selectionEnabled, setSelectionEnabled] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  const loadData = async () => {
+    if (!user?.id_productor) {
+      setError("No se pudo identificar el productor autenticado.");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const [producerData, productsData, storesData, categoriasData] = await Promise.all([
+        api.productores.getOne(user.id_productor),
+        api.productos.getMine(token),
+        api.tiendas.getByProductor(user.id_productor),
+        api.categorias.getAll(),
+      ]);
+      setProducer(producerData as ProducerDetail);
+      setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);
+      setCategorias(Array.isArray(categoriasData) ? (categoriasData as CategoriaItem[]) : []);
+      setProducts(
+        (productsData as ProductItem[]).map((p) => ({
+          ...p,
+          imagen_url: p.imagen_url ?? p.imagen_principal_url ?? null,
+          stock: p.stock ?? 0,
+        })),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No fue posible cargar los productos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [user?.id_productor]);
+
+  const storeMap = useMemo(
+    () => new Map(stores.map((s) => [s.id_tienda, s.nombre])),
+    [stores],
+  );
+
+  const visibleProducts = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    const min = minPrice === "" ? null : Number(minPrice);
+    const max = maxPrice === "" ? null : Number(maxPrice);
+    return products.filter((p) => {
+      const name = p.nombre.toLowerCase();
+      const status = String(p.status || "activo").toLowerCase();
+      const store = String(storeMap.get(Number(p.id_tienda)) || "").toLowerCase();
+      const price = Number(p.precio_base || 0);
+      return (
+        (!q || name.includes(q) || status.includes(q) || store.includes(q)) &&
+        (statusFilter === "todos" || status === statusFilter) &&
+        (storeFilter === "todos" || String(p.id_tienda) === storeFilter) &&
+        (min === null || Number.isNaN(min) || price >= min) &&
+        (max === null || Number.isNaN(max) || price <= max)
+      );
+    });
+  }, [products, query, storeMap, statusFilter, storeFilter, minPrice, maxPrice]);
+
+  const activeProductsCount = useMemo(
+    () => products.filter((p) => String(p.status ?? "activo").toLowerCase() === "activo").length,
+    [products],
+  );
+
+  const inactiveProductsCount = useMemo(
+    () => products.filter((p) => String(p.status ?? "activo").toLowerCase() !== "activo").length,
+    [products],
+  );
+
+  const visibleProductIds = useMemo(
+    () => visibleProducts.map((p) => p.id_producto),
+    [visibleProducts],
+  );
+
+  const allVisibleSelected =
+    visibleProductIds.length > 0 && visibleProductIds.every((id) => selectedIds.includes(id));
+
+  const clearFilters = () => {
+    setQuery("");
+    setStatusFilter("todos");
+    setStoreFilter("todos");
+    setMinPrice("");
+    setMaxPrice("");
+  };
+
+  const toggleSelectionMode = (enabled: boolean) => {
+    setSelectionEnabled(enabled);
+    if (!enabled) setSelectedIds([]);
+  };
+
+  const toggleProductSelection = (id: number, checked: boolean) => {
+    setSelectedIds((cur) =>
+      checked ? Array.from(new Set([...cur, id])) : cur.filter((x) => x !== id),
+    );
+  };
+
+  const toggleSelectAllVisible = (checked: boolean) => {
+    setSelectedIds((cur) =>
+      checked
+        ? Array.from(new Set([...cur, ...visibleProductIds]))
+        : cur.filter((id) => !visibleProductIds.includes(id)),
+    );
+  };
+
+  const openCreate = () => {
+    setSelected(null);
+    setImagen(resetImagenProductoState(imagen));
+    setForm({ ...EMPTY_FORM, id_tienda: String(stores[0]?.id_tienda ?? "") });
+    setMode("create");
+    setModalOpen(true);
+  };
+
+  const openEdit = (product: ProductItem) => {
+    setSelected(product);
+    setImagen(resetImagenProductoState(imagen, product.imagen_url ?? product.imagen_principal_url ?? null));
+    setForm({
+      nombre: product.nombre,
+      descripcion: product.descripcion ?? "",
+      id_tienda: String(product.id_tienda),
+      precio_base: String(product.precio_base ?? ""),
+      moneda_base: product.moneda_base ?? "MXN",
+      status: product.status ?? "activo",
+      id_categoria: String(product.id_categoria ?? ""),
+      peso_kg: String(product.peso_kg ?? ""),
+      alto_cm: String(product.alto_cm ?? ""),
+      ancho_cm: String(product.ancho_cm ?? ""),
+      largo_cm: String(product.largo_cm ?? ""),
+    });
+    setMode("edit");
+    setModalOpen(true);
+  };
+
+  const openView = (product: ProductItem) => {
+    setSelected(product);
+    setImagen(resetImagenProductoState(imagen, product.imagen_url ?? product.imagen_principal_url ?? null));
+    setForm({
+      nombre: product.nombre,
+      descripcion: product.descripcion ?? "",
+      id_tienda: String(product.id_tienda),
+      precio_base: String(product.precio_base ?? ""),
+      moneda_base: product.moneda_base ?? "MXN",
+      status: product.status ?? "activo",
+      id_categoria: String(product.id_categoria ?? ""),
+      peso_kg: String(product.peso_kg ?? ""),
+      alto_cm: String(product.alto_cm ?? ""),
+      ancho_cm: String(product.ancho_cm ?? ""),
+      largo_cm: String(product.largo_cm ?? ""),
+    });
+    setMode("view");
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setImagen(resetImagenProductoState(imagen));
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!user?.id_usuario) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = new FormData();
+      payload.append("id_tienda", String(Number(form.id_tienda)));
+      payload.append("nombre", form.nombre);
+      payload.append("descripcion", form.descripcion);
+      payload.append("precio_base", form.precio_base);
+      payload.append("moneda_base", form.moneda_base);
+      payload.append("status", form.status);
+      payload.append("creado_por", user.id_usuario);
+      payload.append("actualizado_por", user.id_usuario);
+      if (form.id_categoria) payload.append("id_categoria", form.id_categoria);
+      if (form.peso_kg) payload.append("peso_kg", form.peso_kg);
+      if (form.alto_cm) payload.append("alto_cm", form.alto_cm);
+      if (form.ancho_cm) payload.append("ancho_cm", form.ancho_cm);
+      if (form.largo_cm) payload.append("largo_cm", form.largo_cm);
+      appendImagenProducto(payload, imagen);
+
+      if (mode === "edit" && selected) {
+        await api.productos.update(token, String(selected.id_producto), payload);
+      } else {
+        await api.productos.create(token, payload);
+      }
+      closeModal();
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No fue posible guardar el producto");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (product: ProductItem) => {
+    if (!confirm(`¿Eliminar ${product.nombre}?`)) return;
+    try {
+      await api.productos.delete(token, String(product.id_producto));
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No fue posible eliminar el producto");
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`¿Eliminar ${selectedIds.length} producto(s) seleccionados?`)) return;
+    try {
+      await Promise.all(selectedIds.map((id) => api.productos.delete(token, String(id))));
+      setSelectedIds([]);
+      setSelectionEnabled(false);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No fue posible eliminar los productos seleccionados");
+    }
+  };
+
+  return {
+    loading, saving, error, producer, products, stores, categorias,
+    query, setQuery,
+    statusFilter, setStatusFilter,
+    storeFilter, setStoreFilter,
+    minPrice, setMinPrice,
+    maxPrice, setMaxPrice,
+    clearFilters,
+    visibleProducts, activeProductsCount, inactiveProductsCount,
+    storeMap, visibleProductIds, allVisibleSelected,
+    selectionEnabled, selectedIds,
+    toggleSelectionMode, toggleProductSelection, toggleSelectAllVisible,
+    modalOpen, mode, selected, form, setForm, imagen, setImagen,
+    openCreate, openEdit, openView, closeModal,
+    handleSubmit, handleDelete, handleDeleteSelected,
+  };
+}

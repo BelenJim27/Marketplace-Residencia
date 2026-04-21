@@ -9,13 +9,13 @@ const headers = (token?: string, isFormData = false) => ({
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
-  
+
   // Si es 401 (Unauthorized), intentar refrescar el token
   if (response.status === 401) {
     console.log(" 401 recibido, intentando refresh...");
     const refreshToken = getCookie("refresh_token");
     console.log(" Refresh token existe:", !!refreshToken);
-    
+
     if (refreshToken) {
       try {
         console.log(" Token expirado, intentando refrescar...");
@@ -31,13 +31,13 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
           const refreshData = await refreshResponse.json();
           console.log(" Refresh data:", refreshData);
           const newAccessToken = refreshData.tokens.access_token;
-          
+
           // Guardar el nuevo token
           setCookie("token", newAccessToken, 7);
           if (refreshData.tokens.refresh_token) {
             setCookie("refresh_token", refreshData.tokens.refresh_token, 30);
           }
-          
+
           console.log(" Token refrescado exitosamente");
 
           // Reintentar la petición original con el nuevo token
@@ -59,7 +59,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
         console.error(" Error refrescando token:", error);
       }
     }
-    
+
     // Si no se pudo refresh, limpiar y redirigir
     const cookies = document.cookie.split(";");
     cookies.forEach((cookie) => {
@@ -328,6 +328,8 @@ export const api = {
       fetchJson(endpoint(`/lotes/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
     delete: (token: string, id: number) =>
       fetchJson(endpoint(`/lotes/${id}`), { method: "DELETE", headers: headers(token) }),
+    sincronizar: (token: string, data: { uuid_externo: string; id_productor: number; id_region?: number }) =>
+      fetchJson(endpoint("/lotes/sincronizar"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
   },
 
   imagenes: {
@@ -479,11 +481,11 @@ export const api = {
   },
 
   admin: {
-  getStats: (token?: string) =>
-    fetchJson(endpoint("/admin/stats"), { headers: headers(token) }),
-  getRecentOrders: (token?: string) =>
-    fetchJson(endpoint("/admin/pedidos/recientes"), { headers: headers(token) }),
-  getTopProductores: (token?: string) =>
-    fetchJson(endpoint("/admin/productores/top"), { headers: headers(token) }),
-},
+    getStats: (token?: string) =>
+      fetchJson(endpoint("/admin/stats"), { headers: headers(token) }),
+    getRecentOrders: (token?: string) =>
+      fetchJson(endpoint("/admin/pedidos/recientes"), { headers: headers(token) }),
+    getTopProductores: (token?: string) =>
+      fetchJson(endpoint("/admin/productores/top"), { headers: headers(token) }),
+  },
 };

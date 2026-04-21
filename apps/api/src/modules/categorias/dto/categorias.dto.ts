@@ -8,7 +8,6 @@ export class CreateCategoriaDto {
   @IsString() @MaxLength(150) slug!: string;
   @IsOptional() @IsString() descripcion?: string;
   @IsOptional() @IsString() @MaxLength(50) tipo?: string;
-  @IsOptional() @IsInt() @Type(() => Number) orden?: number;
   @IsOptional() @IsString() @MaxLength(500) imagen_url?: string;
   @IsOptional() @IsBoolean() activo?: boolean;
 }

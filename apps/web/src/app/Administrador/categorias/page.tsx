@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, Edit2, Trash2, X, Check } from "lucide-react";
+import { Search, Edit2, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type Categoria = {
@@ -10,7 +10,6 @@ type Categoria = {
   slug: string;
   descripcion: string | null;
   tipo: string;
-  orden: number;
   imagen_url: string | null;
   activo: boolean;
   categorias?: Categoria[];
@@ -35,7 +34,6 @@ export default function CategoriasAdminPage() {
     slug: "",
     descripcion: "",
     tipo: "general",
-    orden: 0,
     activo: true,
     id_padre: "",
   });
@@ -78,7 +76,6 @@ export default function CategoriasAdminPage() {
       slug: "",
       descripcion: "",
       tipo: "general",
-      orden: 0,
       activo: true,
       id_padre: parentId ? String(parentId) : "",
     });
@@ -92,7 +89,6 @@ export default function CategoriasAdminPage() {
       slug: c.slug,
       descripcion: c.descripcion || "",
       tipo: c.tipo,
-      orden: c.orden,
       activo: c.activo,
       id_padre: c.id_padre ? String(c.id_padre) : "",
     });
@@ -104,7 +100,7 @@ export default function CategoriasAdminPage() {
     setNotice(null);
 
     const method = editingCategoria ? "PATCH" : "POST";
-const url = editingCategoria
+    const url = editingCategoria
       ? `${API_URL}/categorias/${editingCategoria.id_categoria}`
       : `${API_URL}/categorias`;
 
@@ -113,7 +109,6 @@ const url = editingCategoria
       slug: formData.slug,
       descripcion: formData.descripcion || null,
       tipo: formData.tipo,
-      orden: Number(formData.orden) || 0,
       activo: formData.activo,
       id_padre: formData.id_padre ? parseInt(formData.id_padre) : null,
     };
@@ -204,7 +199,6 @@ const url = editingCategoria
                 <th className="p-4">Nombre</th>
                 <th className="p-4">Slug</th>
                 <th className="p-4">Tipo</th>
-                <th className="p-4 text-center">Orden</th>
                 <th className="p-4 text-center">Estado</th>
                 <th className="p-4 text-right">Acciones</th>
               </tr>
@@ -212,22 +206,19 @@ const url = editingCategoria
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="p-10 text-center text-gray-500">
+                  <td colSpan={5} className="p-10 text-center text-gray-500">
                     Cargando...
                   </td>
                 </tr>
               ) : filteredCategorias.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-10 text-center text-gray-500">
+                  <td colSpan={5} className="p-10 text-center text-gray-500">
                     No hay categorías.
                   </td>
                 </tr>
               ) : (
                 filteredCategorias.map((cat) => (
-                  <tr
-                    key={cat.id_categoria}
-                    className="group hover:bg-gray-50/60"
-                  >
+                  <tr key={cat.id_categoria} className="group hover:bg-gray-50/60">
                     <td className="p-4 font-semibold text-slate-800">
                       {cat.nombre}
                       {cat.categorias && cat.categorias.length > 0 && (
@@ -238,7 +229,6 @@ const url = editingCategoria
                     </td>
                     <td className="p-4 text-sm text-gray-500">{cat.slug}</td>
                     <td className="p-4 text-sm text-gray-500">{cat.tipo}</td>
-                    <td className="p-4 text-center text-sm">{cat.orden}</td>
                     <td className="p-4 text-center">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cat.activo ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"}`}
@@ -290,15 +280,11 @@ const url = editingCategoria
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Nombre
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Nombre</label>
                 <input
                   type="text"
                   value={formData.nombre}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nombre: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   required
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500"
                 />
@@ -309,69 +295,40 @@ const url = editingCategoria
                 <input
                   type="text"
                   value={formData.slug}
-                  onChange={(e) =>
-                    setFormData({ ...formData, slug: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                   required
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Descripción
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Descripción</label>
                 <textarea
                   value={formData.descripcion}
-                  onChange={(e) =>
-                    setFormData({ ...formData, descripcion: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                   rows={2}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Tipo
-                  </label>
-                  <select
-                    value={formData.tipo}
-                    onChange={(e) =>
-                      setFormData({ ...formData, tipo: e.target.value })
-                    }
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500"
-                  >
-                    <option value="general">General</option>
-                    <option value="maguey">Maguey</option>
-                    <option value="tipo_mezcal">Tipo Mezcal</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Orden</label>
-                  <input
-                    type="number"
-                    value={formData.orden}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        orden: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Tipo</label>
+                <select
+                  value={formData.tipo}
+                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                >
+                  <option value="general">General</option>
+                  <option value="maguey">Maguey</option>
+                  <option value="tipo_mezcal">Tipo Mezcal</option>
+                </select>
               </div>
 
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={formData.activo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, activo: e.target.checked })
-                  }
+                  onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
                   className="h-4 w-4 rounded border-gray-300 text-green-600"
                 />
                 <label className="text-sm text-gray-700">Activo</label>

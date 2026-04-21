@@ -60,7 +60,6 @@ model categorias {
   slug                 String                 @unique @db.VarChar(150)
   descripcion          String?
   tipo                 String                 @default("general") @db.VarChar(50)
-  orden                Int                    @default(0)
   imagen_url           String?                @db.VarChar(500)
   activo               Boolean                @default(true)
   creado_en            DateTime               @default(now()) @db.Timestamptz(6)
@@ -447,18 +446,24 @@ model producto_imagenes {
 }
 
 model productores {
-  id_productor          Int       @id @default(autoincrement())
-  id_usuario            String    @unique @db.Uuid
-  id_region             Int?
-  biografia             String?
-  otras_caracteristicas String?   @db.VarChar(255)
-  creado_en             DateTime  @default(now()) @db.Timestamptz(6)
-  actualizado_en        DateTime  @default(now()) @db.Timestamptz(6)
-  eliminado_en          DateTime? @db.Timestamptz(6)
-  lotes                 lotes[]
-  regiones              regiones? @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
-  usuarios              usuarios  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
-  tiendas               tiendas[]
+  id_productor                                Int       @id @default(autoincrement())
+  id_usuario                                  String    @unique @db.Uuid
+  id_region                                   Int?
+  biografia                                   String?
+  creado_en                                   DateTime  @default(now()) @db.Timestamptz(6)
+  actualizado_en                              DateTime  @default(now()) @db.Timestamptz(6)
+  eliminado_en                                DateTime? @db.Timestamptz(6)
+  otras_caracteristicas                       String?   @db.VarChar(255)
+  estado                                      String    @default("pendiente") @db.VarChar(20)
+  motivo_rechazo                              String?
+  revisado_en                                 DateTime? @db.Timestamptz(6)
+  revisado_por                                String?   @db.Uuid
+  solicitado_en                               DateTime  @default(now()) @db.Timestamptz(6)
+  lotes                                       lotes[]
+  regiones                                    regiones? @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
+  usuarios                                    usuarios  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
+  usuarios_productores_revisado_porTousuarios usuarios? @relation("productores_revisado_porTousuarios", fields: [revisado_por], references: [id_usuario], onUpdate: NoAction)
+  tiendas                                     tiendas[]
 }
 
 model productos {
@@ -643,37 +648,38 @@ model usuario_rol {
 }
 
 model usuarios {
-  id_usuario                                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre                                        String                   @db.VarChar(100)
-  nombre_usuario                                String?                  @unique @db.VarChar(50)
-  foto_url                                      String?                  @db.VarChar(500)
-  apellido_paterno                              String?                  @db.VarChar(100)
-  apellido_materno                              String?                  @db.VarChar(100)
-  email                                         String                   @unique @db.VarChar(255)
-  telefono                                      String?                  @db.VarChar(30)
-  password_hash                                 String?                  @db.VarChar(255)
-  idioma_preferido                              String                   @default("es") @db.VarChar(10)
-  moneda_preferida                              String                   @default("MXN") @db.Char(3)
-  version_token                                 Int                      @default(1)
-  fecha_registro                                DateTime                 @default(now()) @db.Timestamptz(6)
-  eliminado_en                                  DateTime?                @db.Timestamptz(6)
-  archivos                                      archivos[]
-  auditoria                                     auditoria[]
-  carrito_item                                  carrito_item[]
-  direcciones                                   direcciones[]
-  envio_cotizaciones                            envio_cotizaciones[]
-  lista_deseos                                  ListaDeseosItem[]
-  movimientos_inventario                        movimientos_inventario[]
-  notificaciones                                notificaciones[]
-  oauth_cuentas                                 oauth_cuentas[]
-  password_reset_tokens                         password_reset_tokens[]
-  pedidos                                       pedidos[]
-  productores                                   productores?
-  productos_productos_actualizado_porTousuarios productos[]              @relation("productos_actualizado_porTousuarios")
-  productos_productos_creado_porTousuarios      productos[]              @relation("productos_creado_porTousuarios")
-  refresh_tokens                                refresh_tokens[]
-  resenas                                       resenas[]
-  usuario_rol                                   usuario_rol[]
+  id_usuario                                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre                                         String                   @db.VarChar(100)
+  foto_url                                       String?                  @db.VarChar(500)
+  apellido_paterno                               String?                  @db.VarChar(100)
+  apellido_materno                               String?                  @db.VarChar(100)
+  email                                          String                   @unique @db.VarChar(255)
+  telefono                                       String?                  @db.VarChar(30)
+  password_hash                                  String?                  @db.VarChar(255)
+  idioma_preferido                               String                   @default("es") @db.VarChar(10)
+  moneda_preferida                               String                   @default("MXN") @db.Char(3)
+  version_token                                  Int                      @default(1)
+  fecha_registro                                 DateTime                 @default(now()) @db.Timestamptz(6)
+  eliminado_en                                   DateTime?                @db.Timestamptz(6)
+  nombre_usuario                                 String?                  @unique @db.VarChar(50)
+  archivos                                       archivos[]
+  auditoria                                      auditoria[]
+  carrito_item                                   carrito_item[]
+  direcciones                                    direcciones[]
+  envio_cotizaciones                             envio_cotizaciones[]
+  lista_deseos                                   ListaDeseosItem[]
+  movimientos_inventario                         movimientos_inventario[]
+  notificaciones                                 notificaciones[]
+  oauth_cuentas                                  oauth_cuentas[]
+  password_reset_tokens                          password_reset_tokens[]
+  pedidos                                        pedidos[]
+  productores                                    productores?
+  productores_productores_revisado_porTousuarios productores[]            @relation("productores_revisado_porTousuarios")
+  productos_productos_actualizado_porTousuarios  productos[]              @relation("productos_actualizado_porTousuarios")
+  productos_productos_creado_porTousuarios       productos[]              @relation("productos_creado_porTousuarios")
+  refresh_tokens                                 refresh_tokens[]
+  resenas                                        resenas[]
+  usuario_rol                                    usuario_rol[]
 }
 
 model categorias_productos {
