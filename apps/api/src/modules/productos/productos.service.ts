@@ -66,23 +66,19 @@ export class ProductosService {
       const id_usuario = getUserIdFromAccessToken(accessToken);
       const productor = await this.prisma.productores.findFirst({
         where: { id_usuario, eliminado_en: null },
-        include: {
-          lotes: {
-            where: { eliminado_en: null },
-            include: {
-              productos: {
-                where: { eliminado_en: null },
-                include: productoInclude,
-              },
-            },
-          },
-        },
+        include: { tiendas: { where: { eliminado_en: null }, select: { id_tienda: true } } },
       });
 
-      const productos = applyFiltersToProductos(productor?.lotes.flatMap((lote) => lote.productos) ?? []);
+      if (!productor) return serializeBigInts([]);
+
+      const tiendaIds = productor.tiendas.map((t) => t.id_tienda);
+      const productosRaw = await this.prisma.productos.findMany({
+        where: { ...where, id_tienda: { in: tiendaIds } },
+        include: productoInclude,
+      });
 
       return serializeBigInts(
-        await mapProductoResponse(productos),
+        await mapProductoResponse(applyFiltersToProductos(productosRaw)),
       );
     }
 
