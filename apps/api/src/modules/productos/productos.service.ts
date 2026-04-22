@@ -83,6 +83,7 @@ export class ProductosService {
       const id_usuario = getUserIdFromAccessToken(accessToken);
       const productor = await this.prisma.productores.findFirst({
         where: { id_usuario, eliminado_en: null },
+
         select: { id_productor: true },
       });
 

@@ -7,11 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
+    
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
     "@auth/prisma-adapter": "^2.11.1",
     "apexcharts": "^4.5.0",
+    "autoprefixer": "^10.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
@@ -28,6 +30,7 @@
     "nextjs-toploader": "^3.7.15",
     "object-hash": "^3.0.0",
     "postcss-selector-parser": "^6.1.2",
+    "postcss": "^8.5.10",
     "react": "^19.2.0",
     "react-apexcharts": "^1.7.0",
     "react-dom": "^19.2.0",
@@ -39,10 +42,8 @@
     "@types/node": "^22",
     "@types/react": "19.0.8",
     "@types/react-dom": "19.0.3",
-    "autoprefixer": "^10.4.20",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
-    "postcss": "^8",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "typescript": "^5"

@@ -5,8 +5,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { CheckCircle2, FileText, CreditCard, Building2, User, ArrowRight } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+import { Suspense } from "react";
 
-export default function ProductorLandingPage() {
+function ProductorLandingContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -226,5 +227,13 @@ export default function ProductorLandingPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function ProductorLandingPage() {
+  return (
+    <Suspense>
+      <ProductorLandingContent />
+    </Suspense>
   );
 }
