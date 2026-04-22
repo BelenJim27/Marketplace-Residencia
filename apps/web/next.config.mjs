@@ -9,9 +9,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  output: 'standalone',
   async rewrites() {
     return [
       { source: "/uploads/:path*", destination: `${API_URL}/uploads/:path*` },
