@@ -29,7 +29,8 @@
     "typescript": "^6.0.2"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0"
+    "@prisma/client": "^5.22.0",
+    "jsvectormap": "^1.7.0"
   },
   "overrides": {
     "rxjs": "^7.8.1"

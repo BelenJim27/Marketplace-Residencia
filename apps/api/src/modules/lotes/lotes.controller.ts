@@ -13,7 +13,7 @@ export class LotesController {
       : this.service.findAll();
   }
 
-  // ⚠️ Este endpoint debe ir ANTES de :id para que no haya conflicto
+  //  Estos endpoints deben ir ANTES de :id
   @Post('sincronizar')
   sincronizar(
     @Body() body: { uuid_externo: string; id_productor: number; id_region?: number },
@@ -23,6 +23,11 @@ export class LotesController {
       body.id_productor,
       body.id_region,
     );
+  }
+
+  @Post('sincronizar-todos')
+  sincronizarTodos() {
+    return this.service.sincronizarTodos();
   }
 
   @Get(':id')

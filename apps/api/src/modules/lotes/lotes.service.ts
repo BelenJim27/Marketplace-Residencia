@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
@@ -8,6 +9,8 @@ const API_TRAZABILIDAD = 'https://geoportal-trazabilidad-1.onrender.com/lotes/pu
 
 @Injectable()
 export class LotesService {
+  private readonly logger = new Logger(LotesService.name);
+
   constructor(private readonly prisma: PrismaService) { }
 
   async findAll() {
@@ -91,12 +94,7 @@ export class LotesService {
 
   // ─── INTEGRACIÓN CON API EXTERNA ─────────────────────────────────────────
 
-  /**
-   * Consulta la API de trazabilidad con el UUID del lote externo,
-   * y guarda/actualiza los datos en la tabla lotes de nuestra BD.
-   */
   async sincronizarDesdeApi(uuid_externo: string, id_productor: number, id_region?: number) {
-    // 1. Consultar la API externa
     let apiData: any;
     try {
       const res = await fetch(`${API_TRAZABILIDAD}/${uuid_externo}`);
@@ -107,21 +105,37 @@ export class LotesService {
         `No se pudo obtener el lote de la API externa: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-    // 2. Mapear los datos de la API a nuestra estructura
+
+    const marcaApi = apiData.marca?.trim() ?? null;
+    let productorIdFinal = id_productor;
+
+    if (marcaApi) {
+      const tiendaCoincide = await this.prisma.tiendas.findFirst({
+        where: {
+          nombre: { equals: marcaApi, mode: 'insensitive' },
+          eliminado_en: null,
+          status: 'activa',
+        },
+        select: { id_productor: true },
+      });
+
+      if (!tiendaCoincide) return null;
+      productorIdFinal = tiendaCoincide.id_productor;
+    }
+
     const especie = apiData.especies?.[0];
     const codigo_lote = apiData.folio ?? uuid_externo;
 
-    // 3. Verificar si ya existe ese lote (por codigo_lote)
     const existente = await this.prisma.lotes.findFirst({
       where: { codigo_lote, eliminado_en: null },
     });
 
     if (existente) {
-      // Actualizar si ya existe
       return serializeBigInts(
         await this.prisma.lotes.update({
           where: { id_lote: existente.id_lote },
           data: {
+            id_productor: productorIdFinal,
             marca: apiData.marca ?? null,
             grado_alcohol: apiData.grado_alcohol ?? null,
             unidades: apiData.unidades ?? null,
@@ -137,11 +151,10 @@ export class LotesService {
       );
     }
 
-    // 4. Crear nuevo lote con los datos de la API
     return serializeBigInts(
       await this.prisma.lotes.create({
         data: {
-          id_productor,
+          id_productor: productorIdFinal,
           id_region: id_region ?? null,
           codigo_lote,
           marca: apiData.marca ?? null,
@@ -156,6 +169,86 @@ export class LotesService {
         },
       }),
     );
+  }
+
+  // ─── SINCRONIZAR TODOS (botón + cron cada hora) ───────────────────────────
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async sincronizarTodos() {
+    this.logger.log('Sincronizando lotes desde API externa...');
+
+    let lotesApi: any[];
+    try {
+      const res = await fetch(API_TRAZABILIDAD);
+      if (!res.ok) throw new Error(`API respondió con status ${res.status}`);
+      lotesApi = await res.json();
+    } catch (error) {
+      this.logger.error(`Error conectando a API externa: ${error}`);
+      throw new BadRequestException(`No se pudo conectar a la API externa: ${error}`);
+    }
+
+    const resultados = { creados: 0, actualizados: 0, ignorados: 0 };
+
+    for (const loteApi of lotesApi) {
+      const marcaApi = loteApi.marca?.trim() ?? null;
+      if (!marcaApi) { resultados.ignorados++; continue; }
+
+      const tienda = await this.prisma.tiendas.findFirst({
+        where: {
+          nombre: { equals: marcaApi, mode: 'insensitive' },
+          eliminado_en: null,
+          status: 'activa',
+        },
+        select: { id_productor: true },
+      });
+
+      if (!tienda) { resultados.ignorados++; continue; }
+
+      const especie = loteApi.especies?.[0];
+      const codigo_lote = loteApi.folio ?? loteApi.uuid;
+
+      const existente = await this.prisma.lotes.findFirst({
+        where: { codigo_lote, eliminado_en: null },
+      });
+
+      if (existente) {
+        await this.prisma.lotes.update({
+          where: { id_lote: existente.id_lote },
+          data: {
+            id_productor: tienda.id_productor,
+            marca: loteApi.marca ?? null,
+            grado_alcohol: loteApi.grado_alcohol ?? null,
+            unidades: loteApi.unidades ?? null,
+            nombre_comun: especie?.nombre_comun ?? null,
+            nombre_cientifico: especie?.nombre_cientifico ?? null,
+            estado_lote: loteApi.estado ?? 'disponible',
+            sitio: loteApi.sitio?.nombre ?? null,
+            datos_api: loteApi,
+            actualizado_en: new Date(),
+          },
+        });
+        resultados.actualizados++;
+      } else {
+        await this.prisma.lotes.create({
+          data: {
+            id_productor: tienda.id_productor,
+            codigo_lote,
+            marca: loteApi.marca ?? null,
+            grado_alcohol: loteApi.grado_alcohol ?? null,
+            unidades: loteApi.unidades ?? null,
+            nombre_comun: especie?.nombre_comun ?? null,
+            nombre_cientifico: especie?.nombre_cientifico ?? null,
+            estado_lote: loteApi.estado ?? 'disponible',
+            sitio: loteApi.sitio?.nombre ?? null,
+            datos_api: loteApi,
+          },
+        });
+        resultados.creados++;
+      }
+    }
+
+    this.logger.log(`Sincronización completa: ${JSON.stringify(resultados)}`);
+    return resultados;
   }
 
   // ─── ATRIBUTOS ────────────────────────────────────────────────────────────

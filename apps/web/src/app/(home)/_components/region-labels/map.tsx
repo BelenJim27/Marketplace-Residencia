@@ -3,7 +3,7 @@
 import jsVectorMap from "jsvectormap";
 import { useEffect } from "react";
 
-import "@/js/us-aea-en";
+import "jsvectormap/dist/maps/world.js";
 
 export default function Map() {
   useEffect(() => {

@@ -76,7 +76,7 @@ export const ADMIN_NAV_DATA: NavSection[] = [
             icon: Layers,
           },
           {
-            title: "Productores",
+            title: "Productos",
             url: "/Administrador/productos",
             icon: Users,
           },

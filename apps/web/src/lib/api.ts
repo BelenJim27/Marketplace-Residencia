@@ -333,6 +333,11 @@ export const api = {
       fetchJson(endpoint(`/lotes/${id}`), { method: "DELETE", headers: headers(token) }),
     sincronizar: (token: string, data: { uuid_externo: string; id_productor: number; id_region?: number }) =>
       fetchJson(endpoint("/lotes/sincronizar"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+    sincronizarTodos: (token: string) =>
+    fetchJson(endpoint("/lotes/sincronizar-todos"), {
+      method: "POST",
+      headers: headers(token),
+    }),
   },
 
   imagenes: {

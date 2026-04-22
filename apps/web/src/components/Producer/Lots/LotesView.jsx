@@ -25,6 +25,7 @@ export default function LotesView() {
   const [loteSeleccionado, setLoteSeleccionado] = useState(null);
   const [lotes, setLotes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sincronizando, setSincronizando] = useState(false);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("Todos");
   const [year, setYear] = useState("Todos");
@@ -46,19 +47,16 @@ export default function LotesView() {
         .map((l) => ({
           id_lote: l.id_lote,
           lote: l.codigo_lote,
-          // Producto: usa nombre_comun, si no marca, si no datos_api
           producto: l.nombre_comun || l.marca || l.datos_api?.variedad || "Mezcal",
           marca: l.marca || "-",
           grado_alcohol: l.grado_alcohol ? `${l.grado_alcohol}°` : "-",
           especie_cientifica: l.nombre_cientifico || "-",
           sitio: l.sitio || "-",
-          // Cantidad: usa unidades si existe, si no volumen_total
           cantidad: l.unidades
             ? `${l.unidades} uds`
             : l.volumen_total
               ? `${l.volumen_total} L`
               : "-",
-          // Fecha: usa fecha_produccion si existe, si no creado_en
           fecha: l.fecha_produccion
             ? l.fecha_produccion.split("T")[0]
             : l.creado_en
@@ -170,6 +168,21 @@ export default function LotesView() {
     }
   }
 
+  async function sincronizarLotes() {
+    const token = getCookie("token");
+    try {
+      setSincronizando(true);
+      await api.lotes.sincronizarTodos(token);
+      await fetchLotes();
+      alert("Lotes sincronizados correctamente");
+    } catch (error) {
+      console.error("Error sincronizando:", error);
+      alert("Error al sincronizar lotes");
+    } finally {
+      setSincronizando(false);
+    }
+  }
+
   if (loading && lotes.length === 0) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -181,6 +194,7 @@ export default function LotesView() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100">
       <div className="mx-auto max-w-7xl p-6">
+
         {/* Header */}
         <div className="mb-6 flex flex-col gap-4 rounded-xl bg-white dark:bg-gray-800 p-6 shadow-sm md:flex-row md:items-center md:justify-between">
           <div>
@@ -189,17 +203,32 @@ export default function LotesView() {
               Gestiona los lotes de producción registrados
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setForm({ lote: "", tipoProducto: "Mezcal Espadín", cantidad: "", fechaProduccion: "", descripcion: "" });
-              setModalEditar(false);
-              setIsModalOpen(true);
-            }}
-            className="rounded-lg bg-green-500 px-4 py-2 text-white hover:bg-green-600"
-          >
-            + Nuevo Lote
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={sincronizarLotes}
+              disabled={sincronizando}
+              className="flex items-center gap-2 rounded-lg border border-green-500 px-4 py-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50"
+            >
+              {sincronizando ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <span></span>
+              )}
+              Sincronizar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setForm({ lote: "", tipoProducto: "Mezcal Espadín", cantidad: "", fechaProduccion: "", descripcion: "" });
+                setModalEditar(false);
+                setIsModalOpen(true);
+              }}
+              className="rounded-lg bg-green-500 px-4 py-2 text-white hover:bg-green-600"
+            >
+              + Nuevo Lote
+            </button>
+          </div>
         </div>
 
         {/* Filtros */}
