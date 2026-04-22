@@ -1,15 +1,19 @@
+import * as dotenv from 'dotenv';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { static as expressStatic } from 'express';
-import { AppModule } from './app.module';
-import 'dotenv/config';
+
+dotenv.config({ path: resolve(process.cwd(), 'apps/api/.env'), override: true });
+dotenv.config({ path: resolve(__dirname, '../.env'), override: false });
+dotenv.config({ path: resolve(process.cwd(), '.env'), override: false });
 
 (BigInt.prototype as any).toJSON = function () {
   return Number(this);
 };
 
 async function bootstrap() {
+  const { AppModule } = await import('./app.module');
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
