@@ -187,9 +187,19 @@ export const api = {
       const query = params.toString();
       return fetchJson(endpoint("/productos" + (query ? `?${query}` : "")));
     },
-    getByProductor: (id_productor: number) => fetchJson(endpoint(`/productos?id_productor=${id_productor}`)),
-    getMine: (token: string) =>
-      fetchJson(endpoint("/productos"), { headers: headers(token) }),
+    getByProductor: (id_productor: number, token?: string) =>
+      fetchJson(endpoint(`/productos?id_productor=${id_productor}`), {
+        headers: headers(token),
+      }),
+    getMine: (token: string, id_productor?: number) =>
+      fetchJson(
+        endpoint(
+          `/productos${
+            id_productor ? `?${new URLSearchParams({ id_productor: String(id_productor) }).toString()}` : ""
+          }`,
+        ),
+        { headers: headers(token) },
+      ),
     getOne: (id: string) => fetchJson(endpoint(`/productos/${id}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/productos"), {
@@ -221,7 +231,10 @@ export const api = {
   tiendas: {
     getAll: () => fetchJson(endpoint("/tiendas")),
     getOne: (id: number) => fetchJson(endpoint(`/tiendas/${id}`)),
-    getByProductor: (id_productor: number) => fetchJson(endpoint(`/tiendas?id_productor=${id_productor}`)),
+    getByProductor: (id_productor: number, token?: string) =>
+      fetchJson(endpoint(`/tiendas?id_productor=${id_productor}`), {
+        headers: headers(token),
+      }),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/tiendas"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: number, data: any) =>
@@ -232,7 +245,7 @@ export const api = {
 
   productores: {
     getAll: () => fetchJson(endpoint("/productores")),
-    getOne: (id: number) => fetchJson(`/api/productores/${id}`),
+    getOne: (id: number) => fetchJson(endpoint(`/productores/${id}`)),
     getByUsuario: (id_usuario: string) => fetchJson(endpoint(`/productores/by-usuario/${id_usuario}`)),
     getByUbicacion: (ubicacion: string) => fetchJson(endpoint(`/productores?ubicacion=${ubicacion}`)),
     create: (token: string, data: any) =>

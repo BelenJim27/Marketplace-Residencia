@@ -29,6 +29,8 @@ interface ModalProps {
     onRefresh: () => Promise<void>;
 }
 
+const noSpinClass = "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+
 export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefresh }: ModalProps) {
     const formRef = useRef<HTMLFormElement>(null);
     const esEdicion = modo === 'editar';
@@ -129,6 +131,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                 <form ref={formRef} onSubmit={handleSubmit}>
                     <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
 
+                        {/* Nombre */}
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-gray-500 uppercase">Nombre</label>
                             <input
@@ -141,6 +144,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                             />
                         </div>
 
+                        {/* Categorías */}
                         {esEdicion ? (
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-gray-500 uppercase">Categorías</label>
@@ -150,8 +154,8 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                                     ) : (
                                         categorias.map((cat) => (
                                             <label key={cat.id_categoria} className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                                <input 
-                                                    type="checkbox" 
+                                                <input
+                                                    type="checkbox"
                                                     checked={selectedCategorias.includes(cat.id_categoria)}
                                                     onChange={(e) => handleCategoriaChange(cat.id_categoria, e.target.checked)}
                                                     className="rounded text-green-600"
@@ -175,6 +179,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                             </div>
                         )}
 
+                        {/* Productor + Tienda */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-gray-500 uppercase">Productor</label>
@@ -198,6 +203,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                             </div>
                         </div>
 
+                        {/* Stock + Precio + Estado */}
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-gray-500 uppercase">Stock</label>
@@ -206,7 +212,8 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                                     type="number"
                                     defaultValue={producto.stock}
                                     disabled={!esEdicion}
-                                    className="w-full px-4 py-3 bg-gray-50 border rounded-xl disabled:opacity-60"
+                                    // FIX: removed spin buttons
+                                    className={`w-full px-4 py-3 bg-gray-50 border rounded-xl disabled:opacity-60 ${noSpinClass}`}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -217,7 +224,8 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                                     step="0.01"
                                     defaultValue={producto.precio}
                                     disabled={!esEdicion}
-                                    className="w-full px-4 py-3 bg-gray-50 border rounded-xl disabled:opacity-60"
+                                    // FIX: removed spin buttons
+                                    className={`w-full px-4 py-3 bg-gray-50 border rounded-xl disabled:opacity-60 ${noSpinClass}`}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -234,6 +242,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                             </div>
                         </div>
 
+                        {/* Botones */}
                         <div className="flex gap-3 pt-4 border-t">
                             <button type="button" onClick={onClose} className="flex-1 py-3 border rounded-xl font-semibold text-gray-600 hover:bg-gray-50">
                                 Cancelar

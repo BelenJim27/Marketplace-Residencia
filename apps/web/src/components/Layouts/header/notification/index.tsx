@@ -8,6 +8,7 @@ import {
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getCookie } from "@/lib/cookies";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -39,6 +40,7 @@ type StoreItem = {
 
 export function Notification() {
   const { user } = useAuth();
+  const token = getCookie("token") ?? "";
   const [isOpen, setIsOpen] = useState(false);
   const [alerts, setAlerts] = useState<StockAlert[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,8 +61,8 @@ export function Notification() {
         }
 
         const [productsRes, storesRes] = await Promise.all([
-          api.productos.getByProductor(user.id_productor),
-          api.tiendas.getByProductor(user.id_productor),
+          api.productos.getByProductor(user.id_productor, token),
+          api.tiendas.getByProductor(user.id_productor, token),
         ]);
 
         if (cancelled) return;
@@ -111,7 +113,7 @@ export function Notification() {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, user?.id_productor]);
+  }, [isOpen, user?.id_productor, token]);
 
   const alertCount = useMemo(() => alerts.length, [alerts]);
 

@@ -81,7 +81,7 @@ export const EMPTY_FORM: FormState = {
 // ─── Hook principal ───────────────────────────────────────────────────────────
 
 export function useProductos() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const token = getCookie("token") ?? "";
 
   const [loading, setLoading] = useState(true);
@@ -108,18 +108,20 @@ export function useProductos() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const loadData = async () => {
+    if (authLoading) return;
+
     if (!user?.id_productor) {
       setError("No se pudo identificar el productor autenticado.");
       setLoading(false);
       return;
     }
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+      setError(null);
     try {
       const [producerData, productsData, storesData, categoriasData] = await Promise.all([
         api.productores.getOne(user.id_productor),
-        api.productos.getMine(token),
-        api.tiendas.getByProductor(user.id_productor),
+        api.productos.getMine(token, user.id_productor),
+        api.tiendas.getByProductor(user.id_productor, token),
         api.categorias.getAll(),
       ]);
       setProducer(producerData as ProducerDetail);
@@ -141,7 +143,7 @@ export function useProductos() {
 
   useEffect(() => {
     loadData();
-  }, [user?.id_productor]);
+  }, [authLoading, user?.id_productor, token]);
 
   const storeMap = useMemo(
     () => new Map(stores.map((s) => [s.id_tienda, s.nombre])),

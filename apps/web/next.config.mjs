@@ -4,6 +4,11 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/routing.ts");
 
 /** @type {import("next").NextConfig} */
 const nextConfig = {
+  turbopack: {
+    resolveAlias: {
+      pako: "pako/dist/pako.js",
+    },
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

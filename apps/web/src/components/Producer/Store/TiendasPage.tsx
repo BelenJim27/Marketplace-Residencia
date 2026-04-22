@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
 import type { ReactNode } from "react";
 import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { ModalAgregar, ModalEditar, ModalEliminar, ModalVer } from "./acciones";
@@ -23,6 +24,7 @@ type Tienda = {
 
 export function TiendasPage() {
   const { user, loading: authLoading } = useAuth();
+  const token = getCookie("token") ?? "";
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export function TiendasPage() {
     setError(null);
 
     try {
-      const data = await api.tiendas.getByProductor(user.id_productor);
+      const data = await api.tiendas.getByProductor(user.id_productor, token);
       setStores(
         Array.isArray(data)
           ? data.map((store) => ({
@@ -62,7 +64,7 @@ export function TiendasPage() {
   useEffect(() => {
     if (authLoading) return;
     loadStores();
-  }, [authLoading, user?.id_productor]);
+  }, [authLoading, user?.id_productor, token]);
 
   const filteredStores = useMemo(() => {
     const normalized = query.trim().toLowerCase();

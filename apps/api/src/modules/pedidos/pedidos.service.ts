@@ -12,7 +12,7 @@ export class PedidosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
-  ) {}
+  ) { }
   async findAll() { return serializeBigInts(await this.prisma.pedidos.findMany({ include: { detalle_pedido: true, facturas: true, usuarios: true, monedas: true } })); }
   async findOne(id: string) { const item = await this.prisma.pedidos.findUnique({ where: { id_pedido: toBigIntId(id) }, include: { detalle_pedido: true, facturas: true, usuarios: true, monedas: true } }); if (!item || item.eliminado_en) throw new NotFoundException('Pedido no encontrado'); return serializeBigInts(item); }
 
@@ -155,12 +155,12 @@ export class PedidosService {
     start?: Date,
     direction: 'asc' | 'desc' = 'desc',
   ) {
-    const relationWhere = {
+    const relationWhere: Prisma.detalle_pedidoWhereInput = {
       productos: {
-        lotes: {
-          id_productor,
-          eliminado_en: null,
-        },
+        OR: [
+          { tiendas: { id_productor, eliminado_en: null } },
+          { lotes: { id_productor, eliminado_en: null } },
+        ],
       },
     };
 

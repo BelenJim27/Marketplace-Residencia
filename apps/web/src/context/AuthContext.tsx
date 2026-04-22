@@ -46,6 +46,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
+  // Track whether we already resolved id_productor to avoid infinite loops
+  const [productorResolved, setProductorResolved] = useState(false);
   const { data: session } = useSession();
 
   const refreshAuth = useCallback(() => {
@@ -67,7 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      setUser({
+      // FIX: Always carry id_productor forward from cookie so it's not lost on re-renders
+      const id_productor =
+        session.user.id_productor != null
+          ? Number(session.user.id_productor)
+          : storedUser.id_productor != null
+            ? Number(storedUser.id_productor)
+            : undefined;
+
+      const userFinal: Usuario = {
         ...storedUser,
         id_usuario: session.user.id_usuario || session.user.id || storedUser.id_usuario,
         sub: session.user.id || storedUser.sub || "",
@@ -82,13 +92,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         moneda_preferida: storedUser.moneda_preferida || session.user.moneda_preferida || "MXN",
         roles: session.user.roles || storedUser.roles || [(session.user as any)?.role || "user"],
         permisos: session.user.permisos || storedUser.permisos || [],
-        id_productor: session.user.id_productor ?? storedUser.id_productor ?? undefined,
-      });
+        id_productor,
+      };
+
+      // FIX: Persist back to cookie so future refreshAuth calls don't lose id_productor
+      setCookie("usuario", JSON.stringify(userFinal), 7);
+      setUser(userFinal);
       setLoading(false);
       return;
     }
 
-    // Si no, intentar leer de cookies
+    // Si no hay sesión NextAuth, leer de cookies
     const token = getCookie("token");
     const usuarioStr = getCookie("usuario");
 
@@ -99,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...usuario,
           roles: Array.isArray(usuario.roles) ? usuario.roles : [],
           permisos: Array.isArray(usuario.permisos) ? usuario.permisos : [],
-          id_productor: usuario.id_productor ?? undefined,
+          id_productor: usuario.id_productor != null ? Number(usuario.id_productor) : undefined,
           biografia: usuario.biografia ?? null,
         });
       } catch {
@@ -112,11 +126,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session]);
 
   useEffect(() => {
+    // FIX: Reset productorResolved when session changes so we re-resolve if needed
+    setProductorResolved(false);
+  }, [session]);
+
+  useEffect(() => {
     refreshAuth();
   }, [refreshAuth, session]);
 
   useEffect(() => {
-    if (!user?.id_usuario || (user.id_productor != null && user.id_productor !== 0)) return;
+    // FIX: Only run if:
+    // 1. We have a user with id_usuario
+    // 2. id_productor is still missing/zero
+    // 3. We haven't already resolved it in this session (prevents infinite loop)
+    if (!user?.id_usuario) return;
+    if (user.id_productor != null && user.id_productor !== 0) return;
+    if (productorResolved) return;
 
     let cancelled = false;
 
@@ -126,14 +151,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           `${process.env.NEXT_PUBLIC_API_URL}/productores/by-usuario/${user.id_usuario}`,
         );
         if (!response.ok) {
-          setLoading(false);
           return;
         }
         const text = await response.text();
-        if (!text || cancelled) {
-          setLoading(false);
-          return;
-        }
+        if (!text || cancelled) return;
+
         const prod = JSON.parse(text) as
           | { id_productor?: number; estado?: string }
           | Array<{ id_productor?: number; estado?: string }>;
@@ -146,10 +168,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (idProductor == null) return;
 
         // Si el productor fue aprobado pero el token aún no tiene el rol,
-        // usamos el refresh token para obtener un JWT actualizado con roles correctos.
+        // usar el refresh token para obtener un JWT actualizado con roles correctos.
         const rolesActualizados = user.roles?.some((r) =>
           ["PRODUCTOR", "productor"].includes(r),
         );
+
         if (estadoProductor === "aprobado" && !rolesActualizados) {
           const refreshToken = getCookie("refresh_token");
           if (refreshToken) {
@@ -176,20 +199,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   permisos: refreshData.user.permisos ?? user.permisos,
                 };
                 if (cancelled) return;
-                setUser(nextUser);
+                // FIX: Persist before setUser so refreshAuth won't lose id_productor
                 setCookie("usuario", JSON.stringify(nextUser), 7);
+                setUser(nextUser);
+                setProductorResolved(true); // FIX: Mark as resolved to break loop
                 return;
               }
             } catch {
-              // Si el refresh falla, actualizar solo el id_productor
+              // Si el refresh falla, continuar y actualizar solo el id_productor
             }
           }
         }
 
         if (cancelled) return;
+
         const nextUser = { ...user, id_productor: Number(idProductor) };
-        setUser(nextUser);
+        // FIX: Persist before setUser so refreshAuth won't lose id_productor
         setCookie("usuario", JSON.stringify(nextUser), 7);
+        setUser(nextUser);
+        setProductorResolved(true); // FIX: Mark as resolved to break loop
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -201,13 +229,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user?.id_usuario, user?.id_productor]);
+  }, [user?.id_usuario, user?.id_productor, productorResolved]);
 
   const login = useCallback((token: string, usuario: Usuario, refreshToken: string, rememberMe = false) => {
     setCookie("token", token, 7);
     setCookie("refresh_token", refreshToken, rememberMe ? 30 : 1);
-    setCookie("usuario", JSON.stringify(usuario), 7);
-    setUser(usuario);
+    // FIX: Normalize id_productor on login so it's always a number or undefined
+    const normalizedUser: Usuario = {
+      ...usuario,
+      id_productor: usuario.id_productor != null ? Number(usuario.id_productor) : undefined,
+    };
+    setCookie("usuario", JSON.stringify(normalizedUser), 7);
+    setUser(normalizedUser);
+    setProductorResolved(normalizedUser.id_productor != null && normalizedUser.id_productor !== 0);
   }, []);
 
   const logout = useCallback(async () => {
@@ -223,6 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     removeCookie("refresh_token");
     removeCookie("usuario");
     setUser(null);
+    setProductorResolved(false);
     window.location.href = "/auth/sign-in";
   }, []);
 
@@ -230,6 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => user?.roles?.some((r) => ["ADMIN", "administrador", "admin"].includes(r)) ?? false,
     [user],
   );
+
   const isProductor = useMemo(
     () =>
       (user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r)) ||

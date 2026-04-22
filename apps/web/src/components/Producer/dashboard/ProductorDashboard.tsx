@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { getCookie } from "@/lib/cookies";
 import { ExportButtons } from "./charts/ExportButtons";
 import { ProductosChart } from "./charts/ProductosChart";
 import { VentasChart } from "./charts/VentasChart";
@@ -32,6 +31,7 @@ type Product = {
 
 export function ProductorDashboard() {
   const { user, loading: authLoading } = useAuth();
+  const token = getCookie("token") ?? "";
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -59,7 +59,7 @@ export function ProductorDashboard() {
     if (authLoading) return;
 
     // Validación de usuario productor
-    if (!user?.id_productor) {
+    if (!user?.id_productor || !token) {
       setLoading(false);
       setError("No fue posible identificar el productor autenticado.");
       setProducts([]);
@@ -76,7 +76,7 @@ export function ProductorDashboard() {
       try {
         // Llamada paralela a la API para productos e información del productor
         const [productsRes, producerRes] = await Promise.all([
-          api.productos.getByProductor(user.id_productor as number),
+          api.productos.getByProductor(user.id_productor as number, token),
           api.productores.getOne(user.id_productor as number),
         ]);
 
@@ -103,7 +103,7 @@ export function ProductorDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading]);
+  }, [user, authLoading, token]);
 
   const ownedProducts = products;
   const activeProducts = useMemo(
@@ -162,6 +162,11 @@ export function ProductorDashboard() {
 
   const exportPdf = async () => {
     if (!chartsRef.current) return;
+
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf"),
+    ]);
 
     const canvas = await html2canvas(chartsRef.current, {
       scale: 2,

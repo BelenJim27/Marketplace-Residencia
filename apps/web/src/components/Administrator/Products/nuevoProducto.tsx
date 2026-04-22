@@ -13,23 +13,43 @@ type Categoria = {
     nombre: string;
 };
 
+type Tienda = {
+    id_tienda: number;
+    nombre: string;
+    id_productor: number;
+    productores?: {
+        usuarios?: {
+            nombre?: string | null;
+            apellido_paterno?: string | null;
+            apellido_materno?: string | null;
+        } | null;
+    } | null;
+};
+
 export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: ModalProps) {
     const [loading, setLoading] = useState(false);
     const [categorias, setCategorias] = useState<Categoria[]>([]);
+    const [tiendas, setTiendas] = useState<Tienda[]>([]);
     const [selectedCategorias, setSelectedCategorias] = useState<number[]>([]);
+    const [tiendaSeleccionada, setTiendaSeleccionada] = useState<Tienda | null>(null);
 
     const [formData, setFormData] = useState({
         nombre: '',
         descripcion: '',
         precio_base: 0,
-        id_tienda: 1,
+        id_tienda: 0,
         moneda: 'MXN',
-        status: 'activo'
+        status: 'activo',
     });
 
     useEffect(() => {
         if (isOpen) {
             loadCategorias();
+            loadTiendas();
+            // Reset form
+            setFormData({ nombre: '', descripcion: '', precio_base: 0, id_tienda: 0, moneda: 'MXN', status: 'activo' });
+            setSelectedCategorias([]);
+            setTiendaSeleccionada(null);
         }
     }, [isOpen]);
 
@@ -37,19 +57,39 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/categorias`, { cache: "no-store" });
             const data = await res.json();
-            if (res.ok && Array.isArray(data)) {
-                setCategorias(data);
-            }
+            if (res.ok && Array.isArray(data)) setCategorias(data);
         } catch (error) {
             console.error("Error loading categorias:", error);
         }
     };
 
+    const loadTiendas = async () => {
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/tiendas`, { cache: "no-store" });
+            const data = await res.json();
+            if (res.ok && Array.isArray(data)) setTiendas(data);
+        } catch (error) {
+            console.error("Error loading tiendas:", error);
+        }
+    };
+
+    const handleTiendaChange = (id: number) => {
+        const tienda = tiendas.find((t) => t.id_tienda === id) ?? null;
+        setTiendaSeleccionada(tienda);
+        setFormData((prev) => ({ ...prev, id_tienda: id }));
+    };
+
+    const getNombreProductor = (tienda: Tienda | null): string => {
+        if (!tienda?.productores?.usuarios) return "—";
+        const u = tienda.productores.usuarios;
+        return [u.nombre, u.apellido_paterno, u.apellido_materno].filter(Boolean).join(" ") || "—";
+    };
+
     const handleCategoriaChange = (id: number, checked: boolean) => {
         if (checked) {
-            setSelectedCategorias([...selectedCategorias, id]);
+            setSelectedCategorias((prev) => [...prev, id]);
         } else {
-            setSelectedCategorias(selectedCategorias.filter(c => c !== id));
+            setSelectedCategorias((prev) => prev.filter((c) => c !== id));
         }
     };
 
@@ -73,7 +113,7 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/productos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(productoParaEnviar)
+                body: JSON.stringify(productoParaEnviar),
             });
 
             if (res.ok) {
@@ -96,19 +136,22 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
 
-                {/* Cabecera Fija */}
+                {/* Cabecera */}
                 <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
                     <h2 className="text-xl font-bold text-gray-800">Registrar Nuevo Producto</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
                 </div>
 
-                {/* Cuerpo con Scroll */}
+                {/* Formulario */}
                 <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto bg-white">
 
                     {/* Nombre */}
                     <div>
                         <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Nombre del Producto</label>
-                        <input required type="text" className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500"
+                        <input
+                            required
+                            type="text"
+                            className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500"
                             placeholder="Ej. Mezcal madrecuixe"
                             onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                         />
@@ -123,8 +166,8 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
                             ) : (
                                 categorias.map((cat) => (
                                     <label key={cat.id_categoria} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked={selectedCategorias.includes(cat.id_categoria)}
                                             onChange={(e) => handleCategoriaChange(cat.id_categoria, e.target.checked)}
                                             className="rounded text-green-600"
@@ -136,18 +179,28 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
                         </div>
                     </div>
 
+                    {/* Tienda (selector) + Estado */}
                     <div className="grid grid-cols-2 gap-4">
-                        {/* Tienda ID */}
                         <div>
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tienda ID</label>
-                            <input required type="number" className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500"
-                                value={formData.id_tienda} onChange={(e) => setFormData({ ...formData, id_tienda: Number(e.target.value) })}
-                            />
+                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tienda</label>
+                            <select
+                                required
+                                className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500"
+                                value={formData.id_tienda || ""}
+                                onChange={(e) => handleTiendaChange(Number(e.target.value))}
+                            >
+                                <option value="" disabled>Seleccionar...</option>
+                                {tiendas.map((t) => (
+                                    <option key={t.id_tienda} value={t.id_tienda}>
+                                        {t.nombre}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
-                        {/* Estado */}
                         <div>
                             <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Estado</label>
-                            <select className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none"
+                            <select
+                                className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none"
                                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                             >
                                 <option value="activo">Activo</option>
@@ -156,18 +209,35 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
                         </div>
                     </div>
 
+                    {/* Productor (read-only, se llena automáticamente al elegir tienda) */}
+                    <div>
+                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Productor</label>
+                        <input
+                            type="text"
+                            readOnly
+                            value={getNombreProductor(tiendaSeleccionada)}
+                            placeholder="Se llena al seleccionar una tienda"
+                            className="w-full mt-1 border p-3 rounded-xl bg-gray-100 outline-none text-gray-600 cursor-not-allowed"
+                        />
+                    </div>
+
+                    {/* Precio + Moneda */}
                     <div className="grid grid-cols-2 gap-4">
-                        {/* Precio */}
                         <div>
                             <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Precio Base</label>
-                            <input required type="number" step="0.01" className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500"
-                                placeholder="0.00" onChange={(e) => setFormData({ ...formData, precio_base: Number(e.target.value) })}
+                            <input
+                                required
+                                type="number"
+                                step="0.01"
+                                className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                placeholder="0.00"
+                                onChange={(e) => setFormData({ ...formData, precio_base: Number(e.target.value) })}
                             />
                         </div>
-                        {/* Moneda */}
                         <div>
                             <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Moneda</label>
-                            <select className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none"
+                            <select
+                                className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none"
                                 onChange={(e) => setFormData({ ...formData, moneda: e.target.value })}
                             >
                                 <option value="MXN">MXN - Pesos</option>
@@ -179,9 +249,11 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
                     {/* Descripción */}
                     <div>
                         <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Descripción</label>
-                        <textarea className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none h-24 resize-none"
-                            placeholder="Descripción del producto..." onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                        ></textarea>
+                        <textarea
+                            className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none h-24 resize-none"
+                            placeholder="Descripción del producto..."
+                            onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                        />
                     </div>
 
                     {/* Botones */}
