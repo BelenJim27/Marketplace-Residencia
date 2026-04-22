@@ -4,17 +4,10 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/routing.ts");
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-/** @type {import("next").NextConfig} */
 const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  experimental: {
-    turbo: {
-      enabled: false
-    }
-  },
-  output: 'standalone',
   async rewrites() {
     return [
       { source: "/uploads/:path*", destination: `${API_URL}/uploads/:path*` },
@@ -23,15 +16,7 @@ const nextConfig = {
         destination: `${API_URL}/inventario/:path*`,
       },
       {
-        source: "/api/inventario/:path*",
-        destination: `${API_URL}/inventario/:path*`,
-      },
-      {
         source: "/productos/:path*",
-        destination: `${API_URL}/productos/:path*`,
-      },
-      {
-        source: "/api/productos/:path*",
         destination: `${API_URL}/productos/:path*`,
       },
       {
@@ -42,6 +27,14 @@ const nextConfig = {
       {
         source: "/categorias/:path*",
         destination: `${API_URL}/categorias/:path*`,
+      },
+      {
+        source: "/api/inventario/:path*",
+        destination: `${API_URL}/inventario/:path*`,
+      },
+      {
+        source: "/api/productos/:path*",
+        destination: `${API_URL}/productos/:path*`,
       },
       {
         source: "/api/categorias/:path*",
