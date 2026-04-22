@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
 import { OAuthService } from './oauth.service';
 import { AuthService } from './auth.service';
 
@@ -19,6 +19,7 @@ export class OAuthController {
   ) {}
 
   @Post('google')
+  @HttpCode(200)
   async googleOAuth(@Body() dto: OAuthGoogleDto) {
     console.log('🔵 [OAuth] Google login request:', {
       provider_uid: dto.provider_uid,

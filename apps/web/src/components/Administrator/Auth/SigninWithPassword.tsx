@@ -9,7 +9,7 @@ import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
-export default function SigninWithPassword() {
+export default function SigninWithPassword({ isVenderFlow = false }: { isVenderFlow?: boolean }) {
   const router = useRouter();
   const { login } = useAuth();
   const [data, setData] = useState({
@@ -50,8 +50,14 @@ export default function SigninWithPassword() {
           roles,
           permisos,
         },
-        data.remember ? response.tokens.refresh_token : undefined,
+        response.tokens.refresh_token,
+        data.remember,
       );
+
+      if (isVenderFlow) {
+        router.push("/Productor/solicitar");
+        return;
+      }
 
       const isAdmin = roles.some((rol: string) => ["ADMIN", "administrador", "admin"].includes(rol));
       if (isAdmin) {

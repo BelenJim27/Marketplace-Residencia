@@ -10,9 +10,10 @@ export const authOptions: AuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      // Account linking is handled by the backend (oauth.service.ts upsertOAuthAccount)
+      // which safely links to an existing email without requiring confirmation
       allowDangerousEmailAccountLinking: true,
       profile(profile) {
-        console.log("Google profile:", profile.email);
         return {
           id: profile.sub,
           name: profile.name,
@@ -76,7 +77,7 @@ export const authOptions: AuthOptions = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 24 * 60 * 60,
+    maxAge: 30 * 24 * 60 * 60, // 30 días, igual que el refresh token
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
@@ -88,30 +89,17 @@ export const authOptions: AuthOptions = {
         return url;
       }
 
-      return `${baseUrl}/Cliente/producto`;
+      return `${baseUrl}/auth/sign-in`;
     },
-    async signIn({ user, account }: any) {
-      console.log("signIn callback", {
-        provider: account?.provider,
-        email: user?.email,
-      });
+    async signIn() {
       return true;
     },
     async jwt({ token, user, account }: any) {
-      console.log("jwt callback", {
-        provider: account?.provider,
-        hasUser: !!user,
-        hasToken: !!token,
-      });
-
       if (account && account.provider === "google") {
-        console.log("Processing Google OAuth...");
         try {
           const response = await fetch(`${apiBaseUrl}/auth/oauth/google`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               access_token: account.access_token,
               refresh_token: account.refresh_token,
@@ -122,15 +110,8 @@ export const authOptions: AuthOptions = {
             }),
           });
 
-          console.log("Backend response status:", response.status);
-
           if (response.ok) {
             const data = await response.json();
-            console.log("Backend OAuth response:", {
-              hasTokens: !!data.tokens,
-              userId: data.user?.id_usuario,
-            });
-
             token.accessToken = data.tokens.access_token;
             token.refreshToken = data.tokens.refresh_token;
             token.id = data.user.id_usuario;
@@ -149,21 +130,17 @@ export const authOptions: AuthOptions = {
             token.roles = data.user.roles;
             token.permisos = data.user.permisos;
             token.id_productor = data.user.id_productor;
-
-            console.log("Token actualizado con datos de backend");
             return token;
           }
 
-          console.warn("Backend auth/oauth/google retorno error:", response.status);
-          const errorText = await response.text();
-          console.error("Error response:", errorText);
+          console.error("[Auth] oauth/google backend error:", response.status);
           token.email = user.email;
           token.name = user.name;
           token.id = user.id;
           token.picture = user.image;
           return token;
         } catch (err) {
-          console.error("Error en jwt callback:", err);
+          console.error("[Auth] jwt callback error:", err);
           token.email = user.email;
           token.name = user.name;
           token.id = user.id;
@@ -225,11 +202,6 @@ export const authOptions: AuthOptions = {
       return token;
     },
     async session({ session, token }: any) {
-      console.log("session callback", {
-        hasToken: !!token,
-        hasAccessToken: !!token?.accessToken,
-      });
-
       if (token) {
         session.accessToken = token.accessToken;
         session.refreshToken = token.refreshToken;
@@ -250,11 +222,6 @@ export const authOptions: AuthOptions = {
         session.user.permisos = token.permisos;
         session.user.id_productor = token.id_productor;
       }
-
-      console.log("Session retornada:", {
-        hasEmail: !!session.user.email,
-        hasId: !!session.user.id,
-      });
 
       return session;
     },

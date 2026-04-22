@@ -36,7 +36,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   isProductor: boolean;
-  login: (token: string, usuario: Usuario, refreshToken?: string) => void;
+  login: (token: string, usuario: Usuario, refreshToken: string, rememberMe?: boolean) => void;
   logout: () => void;
   refreshAuth: () => void;
 }
@@ -52,6 +52,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Si hay sesión de NextAuth, usarla
     if (session?.user) {
       console.log("📋 Usando sesión de NextAuth", session.user.email);
+
+      const accessToken = (session as any)?.accessToken;
+      if (accessToken) setCookie("token", accessToken, 7);
+
       let storedUser: Partial<Usuario> = {};
 
       const usuarioStr = getCookie("usuario");
@@ -116,35 +120,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
 
-const resolveProductor = async () => {
+    const resolveProductor = async () => {
       try {
-        const accessToken = getCookie("token");
-        if (!accessToken) {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/productores/by-usuario/${user.id_usuario}`,
+        );
+        if (!response.ok) {
           setLoading(false);
           return;
-        }
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/productores/by-usuario/${user.id_usuario}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (!response.ok) {
-          if (response.status === 404) {
-            if (cancelled) return;
-            setLoading(false);
-            return;
-          }
-          throw new Error(`Error ${response.status}`);
         }
         const text = await response.text();
         if (!text || cancelled) {
           setLoading(false);
           return;
         }
-        const prod = JSON.parse(text) as { id_productor?: number } | Array<{ id_productor?: number }>;
-        if (!prod || (typeof prod === 'object' && !Array.isArray(prod) && !prod.id_productor)) return;
+        const prod = JSON.parse(text) as
+          | { id_productor?: number; estado?: string }
+          | Array<{ id_productor?: number; estado?: string }>;
+
+        if (!prod || (typeof prod === "object" && !Array.isArray(prod) && !prod.id_productor)) return;
 
         const idProductor = Array.isArray(prod) ? prod[0]?.id_productor : prod.id_productor;
+        const estadoProductor = Array.isArray(prod) ? prod[0]?.estado : prod.estado;
+
         if (idProductor == null) return;
 
+        // Si el productor fue aprobado pero el token aún no tiene el rol,
+        // usamos el refresh token para obtener un JWT actualizado con roles correctos.
+        const rolesActualizados = user.roles?.some((r) =>
+          ["PRODUCTOR", "productor"].includes(r),
+        );
+        if (estadoProductor === "aprobado" && !rolesActualizados) {
+          const refreshToken = getCookie("refresh_token");
+          if (refreshToken) {
+            try {
+              const refreshRes = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ refresh_token: refreshToken }),
+                },
+              );
+              if (refreshRes.ok) {
+                const refreshData = await refreshRes.json();
+                setCookie("token", refreshData.tokens.access_token, 7);
+                if (refreshData.tokens.refresh_token) {
+                  setCookie("refresh_token", refreshData.tokens.refresh_token, 30);
+                }
+                const nextUser: Usuario = {
+                  ...user,
+                  ...refreshData.user,
+                  id_productor: Number(idProductor),
+                  roles: refreshData.user.roles ?? user.roles,
+                  permisos: refreshData.user.permisos ?? user.permisos,
+                };
+                if (cancelled) return;
+                setUser(nextUser);
+                setCookie("usuario", JSON.stringify(nextUser), 7);
+                return;
+              }
+            } catch {
+              // Si el refresh falla, actualizar solo el id_productor
+            }
+          }
+        }
+
+        if (cancelled) return;
         const nextUser = { ...user, id_productor: Number(idProductor) };
         setUser(nextUser);
         setCookie("usuario", JSON.stringify(nextUser), 7);
@@ -161,9 +203,9 @@ const resolveProductor = async () => {
     };
   }, [user?.id_usuario, user?.id_productor]);
 
-  const login = useCallback((token: string, usuario: Usuario, refreshToken?: string) => {
+  const login = useCallback((token: string, usuario: Usuario, refreshToken: string, rememberMe = false) => {
     setCookie("token", token, 7);
-    if (refreshToken) setCookie("refresh_token", refreshToken, 30);
+    setCookie("refresh_token", refreshToken, rememberMe ? 30 : 1);
     setCookie("usuario", JSON.stringify(usuario), 7);
     setUser(usuario);
   }, []);
@@ -189,7 +231,10 @@ const resolveProductor = async () => {
     [user],
   );
   const isProductor = useMemo(
-    () => user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r)) ?? false,
+    () =>
+      (user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r)) ||
+        (user?.id_productor != null && user.id_productor !== 0)) ??
+      false,
     [user],
   );
 

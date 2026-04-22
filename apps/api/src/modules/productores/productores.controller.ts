@@ -1,13 +1,26 @@
-import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Req, UseGuards, Logger } from '@nestjs/common';
 import { CreateProductorDto, CreateRegionDto, RevisarSolicitudDto, SolicitarProductorDto, UpdateProductorDto, UpdateRegionDto } from './dto/productores.dto';
 import { ProductoresService } from './productores.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 
 @Controller('productores')
 export class ProductoresController {
+  private readonly logger = new Logger(ProductoresController.name);
   constructor(private readonly service: ProductoresService) {}
   @Get('regiones') listRegiones() { return this.service.listRegiones(); }
   @Get('by-usuario/:id_usuario') findByUsuario(@Param('id_usuario', ParseUUIDPipe) id_usuario: string) { return this.service.findByUsuario(id_usuario); }
+  @Get('mi-solicitud')
+  @UseGuards(AuthGuard)
+  async getMiSolicitud(@Req() req: any) {
+    try {
+      return await this.service.getMiSolicitud(req.user.id_usuario);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('GET /productores/mi-solicitud', error);
+      throw new HttpException({ error: String(error) }, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   @Post('regiones') createRegion(@Body() dto: CreateRegionDto) { return this.service.createRegion(dto); }
   @Patch('regiones/:id') updateRegion(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRegionDto) { return this.service.updateRegion(id, dto); }
   @Delete('regiones/:id') removeRegion(@Param('id', ParseIntPipe) id: number) { return this.service.removeRegion(id); }
@@ -18,10 +31,8 @@ export class ProductoresController {
     try {
       return await this.service.solicitarProductor(dto, req.user.id_usuario);
     } catch (error) {
-      console.error('ERROR EN API PRODUCTORES:', {
-        route: '/productores/solicitar',
-        error,
-      });
+      if (error instanceof HttpException) throw error;
+      this.logger.error('POST /productores/solicitar', error);
       throw new HttpException({ error: String(error) }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -31,10 +42,8 @@ export class ProductoresController {
     try {
       return await this.service.findAll();
     } catch (error) {
-      console.error('ERROR EN API PRODUCTORES:', {
-        route: '/productores',
-        error,
-      });
+      if (error instanceof HttpException) throw error;
+      this.logger.error('GET /productores', error);
       throw new HttpException({ error: String(error) }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -44,11 +53,8 @@ export class ProductoresController {
     try {
       return await this.service.findOne(id);
     } catch (error) {
-      console.error('ERROR EN API PRODUCTORES:', {
-        route: '/productores/:id',
-        id,
-        error,
-      });
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`GET /productores/${id}`, error);
       throw new HttpException({ error: String(error) }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }

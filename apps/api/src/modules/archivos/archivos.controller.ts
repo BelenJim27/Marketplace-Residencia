@@ -1,10 +1,11 @@
 import { existsSync, mkdirSync, renameSync } from 'fs';
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage, StorageEngine } from 'multer';
 import { extname, join } from 'path';
 import { CreateArchivoDto, UpdateArchivoDto } from './dto/archivos.dto';
 import { ArchivosService } from './archivos.service';
+import { AuthGuard } from '../auth/guards/auth.guard';
 
 const uploadPath = join(process.cwd(), 'uploads', 'archivos');
 
@@ -28,6 +29,7 @@ export class ArchivosController {
   }
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
   @Post('upload')
+  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('archivo', { storage: archivoStorage }))
   createWithUpload(@UploadedFile() file: Express.Multer.File | undefined, @Body() dto: CreateArchivoDto) {
     if (!file) throw new BadRequestException('Archivo requerido');
@@ -42,8 +44,11 @@ export class ArchivosController {
       tipo: dto.tipo?.trim() || inferTipo(file.originalname),
     });
   }
-  @Post() create(@Body() dto: CreateArchivoDto) { return this.service.create(dto); }
+  @Post() 
+  @UseGuards(AuthGuard)
+  create(@Body() dto: CreateArchivoDto) { return this.service.create(dto); }
   @Patch(':id/upload')
+  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('archivo', { storage: archivoStorage }))
   updateWithUpload(@Param('id') id: string, @UploadedFile() file: Express.Multer.File | undefined, @Body() dto: UpdateArchivoDto) {
     if (file) {
@@ -55,8 +60,12 @@ export class ArchivosController {
       originalName: file.originalname,
     } : undefined);
   }
-  @Patch(':id') update(@Param('id') id: string, @Body() dto: UpdateArchivoDto) { return this.service.update(id, dto); }
-  @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }
+  @Patch(':id') 
+  @UseGuards(AuthGuard)
+  update(@Param('id') id: string, @Body() dto: UpdateArchivoDto) { return this.service.update(id, dto); }
+  @Delete(':id')
+  @UseGuards(AuthGuard)
+  remove(@Param('id') id: string) { return this.service.remove(id); }
 }
 
 function getSafeBaseName(fileName: string) {

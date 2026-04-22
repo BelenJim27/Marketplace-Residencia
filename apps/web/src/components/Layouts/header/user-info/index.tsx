@@ -14,24 +14,64 @@ import { LogOutIcon, SettingsIcon, UserIcon } from "./icons";
 import { useAuth } from "@/context/AuthContext";
 import { useSession, signOut } from "next-auth/react";
 
+const ROLE_LABELS: Record<string, { label: string; className: string }> = {
+  administrador: { label: "Administrador", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  admin: { label: "Administrador", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  ADMIN: { label: "Administrador", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  productor: { label: "Productor", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+  PRODUCTOR: { label: "Productor", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+  cliente: { label: "Cliente", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+  CLIENTE: { label: "Cliente", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+};
+
+function getRoleBadge(roles: string[] | undefined) {
+  if (!roles?.length) return null;
+  for (const r of roles) {
+    const match = ROLE_LABELS[r];
+    if (match) return match;
+  }
+  return null;
+}
+
 export function UserInfo() {
   const [isOpen, setIsOpen] = useState(false);
   const { user: contextUser, logout } = useAuth();
   const { data: session } = useSession();
 
-  // Priorizar datos de NextAuth, sino usar el contexto
-  const user = session?.user || contextUser;
-  const userName = session?.user?.name || contextUser?.nombre || "Usuario";
-  const userEmail = session?.user?.email || contextUser?.email || "correo@ejemplo.com";
-  const userPhoto = contextUser?.foto_url || session?.user?.foto_url || session?.user?.image || null;
+  const userName =
+    contextUser?.nombre ||
+    session?.user?.nombre ||
+    session?.user?.name ||
+    "Usuario";
+
+  const apellido =
+    contextUser?.apellido_paterno ||
+    (session?.user as any)?.apellido_paterno ||
+    "";
+
+  const fullName = apellido ? `${userName} ${apellido}` : userName;
+
+  const userEmail =
+    contextUser?.email || session?.user?.email || "correo@ejemplo.com";
+
+  const userPhoto =
+    contextUser?.foto_url ||
+    (session?.user as any)?.foto_url ||
+    session?.user?.image ||
+    null;
+
+  const roles: string[] =
+    contextUser?.roles ||
+    (session?.user as any)?.roles ||
+    [];
+
+  const badge = getRoleBadge(roles);
 
   const handleLogout = async () => {
     setIsOpen(false);
     if (session) {
-      // Si hay sesión de NextAuth, usar signOut
       await signOut({ callbackUrl: "/auth/sign-in" });
     } else {
-      // Si no, usar el logout del contexto
       logout();
     }
   };
@@ -39,18 +79,17 @@ export function UserInfo() {
   return (
     <Dropdown isOpen={isOpen} setIsOpen={setIsOpen}>
       <DropdownTrigger className="rounded align-middle outline-none ring-primary ring-offset-2 focus-visible:ring-1 dark:ring-offset-gray-dark">
-        <span className="sr-only">My Account</span>
+        <span className="sr-only">Mi cuenta</span>
 
         <figure className="flex items-center gap-3">
           <img
             src={getMediaUrl(userPhoto) || "/images/user/user-03.png"}
             className="size-12 rounded-full object-cover object-center"
-            alt={`Avatar of ${userName}`}
+            alt={`Avatar de ${fullName}`}
             role="presentation"
           />
           <figcaption className="flex items-center gap-1 font-medium text-dark dark:text-dark-6 max-[1024px]:sr-only">
-            <span>{userName}</span>
-
+            <span>{fullName}</span>
             <ChevronUpIcon
               aria-hidden
               className={cn(
@@ -67,24 +106,33 @@ export function UserInfo() {
         className="border border-stroke bg-white shadow-md dark:border-dark-3 dark:bg-gray-dark min-[230px]:min-w-[17.5rem]"
         align="end"
       >
-        <h2 className="sr-only">User information</h2>
+        <h2 className="sr-only">Información de usuario</h2>
 
         <figure className="flex items-center gap-2.5 px-5 py-3.5">
           <img
             src={getMediaUrl(userPhoto) || "/images/user/user-03.png"}
             className="size-12 rounded-full object-cover object-center"
-            alt={`Avatar for ${userName}`}
+            alt={`Avatar de ${fullName}`}
             role="presentation"
           />
 
-          <figcaption className="space-y-1 text-base font-medium">
-            <div className="mb-2 leading-none text-dark dark:text-white">
-              {userName}
+          <figcaption className="space-y-1 text-base font-medium min-w-0">
+            <div className="leading-snug text-dark dark:text-white truncate">
+              {fullName}
             </div>
-
-            <div className="leading-none text-gray-6">
+            <div className="leading-none text-gray-6 text-sm truncate">
               {userEmail}
             </div>
+            {badge && (
+              <span
+                className={cn(
+                  "inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1",
+                  badge.className,
+                )}
+              >
+                {badge.label}
+              </span>
+            )}
           </figcaption>
         </figure>
 
@@ -97,7 +145,6 @@ export function UserInfo() {
             className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
           >
             <UserIcon />
-
             <span className="mr-auto text-base font-medium">Ver perfil</span>
           </Link>
 
@@ -107,7 +154,6 @@ export function UserInfo() {
             className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
           >
             <SettingsIcon />
-
             <span className="mr-auto text-base font-medium">Configuración</span>
           </Link>
         </div>
@@ -120,7 +166,6 @@ export function UserInfo() {
             onClick={handleLogout}
           >
             <LogOutIcon />
-
             <span className="text-base font-medium">Cerrar sesión</span>
           </button>
         </div>

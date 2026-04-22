@@ -27,12 +27,6 @@ export class OAuthService {
   ) {}
 
   async upsertOAuthAccount(profile: OAuthProfile) {
-    console.log('🔍 [OAuthService] upsertOAuthAccount:', {
-      provider: profile.provider,
-      providerUid: profile.providerUid,
-      email: profile.email,
-    });
-
     const existingAccount = await this.prisma.oauth_cuentas.findUnique({
       where: {
         provider_provider_uid: {
@@ -44,8 +38,6 @@ export class OAuthService {
     });
 
     if (existingAccount) {
-      console.log('✅ [OAuthService] Cuenta OAuth existente encontrada:', existingAccount.id_usuario);
-      
       if (existingAccount.usuarios?.eliminado_en) {
         throw new UnauthorizedException('La cuenta ha sido eliminada');
       }
@@ -78,8 +70,6 @@ export class OAuthService {
       : null;
 
     if (existingUserByEmail) {
-      console.log('✅ [OAuthService] Usuario con email existente encontrado:', existingUserByEmail.id_usuario);
-      
       if (profile.fotoUrl && !existingUserByEmail.foto_url) {
         await this.prisma.usuarios.update({
           where: { id_usuario: existingUserByEmail.id_usuario },
@@ -103,8 +93,6 @@ export class OAuthService {
       return newAccount.id_usuario;
     }
 
-    console.log('🆕 [OAuthService] Creando nuevo usuario');
-
     const nombreParts = (profile.nombre || 'Usuario').split(' ');
     const nombre = nombreParts[0];
     const apellidoPaterno = nombreParts[1] || null;
@@ -126,8 +114,6 @@ export class OAuthService {
       },
     });
 
-    console.log('✅ [OAuthService] Usuario nuevo creado:', user.id_usuario);
-
     if (profile.email) {
       try {
         await this.emailService.sendWelcomeEmail(profile.email, user.nombre);
@@ -148,8 +134,6 @@ export class OAuthService {
         expira_en: profile.expiraEn,
       },
     });
-
-    console.log('✅ [OAuthService] Cuenta OAuth creada:', profile.provider);
 
     return user.id_usuario;
   }

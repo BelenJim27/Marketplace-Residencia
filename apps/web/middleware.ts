@@ -18,6 +18,11 @@ export async function middleware(request: NextRequest) {
       return redirectToSignIn(request);
     }
 
+    // Rutas que solo requieren estar autenticado
+    if (pathname.startsWith("/Productor/solicitar")) {
+      return NextResponse.next();
+    }
+
     let requiredPermission = "panel_productor";
     if (pathname.startsWith("/dashboard/administrador")) {
       requiredPermission = "panel_admin";
@@ -35,7 +40,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/productor/:path*", "/dashboard/administrador/:path*"],
+  matcher: [
+    "/dashboard/productor/:path*",
+    "/dashboard/administrador/:path*",
+    "/Productor/solicitar",
+  ],
 };
 
 

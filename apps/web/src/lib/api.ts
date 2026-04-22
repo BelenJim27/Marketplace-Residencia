@@ -3,80 +3,108 @@ import { getCookie, setCookie } from "@/lib/cookies";
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "");
 
 const headers = (token?: string, isFormData = false) => ({
-  ...(!isFormData && { "Content-Type": "application/json" }),
+  ...(isFormData ? {} : { "Content-Type": "application/json" }),
   ...(token && { Authorization: `Bearer ${token}` }),
 });
 
+// Singleton para deduplicar refreshes concurrentes: si múltiples requests
+// fallan con 401 al mismo tiempo, todas esperan el mismo refresh en lugar de
+// hacer N requests (el segundo invalidaría el token del primero).
+let pendingRefresh: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  const refreshToken = getCookie("refresh_token");
+  if (!refreshToken) throw new Error("No refresh token");
+
+  const res = await fetch(endpoint("/auth/refresh"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+
+  if (!res.ok) throw new Error("Refresh failed");
+
+  const data = await res.json();
+  const newAccess: string = data.tokens.access_token;
+  setCookie("token", newAccess, 7);
+  if (data.tokens.refresh_token) {
+    setCookie("refresh_token", data.tokens.refresh_token, 30);
+  }
+  return newAccess;
+}
+
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
-
-  // Si es 401 (Unauthorized), intentar refrescar el token
   if (response.status === 401) {
-    console.log(" 401 recibido, intentando refresh...");
-    const refreshToken = getCookie("refresh_token");
-    console.log(" Refresh token existe:", !!refreshToken);
-
-    if (refreshToken) {
-      try {
-        console.log(" Token expirado, intentando refrescar...");
-        const refreshResponse = await fetch(endpoint("/auth/refresh"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken }),
+    try {
+      if (!pendingRefresh) {
+        pendingRefresh = refreshAccessToken().finally(() => {
+          pendingRefresh = null;
         });
-
-        console.log(" Refresh response status:", refreshResponse.status);
-
-        if (refreshResponse.ok) {
-          const refreshData = await refreshResponse.json();
-          console.log(" Refresh data:", refreshData);
-          const newAccessToken = refreshData.tokens.access_token;
-
-          // Guardar el nuevo token
-          setCookie("token", newAccessToken, 7);
-          if (refreshData.tokens.refresh_token) {
-            setCookie("refresh_token", refreshData.tokens.refresh_token, 30);
-          }
-
-          console.log(" Token refrescado exitosamente");
-
-          // Reintentar la petición original con el nuevo token
-          const newHeaders = { ...options?.headers } as Record<string, string>;
-          if (newHeaders["Authorization"]) {
-            newHeaders["Authorization"] = `Bearer ${newAccessToken}`;
-          }
-
-          const retryResponse = await fetch(url, { ...options, headers: newHeaders });
-          if (!retryResponse.ok) {
-            const error = await retryResponse.json().catch(() => ({ message: "Error desconocido" }));
-            throw new Error(error.message || `Error ${retryResponse.status}`);
-          }
-          return retryResponse.json() as Promise<T>;
-        } else {
-          console.error(" Refresh falló:", refreshResponse.status);
-        }
-      } catch (error) {
-        console.error(" Error refrescando token:", error);
       }
+
+      const newAccessToken = await pendingRefresh;
+
+
+      const newHeaders = { ...options?.headers } as Record<string, string>;
+      if (newHeaders["Authorization"]) {
+        newHeaders["Authorization"] = `Bearer ${newAccessToken}`;
+      }
+
+      const retryResponse = await fetch(url, { ...options, headers: newHeaders });
+      if (!retryResponse.ok) {
+        const error = await retryResponse.json().catch(() => ({ message: "Error desconocido" }));
+        throw new Error(error.message || `Error ${retryResponse.status}`);
+      }
+      return retryResponse.json() as Promise<T>;
+    } catch {
+      // Limpiar cookies y redirigir al login
+      const cookies = document.cookie.split(";");
+      cookies.forEach((cookie) => {
+        const name = cookie.split("=")[0].trim();
+        if (["token", "refresh_token", "usuario"].includes(name)) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        }
+      });
+      window.location.href = "/auth/sign-in";
+      throw new Error("Sesión expirada. Por favor inicia sesión de nuevo.");
     }
 
-    // Si no se pudo refresh, limpiar y redirigir
-    const cookies = document.cookie.split(";");
-    cookies.forEach((cookie) => {
-      const name = cookie.split("=")[0].trim();
-      if (["token", "refresh_token", "usuario"].includes(name)) {
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00: UTC; path=/;`;
-      }
-    });
-    window.location.href = "/auth/sign-in";
-    throw new Error("Sesión expirada. Por favor inicia sesión de nuevo.");
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: "Error desconocido" }));
+    const contentType = response.headers.get("content-type");
+    let error = { message: `Error ${response.status}` };
+    
+    if (contentType && contentType.includes("application/json")) {
+      try {
+        error = await response.json();
+      } catch (e) {
+        console.error("Error parsing error response:", e);
+      }
+    } else {
+      const text = await response.text();
+      console.error("Non-JSON error response:", text);
+    }
     throw new Error(error.message || `Error ${response.status}`);
   }
-  return response.json();
+  
+  const text = await response.text();
+  
+  // Manejo robusto de respuestas vacías o nulas
+  if (!text || text.trim() === '') {
+    // Retornar objeto vacío si es una respuesta válida pero sin contenido
+    // (típico en operaciones exitosas que no retornan data, ej: DELETE)
+    console.warn("Servidor retornó respuesta vacía (válido para algunos endpoints)");
+    return {} as T;
+  }
+  
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("Error parsing response JSON. Text:", text, "Error:", e);
+    throw new Error(`Error al parsear respuesta: ${String(e)}`);
+  }
 }
 
 function endpoint(path: string) {
@@ -214,8 +242,18 @@ export const api = {
     delete: (token: string, id: number) =>
       fetchJson(endpoint(`/productores/${id}`), { method: "DELETE", headers: headers(token) }),
     getRegiones: () => fetchJson(endpoint("/productores/regiones")),
-    solicitar: (token: string, data: { id_region?: number; biografia: string; certificado_url: string }) =>
+    getMiSolicitud: (token: string) =>
+      fetchJson(endpoint("/productores/mi-solicitud"), { headers: headers(token) }),
+    solicitar: (token: string, data: { id_region?: number; rfc?: string; razon_social?: string; datos_bancarios?: string; direccion_fiscal?: { linea_1?: string; linea_2?: string; referencia?: string; ubicacion?: Record<string, unknown>; es_internacional?: boolean } }) =>
       fetchJson(endpoint("/productores/solicitar"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+    getSolicitudesPendientes: (token: string) =>
+      fetchJson(endpoint("/admin/productores/solicitudes"), { headers: headers(token) }),
+    revisarSolicitud: (token: string, id: number, data: { estado: string; motivo_rechazo?: string }) =>
+      fetchJson(endpoint(`/admin/productores/${id}/revisar`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
+    aprobarSolicitud: (token: string, id: number) =>
+      fetchJson(endpoint(`/admin/productores/${id}/aprobar`), { method: "PATCH", headers: headers(token) }),
+    rechazarSolicitud: (token: string, id: number, motivo: string) =>
+      fetchJson(endpoint(`/admin/productores/${id}/rechazar`), { method: "PATCH", headers: headers(token), body: JSON.stringify({ estado: "rechazado", motivo_rechazo: motivo }) }),
   },
 
   pedidos: {

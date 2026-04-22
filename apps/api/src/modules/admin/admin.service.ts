@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { serializeBigInts } from '../shared/serialize';
 import { RevisarSolicitudDto } from '../productores/dto/productores.dto';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 
@@ -105,6 +106,21 @@ async getStats() {
     });
   }
 
+  async getAllProductores(estado?: string) {
+    const where: any = { eliminado_en: null };
+    if (estado) {
+      where.estado = estado;
+    }
+    return this.prisma.productores.findMany({
+      where,
+      include: {
+        usuarios: { select: { id_usuario: true, nombre: true, email: true, telefono: true } },
+        regiones: true,
+      },
+      orderBy: { solicitado_en: 'desc' },
+    });
+  }
+
   async revisarSolicitud(id_productor: number, dto: RevisarSolicitudDto, revisor_id: string) {
     const productor = await this.prisma.productores.findUnique({ where: { id_productor } });
     if (!productor || productor.eliminado_en) throw new NotFoundException('Solicitud no encontrada');
@@ -116,12 +132,28 @@ async getStats() {
     let rolProductor = null;
 
     if (dto.estado === 'aprobado') {
-      rolProductor = await this.prisma.roles.findUnique({ where: { nombre: 'PRODUCTOR' } });
+      rolProductor = await this.prisma.roles.findUnique({ where: { nombre: 'productor' } });
       if (rolProductor) {
         await this.prisma.usuario_rol.upsert({
           where: { id_usuario_id_rol: { id_usuario: usuario.id_usuario, id_rol: rolProductor.id_rol } },
           create: { id_usuario: usuario.id_usuario, id_rol: rolProductor.id_rol, estado: 'activo' },
           update: { estado: 'activo' },
+        });
+      }
+
+      const existingTienda = await this.prisma.tiendas.findFirst({
+        where: { id_productor, eliminado_en: null },
+      });
+
+      if (!existingTienda) {
+        await this.prisma.tiendas.create({
+          data: {
+            id_productor,
+            nombre: `${usuario.nombre}'s Store`,
+            descripcion: `Tienda de ${usuario.nombre}`,
+            pais_operacion: 'MX',
+            status: 'activa',
+          },
         });
       }
     }
@@ -148,6 +180,6 @@ async getStats() {
       cuerpo,
     });
 
-    return actualizado;
+return serializeBigInts(actualizado);
   }
 }

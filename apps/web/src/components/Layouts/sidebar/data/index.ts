@@ -65,7 +65,6 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         url: "/Administrador/tienda/productores",
         icon: Users,
       },
-      { title: "Reportes", url: "/Administrador/reportes", icon: BarChart3 },
       {
         title: "Inventario",
         icon: Boxes,
@@ -83,16 +82,7 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         ],
       },
       { title: "Pedidos", url: "/Administrador/pedidos", icon: ShoppingCart },
-      {
-        title: "Certificaciones",
-        url: "/Administrador/validar-certificaciones",
-        icon: Award,
-      },
-      {
-        title: "Validar Certificaciones",
-        url: "/Administrador/validar-certificaciones",
-        icon: ShieldCheck,
-      },
+      
       {
         title: "Solicitudes Productores",
         url: "/Administrador/solicitudes-productores",

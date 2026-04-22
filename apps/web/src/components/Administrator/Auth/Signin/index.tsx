@@ -1,19 +1,36 @@
 import Link from "next/link";
 import GoogleSigninButton from "../GoogleSigninButton";
 import SigninWithPassword from "../SigninWithPassword";
-import { WantToSellBanner } from "../SolicitarVendedor";
 
-export default function Signin() {
+export default function Signin({ isVenderFlow = false }: { isVenderFlow?: boolean }) {
+  if (isVenderFlow) {
+    return (
+      <>
+        <GoogleSigninButton text="Iniciar sesión" />
+
+        <div className="my-6 flex items-center justify-center">
+          <span className="block h-px w-full bg-stroke dark:bg-dark-3"></span>
+          <div className="block w-full min-w-fit bg-white px-3 text-center font-medium dark:bg-gray-dark">
+            O inicia sesión con tu correo
+          </div>
+          <span className="block h-px w-full bg-stroke dark:bg-dark-3"></span>
+        </div>
+
+        <div>
+          <SigninWithPassword isVenderFlow={true} />
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
-      <WantToSellBanner />
-      
       <GoogleSigninButton text="Iniciar sesión" />
 
       <div className="my-6 flex items-center justify-center">
         <span className="block h-px w-full bg-stroke dark:bg-dark-3"></span>
         <div className="block w-full min-w-fit bg-white px-3 text-center font-medium dark:bg-gray-dark">
-          O inica sesion con tu correo
+          O inicia sesión con tu correo
         </div>
         <span className="block h-px w-full bg-stroke dark:bg-dark-3"></span>
       </div>

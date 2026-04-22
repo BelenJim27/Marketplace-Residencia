@@ -1,14 +1,48 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { SignUpForm } from "./_components/sign-up-form";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Crear cuenta",
-};
+import { useSearchParams } from "next/navigation";
 
 export default function SignUpPage() {
+  const searchParams = useSearchParams();
+  const isVenderFlow = searchParams.get("vender") === "true";
+
+  if (isVenderFlow) {
+    return (
+      <>
+        <Breadcrumb pageName="Crear Cuenta" />
+
+        <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card p-6 sm:p-12">
+          <div className="max-w-md mx-auto">
+            <h1 className="text-2xl font-bold text-dark dark:text-white mb-2 text-center">
+              Crea una cuenta para solicitar ser productor
+            </h1>
+            <p className="text-gray-500 mb-8 text-center">
+              Regístrate para continuar con tu solicitud.
+            </p>
+
+            <SignUpForm />
+
+            <div className="mt-6 text-center">
+              <p>
+                ¿Ya tienes una cuenta?{" "}
+                <Link
+                  href="/auth/sign-in?vender=true"
+                  className="text-green-600 hover:underline"
+                >
+                  Ingresar
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Breadcrumb pageName="Crear Cuenta" />

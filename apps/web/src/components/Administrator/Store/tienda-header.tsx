@@ -37,7 +37,7 @@ export function TiendaHeader() {
 
   const handleSellClick = () => {
     if (!isAuthenticated) {
-      router.push("/Productor");
+      router.push("/Productor?vender=true");
     } else if (isProductor) {
       router.push("/Productor/productor");
     } else {
@@ -109,7 +109,7 @@ export function TiendaHeader() {
 
             <UserInfo />
           </>
-        ) : (
+        ) : isAuthenticated ? (
           <>
             <button
               onClick={handleMyPurchasesClick}
@@ -127,6 +127,18 @@ export function TiendaHeader() {
               <span className="hidden sm:inline text-xs">Carrito</span>
             </button>
 
+            <button
+              onClick={handleSellClick}
+              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
+            >
+              <Store size={24} />
+              <span className="hidden sm:inline text-xs">Vender</span>
+            </button>
+
+            <UserInfo />
+          </>
+        ) : (
+          <>
             <button
               onClick={handleSellClick}
               className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"

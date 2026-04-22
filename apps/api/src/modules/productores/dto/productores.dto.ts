@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
 
 export class CreateProductorDto {
   @IsString() id_usuario!: string;
@@ -10,16 +10,26 @@ export class CreateProductorDto {
 
 export class UpdateProductorDto extends PartialType(CreateProductorDto) {}
 
+export class DireccionFiscalDto {
+  @IsOptional() @IsString() @MaxLength(200) linea_1?: string;
+  @IsOptional() @IsString() @MaxLength(200) linea_2?: string;
+  @IsOptional() @IsString() referencia?: string;
+  @IsOptional() @ValidateNested() ubicacion?: Record<string, unknown>;
+  @IsOptional() @IsBoolean() es_internacional?: boolean;
+}
+
 export class SolicitarProductorDto {
-  @IsString() id_usuario!: string;
   @IsOptional() @IsInt() @Type(() => Number) id_region?: number;
-  @IsOptional() @IsString() biografia?: string;
-  @IsString() certificado_url!: string;
+  @IsOptional() @IsString() @MaxLength(13) rfc?: string;
+  @IsOptional() @IsString() @MaxLength(200) razon_social?: string;
+  @IsOptional() @ValidateNested() direccion_fiscal?: DireccionFiscalDto;
+  @IsOptional() @IsString() datos_bancarios?: string;
 }
 
 export class RevisarSolicitudDto {
   @IsString() estado!: 'aprobado' | 'rechazado';
   @IsOptional() @IsString() motivo_rechazo?: string;
+  @IsOptional() @IsString() motivo_aprobacion?: string;
 }
 
 export class CreateRegionDto {

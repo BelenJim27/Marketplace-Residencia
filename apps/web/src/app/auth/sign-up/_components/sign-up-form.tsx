@@ -17,8 +17,10 @@ export function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const wantToSellDefault = searchParams.get("vender") === "true";
+  const isVenderFlow = searchParams.get("vender") === "true";
 
   const [formData, setFormData] = useState({
+    nombre_usuario: "",
     nombre: "",
     apellido_paterno: "",
     apellido_materno: "",
@@ -80,6 +82,7 @@ export function SignUpForm() {
     setLoading(true);
     try {
       const result = (await api.auth.register({
+        nombre_usuario: formData.nombre_usuario,
         email: formData.email,
         password: formData.password,
         nombre: formData.nombre,
@@ -104,7 +107,7 @@ export function SignUpForm() {
         result.tokens.refresh_token,
       );
 
-      if (formData.wantToSell) {
+      if (isVenderFlow || formData.wantToSell) {
         router.push("/Productor/solicitar");
       } else {
         router.push("/producto");
@@ -144,8 +147,8 @@ export function SignUpForm() {
             required
             className="w-full rounded-lg border border-green-200 bg-white p-3 outline-none focus:border-green-400 dark:bg-gray-dark"
             placeholder="Ingresa tu nombre de usuario"
-            value={formData.nombre}
-            onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+            value={formData.nombre_usuario}
+            onChange={(e) => setFormData({ ...formData, nombre_usuario: e.target.value })}
           />
         </div>
         {/* NOMBRE */}
@@ -286,7 +289,7 @@ export function SignUpForm() {
           )}
         </div>
 
-        <SolicitarVendedor mode="checkbox" />
+        {!isVenderFlow && <SolicitarVendedor mode="checkbox" />}
 
         <button
           type="submit"

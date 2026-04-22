@@ -446,23 +446,26 @@ model producto_imagenes {
 }
 
 model productores {
-  id_productor          Int        @id @default(autoincrement())
-  id_usuario            String     @unique @db.Uuid
+  id_productor          Int       @id @default(autoincrement())
+  id_usuario            String    @unique @db.Uuid
   id_region             Int?
   biografia             String?
-  otras_caracteristicas String?    @db.VarChar(255)
-  estado                String     @default("pendiente") @db.VarChar(20)
-  motivo_rechazo        String?    @db.Text
-  revisado_por          String?    @db.Uuid
-  revisado_en           DateTime?  @db.Timestamptz(6)
-  solicitado_en         DateTime   @default(now()) @db.Timestamptz(6)
-  creado_en             DateTime   @default(now()) @db.Timestamptz(6)
-  actualizado_en        DateTime   @default(now()) @db.Timestamptz(6)
-  eliminado_en          DateTime?  @db.Timestamptz(6)
+  creado_en             DateTime  @default(now()) @db.Timestamptz(6)
+  actualizado_en        DateTime  @default(now()) @db.Timestamptz(6)
+  eliminado_en          DateTime? @db.Timestamptz(6)
+  otras_caracteristicas String?   @db.VarChar(255)
+  estado                String    @default("pendiente") @db.VarChar(20)
+  motivo_rechazo        String?
+  revisado_en           DateTime? @db.Timestamptz(6)
+  revisado_por          String?   @db.Uuid
+  solicitado_en         DateTime  @default(now()) @db.Timestamptz(6)
+  datos_bancarios       String?
+  razon_social          String?   @db.VarChar(200)
+  rfc                   String?   @db.VarChar(13)
   lotes                 lotes[]
-  regiones              regiones?  @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
-  usuarios              usuarios   @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
-  revisor               usuarios?  @relation("RevisorProductor", fields: [revisado_por], references: [id_usuario], onUpdate: NoAction)
+  regiones              regiones? @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
+  usuarios              usuarios  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
+  revisor               usuarios? @relation("RevisorProductor", fields: [revisado_por], references: [id_usuario], onUpdate: NoAction)
   tiendas               tiendas[]
 }
 
@@ -650,7 +653,6 @@ model usuario_rol {
 model usuarios {
   id_usuario                                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre                                        String                   @db.VarChar(100)
-  nombre_usuario                                String?                  @unique @db.VarChar(50)
   foto_url                                      String?                  @db.VarChar(500)
   apellido_paterno                              String?                  @db.VarChar(100)
   apellido_materno                              String?                  @db.VarChar(100)
@@ -662,6 +664,7 @@ model usuarios {
   version_token                                 Int                      @default(1)
   fecha_registro                                DateTime                 @default(now()) @db.Timestamptz(6)
   eliminado_en                                  DateTime?                @db.Timestamptz(6)
+  nombre_usuario                                String?                  @unique @db.VarChar(50)
   archivos                                      archivos[]
   auditoria                                     auditoria[]
   carrito_item                                  carrito_item[]

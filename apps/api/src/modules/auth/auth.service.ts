@@ -67,9 +67,8 @@ export class AuthService {
       throw new ConflictException('Ya existe un usuario con ese email');
     }
 
-    const passwordHash = await hashPassword(dto.password);
-
     try {
+      const passwordHash = await hashPassword(dto.password);
       const user = await this.prisma.usuarios.create({
         data: {
           nombre_usuario: dto.nombre_usuario.trim(),
@@ -82,6 +81,12 @@ export class AuthService {
           foto_url: dto.foto_url?.trim() || null,
           idioma_preferido: dto.idioma_preferido?.trim() || 'es',
           moneda_preferida: dto.moneda_preferida?.trim() || 'MXN',
+          usuario_rol: {
+            create: {
+              id_rol: 1, // Rol cliente por defecto
+              estado: 'activo',
+            },
+          },
         },
       });
 
@@ -90,13 +95,13 @@ export class AuthService {
         await this.emailService.sendWelcomeEmail(user.email, user.nombre);
       } catch (emailError) {
         console.error('Error sending welcome email:', emailError);
-        // No lanzar error si falla el email, el usuario ya está registrado
       }
 
       await this.logAuthEvent('register', user.id_usuario, { email: user.email });
 
       return this.issueTokens(user);
     } catch (error) {
+      console.error('[AuthService] register error:', error);
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('No fue posible registrar el usuario');
       }

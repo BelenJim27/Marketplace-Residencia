@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useSession } from "next-auth/react";
 import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
-import { AlertCircle, CheckCircle2, Loader2, UploadIcon } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, UploadIcon, Building2, MapPin, CreditCard } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
 interface Region {
@@ -14,20 +15,37 @@ interface Region {
   estado_prov?: string;
 }
 
+interface Solicitud {
+  id_productor: number;
+  estado: string;
+  motivo_rechazo?: string;
+  rfc?: string;
+  razon_social?: string;
+}
+
 export default function SolicitarPage() {
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, user: contextUser } = useAuth();
+  const { data: session } = useSession();
+  const user = session?.user || contextUser;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [loadingSolicitud, setLoadingSolicitud] = useState(true);
+  const [solicitudActual, setSolicitudActual] = useState<Solicitud | null>(null);
   const [regiones, setRegiones] = useState<Region[]>([]);
   const [certificadoUrl, setCertificadoUrl] = useState("");
   const [certificadoFile, setCertificadoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
   const [formData, setFormData] = useState({
-    nombre_tienda: "",
-    descripcion: "",
+    rfc: "",
+    razon_social: "",
+    direccion_calle: "",
+    direccion_cp: "",
+    direccion_ciudad: "",
+    direccion_estado: "",
+    datos_bancarios: "",
     id_region: null as number | null,
   });
 
@@ -37,15 +55,128 @@ export default function SolicitarPage() {
       router.push("/auth/sign-in");
       return;
     }
-    api.productores.getRegiones().then((data) => setRegiones(data as Region[])).catch(console.error);
-  }, [isAuthenticated, authLoading, router]);
 
-  if (authLoading) {
+    const token = (session as any)?.accessToken || getCookie("token");
+    
+    api.productores.getRegiones().then((data) => setRegiones(data as Region[])).catch(console.error);
+    
+    if (token) {
+      api.productores.getMiSolicitud(token)
+        .then((data) => {
+          if (data) {
+            setSolicitudActual(data as Solicitud);
+          }
+        })
+        .catch(console.error)
+        .finally(() => setLoadingSolicitud(false));
+    }
+  }, [isAuthenticated, authLoading, router, session]);
+
+  if (authLoading || loadingSolicitud) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (solicitudActual) {
+    if (solicitudActual.estado === "pendiente") {
+      return (
+        <div className="mx-auto w-full max-w-4xl px-4 py-8">
+          <Breadcrumb pageName="Solicitud Pendiente" />
+          <div className="mt-6 rounded-xl bg-white p-8 shadow-1 dark:bg-gray-dark">
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-yellow-100">
+                <Loader2 className="h-10 w-10 animate-spin text-yellow-600" />
+              </div>
+              <h2 className="mb-2 text-2xl font-bold text-dark dark:text-white">
+                Solicitud en Revisión
+              </h2>
+              <p className="mb-6 text-gray-500">
+                Tu solicitud para convertirte en productor está siendo revisada por un administrador.
+                Te notificaremos cuando sea aprobada.
+              </p>
+              <button
+                onClick={() => router.push("/producto")}
+                className="rounded-lg bg-primary px-6 py-3 font-medium text-white hover:bg-opacity-90"
+              >
+                Volver a la tienda
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (solicitudActual.estado === "aprobado") {
+      return (
+        <div className="mx-auto w-full max-w-4xl px-4 py-8">
+          <Breadcrumb pageName="Ya eres Productor" />
+          <div className="mt-6 rounded-xl bg-white p-8 shadow-1 dark:bg-gray-dark">
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+                <CheckCircle2 className="h-10 w-10 text-green-600" />
+              </div>
+              <h2 className="mb-2 text-2xl font-bold text-dark dark:text-white">
+                ¡Ya eres Productor!
+              </h2>
+              <p className="mb-6 text-gray-500">
+                Tu solicitud fue aprobada. Ahora puedes publicar y vender tus productos.
+              </p>
+              <button
+                onClick={() => router.push("/dashboard/productor")}
+                className="rounded-lg bg-primary px-6 py-3 font-medium text-white hover:bg-opacity-90"
+              >
+                Ir a mi dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (solicitudActual.estado === "rechazado") {
+      return (
+        <div className="mx-auto w-full max-w-4xl px-4 py-8">
+          <Breadcrumb pageName="Solicitud Rechazada" />
+          <div className="mt-6 rounded-xl bg-white p-8 shadow-1 dark:bg-gray-dark">
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-100">
+                <AlertCircle className="h-10 w-10 text-red-600" />
+              </div>
+              <h2 className="mb-2 text-2xl font-bold text-dark dark:text-white">
+                Solicitud Rechazada
+              </h2>
+              <p className="mb-2 text-gray-500">
+                Tu solicitud fue rechazada.
+              </p>
+              <p className="mb-6 rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20">
+                <strong>Motivo:</strong> {solicitudActual.motivo_rechazo || "No especificado"}
+              </p>
+              <button
+                onClick={() => {
+                  setSolicitudActual(null);
+                  setFormData({
+                    rfc: "",
+                    razon_social: "",
+                    direccion_calle: "",
+                    direccion_cp: "",
+                    direccion_ciudad: "",
+                    direccion_estado: "",
+                    datos_bancarios: "",
+                    id_region: null,
+                  });
+                }}
+                className="rounded-lg bg-primary px-6 py-3 font-medium text-white hover:bg-opacity-90"
+              >
+                Intentar de nuevo
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
   }
 
   const handleInputChange = (
@@ -64,22 +195,23 @@ export default function SolicitarPage() {
     setError("");
     
     try {
-      const token = getCookie("token");
+      const token = (session as any)?.accessToken || getCookie("token");
+      
       if (!token) {
-        router.push("/auth/sign-in");
+        setError("Error: No se detectó sesión. Por favor inicia sesión.");
         return;
       }
       
       const formDataUpload = new FormData();
-      formDataUpload.append("file", file);
+      formDataUpload.append("archivo", file);
       formDataUpload.append("entidad_tipo", "productor_certificado");
       formDataUpload.append("tipo", "certificado");
 
       const result = await api.archivos.upload(token, formDataUpload);
       setCertificadoUrl((result as any).url || `/${(result as any).id}`);
     } catch (err) {
-      console.error("Error uploading:", err);
-      setError("Error al subir el certificado");
+      const msg = err instanceof Error ? err.message : "Error al subir el certificado";
+      setError(msg);
     } finally {
       setUploading(false);
     }
@@ -91,9 +223,9 @@ export default function SolicitarPage() {
     setError("");
 
     try {
-      const token = getCookie("token");
+      const token = (session as any)?.accessToken || getCookie("token");
       if (!token) {
-        router.push("/auth/sign-in");
+        setError("Error: No se detectó sesión. Por favor inicia sesión.");
         return;
       }
 
@@ -102,9 +234,14 @@ export default function SolicitarPage() {
       }
 
       await api.productores.solicitar(token, {
+        rfc: formData.rfc || undefined,
+        razon_social: formData.razon_social || undefined,
+        datos_bancarios: formData.datos_bancarios || undefined,
+        direccion_fiscal: formData.direccion_calle || formData.direccion_cp ? {
+          linea_1: formData.direccion_calle,
+          ubicacion: formData.direccion_cp ? { cp: formData.direccion_cp } : undefined,
+        } : undefined,
         id_region: formData.id_region ?? undefined,
-        biografia: formData.descripcion,
-        certificado_url: certificadoUrl,
       });
 
       setSuccess(true);
@@ -129,7 +266,7 @@ export default function SolicitarPage() {
             </h2>
             <p className="mb-6 text-gray-500">
               Tu solicitud para convertirte en productor ha sido enviada exitosamente.
-              Nuestro equipo revisará tu información y te notificará cuando tu cuenta haya sido aprobada.
+              Un administrador la revisará y te notificará cuando sea aprobada.
             </p>
             <button
               onClick={() => router.push("/producto")}
@@ -153,7 +290,7 @@ export default function SolicitarPage() {
             Solicitar ser Productor
           </h1>
           <p className="mt-1 text-gray-500">
-            Completa el siguiente formulario para solicitar convertirte en productor en nuestra plataforma.
+            Completa el formulario para convertirte en productor en nuestra plataforma.
           </p>
         </div>
 
@@ -165,19 +302,132 @@ export default function SolicitarPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-              Nombre de la Tienda *
-            </label>
-            <input
-              type="text"
-              name="nombre_tienda"
-              value={formData.nombre_tienda}
-              onChange={handleInputChange}
-              required
-              className="w-full rounded-lg border border-gray-4 bg-gray-1 px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark-2 dark:text-white"
-              placeholder="Mi Tienda de Productos"
-            />
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
+              <Building2 className="h-5 w-5" />
+              Datos Fiscales
+            </h3>
+            
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  RFC
+                </label>
+                <input
+                  type="text"
+                  name="rfc"
+                  value={formData.rfc}
+                  onChange={handleInputChange}
+                  maxLength={13}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark uppercase focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="XAXX010101000"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Razón Social
+                </label>
+                <input
+                  type="text"
+                  name="razon_social"
+                  value={formData.razon_social}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="Mi Empresa S.A. de C.V."
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
+              <MapPin className="h-5 w-5" />
+              Dirección Fiscal
+            </h3>
+            
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Calle y Número
+                </label>
+                <input
+                  type="text"
+                  name="direccion_calle"
+                  value={formData.direccion_calle}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="Av. Principal #123"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Código Postal
+                </label>
+                <input
+                  type="text"
+                  name="direccion_cp"
+                  value={formData.direccion_cp}
+                  onChange={handleInputChange}
+                  maxLength={5}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="12345"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Ciudad
+                </label>
+                <input
+                  type="text"
+                  name="direccion_ciudad"
+                  value={formData.direccion_ciudad}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="Ciudad de México"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Estado
+                </label>
+                <input
+                  type="text"
+                  name="direccion_estado"
+                  value={formData.direccion_estado}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="CDMX"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
+              <CreditCard className="h-5 w-5" />
+              Datos Bancarios (para pagos)
+            </h3>
+            
+            <div>
+              <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                Datos de cuenta bancaria (número de cuenta o CLABE)
+              </label>
+              <input
+                type="text"
+                name="datos_bancarios"
+                value={formData.datos_bancarios}
+                onChange={handleInputChange}
+                className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                placeholder="123456789012345678"
+              />
+              <p className="mt-1 text-xs text-gray-400">
+                Estos datos se encriptan y solo se usan para procesar tus pagos
+              </p>
+            </div>
           </div>
 
           <div>
@@ -202,21 +452,7 @@ export default function SolicitarPage() {
 
           <div>
             <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-              Descripción
-            </label>
-            <textarea
-              name="descripcion"
-              value={formData.descripcion}
-              onChange={handleInputChange}
-              rows={3}
-              className="w-full rounded-lg border border-gray-4 bg-gray-1 px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark-2 dark:text-white"
-              placeholder="Describe tu tienda y los productos que venderás..."
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-              Certificado de Origen *
+              Certificado de Origen (PDF o imagen) *
             </label>
             {certificadoUrl ? (
               <div className="flex items-center justify-between rounded-lg border border-green-5 bg-green-1 p-4 dark:bg-green-9/20">
@@ -277,14 +513,12 @@ export default function SolicitarPage() {
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Enviando...
                 </>
-) : uploading ? (
-              <div className="flex items-center justify-center rounded-xl border border-gray-4 bg-gray-2 p-6 dark:border-dark-3 dark:bg-dark-2">
-                <div className="flex items-center gap-2 text-gray-500">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                  <span>Subiendo certificado...</span>
-                </div>
-              </div>
-            ) : (
+              ) : uploading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
                 "Enviar Solicitud"
               )}
             </button>

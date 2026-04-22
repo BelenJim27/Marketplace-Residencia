@@ -31,6 +31,11 @@ export class AdminController {
     return this.adminService.getSolicitudesPendientes();
   }
 
+  @Get('productores')
+  getAllProductores() {
+    return this.adminService.getAllProductores();
+  }
+
   @Patch('productores/:id/revisar')
   async revisarSolicitud(
     @Param('id', ParseIntPipe) id: number,

@@ -3,11 +3,54 @@
 import Signin from "@/components/Administrator/Auth/Signin";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function SignInPage() {
   const searchParams = useSearchParams();
-  const showBanner = searchParams.get("vender") === "true";
+  const isVenderFlow = searchParams.get("vender") === "true";
+  const { isAuthenticated, loading, isAdmin, isProductor } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!isAuthenticated) return;
+
+    if (isVenderFlow) {
+      router.replace("/Productor/solicitar");
+      return;
+    }
+    if (isAdmin) {
+      router.replace("/dashboard/administrador");
+      return;
+    }
+    if (isProductor) {
+      router.replace("/dashboard/productor");
+      return;
+    }
+    router.replace("/Cliente/producto");
+  }, [isAuthenticated, loading, isVenderFlow, isAdmin, isProductor, router]);
+
+  if (isVenderFlow) {
+    return (
+      <>
+        <Breadcrumb pageName="Iniciar Sesión" />
+
+        <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card p-6 sm:p-12">
+          <div className="max-w-md mx-auto">
+            <h1 className="text-2xl font-bold text-dark dark:text-white mb-2 text-center">
+              Inicia sesión para solicitar ser productor
+            </h1>
+            <p className="text-gray-500 mb-8 text-center">
+              Ingresa tus credenciales para continuar con tu solicitud.
+            </p>
+            <Signin isVenderFlow={true} />
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

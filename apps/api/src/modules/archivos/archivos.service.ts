@@ -24,7 +24,7 @@ export class ArchivosService {
     return serializeBigInts(mapArchivoResponse(item));
   }
   async create(dto: CreateArchivoDto) {
-    const created = await this.prisma.archivos.create({ data: { entidad_tipo: dto.entidad_tipo.trim(), entidad_id: dto.entidad_id, url: dto.url ?? '', tipo: dto.tipo ?? null, estado: dto.estado?.trim() ?? 'pendiente', validado_por: dto.validado_por ?? null } });
+    const created = await this.prisma.archivos.create({ data: { entidad_tipo: dto.entidad_tipo.trim(), entidad_id: dto.entidad_id ?? BigInt(0), url: dto.url ?? '', tipo: dto.tipo ?? null, estado: dto.estado?.trim() ?? 'pendiente', validado_por: dto.validado_por ?? null } });
     return serializeBigInts(mapArchivoResponse(created));
   }
   async update(id_archivo: string, dto: UpdateArchivoDto) {

@@ -200,4 +200,130 @@ export class EmailService {
       throw error;
     }
   }
+
+  async sendSolicitudRecibidaEmail(email: string, nombre: string): Promise<void> {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 30px; }
+          .badge { display: inline-block; background: #fef9c3; color: #854d0e; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+          .footer { margin-top: 20px; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="card">
+            <span class="badge">En revisión</span>
+            <h2>Solicitud recibida, ${nombre}</h2>
+            <p>Hemos recibido tu solicitud para convertirte en productor. Nuestro equipo la revisará en los próximos días hábiles.</p>
+            <p>Te notificaremos por este medio cuando tengamos una respuesta.</p>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Marketplace · <a href="${frontendUrl}">Ir a la plataforma</a></p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await this.sendEmail({
+      to: email,
+      subject: 'Recibimos tu solicitud de productor',
+      html,
+    });
+  }
+
+  async sendProductorApprovedEmail(email: string, nombre: string, motivo?: string | null): Promise<void> {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 30px; }
+          .button { display: inline-block; background: #16a34a; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin: 20px 0; }
+          .badge { display: inline-block; background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+          .footer { margin-top: 20px; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="card">
+            <span class="badge">✓ Aprobada</span>
+            <h2>¡Felicidades, ${nombre}!</h2>
+            <p>Tu solicitud para convertirte en productor ha sido <strong>aprobada</strong>.</p>
+            <p>Ahora puedes:</p>
+            <ul>
+              <li>Publicar tus productos en la plataforma</li>
+              <li>Gestionar tu tienda</li>
+              <li>Recibir pedidos de clientes</li>
+            </ul>
+            ${motivo ? `<p><strong>Nota del administrador:</strong> ${motivo}</p>` : ''}
+            <a href="${frontendUrl}/dashboard/productor" class="button">Ir a mi dashboard</a>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Marketplace</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await this.sendEmail({
+      to: email,
+      subject: '¡Tu solicitud de productor fue aprobada!',
+      html,
+    });
+  }
+
+  async sendProductorRejectedEmail(email: string, nombre: string, motivo?: string | null): Promise<void> {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 30px; }
+          .button { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin: 20px 0; }
+          .badge { display: inline-block; background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+          .motivo { background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 4px; margin: 16px 0; }
+          .footer { margin-top: 20px; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="card">
+            <span class="badge">Rechazada</span>
+            <h2>Hola ${nombre},</h2>
+            <p>Lamentamos informarte que tu solicitud para convertirte en productor no fue aprobada en esta ocasión.</p>
+            ${motivo ? `<div class="motivo"><strong>Motivo:</strong> ${motivo}</div>` : ''}
+            <p>Puedes corregir la información y volver a intentarlo desde la plataforma.</p>
+            <a href="${frontendUrl}/Productor/solicitar" class="button">Intentar de nuevo</a>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Marketplace</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await this.sendEmail({
+      to: email,
+      subject: 'Actualización sobre tu solicitud de productor',
+      html,
+    });
+  }
 }

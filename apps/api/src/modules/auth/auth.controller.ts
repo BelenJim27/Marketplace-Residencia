@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Ip, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Ip, Post, UnauthorizedException } from '@nestjs/common';
 import {
   LoginAuthDto,
   LogoutAuthDto,
@@ -14,11 +14,13 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @HttpCode(201)
   register(@Body() dto: RegisterAuthDto) {
     return this.authService.register(dto);
   }
 
   @Post('login')
+  @HttpCode(200)
   login(@Body() dto: LoginAuthDto) {
     return this.authService.login(dto);
   }
@@ -34,21 +36,25 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @HttpCode(200)
   refresh(@Body() dto: RefreshAuthDto) {
     return this.authService.refresh(dto);
   }
 
   @Post('logout')
+  @HttpCode(200)
   logout(@Body() dto: LogoutAuthDto) {
     return this.authService.logout(dto);
   }
 
   @Post('password-reset/request')
+  @HttpCode(200)
   requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
     return this.authService.requestPasswordReset(dto);
   }
 
   @Post('password-reset/confirm')
+  @HttpCode(200)
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }

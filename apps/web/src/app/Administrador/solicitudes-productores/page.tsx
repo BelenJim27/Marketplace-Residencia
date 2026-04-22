@@ -8,21 +8,22 @@ import { AlertCircle, CheckCircle2, XCircle, FileText, Eye, Loader2, User, Build
 import Image from "next/image";
 
 interface SolicitudProductor {
-  id_solicitud: number;
-  id_usuario: number;
-  nombre_usuario: string;
-  email: string;
-  rfc: string;
-  nombre_tienda: string;
-  descripcion: string;
-  banco: string;
-  numero_cuenta: string;
-  clabe_interbancaria: string;
-  url_certificado: string;
-  url_ine: string;
-  url_comprobante_domicilio: string;
-  status: "pendiente" | "aprobada" | "rechazada";
-  fecha_solicitud: string;
+  id_productor: number;
+  id_usuario: string;
+  estado: string;
+  rfc?: string;
+  razon_social?: string;
+  motivo_rechazo?: string;
+  solicitado_en: string;
+  revisado_en?: string;
+  usuarios: {
+    nombre: string;
+    email: string;
+    telefono?: string;
+  };
+  regiones?: {
+    nombre: string;
+  };
 }
 
 export default function SolicitudesProductoresPage() {
@@ -31,6 +32,10 @@ export default function SolicitudesProductoresPage() {
   const [error, setError] = useState("");
   const [selectedSolicitud, setSelectedSolicitud] = useState<SolicitudProductor | null>(null);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [approveReason, setApproveReason] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
 
   useEffect(() => {
     loadSolicitudes();
@@ -46,7 +51,7 @@ export default function SolicitudesProductoresPage() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/productores/solicitudes`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/admin/productores/solicitudes`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -55,7 +60,8 @@ export default function SolicitudesProductoresPage() {
       );
 
       if (!response.ok) {
-        throw new Error("Error al cargar solicitudes");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || `Error ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -74,12 +80,14 @@ export default function SolicitudesProductoresPage() {
       if (!token) return;
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/productores/solicitudes/${id}/aprobar`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/admin/productores/${id}/revisar`,
         {
-          method: "POST",
+          method: "PATCH",
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
+          body: JSON.stringify({ estado: "aprobado", motivo_aprobacion: approveReason || null }),
         }
       );
 
@@ -88,9 +96,11 @@ export default function SolicitudesProductoresPage() {
       }
 
       setSolicitudes((prev) =>
-        prev.map((s) => (s.id_solicitud === id ? { ...s, status: "aprobada" } : s))
+        prev.map((s) => (s.id_productor === id ? { ...s, estado: "aprobado" } : s))
       );
       setSelectedSolicitud(null);
+      setApproveModalOpen(false);
+      setApproveReason("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al aprobar");
     } finally {
@@ -105,12 +115,14 @@ export default function SolicitudesProductoresPage() {
       if (!token) return;
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/productores/solicitudes/${id}/rechazar`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/admin/productores/${id}/revisar`,
         {
-          method: "POST",
+          method: "PATCH",
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
+          body: JSON.stringify({ estado: "rechazado", motivo_rechazo: rejectReason }),
         }
       );
 
@@ -119,9 +131,11 @@ export default function SolicitudesProductoresPage() {
       }
 
       setSolicitudes((prev) =>
-        prev.map((s) => (s.id_solicitud === id ? { ...s, status: "rechazada" } : s))
+        prev.map((s) => (s.id_productor === id ? { ...s, estado: "rechazado" } : s))
       );
       setSelectedSolicitud(null);
+      setRejectModalOpen(false);
+      setRejectReason("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al rechazar");
     } finally {
@@ -137,16 +151,16 @@ export default function SolicitudesProductoresPage() {
             Pendiente
           </span>
         );
-      case "aprobada":
+      case "aprobado":
         return (
           <span className="inline-flex rounded-full bg-green-1 px-3 py-1 text-sm font-medium text-green-7 dark:bg-green-9 dark:text-green-2">
-            Aprobada
+            Aprobado
           </span>
         );
-      case "rechazada":
+      case "rechazado":
         return (
           <span className="inline-flex rounded-full bg-red-1 px-3 py-1 text-sm font-medium text-red-7 dark:bg-red-9 dark:text-red-2">
-            Rechazada
+            Rechazado
           </span>
         );
       default:
@@ -154,14 +168,8 @@ export default function SolicitudesProductoresPage() {
     }
   };
 
-  const getMediaUrl = (path: string) => {
-    if (!path) return "";
-    const baseUrl = process.env.NEXT_PUBLIC_MEDIA_URL || "http://localhost:3001";
-    return path.startsWith("http") ? path : `${baseUrl}${path}`;
-  };
-
-  const pendientes = solicitudes.filter((s) => s.status === "pendiente");
-  const procesadas = solicitudes.filter((s) => s.status !== "pendiente");
+  const pendientes = solicitudes.filter((s) => s.estado === "pendiente");
+  const procesadas = solicitudes.filter((s) => s.estado !== "pendiente");
 
   return (
     <>
@@ -190,7 +198,6 @@ export default function SolicitudesProductoresPage() {
           </div>
         ) : (
           <>
-            {/* Pendientes */}
             <div className="mb-8">
               <h3 className="mb-4 text-lg font-semibold text-dark dark:text-white flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-yellow-500" />
@@ -202,31 +209,35 @@ export default function SolicitudesProductoresPage() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {pendientes.map((solicitud) => (
                     <div
-                      key={solicitud.id_solicitud}
+                      key={solicitud.id_productor}
                       className="rounded-lg border border-gray-3 p-4 dark:border-dark-3"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h4 className="font-semibold text-dark dark:text-white">
-                            {solicitud.nombre_tienda}
+                            {solicitud.usuarios?.nombre || "Usuario"}
                           </h4>
-                          <p className="text-sm text-gray-500">{solicitud.email}</p>
+                          <p className="text-sm text-gray-500">{solicitud.usuarios?.email}</p>
                         </div>
-                        {getStatusBadge(solicitud.status)}
+                        {getStatusBadge(solicitud.estado)}
                       </div>
                       <div className="space-y-2 text-sm mb-4">
                         <p className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <User className="h-4 w-4" />
-                          {solicitud.nombre_usuario}
+                          {solicitud.usuarios?.nombre}
                         </p>
-                        <p className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                          <FileText className="h-4 w-4" />
-                          RFC: {solicitud.rfc}
-                        </p>
-                        <p className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                          <Building2 className="h-4 w-4" />
-                          {solicitud.banco}
-                        </p>
+                        {solicitud.rfc && (
+                          <p className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                            <FileText className="h-4 w-4" />
+                            RFC: {solicitud.rfc}
+                          </p>
+                        )}
+                        {solicitud.razon_social && (
+                          <p className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                            <Building2 className="h-4 w-4" />
+                            {solicitud.razon_social}
+                          </p>
+                        )}
                       </div>
                       <button
                         onClick={() => setSelectedSolicitud(solicitud)}
@@ -241,7 +252,6 @@ export default function SolicitudesProductoresPage() {
               )}
             </div>
 
-            {/* Procesadas */}
             {procesadas.length > 0 && (
               <div>
                 <h3 className="mb-4 text-lg font-semibold text-dark dark:text-white">
@@ -252,10 +262,10 @@ export default function SolicitudesProductoresPage() {
                     <thead>
                       <tr className="border-b border-gray-3 dark:border-dark-3">
                         <th className="pb-3 text-left text-sm font-semibold text-dark dark:text-white">
-                          Tienda
+                          Usuario
                         </th>
                         <th className="pb-3 text-left text-sm font-semibold text-dark dark:text-white">
-                          Usuario
+                          Email
                         </th>
                         <th className="pb-3 text-left text-sm font-semibold text-dark dark:text-white">
                           RFC
@@ -271,22 +281,22 @@ export default function SolicitudesProductoresPage() {
                     <tbody>
                       {procesadas.map((solicitud) => (
                         <tr
-                          key={solicitud.id_solicitud}
+                          key={solicitud.id_productor}
                           className="border-b border-gray-2 dark:border-dark-3"
                         >
                           <td className="py-3 text-sm text-dark dark:text-white">
-                            {solicitud.nombre_tienda}
+                            {solicitud.usuarios?.nombre}
                           </td>
                           <td className="py-3 text-sm text-gray-500">
-                            {solicitud.email}
+                            {solicitud.usuarios?.email}
                           </td>
                           <td className="py-3 text-sm text-gray-500">
-                            {solicitud.rfc}
+                            {solicitud.rfc || "-"}
                           </td>
                           <td className="py-3 text-sm text-gray-500">
-                            {new Date(solicitud.fecha_solicitud).toLocaleDateString("es-MX")}
+                            {new Date(solicitud.solicitado_en).toLocaleDateString("es-MX")}
                           </td>
-                          <td className="py-3">{getStatusBadge(solicitud.status)}</td>
+                          <td className="py-3">{getStatusBadge(solicitud.estado)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -298,16 +308,15 @@ export default function SolicitudesProductoresPage() {
         )}
       </div>
 
-      {/* Modal de Detalles */}
       {selectedSolicitud && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 dark:bg-gray-dark">
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-dark dark:text-white">
-                  {selectedSolicitud.nombre_tienda}
+                  {selectedSolicitud.usuarios?.nombre}
                 </h2>
-                <p className="text-gray-500">{selectedSolicitud.email}</p>
+                <p className="text-gray-500">{selectedSolicitud.usuarios?.email}</p>
               </div>
               <button
                 onClick={() => setSelectedSolicitud(null)}
@@ -318,7 +327,6 @@ export default function SolicitudesProductoresPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Info Usuario */}
               <div>
                 <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
                   <User className="h-5 w-5" />
@@ -328,121 +336,83 @@ export default function SolicitudesProductoresPage() {
                   <div>
                     <p className="text-xs text-gray-500">Nombre</p>
                     <p className="text-sm font-medium text-dark dark:text-white">
-                      {selectedSolicitud.nombre_usuario}
+                      {selectedSolicitud.usuarios?.nombre}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Email</p>
                     <p className="text-sm font-medium text-dark dark:text-white">
-                      {selectedSolicitud.email}
+                      {selectedSolicitud.usuarios?.email}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Teléfono</p>
+                    <p className="text-sm font-medium text-dark dark:text-white">
+                      {selectedSolicitud.usuarios?.telefono || "No proporcionado"}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Info Tienda */}
               <div>
                 <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
-                  Información de la Tienda
+                  Datos Fiscales
                 </h3>
                 <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-1 p-4 dark:bg-dark-2">
                   <div>
                     <p className="text-xs text-gray-500">RFC</p>
                     <p className="text-sm font-medium text-dark dark:text-white">
-                      {selectedSolicitud.rfc}
+                      {selectedSolicitud.rfc || "No proporcionado"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Nombre de Tienda</p>
+                    <p className="text-xs text-gray-500">Razón Social</p>
                     <p className="text-sm font-medium text-dark dark:text-white">
-                      {selectedSolicitud.nombre_tienda}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-xs text-gray-500">Descripción</p>
-                    <p className="text-sm text-dark dark:text-white">
-                      {selectedSolicitud.descripcion || "Sin descripción"}
+                      {selectedSolicitud.razon_social || "No proporcionada"}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Info Bancaria */}
-              <div>
-                <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  Información Bancaria
-                </h3>
-                <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-1 p-4 dark:bg-dark-2">
-                  <div>
-                    <p className="text-xs text-gray-500">Banco</p>
-                    <p className="text-sm font-medium text-dark dark:text-white">
-                      {selectedSolicitud.banco}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Número de Cuenta</p>
-                    <p className="text-sm font-medium text-dark dark:text-white">
-                      {selectedSolicitud.numero_cuenta}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-xs text-gray-500">CLABE Interbancaria</p>
-                    <p className="text-sm font-medium text-dark dark:text-white">
-                      {selectedSolicitud.clabe_interbancaria}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Documentos */}
               <div>
                 <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  Documentos
+                  Estado de Solicitud
                 </h3>
-                <div className="space-y-3">
-                  {[
-                    { label: "Certificado", url: selectedSolicitud.url_certificado },
-                    { label: "INE", url: selectedSolicitud.url_ine },
-                    { label: "Comprobante de Domicilio", url: selectedSolicitud.url_comprobante_domicilio },
-                  ].map((doc, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between rounded-lg border border-gray-3 p-3 dark:border-dark-3"
-                    >
-                      <span className="text-sm font-medium text-dark dark:text-white">
-                        {doc.label}
-                      </span>
-                      {doc.url ? (
-                        <a
-                          href={getMediaUrl(doc.url)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-sm text-primary hover:underline"
-                        >
-                          <Eye className="h-4 w-4" />
-                          Ver
-                        </a>
-                      ) : (
-                        <span className="text-sm text-gray-400">No cargado</span>
-                      )}
-                    </div>
-                  ))}
+                <div className="rounded-lg bg-gray-1 p-4 dark:bg-dark-2">
+                  <p className="text-xs text-gray-500">Fecha de solicitud</p>
+                  <p className="text-sm font-medium text-dark dark:text-white">
+                    {new Date(selectedSolicitud.solicitado_en).toLocaleString("es-MX")}
+                  </p>
+                  {selectedSolicitud.revisado_en && (
+                    <>
+                      <p className="text-xs text-gray-500 mt-2">Fecha de resolución</p>
+                      <p className="text-sm font-medium text-dark dark:text-white">
+                        {new Date(selectedSolicitud.revisado_en).toLocaleString("es-MX")}
+                      </p>
+                    </>
+                  )}
+                  {selectedSolicitud.motivo_rechazo && (
+                    <>
+                      <p className="text-xs text-gray-500 mt-2">Motivo de rechazo</p>
+                      <p className="text-sm font-medium text-red-600">
+                        {selectedSolicitud.motivo_rechazo}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Botones de Acción */}
-            {selectedSolicitud.status === "pendiente" && (
+            {selectedSolicitud.estado === "pendiente" && (
               <div className="mt-6 flex gap-4">
                 <button
-                  onClick={() => handleReject(selectedSolicitud.id_solicitud)}
+                  onClick={() => setRejectModalOpen(true)}
                   disabled={processingId !== null}
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-3 font-medium text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-900/20 dark:hover:bg-red-900/30 disabled:opacity-50"
                 >
-                  {processingId === selectedSolicitud.id_solicitud ? (
+                  {processingId === selectedSolicitud.id_productor ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     <XCircle className="h-5 w-5" />
@@ -450,11 +420,11 @@ export default function SolicitudesProductoresPage() {
                   Rechazar
                 </button>
                 <button
-                  onClick={() => handleApprove(selectedSolicitud.id_solicitud)}
+                  onClick={() => setApproveModalOpen(true)}
                   disabled={processingId !== null}
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 font-medium text-white hover:bg-green-700 disabled:opacity-50"
                 >
-                  {processingId === selectedSolicitud.id_solicitud ? (
+                  {processingId === selectedSolicitud.id_productor ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     <CheckCircle2 className="h-5 w-5" />
@@ -463,6 +433,87 @@ export default function SolicitudesProductoresPage() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {rejectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 dark:bg-gray-dark">
+            <h2 className="text-xl font-bold text-dark dark:text-white mb-4">
+              Rechazar Solicitud
+            </h2>
+            <p className="text-gray-500 mb-4">
+              Por favor proporciona un motivo para el rechazo:
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={4}
+              className="w-full rounded-lg border border-gray-4 bg-gray-1 px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark-2 dark:text-white mb-4"
+              placeholder="Motivo del rechazo..."
+            />
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  setRejectModalOpen(false);
+                  setRejectReason("");
+                }}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 font-medium text-dark hover:bg-gray-100"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleReject(selectedSolicitud!.id_productor)}
+                disabled={processingId !== null || !rejectReason.trim()}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                Rechazar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {approveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 dark:bg-gray-dark">
+            <h2 className="text-xl font-bold text-dark dark:text-white mb-4">
+              Aprobar Solicitud
+            </h2>
+            <p className="text-gray-500 mb-4">
+              ¿Estás seguro de que deseas aprobar esta solicitud de productor? El usuario deberá completar su perfil y subir su certificado antes de poder vender.
+            </p>
+            <textarea
+              value={approveReason}
+              onChange={(e) => setApproveReason(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-gray-4 bg-gray-1 px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark-2 dark:text-white mb-4"
+              placeholder="Motivo de aprobación (opcional)..."
+            />
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  setApproveModalOpen(false);
+                  setApproveReason("");
+                }}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 font-medium text-dark hover:bg-gray-100"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleApprove(selectedSolicitud!.id_productor)}
+                disabled={processingId !== null}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 font-medium text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                {processingId !== null ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-5 w-5" />
+                )}
+                Aprobar
+              </button>
+            </div>
           </div>
         </div>
       )}
