@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "nodejs";
-
 type RouteContext = {
   params: Promise<{
     id: string;
@@ -9,7 +7,7 @@ type RouteContext = {
 };
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: RouteContext,
 ) {
   const { id } = await params;
@@ -22,45 +20,28 @@ export async function GET(
     );
   }
 
-  if (!process.env.DATABASE_URL) {
-    return NextResponse.json(
-      { message: "DATABASE_URL no está configurada." },
-      { status: 500 },
-    );
-  }
-
-  const { Client } = await import("pg");
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+  const authHeader = request.headers.get("authorization");
 
   try {
-    await client.connect();
-
-    const result = await client.query(
-      `
-        SELECT p.id_producto, p.nombre, p.precio_base, p.moneda_base,
-               p.status, p.imagen_principal_url,
-               COALESCE(i.stock, 0) AS stock
-        FROM productos p
-        INNER JOIN lotes l ON p.id_lote = l.id_lote
-        LEFT JOIN inventario i ON i.id_producto = p.id_producto
-        WHERE l.id_productor = $1
-          AND p.eliminado_en IS NULL
-      `,
-      [idProductor],
-    );
-
-    return NextResponse.json(result.rows);
+    const res = await fetch(`${apiUrl}/productos?id_productor=${idProductor}`, {
+      headers: {
+        ...(authHeader ? { Authorization: authHeader } : {}),
+      },
+    });
+    if (!res.ok) {
+      return NextResponse.json(
+        { message: "No fue posible obtener los productos." },
+        { status: res.status },
+      );
+    }
+    return NextResponse.json(await res.json());
   } catch (error) {
     console.error("ERROR EN API PRODUCTOS:", {
       route: "/api/admin/productos/por-productor/[id]",
       idProductor,
       error,
     });
-    return NextResponse.json(
-      { error: String(error) },
-      { status: 500 },
-    );
-  } finally {
-    await client.end();
+    return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
