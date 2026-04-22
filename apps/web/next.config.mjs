@@ -9,6 +9,11 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  experimental: {
+    turbo: {
+      enabled: false
+    }
+  },
   output: 'standalone',
   async rewrites() {
     return [
