@@ -4,10 +4,10 @@ import Signin from "@/components/Administrator/Auth/Signin";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
 
-export default function SignInPage() {
+function SignInContent() {
   const searchParams = useSearchParams();
   const isVenderFlow = searchParams.get("vender") === "true";
   const { isAuthenticated, loading, isAdmin, isProductor } = useAuth();
@@ -31,6 +31,7 @@ export default function SignInPage() {
     }
     router.replace("/Cliente/producto");
   }, [isAuthenticated, loading, isVenderFlow, isAdmin, isProductor, router]);
+
 
   if (isVenderFlow) {
     return (
@@ -85,5 +86,13 @@ export default function SignInPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInContent />
+    </Suspense>
   );
 }

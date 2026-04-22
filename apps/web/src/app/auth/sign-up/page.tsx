@@ -5,8 +5,9 @@ import Image from "next/image";
 import { SignUpForm } from "./_components/sign-up-form";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function SignUpPage() {
+function SignUpContent() {
   const searchParams = useSearchParams();
   const isVenderFlow = searchParams.get("vender") === "true";
 
@@ -112,5 +113,13 @@ export default function SignUpPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpContent />
+    </Suspense>
   );
 }
