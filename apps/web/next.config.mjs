@@ -8,6 +8,10 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  experimental: {
+    workerThreads: false,
+    cpus: 1,
+  },
   async rewrites() {
     return [
       { source: "/uploads/:path*", destination: `${API_URL}/uploads/:path*` },
