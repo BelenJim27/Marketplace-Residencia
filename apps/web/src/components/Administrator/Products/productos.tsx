@@ -35,7 +35,7 @@ export default function ProductosAdmin() {
 
     const fetchProductos = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/productos`);
+            const res = await fetch(`/productos`);
             if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
 
@@ -79,7 +79,7 @@ export default function ProductosAdmin() {
     const confirmarEliminacion = async () => {
         if (!productoSeleccionado) return;
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/productos/${productoSeleccionado.id_producto}`, {
+            const res = await fetch(`/productos/${productoSeleccionado.id_producto}`, {
                 method: 'DELETE',
             });
             if (res.ok) {

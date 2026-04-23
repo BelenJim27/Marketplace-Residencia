@@ -56,18 +56,53 @@ export default function SolicitarPage() {
       return;
     }
 
-    const token = (session as any)?.accessToken || getCookie("token");
+    // Obtener el token de múltiples fuentes en orden de prioridad
+    let token = (session as any)?.accessToken || getCookie("token");
+    
+    // Log para debugging
+    console.log("=== SolicitarPage Debug ===");
+    console.log("isAuthenticated:", isAuthenticated);
+    console.log("authLoading:", authLoading);
+    console.log("Token from session:", (session as any)?.accessToken ? "exists" : "not found");
+    console.log("Token from cookies:", token ? "exists" : "not found");
     
     api.productores.getRegiones().then((data) => setRegiones(data as Region[])).catch(console.error);
     
-    if (token) {
+    if (!token) {
+      // Si no hay token pero está autenticado, espera un poco y reintentar
+      // Esto puede suceder en transiciones rápidas después del login
+      console.warn("Token no encontrado en primera ejecución, esperando...");
+      const timeout = setTimeout(() => {
+        token = getCookie("token");
+        console.log("Token after delay:", token ? "exists" : "not found");
+        if (token) {
+          loadSolicitud(token);
+        } else {
+          console.warn("Token no disponible después de esperar");
+          setLoadingSolicitud(false);
+        }
+      }, 300);
+      return () => clearTimeout(timeout);
+    }
+    
+    loadSolicitud(token);
+
+    function loadSolicitud(token: string) {
       api.productores.getMiSolicitud(token)
         .then((data) => {
+          console.log("getMiSolicitud response:", data);
           if (data) {
             setSolicitudActual(data as Solicitud);
           }
         })
-        .catch(console.error)
+        .catch((err) => {
+          console.error("Error obteniendo solicitud:", err);
+          // No mostrar error si es un error de autenticación en la primera carga
+          // ya que podría ser un timing issue
+          if (err?.status !== 401) {
+            setError("Error al obtener tu solicitud anterior");
+          }
+        })
         .finally(() => setLoadingSolicitud(false));
     }
   }, [isAuthenticated, authLoading, router, session]);

@@ -20,7 +20,7 @@ type Notice = {
   message: string;
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL = "";
 
 export default function CategoriasAdminPage() {
   const [query, setQuery] = useState("");

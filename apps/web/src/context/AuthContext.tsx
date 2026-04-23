@@ -148,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const resolveProductor = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/productores/by-usuario/${user.id_usuario}`,
+          `/productores/by-usuario/${user.id_usuario}`,
         );
         if (!response.ok) {
           return;
@@ -178,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (refreshToken) {
             try {
               const refreshRes = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
+                `/auth/refresh`,
                 {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },

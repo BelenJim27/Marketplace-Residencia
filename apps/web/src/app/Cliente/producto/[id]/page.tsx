@@ -3,11 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { ShoppingCart, ArrowLeft, Star, MapPin, Heart } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap } from "lucide-react";
 import { api } from "@/lib/api";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { formatPrice } from "@/lib/format-number";
+import { useDHLShipping, DHLServiceType } from "@/hooks/useDHLShipping";
 
 interface LoteData {
   datos_api?: Record<string, string>;
@@ -66,6 +67,9 @@ export default function ProductoDetallePage() {
   const [imagenSeleccionada, setImagenSeleccionada] = useState(0);
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
+  const [envioSeleccionado, setEnvioSeleccionado] = useState<DHLServiceType>("estandar");
+  const { cotizarTodos } = useDHLShipping();
+  const cotizacionesDHL = cotizarTodos(0.75, "MX");
 
   const fetchProducto = useCallback(async () => {
     const id = params.id;
@@ -90,7 +94,6 @@ export default function ProductoDetallePage() {
 
   const handleAgregar = () => {
     if (!producto) return;
-    
     agregarProducto({
       id_producto: producto.id_producto,
       nombre: producto.nombre,
@@ -101,6 +104,19 @@ export default function ProductoDetallePage() {
     });
     setAgregado(true);
     setTimeout(() => setAgregado(false), 2000);
+  };
+
+  const handleComprarAhora = () => {
+    if (!producto) return;
+    agregarProducto({
+      id_producto: producto.id_producto,
+      nombre: producto.nombre,
+      precio_base: producto.precio_base,
+      imagen_principal_url: producto.imagen_principal_url,
+      producto_imagenes: producto.producto_imagenes,
+      cantidad: cantidad,
+    });
+    router.push("/tienda/checkout");
   };
 
   const todasImagenes = [
@@ -381,42 +397,83 @@ export default function ProductoDetallePage() {
               </div>
             </div>
 
-            <div className="flex gap-3">
+            {/* Sección de envío DHL */}
+            <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+              <div className="mb-3 flex items-center gap-2">
+                <Truck size={16} className="text-yellow-500" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">Opciones de envío</span>
+              </div>
+              <div className="space-y-2">
+                {cotizacionesDHL.map((cot, idx) => {
+                  const tipos: DHLServiceType[] = ["express", "estandar", "economico"];
+                  const tipo = tipos[idx];
+                  return (
+                    <label
+                      key={cot.servicio}
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors
+                        ${envioSeleccionado === tipo ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "border-gray-200 dark:border-gray-700"}`}
+                    >
+                      <input
+                        type="radio"
+                        name="dhl-envio"
+                        className="accent-green-600"
+                        checked={envioSeleccionado === tipo}
+                        onChange={() => setEnvioSeleccionado(tipo)}
+                      />
+                      <span className="flex-1 text-gray-700 dark:text-gray-300">{cot.servicio}</span>
+                      <span className="text-gray-500">{cot.diasEntrega}</span>
+                      <span className="font-semibold text-green-600">${formatPrice(cot.precio, { showCurrency: false })} MXN</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    if (!producto) return;
+                    if (isInWishlist(producto.id_producto)) {
+                      eliminarWishlist(producto.id_producto);
+                    } else {
+                      agregarWishlist({
+                        id_producto: producto.id_producto,
+                        nombre: producto.nombre,
+                        precio_base: producto.precio_base,
+                        imagen_principal_url: producto.imagen_principal_url,
+                        producto_imagenes: producto.producto_imagenes,
+                      });
+                    }
+                  }}
+                  className={`flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${
+                    producto && isInWishlist(producto.id_producto)
+                      ? "bg-red-100 text-red-600 border border-red-300 hover:bg-red-200"
+                      : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-dark dark:border-gray-600 dark:text-gray-300"
+                  }`}
+                >
+                  <Heart size={20} fill={producto && isInWishlist(producto.id_producto) ? "currentColor" : "none"} />
+                  {producto && isInWishlist(producto.id_producto) ? "En favoritos" : "Favoritos"}
+                </button>
+                <button
+                  onClick={handleAgregar}
+                  disabled={agregado}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${
+                    agregado
+                      ? "bg-green-700 text-white"
+                      : "bg-green-600 text-white hover:bg-green-700"
+                  }`}
+                >
+                  <ShoppingCart size={20} />
+                  {agregado ? "Agregado" : "Agregar al carrito"}
+                </button>
+              </div>
               <button
-                onClick={() => {
-                  if (!producto) return;
-                  if (isInWishlist(producto.id_producto)) {
-                    eliminarWishlist(producto.id_producto);
-                  } else {
-                    agregarWishlist({
-                      id_producto: producto.id_producto,
-                      nombre: producto.nombre,
-                      precio_base: producto.precio_base,
-                      imagen_principal_url: producto.imagen_principal_url,
-                      producto_imagenes: producto.producto_imagenes,
-                    });
-                  }
-                }}
-                className={`flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${
-                  producto && isInWishlist(producto.id_producto)
-                    ? "bg-red-100 text-red-600 border border-red-300 hover:bg-red-200"
-                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-dark dark:border-gray-600 dark:text-gray-300"
-                }`}
+                onClick={handleComprarAhora}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-amber-700"
               >
-                <Heart size={20} fill={producto && isInWishlist(producto.id_producto) ? "currentColor" : "none"} />
-                {producto && isInWishlist(producto.id_producto) ? "En favoritos" : "Agregar a favoritos"}
-              </button>
-              <button
-                onClick={handleAgregar}
-                disabled={agregado}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${
-                  agregado
-                    ? "bg-green-700 text-white"
-                    : "bg-green-600 text-white hover:bg-green-700"
-                }`}
-              >
-                <ShoppingCart size={20} />
-                {agregado ? "Agregado al carrito" : "Agregar al carrito"}
+                <Zap size={20} />
+                Comprar ahora
               </button>
             </div>
           </div>

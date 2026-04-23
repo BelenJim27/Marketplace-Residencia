@@ -55,7 +55,7 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
 
     const loadCategorias = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/categorias`, { cache: "no-store" });
+            const res = await fetch(`/categorias`, { cache: "no-store" });
             const data = await res.json();
             if (res.ok && Array.isArray(data)) setCategorias(data);
         } catch (error) {
@@ -65,7 +65,7 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
 
     const loadTiendas = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/tiendas`, { cache: "no-store" });
+            const res = await fetch(`/tiendas`, { cache: "no-store" });
             const data = await res.json();
             if (res.ok && Array.isArray(data)) setTiendas(data);
         } catch (error) {
@@ -110,7 +110,7 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
                 categorias: selectedCategorias.length > 0 ? selectedCategorias : undefined,
             };
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/productos`, {
+            const res = await fetch(`/productos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(productoParaEnviar),
