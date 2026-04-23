@@ -5,6 +5,10 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/routing.ts");
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 const nextConfig = {
+  output: 'standalone',
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
   turbopack: {
     resolveAlias: {
       pako: "pako/dist/pako.js",
