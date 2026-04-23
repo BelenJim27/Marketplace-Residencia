@@ -1,6 +1,11 @@
 import { getCookie, setCookie } from "@/lib/cookies";
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "");
+// En el browser usamos URLs relativas para que Next.js las proxee al API
+// (evita CORS sin tocar la configuración del servidor de producción).
+// En el servidor (SSR / NextAuth callbacks) usamos la URL directa.
+const API_BASE = typeof window === "undefined"
+  ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "")
+  : "";
 
 const headers = (token?: string, isFormData = false) => ({
   ...(isFormData ? {} : { "Content-Type": "application/json" }),
@@ -279,6 +284,8 @@ export const api = {
     getByUsuario: (usuarioId: string) => fetchJson(endpoint(`/pedidos?usuario=${usuarioId}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/pedidos"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+    addDetalle: (token: string, pedidoId: string, data: any) =>
+      fetchJson(endpoint(`/pedidos/${pedidoId}/detalles`), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: string, data: any) =>
       fetchJson(endpoint(`/pedidos/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
     delete: (token: string, id: string) =>
@@ -478,6 +485,7 @@ export const api = {
 
   direcciones: {
     getAll: () => fetchJson(endpoint("/direcciones")),
+    getByUsuario: (usuarioId: string) => fetchJson(endpoint(`/direcciones/${usuarioId}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/direcciones"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: string, data: any) =>
@@ -528,7 +536,8 @@ export const api = {
   },
 
   wishlist: {
-    getByUsuario: (id_usuario: string) => fetchJson(endpoint(`/wishlist/${id_usuario}`)),
+    getByUsuario: (id_usuario: string, token?: string) =>
+      fetchJson(endpoint(`/wishlist/${id_usuario}`), token ? { headers: headers(token) } : undefined),
     add: (token: string, data: { id_usuario: string; id_producto: string }) =>
       fetchJson(endpoint("/wishlist"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     remove: (token: string, id_usuario: string, id_producto: string) =>

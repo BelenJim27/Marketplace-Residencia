@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Marketplace-Residencia is a NestJS + Next.js monorepo for a producer marketplace, orchestrated with Turborepo and npm workspaces.
+Marketplace-Residencia is a NestJS + Next.js monorepo for a mezcal producer marketplace (Oaxaca), orchestrated with Turborepo and npm workspaces.
 
 ## Monorepo Structure
 
@@ -40,6 +40,9 @@ npm run test:cov     # Coverage report
 npm run test:e2e     # End-to-end tests
 npm run lint         # ESLint with auto-fix
 npm run prisma:generate  # Regenerate Prisma client
+
+# Run a single test file
+npx jest src/modules/auth/auth.service.spec.ts --no-coverage
 ```
 
 ### Web only (apps/web)
@@ -65,7 +68,7 @@ node scripts/seed-usuarios.js     # Seed demo users
 
 ## Environment Variables
 
-Required in root `.env`:
+Required in root `.env` (also duplicated in `apps/api/.env`):
 ```
 DATABASE_URL=postgresql://...
 FRONTEND_URL=http://localhost:3000
@@ -84,6 +87,8 @@ SENDGRID_API_KEY=
 EMAIL_FROM=
 ```
 
+The API (`main.ts`) loads env files in this priority order: `apps/api/.env` → `apps/api/dist/../.env` → root `.env`. CORS is controlled by `FRONTEND_URL`.
+
 ## Architecture
 
 ### Backend (apps/api)
@@ -91,21 +96,32 @@ EMAIL_FROM=
 NestJS 11 with 23 feature modules under `src/modules/`. Each module follows the standard NestJS pattern: `module.ts`, `controller.ts`, `service.ts`, `dto/`.
 
 Key cross-cutting concerns:
-- **Auth**: JWT access tokens (15m) + refresh tokens (30d). Guards in `auth/auth.guard.ts` (bearer validation) and `auth/rbac.guard.ts` (role-based). OAuth via Google/Facebook in `auth/oauth.controller.ts`.
+- **Auth**: JWT access tokens (15m) + refresh tokens (30d). Guards in `auth/auth.guard.ts` (bearer validation) and `auth/rbac.guard.ts` (role-based). OAuth via Google in `auth/oauth.controller.ts`. JWTs are built manually with HMAC-SHA256 (no `jsonwebtoken` library) — see `auth.service.ts`.
 - **Database**: Singleton `PrismaService` at `src/prisma/prisma.service.ts` wraps the shared Prisma client from `packages/database`.
+- **BigInt serialization**: `main.ts` patches `BigInt.prototype.toJSON` to serialize as `Number`. All BigInt DB ids become numbers in JSON.
 - **File uploads**: Multer; files saved to `apps/api/uploads/`; served as static assets at `/uploads`.
 - **Email**: SendGrid via `modules/email/email.service.ts`.
 - **Validation**: Global `ValidationPipe` with `whitelist: true`, `transform: true`, `transformOptions: { enableImplicitConversion: true }`.
 
 ### Frontend (apps/web)
 
-Next.js 16 App Router. Pages live under `src/app/`. The frontend proxies API calls through Next.js rewrites defined in `next.config.mjs` (routes like `/uploads/`, `/productos/`, `/productores/`, etc. are forwarded to the API).
+Next.js 16 App Router. Pages live under `src/app/`. TypeScript errors and ESLint are intentionally ignored during builds (`next.config.mjs`).
+
+**Route structure and layout selection** (`root-content.tsx`):
+- `/auth/*` → TiendaHeader (no sidebar)
+- `/tienda/*`, `/Cliente/*` → TiendaHeader (no sidebar)
+- `/`, `/producto`, `/producto/*` → TiendaHeader (no sidebar)
+- Authenticated Admin or Productor on any other route → full Sidebar + Header
+- All other authenticated users → TiendaHeader
+
+**API proxy rewrites** (`next.config.mjs`): `/uploads/`, `/inventario/`, `/productos/`, `/productores/`, `/pedidos/`, `/categorias/` are forwarded to the API. Direct calls in `api.ts` bypass the proxy and hit `NEXT_PUBLIC_API_URL` directly.
 
 Key integrations:
-- **Auth**: NextAuth v4 (`next-auth`) — session-based, wraps the API's JWT tokens.
-- **i18n**: `next-intl` with Spanish (`es`, default) and English (`en`).
+- **Auth (dual-mode)**: `AuthContext` reads from both NextAuth session (OAuth) and custom cookies (`token`, `refresh_token`, `usuario`). The cookie-based flow is used for email/password login; NextAuth wraps Google OAuth. Both paths end up populating the same `AuthContext` state.
+- **API client**: `src/lib/api.ts` centralizes all fetch calls. It implements automatic token refresh with a **singleton deduplication pattern** — concurrent 401s share a single refresh call to avoid invalidating each other's tokens.
+- **i18n**: `next-intl` with Spanish (`es`, default) and English (`en`), configured in `src/i18n/routing.ts`.
 - **Theming**: `next-themes` for dark/light mode.
-- **API client**: `src/lib/api.ts` centralizes fetch calls to the backend.
+- **Providers order** (`providers.tsx`): `SessionProvider` → `ThemeProvider` → `AuthProvider` → `CarritoProvider` → `WishlistProvider` → `ConfigProvider` → `SidebarProvider`.
 
 ### Database (packages/database)
 

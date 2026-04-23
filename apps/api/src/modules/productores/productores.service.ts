@@ -293,6 +293,13 @@ export class ProductoresService {
         where: { nombre: "productor" },
       });
       if (rolProductor) {
+        await this.prisma.usuario_rol.updateMany({
+          where: {
+            id_usuario: usuario.id_usuario,
+            roles: { nombre: "cliente" },
+          },
+          data: { estado: "inactivo" },
+        });
         await this.prisma.usuario_rol.upsert({
           where: {
             id_usuario_id_rol: {

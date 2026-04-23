@@ -25,7 +25,7 @@ function AuthCallbackContent() {
       setCookie("token", token, 7);
       setCookie("refresh_token", refresh, 30);
       
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+      fetch(`/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

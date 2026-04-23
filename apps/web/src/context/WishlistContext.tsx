@@ -73,10 +73,11 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
   const cargarWishlist = useCallback(async () => {
     const usuarioId = getUsuarioId();
-    
-    if (usuarioId) {
+    const token = getCookie("token");
+
+    if (usuarioId && token) {
       try {
-        const data = await api.wishlist.getByUsuario(usuarioId);
+        const data = await api.wishlist.getByUsuario(usuarioId, token);
         setItems(data as WishlistItem[]);
       } catch (e) {
         console.error("Error loading wishlist from API:", e);

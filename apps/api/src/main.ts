@@ -19,7 +19,10 @@ async function bootstrap() {
   });
   app.use('/uploads', expressStatic(join(process.cwd(), 'uploads')));
   
-  const corsOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const rawOrigins = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const corsOrigin = rawOrigins.includes(',')
+    ? rawOrigins.split(',').map((o) => o.trim())
+    : rawOrigins;
   app.enableCors({
     origin: corsOrigin,
     credentials: true,

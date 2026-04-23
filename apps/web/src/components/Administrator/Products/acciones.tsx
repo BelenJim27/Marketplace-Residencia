@@ -53,7 +53,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
 
     const loadCategorias = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/categorias`, { cache: "no-store" });
+            const res = await fetch(`/categorias`, { cache: "no-store" });
             const data = await res.json();
             if (res.ok && Array.isArray(data)) {
                 setCategorias(data);
@@ -86,7 +86,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
         };
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/productos/${producto.id_producto}`, {
+            const res = await fetch(`/productos/${producto.id_producto}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(datosParaEnviar),

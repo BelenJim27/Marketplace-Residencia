@@ -51,7 +51,7 @@ export default function SolicitudesProductoresPage() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/admin/productores/solicitudes`,
+        `/admin/productores/solicitudes`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -80,7 +80,7 @@ export default function SolicitudesProductoresPage() {
       if (!token) return;
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/admin/productores/${id}/revisar`,
+        `/admin/productores/${id}/revisar`,
         {
           method: "PATCH",
           headers: {
@@ -115,7 +115,7 @@ export default function SolicitudesProductoresPage() {
       if (!token) return;
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/admin/productores/${id}/revisar`,
+        `/admin/productores/${id}/revisar`,
         {
           method: "PATCH",
           headers: {

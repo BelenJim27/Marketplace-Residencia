@@ -2,11 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {Minus, Plus, Trash2, ShoppingBag, ArrowRight} from "lucide-react";
 import {useCarrito} from "@/context/CarritoContext";
 import { formatPrice } from "@/lib/format-number";
 
 export default function CarritoPage() {
+  const router = useRouter();
   const {items, cantidadTotal, precioTotal, actualizarCantidad, eliminarProducto} = useCarrito();
 
   if (items.length === 0) {
@@ -156,7 +158,10 @@ export default function CarritoPage() {
               </span>
             </div>
 
-            <button className="w-full rounded-lg bg-green-600 px-4 py-3 font-medium text-white transition-colors hover:bg-green-700">
+            <button
+              onClick={() => router.push("/tienda/checkout")}
+              className="w-full rounded-lg bg-green-600 px-4 py-3 font-medium text-white transition-colors hover:bg-green-700"
+            >
               Proceder al pago
             </button>
           </div>
