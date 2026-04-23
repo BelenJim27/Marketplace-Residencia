@@ -18,6 +18,7 @@ interface Producto {
     precio: number;
     moneda: string;
     estado: string;
+    imagen_url: string | null;
     categorias?: number[];
 }
 
@@ -62,8 +63,8 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
         }
     };
 
-    const handleCategoriaChange = (id: number, checked: boolean) => {
-        if (checked) {
+    const handleCategoriaChange = (id: number, seleccionada: boolean) => {
+        if (seleccionada) {
             setSelectedCategorias([...selectedCategorias, id]);
         } else {
             setSelectedCategorias(selectedCategorias.filter(c => c !== id));
@@ -83,8 +84,6 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
             status: formData.get("estado")?.toString(),
             categorias: selectedCategorias.length > 0 ? selectedCategorias : undefined,
         };
-
-        console.log("Enviando a NestJS:", datosParaEnviar);
 
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/productos/${producto.id_producto}`, {
@@ -116,6 +115,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-gray-100">
 
+                {/* HEADER */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-white">
                     <div>
                         <h2 className="text-xl font-extrabold text-gray-800">
@@ -123,7 +123,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                         </h2>
                         <p className="text-xs text-gray-400">ID: #{producto.id_producto}</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -131,7 +131,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                 <form ref={formRef} onSubmit={handleSubmit}>
                     <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
 
-                        {/* Nombre */}
+                        {/* NOMBRE */}
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-gray-500 uppercase">Nombre</label>
                             <input
@@ -140,46 +140,40 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                                 defaultValue={producto.nombre}
                                 disabled={!esEdicion}
                                 required
-                                className="w-full px-4 py-3 bg-gray-50 border rounded-xl disabled:opacity-60"
+                                className="w-full px-4 py-3 bg-gray-50 border rounded-xl disabled:opacity-60 outline-none focus:ring-2 focus:ring-green-500"
                             />
                         </div>
 
-                        {/* Categorías */}
+                        {/* CATEGORÍAS */}
                         {esEdicion ? (
                             <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-gray-500 uppercase">Categorías</label>
-                                <div className="max-h-24 overflow-y-auto border rounded-xl p-2 space-y-1 bg-gray-50">
-                                    {categorias.length === 0 ? (
-                                        <p className="text-sm text-gray-400">Cargando...</p>
-                                    ) : (
-                                        categorias.map((cat) => (
-                                            <label key={cat.id_categoria} className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedCategorias.includes(cat.id_categoria)}
-                                                    onChange={(e) => handleCategoriaChange(cat.id_categoria, e.target.checked)}
-                                                    className="rounded text-green-600"
-                                                />
-                                                <span className="text-sm">{cat.nombre}</span>
-                                            </label>
-                                        ))
-                                    )}
-                                </div>
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Categoría</label>
+                                <select
+                                    className="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-green-500"
+                                    value={selectedCategorias[0] ?? ""}
+                                    onChange={(e) => setSelectedCategorias(e.target.value ? [Number(e.target.value)] : [])}
+                                >
+                                    <option value="">Sin categoría</option>
+                                    {categorias.map((cat) => (
+                                        <option key={cat.id_categoria} value={cat.id_categoria}>
+                                            {cat.nombre}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         ) : (
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-gray-500 uppercase">Categoría</label>
                                 <input
-                                    name="categoria"
                                     type="text"
                                     defaultValue={producto.categoria || ''}
                                     disabled
-                                    className="w-full px-4 py-3 bg-gray-50 border rounded-xl"
+                                    className="w-full px-4 py-3 bg-gray-50 border rounded-xl opacity-60"
                                 />
                             </div>
                         )}
 
-                        {/* Productor + Tienda */}
+                        {/* PRODUCTOR + TIENDA */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-gray-500 uppercase">Productor</label>
@@ -188,7 +182,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                                     type="text"
                                     defaultValue={producto.nombre_productor || ''}
                                     disabled
-                                    className="w-full px-4 py-3 bg-gray-50 border rounded-xl"
+                                    className="w-full px-4 py-3 bg-gray-50 border rounded-xl opacity-60"
                                 />
                             </div>
                             <div className="space-y-1">
@@ -198,12 +192,12 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                                     type="text"
                                     defaultValue={producto.nombre_tienda || ''}
                                     disabled
-                                    className="w-full px-4 py-3 bg-gray-50 border rounded-xl"
+                                    className="w-full px-4 py-3 bg-gray-50 border rounded-xl opacity-60"
                                 />
                             </div>
                         </div>
 
-                        {/* Stock + Precio + Estado */}
+                        {/* STOCK + PRECIO + ESTADO */}
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-gray-500 uppercase">Stock</label>
@@ -212,8 +206,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                                     type="number"
                                     defaultValue={producto.stock}
                                     disabled={!esEdicion}
-                                    // FIX: removed spin buttons
-                                    className={`w-full px-4 py-3 bg-gray-50 border rounded-xl disabled:opacity-60 ${noSpinClass}`}
+                                    className={`w-full px-4 py-3 bg-gray-50 border rounded-xl disabled:opacity-60 outline-none focus:ring-2 focus:ring-green-500 ${noSpinClass}`}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -224,8 +217,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                                     step="0.01"
                                     defaultValue={producto.precio}
                                     disabled={!esEdicion}
-                                    // FIX: removed spin buttons
-                                    className={`w-full px-4 py-3 bg-gray-50 border rounded-xl disabled:opacity-60 ${noSpinClass}`}
+                                    className={`w-full px-4 py-3 bg-gray-50 border rounded-xl disabled:opacity-60 outline-none focus:ring-2 focus:ring-green-500 ${noSpinClass}`}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -234,7 +226,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                                     name="estado"
                                     defaultValue={producto.estado}
                                     disabled={!esEdicion}
-                                    className="w-full px-4 py-3 bg-gray-50 border rounded-xl disabled:opacity-60"
+                                    className="w-full px-4 py-3 bg-gray-50 border rounded-xl disabled:opacity-60 outline-none focus:ring-2 focus:ring-green-500"
                                 >
                                     <option value="activo">Activo</option>
                                     <option value="inactivo">Inactivo</option>
@@ -242,13 +234,21 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                             </div>
                         </div>
 
-                        {/* Botones */}
+                        {/* BOTONES */}
                         <div className="flex gap-3 pt-4 border-t">
-                            <button type="button" onClick={onClose} className="flex-1 py-3 border rounded-xl font-semibold text-gray-600 hover:bg-gray-50">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 py-3 border rounded-xl font-semibold text-gray-600 hover:bg-gray-50 transition"
+                            >
                                 Cancelar
                             </button>
                             {esEdicion && (
-                                <button type="submit" disabled={loading} className="flex-1 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-50">
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="flex-1 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-50 transition"
+                                >
                                     {loading ? "Guardando..." : "Guardar"}
                                 </button>
                             )}

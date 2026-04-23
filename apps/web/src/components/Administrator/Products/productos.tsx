@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import ModalNuevoProducto from './nuevoProducto';
-// Importamos el componente para Ver/Editar (asegúrate de que el nombre del archivo coincida)
 import ModalEditarVer from './acciones';
 import { Eye, Pencil, Trash2, Search, Plus } from "lucide-react";
 import { formatPrice } from "@/lib/format-number";
+import ProductoImagen from './productoImagen';
 
 interface Producto {
     id_producto: number;
@@ -17,6 +17,7 @@ interface Producto {
     precio: number;
     moneda: string;
     estado: string;
+    imagen_url: string | null; // ← AGREGADO
 }
 
 export default function ProductosAdmin() {
@@ -24,8 +25,7 @@ export default function ProductosAdmin() {
     const [busqueda, setBusqueda] = useState("");
     const [loading, setLoading] = useState(true);
 
-    // --- ESTADOS DE MODALES ---
-    const [isModalOpen, setIsModalOpen] = useState(false); // Nuevo
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
     const [modoModal, setModoModal] = useState<"ver" | "editar" | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -44,8 +44,9 @@ export default function ProductosAdmin() {
                 stock: Number(p.stock) || 0,
                 precio: Number(p.precio_base) || Number(p.precio) || 0,
                 estado: p.status || p.estado || "activo",
-                // Cubre los nombres más comunes que puede devolver tu API:
                 categoria: p.categoria || p.category || p.nombre_categoria || p.categoria_nombre || null,
+                // Toma imagen_url o imagen_principal_url, lo que venga primero
+                imagen_url: p.imagen_url || p.imagen_principal_url || null,
             }));
             setProductos(formatted);
             setLoading(false);
@@ -58,8 +59,6 @@ export default function ProductosAdmin() {
     useEffect(() => {
         fetchProductos();
     }, []);
-
-    // --- FUNCIONES DE ACCIÓN ACTUALIZADAS ---
 
     const handleVer = (p: Producto) => {
         setProductoSeleccionado(p);
@@ -79,16 +78,18 @@ export default function ProductosAdmin() {
     const confirmarEliminacion = async () => {
         if (!productoSeleccionado) return;
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/productos/${productoSeleccionado.id_producto}`, {
-                method: 'DELETE',
-            });
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/productos/${productoSeleccionado.id_producto}`,
+                { method: "DELETE" }
+            );
             if (res.ok) {
                 setShowDeleteConfirm(false);
                 setProductoSeleccionado(null);
                 fetchProductos();
-                // Opcional: podrías usar un toast aquí en vez de alert
             }
-        } catch (error) { console.error(error); }
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     const filtered = productos.filter((p) => {
@@ -98,14 +99,21 @@ export default function ProductosAdmin() {
             (p.nombre_productor?.toLowerCase().includes(query) ?? false) ||
             (p.nombre_tienda?.toLowerCase().includes(query) ?? false);
 
-        const matchesStatus = filtroEstado === "todos" || p.estado.toLowerCase() === filtroEstado.toLowerCase();
-        const matchesTipo = filtroTipo === "todos" ||
+        const matchesStatus =
+            filtroEstado === "todos" || p.estado.toLowerCase() === filtroEstado.toLowerCase();
+        const matchesTipo =
+            filtroTipo === "todos" ||
             (p.categoria && p.categoria.toLowerCase() === filtroTipo.toLowerCase());
 
         return matchesSearch && matchesStatus && matchesTipo;
     });
 
-    if (loading) return <div className="p-6 text-center text-green-600 font-bold animate-pulse">Cargando catálogo...</div>;
+    if (loading)
+        return (
+            <div className="p-6 text-center text-green-600 font-bold animate-pulse">
+                Cargando catálogo...
+            </div>
+        );
 
     return (
         <div className="p-6 space-y-6">
@@ -124,15 +132,28 @@ export default function ProductosAdmin() {
                 </button>
             </div>
 
-            {/* CARDS DINÁMICAS (Se mantienen igual) */}
+            {/* CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card title="Total productos" value={productos.length} color="text-gray-800" />
-                <Card title="Activos" value={productos.filter(p => p.estado?.toLowerCase() === 'activo').length} color="text-green-600" />
-                <Card title="Inactivos" value={productos.filter(p => p.estado?.toLowerCase() === 'inactivo').length} color="text-amber-600" />
-                <Card title="Stock Total" value={productos.reduce((acc, p) => acc + (p.stock || 0), 0)} color="text-blue-600" />
+                <Card
+                    title="Activos"
+                    value={productos.filter((p) => p.estado?.toLowerCase() === "activo").length}
+                    color="text-green-600"
+                />
+                <Card
+                    title="Inactivos"
+                    value={productos.filter((p) => p.estado?.toLowerCase() === "inactivo").length}
+                    color="text-amber-600"
+                />
+                <Card
+                    title="Stock Total"
+                    value={productos.reduce((acc, p) => acc + (p.stock || 0), 0)}
+                    color="text-blue-600"
+                />
             </div>
+
             {/* BUSCADOR Y FILTROS */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4 mb-6">
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
                 <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
@@ -145,27 +166,30 @@ export default function ProductosAdmin() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4">
-                    {/* Filtro de Categoría Dinámico */}
                     <div className="flex-1 min-w-[200px]">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1 block">Categoría</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1 block">
+                            Categoría
+                        </label>
                         <select
                             className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                             value={filtroTipo}
                             onChange={(e) => setFiltroTipo(e.target.value)}
                         >
                             <option value="todos">Todas las categorías</option>
-                            {/* Obtenemos categorías únicas de los productos cargados */}
-                            {Array.from(new Set(productos.map(p => p.categoria).filter(Boolean))).map((cat) => (
-                                <option key={cat} value={cat?.toLowerCase()}>
-                                    {cat}
-                                </option>
-                            ))}
+                            {Array.from(new Set(productos.map((p) => p.categoria).filter(Boolean))).map(
+                                (cat) => (
+                                    <option key={cat} value={cat?.toLowerCase()}>
+                                        {cat}
+                                    </option>
+                                )
+                            )}
                         </select>
                     </div>
 
-                    {/* Filtro de Estado */}
                     <div className="flex-1 min-w-[200px]">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1 block">Estado</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1 block">
+                            Estado
+                        </label>
                         <select
                             className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                             value={filtroEstado}
@@ -177,7 +201,6 @@ export default function ProductosAdmin() {
                         </select>
                     </div>
 
-                    {/* Botón Limpiar */}
                     <button
                         onClick={() => {
                             setBusqueda("");
@@ -191,67 +214,116 @@ export default function ProductosAdmin() {
                 </div>
             </div>
 
-            {/* TABLA DE PRODUCTOS */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <table className="w-full text-left border-collapse">
-                    {/* ... THead y TBody con tus productos mapeados ... */}
-                </table>
-            </div>
-
-            {/* TABLA */}
+            {/* TABLA — una sola, sin duplicado */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full min-w-[900px]">
                         <thead className="bg-gray-50 text-left text-[11px] uppercase font-bold text-gray-400 tracking-wider">
                             <tr>
-                                <th className="p-4">Producto</th>
-                                <th className="p-4">Productor</th>
-                                <th className="p-4">Tienda</th>
-                                <th className="p-4">Categoría</th>
-                                <th className="p-4 text-center">Stock</th>
-                                <th className="p-4">Precio</th>
-                                <th className="p-4 text-center">Estado</th>
-                                <th className="p-4 text-center">Acciones</th>
+                                <th className="px-4 py-3 w-16">Foto</th>
+                                <th className="px-4 py-3">Producto</th>
+                                <th className="px-4 py-3">Productor</th>
+                                <th className="px-4 py-3">Tienda</th>
+                                <th className="px-4 py-3">Categoría</th>
+                                <th className="px-4 py-3 text-center">Stock</th>
+                                <th className="px-4 py-3">Precio</th>
+                                <th className="px-4 py-3 text-center">Estado</th>
+                                <th className="px-4 py-3 text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filtered.map((p) => (
-                                <tr key={p.id_producto} className="hover:bg-gray-50/50 transition group">
-                                    <td className="p-4 font-semibold text-gray-800">{p.nombre}</td>
-                                    <td className="p-4 text-sm text-gray-600">{p.nombre_productor || "Sin productor"}</td>
-                                    <td className="p-4 text-sm text-gray-600">{p.nombre_tienda || "Sin tienda"}</td>
-                                    <td className="p-4">
-                                        <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-bold border border-blue-100 uppercase">
-                                            {p.categoria || "Sin categoría"}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-center font-medium">
-                                        <span className={p.stock <= 5 ? "text-red-600" : "text-gray-700"}>
-                                            {p.stock} unidades
-                                        </span>
-                                    </td>
-                                    <td className="p-4 font-bold text-gray-700">
-                                        ${formatPrice(Number(p.precio), { showCurrency: false })}
-                                        <span className="text-[10px] text-gray-400 ml-1 font-normal">{p.moneda}</span>
-                                    </td>
-                                    <td className="p-4 text-center">
-                                        <EstadoBadge status={p.estado} />
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <button onClick={() => handleVer(p)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Eye size={16} /></button>
-                                            <button onClick={() => handleEditar(p)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"><Pencil size={16} /></button>
-                                            <button onClick={() => handleEliminarClick(p)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={16} /></button>
-                                        </div>
+                            {filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="text-center py-12 text-gray-400 text-sm">
+                                        No se encontraron productos
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                filtered.map((p) => (
+                                    <tr key={p.id_producto} className="hover:bg-gray-50/50 transition group">
+                                        {/* FOTO */}
+                                        <td className="px-4 py-3">
+                                            <ProductoImagen
+                                                nombre={p.nombre}
+                                                imagenUrl={p.imagen_url}
+                                            />
+                                        </td>
+
+                                        {/* PRODUCTO */}
+                                        <td className="px-4 py-3 font-semibold text-gray-800 max-w-[160px]">
+                                            <span className="line-clamp-2">{p.nombre}</span>
+                                        </td>
+
+                                        {/* PRODUCTOR */}
+                                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                                            {p.nombre_productor || "Sin productor"}
+                                        </td>
+
+                                        {/* TIENDA */}
+                                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                                            {p.nombre_tienda || "Sin tienda"}
+                                        </td>
+
+                                        {/* CATEGORÍA */}
+                                        <td className="px-4 py-3">
+                                            <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-bold border border-blue-100 uppercase whitespace-nowrap">
+                                                {p.categoria || "Sin categoría"}
+                                            </span>
+                                        </td>
+
+                                        {/* STOCK */}
+                                        <td className="px-4 py-3 text-center font-medium">
+                                            <span className={p.stock <= 5 ? "text-red-600" : "text-gray-700"}>
+                                                {p.stock} uds.
+                                            </span>
+                                        </td>
+
+                                        {/* PRECIO */}
+                                        <td className="px-4 py-3 font-bold text-gray-700 whitespace-nowrap">
+                                            ${formatPrice(Number(p.precio), { showCurrency: false })}
+                                            <span className="text-[10px] text-gray-400 ml-1 font-normal">
+                                                {p.moneda}
+                                            </span>
+                                        </td>
+
+                                        {/* ESTADO */}
+                                        <td className="px-4 py-3 text-center">
+                                            <EstadoBadge status={p.estado} />
+                                        </td>
+
+                                        {/* ACCIONES */}
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <button
+                                                    onClick={() => handleVer(p)}
+                                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                    title="Ver"
+                                                >
+                                                    <Eye size={15} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEditar(p)}
+                                                    className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                                                    title="Editar"
+                                                >
+                                                    <Pencil size={15} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEliminarClick(p)}
+                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                    title="Eliminar"
+                                                >
+                                                    <Trash2 size={15} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
             </div>
-
-            {/* --- SECCIÓN DE MODALES (Al final del return) --- */}
 
             {/* MODAL NUEVO */}
             <ModalNuevoProducto
@@ -264,14 +336,17 @@ export default function ProductosAdmin() {
             {productoSeleccionado && modoModal && (
                 <ModalEditarVer
                     producto={productoSeleccionado}
-                    modo={modoModal} // Tú usas modoModal, no modo
+                    modo={modoModal}
                     isOpen={!!modoModal}
-                    onClose={() => { setModoModal(null); setProductoSeleccionado(null); }}
-                    onRefresh={fetchProductos} // Usaremos esta prop para guardar
+                    onClose={() => {
+                        setModoModal(null);
+                        setProductoSeleccionado(null);
+                    }}
+                    onRefresh={fetchProductos}
                 />
             )}
 
-            {/* MODAL ELIMINAR (CONFIRMACIÓN) */}
+            {/* MODAL ELIMINAR */}
             {showDeleteConfirm && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70]">
                     <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center animate-in fade-in zoom-in duration-200">
@@ -279,10 +354,22 @@ export default function ProductosAdmin() {
                             <Trash2 size={32} />
                         </div>
                         <h3 className="text-xl font-bold text-gray-800">¿Estás seguro?</h3>
-                        <p className="text-gray-500 mt-2">Vas a eliminar <b>{productoSeleccionado?.nombre}</b>. Esta acción no se puede deshacer.</p>
+                        <p className="text-gray-500 mt-2">
+                            Vas a eliminar <b>{productoSeleccionado?.nombre}</b>. Esta acción no se puede deshacer.
+                        </p>
                         <div className="flex gap-3 mt-6">
-                            <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 border rounded-xl font-semibold hover:bg-gray-50 transition">No, cancelar</button>
-                            <button onClick={confirmarEliminacion} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition">Sí, eliminar</button>
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                className="flex-1 py-3 border rounded-xl font-semibold hover:bg-gray-50 transition"
+                            >
+                                No, cancelar
+                            </button>
+                            <button
+                                onClick={confirmarEliminacion}
+                                className="flex-1 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition"
+                            >
+                                Sí, eliminar
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -290,8 +377,6 @@ export default function ProductosAdmin() {
         </div>
     );
 }
-
-// --- COMPONENTES AUXILIARES ---
 
 function Card({ title, value, color }: { title: string; value: number; color: string }) {
     return (
@@ -305,7 +390,6 @@ function Card({ title, value, color }: { title: string; value: number; color: st
 function EstadoBadge({ status }: { status: string }) {
     const s = status?.toLowerCase() || "";
     const isActivo = s === "activo";
-
     const styles = isActivo
         ? "bg-green-50 text-green-700 border-green-200"
         : "bg-amber-50 text-amber-700 border-amber-200";

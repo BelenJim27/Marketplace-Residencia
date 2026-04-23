@@ -6,12 +6,29 @@ import { CreateTiendaDto, UpdateTiendaDto } from './dto/tiendas.dto';
 @Injectable()
 export class TiendasService {
   constructor(private readonly prisma: PrismaService) {}
-  async findAll(id_productor: number) {
-    if (!id_productor) throw new BadRequestException('id_productor es requerido');
 
+  async findAll(id_productor?: number) {
     const stores = await this.prisma.tiendas.findMany({
-      where: { id_productor, eliminado_en: null },
+      where: {
+        eliminado_en: null,
+        // Solo filtra por productor si se recibe el parámetro
+        ...(id_productor ? { id_productor } : {}),
+      },
       orderBy: { fecha_creacion: 'desc' },
+      // Incluye datos del productor para mostrarlos en el formulario
+      include: {
+        productores: {
+          include: {
+            usuarios: {
+              select: {
+                nombre: true,
+                apellido_paterno: true,
+                apellido_materno: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     const storeIds = stores.map((store) => store.id_tienda);
@@ -29,7 +46,9 @@ export class TiendasService {
             },
           });
 
-    const stockByStore = new Map(productCounts.map((item) => [item.id_tienda, item._count.id_producto]));
+    const stockByStore = new Map(
+      productCounts.map((item) => [item.id_tienda, item._count.id_producto]),
+    );
 
     return serializeBigInts(
       stores.map((store) => ({
@@ -40,7 +59,9 @@ export class TiendasService {
   }
 
   async findOne(id_tienda: number) {
-    const item = await this.prisma.tiendas.findFirst({ where: { id_tienda, eliminado_en: null } });
+    const item = await this.prisma.tiendas.findFirst({
+      where: { id_tienda, eliminado_en: null },
+    });
     if (!item || item.eliminado_en) throw new NotFoundException('Tienda no encontrada');
     return serializeBigInts(item);
   }
@@ -66,11 +87,18 @@ export class TiendasService {
   }
 
   async update(id_tienda: number, dto: UpdateTiendaDto) {
-    if (!dto.nombre?.trim() || !dto.descripcion?.trim() || !dto.pais_operacion?.trim() || !dto.status?.trim()) {
+    if (
+      !dto.nombre?.trim() ||
+      !dto.descripcion?.trim() ||
+      !dto.pais_operacion?.trim() ||
+      !dto.status?.trim()
+    ) {
       throw new BadRequestException('Nombre, descripción, país y status son requeridos');
     }
 
-    const exists = await this.prisma.tiendas.findFirst({ where: { id_tienda, eliminado_en: null } });
+    const exists = await this.prisma.tiendas.findFirst({
+      where: { id_tienda, eliminado_en: null },
+    });
     if (!exists) throw new NotFoundException('Tienda no encontrada');
 
     return serializeBigInts(
@@ -88,7 +116,9 @@ export class TiendasService {
   }
 
   async remove(id_tienda: number) {
-    const exists = await this.prisma.tiendas.findFirst({ where: { id_tienda, eliminado_en: null } });
+    const exists = await this.prisma.tiendas.findFirst({
+      where: { id_tienda, eliminado_en: null },
+    });
     if (!exists) throw new NotFoundException('Tienda no encontrada');
 
     return serializeBigInts(
