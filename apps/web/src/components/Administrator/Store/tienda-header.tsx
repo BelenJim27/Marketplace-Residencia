@@ -38,7 +38,7 @@ export function TiendaHeader() {
   const handleSellClick = () => {
     if (!isAuthenticated) {
       router.push("/Productor?vender=true");
-    } else if (isProductor) {
+    } else if (user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r))) {
       router.push("/Productor/productor");
     } else {
       router.push("/Productor/solicitar");

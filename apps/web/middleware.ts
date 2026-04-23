@@ -43,7 +43,6 @@ export const config = {
   matcher: [
     "/dashboard/productor/:path*",
     "/dashboard/administrador/:path*",
-    "/Productor/solicitar",
   ],
 };
 
