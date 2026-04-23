@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, ImagePlus } from "lucide-react";
 
 interface Categoria {
     id_categoria: number;
@@ -38,12 +38,17 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
     const [categorias, setCategorias] = useState<Categoria[]>([]);
     const [selectedCategorias, setSelectedCategorias] = useState<number[]>([]);
     const [loading, setLoading] = useState(false);
+    const [imagenPreview, setImagenPreview] = useState<string | null>(null);
+    const [imagenFile, setImagenFile] = useState<File | null>(null);
 
     useEffect(() => {
         if (isOpen && esEdicion) {
             loadCategorias();
         }
-    }, [isOpen, esEdicion]);
+        // Resetear imagen al abrir
+        setImagenPreview(producto?.imagen_url || null);
+        setImagenFile(null);
+    }, [isOpen, esEdicion, producto]);
 
     useEffect(() => {
         if (producto && esEdicion) {
@@ -63,12 +68,13 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
         }
     };
 
-    const handleCategoriaChange = (id: number, seleccionada: boolean) => {
-        if (seleccionada) {
-            setSelectedCategorias([...selectedCategorias, id]);
-        } else {
-            setSelectedCategorias(selectedCategorias.filter(c => c !== id));
-        }
+    const handleImagenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setImagenFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => setImagenPreview(reader.result as string);
+        reader.readAsDataURL(file);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -78,11 +84,42 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
         setLoading(true);
         const formData = new FormData(formRef.current);
 
+        // Si hay imagen nueva, usar FormData para enviarla
+        if (imagenFile) {
+            formData.append("imagen", imagenFile);
+            formData.append("precio_base", formData.get("precio")?.toString() || "");
+            formData.append("status", formData.get("estado")?.toString() || "");
+            // ✅ CORRECCIÓN: siempre enviar categorias aunque esté vacío
+            formData.append("categorias", JSON.stringify(selectedCategorias));
+
+            try {
+                const res = await fetch(`/productos/${producto.id_producto}`, {
+                    method: 'PATCH',
+                    body: formData,
+                });
+                const respuestaServidor = await res.json();
+                if (res.ok) {
+                    await onRefresh();
+                    alert("¡Producto actualizado!");
+                    onClose();
+                } else {
+                    alert(`Error: ${respuestaServidor.message || JSON.stringify(respuestaServidor)}`);
+                }
+            } catch (error) {
+                console.error("Error de conexión:", error);
+                alert("Error al actualizar el producto");
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+
+        // Sin imagen nueva, enviar JSON normal
         const datosParaEnviar = {
             nombre: formData.get("nombre")?.toString(),
             precio_base: String(formData.get("precio")),
             status: formData.get("estado")?.toString(),
-            categorias: selectedCategorias.length > 0 ? selectedCategorias : undefined,
+            categorias: selectedCategorias,
         };
 
         try {
@@ -91,9 +128,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(datosParaEnviar),
             });
-
             const respuestaServidor = await res.json();
-
             if (res.ok) {
                 await onRefresh();
                 alert("¡Producto actualizado!");
@@ -130,6 +165,59 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
 
                 <form ref={formRef} onSubmit={handleSubmit}>
                     <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+
+                        {/* IMAGEN */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase">
+                                {esEdicion ? "Foto del producto" : "Imagen"}
+                            </label>
+
+                            {esEdicion ? (
+                                <label className="flex flex-col items-center justify-center w-full cursor-pointer group">
+                                    <div className="relative w-full h-40 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 hover:border-green-400 transition bg-gray-50 group-hover:bg-green-50">
+                                        {imagenPreview ? (
+                                            <>
+                                                <img
+                                                    src={imagenPreview}
+                                                    alt="Preview"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                                    <div className="text-white text-center">
+                                                        <ImagePlus className="w-8 h-8 mx-auto mb-1" />
+                                                        <p className="text-xs font-semibold">Cambiar imagen</p>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center h-full text-gray-400 group-hover:text-green-500 transition">
+                                                <ImagePlus className="w-10 h-10 mb-2" />
+                                                <p className="text-sm font-semibold">Subir imagen</p>
+                                                <p className="text-xs mt-1">PNG, JPG, WEBP</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={handleImagenChange}
+                                    />
+                                </label>
+                            ) : (
+                                imagenPreview ? (
+                                    <img
+                                        src={imagenPreview}
+                                        alt={producto.nombre}
+                                        className="w-full h-40 object-cover rounded-xl border border-gray-100"
+                                    />
+                                ) : (
+                                    <div className="w-full h-40 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400">
+                                        <p className="text-sm">Sin imagen</p>
+                                    </div>
+                                )
+                            )}
+                        </div>
 
                         {/* NOMBRE */}
                         <div className="space-y-1">
