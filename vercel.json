@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd apps/web && next build > /tmp/build.log 2>&1 || (cat /tmp/build.log && exit 1)",
+  "buildCommand": "cd apps/web && next build --no-turbo",
   "outputDirectory": "apps/web/.next",
   "installCommand": "npm install && npm run db:generate -w database",
   "framework": "nextjs",
