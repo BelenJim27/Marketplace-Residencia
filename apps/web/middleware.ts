@@ -1,48 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
+import createMiddleware from 'next-intl/middleware';
+import { routing } from "./src/i18n/routing";
 
-const ACCESS_SECRET =
-  process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET ?? "change-me-access-secret";
+// 1. Creamos el middleware de i18n
+const intlMiddleware = createMiddleware(routing);
+
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET ?? "change-me-access-secret";
 
 export async function middleware(request: NextRequest) {
-  const token = request.cookies.get("token")?.value;
   const { pathname } = request.nextUrl;
 
-  if (!token) {
-    return redirectToSignIn(request);
-  }
+  // 2. Definir rutas que requieren protección (teniendo en cuenta los prefijos /es o /en)
+  const isProtectedRoute = pathname.includes('/dashboard') || pathname.includes('/Productor/solicitar');
 
-  try {
-    const payload = await verifyJwt(token, ACCESS_SECRET);
+  if (isProtectedRoute) {
+    const token = request.cookies.get("token")?.value;
 
-    if (payload.token_type !== "access") {
+    if (!token) {
       return redirectToSignIn(request);
     }
 
-    // Rutas que solo requieren estar autenticado
-    if (pathname.startsWith("/Productor/solicitar")) {
-      return NextResponse.next();
-    }
-
-    let requiredPermission = "panel_productor";
-    if (pathname.startsWith("/dashboard/administrador")) {
-      requiredPermission = "panel_admin";
-    }
-
-    const permisos = Array.isArray(payload.permisos) ? payload.permisos : [];
-    if (!permisos.includes(requiredPermission)) {
+    try {
+      const payload = await verifyJwt(token, ACCESS_SECRET);
+      
+      // Lógica de permisos...
+      let requiredPermission = pathname.includes("/dashboard/administrador") ? "panel_admin" : "panel_productor";
+      const permisos = Array.isArray(payload.permisos) ? payload.permisos : [];
+      
+      if (!permisos.includes(requiredPermission) && !pathname.includes("/Productor/solicitar")) {
+        return redirectToSignIn(request);
+      }
+    } catch (error) {
       return redirectToSignIn(request);
     }
-
-    return NextResponse.next();
-  } catch {
-    return redirectToSignIn(request);
   }
+
+  // 3. Ejecutar el middleware de i18n para TODAS las rutas (incluyendo las protegidas)
+  return intlMiddleware(request);
 }
 
 export const config = {
+  // Ajustamos el matcher para que incluya i18n y tus rutas protegidas
   matcher: [
-    "/dashboard/productor/:path*",
-    "/dashboard/administrador/:path*",
+    // Matcher para next-intl
+    '/', 
+    '/(es|en)/:path*',
+    // Matcher para tus rutas de dashboard (sin importar el idioma)
+    '/((?!api|_next|_vercel|.*\\..*).*)'
   ],
 };
 
