@@ -4,19 +4,12 @@ import CarruselProductos from "@/components/Cliente/carruselProductos";
 import ConoceMas from "@/components/Cliente/Flechas/conoceMas";
 
 export default function InicioCliente() {
-    return (
-        <main className="w-full">
-            {/* 1. Hero con navbar */}
-            <HeroSection />
-
-            {/* 2. Sobre el mezcal */}
-            <SobreElMezcal />
-
-            {/* 3. Carrusel de productos con notas de cata */}
-            <CarruselProductos />
-
-            {/* 4. Conoce más productos */}
-            <ConoceMas />
-        </main>
-    );
+  return (
+    <main className="w-full">
+      <HeroSection />
+      <SobreElMezcal />
+      <CarruselProductos />
+      <ConoceMas />
+    </main>
+  );
 }

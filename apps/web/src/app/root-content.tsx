@@ -17,6 +17,7 @@ export function RootContent({ children }: PropsWithChildren) {
 
   const isAuthRoute = pathname.startsWith("/auth/");
   const isClientOnlyRoute = pathname.startsWith("/tienda/") || pathname.startsWith("/Cliente/");
+  const isClientHome = pathname === "/Cliente/inicio";
 
   if (loading) {
     return (
@@ -36,6 +37,15 @@ export function RootContent({ children }: PropsWithChildren) {
         <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
+      </div>
+    );
+  }
+
+  // ✅ Inicio del cliente: sin header ni padding, pantalla completa
+  if (isClientHome) {
+    return (
+      <div className="min-h-screen">
+        {children}
       </div>
     );
   }
@@ -100,4 +110,3 @@ export function RootContent({ children }: PropsWithChildren) {
     </div>
   );
 }
-

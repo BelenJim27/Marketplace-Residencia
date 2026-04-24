@@ -55,9 +55,9 @@ export function UserInfo() {
     contextUser?.email || session?.user?.email || "correo@ejemplo.com";
 
   const userPhoto =
-    contextUser?.foto_url ||
-    (session?.user as any)?.foto_url ||
-    session?.user?.image ||
+    contextUser?.foto_url ??
+    (session?.user as any)?.foto_url ??
+    session?.user?.image ??
     null;
 
   const roles: string[] =

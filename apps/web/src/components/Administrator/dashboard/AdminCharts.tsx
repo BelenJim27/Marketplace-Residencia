@@ -45,13 +45,13 @@ type ChartsData = {
 // ─── Paleta de colores ────────────────────────────────────────────────────────
 
 const COLORS = {
-  green:  "#22c55e",
-  blue:   "#3b82f6",
+  green: "#22c55e",
+  blue: "#3b82f6",
   orange: "#f97316",
   purple: "#a855f7",
-  teal:   "#14b8a6",
-  rose:   "#f43f5e",
-  amber:  "#f59e0b",
+  teal: "#14b8a6",
+  rose: "#f43f5e",
+  amber: "#f59e0b",
 };
 
 const BAR_COLORS = [
@@ -87,10 +87,10 @@ function CustomTooltip({
           {entry.name}:{" "}
           {currency
             ? new Intl.NumberFormat("es-MX", {
-                style: "currency",
-                currency: "MXN",
-                maximumFractionDigits: 0,
-              }).format(entry.value)
+              style: "currency",
+              currency: "MXN",
+              maximumFractionDigits: 0,
+            }).format(entry.value)
             : entry.value.toLocaleString("es-MX")}
         </p>
       ))}
@@ -115,11 +115,10 @@ function PeriodSelector({
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-            value === opt.value
-              ? "bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-          }`}
+          className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${value === opt.value
+            ? "bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm"
+            : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            }`}
         >
           {opt.label}
         </button>
@@ -208,10 +207,6 @@ function estaEnPeriodo(fecha: Date, period: Period): boolean {
   return fecha >= limite;
 }
 
-// ─── Colores de ejes para dark mode ──────────────────────────────────────────
-// Recharts no lee clases Tailwind, así que usamos variables inline.
-// Detectamos el tema consultando la clase "dark" en <html>.
-
 function useIsDark() {
   const [dark, setDark] = useState(false);
   useEffect(() => {
@@ -228,15 +223,13 @@ function useIsDark() {
   return dark;
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────────
-
 export function AdminCharts() {
   const token = getCookie("token");
   const isDark = useIsDark();
 
-  const axisColor   = isDark ? "#6b7280" : "#94a3b8"; // gray-500 / slate-400
-  const gridColor   = isDark ? "#374151" : "#f1f5f9"; // gray-700 / slate-50
-  const labelColor  = isDark ? "#9ca3af" : "#64748b"; // gray-400 / slate-500
+  const axisColor = isDark ? "#6b7280" : "#94a3b8"; // gray-500 / slate-400
+  const gridColor = isDark ? "#374151" : "#f1f5f9"; // gray-700 / slate-50
+  const labelColor = isDark ? "#9ca3af" : "#64748b"; // gray-400 / slate-500
 
   const [ventasPeriod, setVentasPeriod] = useState<Period>("mes");
   const [usuariosPeriod, setUsuariosPeriod] = useState<Period>("mes");
@@ -256,10 +249,10 @@ export function AdminCharts() {
         api.productos.getAll(),
       ]);
 
-      const pedidos: any[]     = Array.isArray(pedidosRes)     ? pedidosRes     : [];
-      const usuarios: any[]    = Array.isArray(usuariosRes)    ? usuariosRes    : [];
+      const pedidos: any[] = Array.isArray(pedidosRes) ? pedidosRes : [];
+      const usuarios: any[] = Array.isArray(usuariosRes) ? usuariosRes : [];
       const productores: any[] = Array.isArray(productoresRes) ? productoresRes : [];
-      const productos: any[]   = Array.isArray(productosRes)   ? productosRes   : [];
+      const productos: any[] = Array.isArray(productosRes) ? productosRes : [];
 
       const usuarioNombreMap = new Map<string, string>();
       usuarios.forEach((u) => {
@@ -285,11 +278,10 @@ export function AdminCharts() {
       pedidos.forEach((p) => {
         const items: any[] = p.detalle_pedido ?? [];
         items.forEach((item) => {
-          const id_productor = productoProductorMap.get(item.id_producto);
-          const nombre =
-            id_productor != null
-              ? (productorNombreMap.get(id_productor) ?? "Sin nombre")
-              : "Sin nombre";
+          //  Buscar el producto directamente por id_producto
+          const prod = productos.find((pr) => pr.id_producto === item.id_producto);
+          //  Usar nombre_productor que ya viene en el producto
+          const nombre = prod?.nombre_productor ?? "Sin nombre";
           const total = Number(p.total ?? 0) / items.length;
           const prev = ventasMap.get(nombre) ?? { total: 0, pedidos: 0 };
           ventasMap.set(nombre, { total: prev.total + total, pedidos: prev.pedidos + 1 });

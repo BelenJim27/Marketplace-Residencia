@@ -2,11 +2,12 @@
 
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CameraIcon } from "@/app/profile/_components/icons";
 import { useAuth } from "@/context/AuthContext";
-import { getCookie } from "@/lib/cookies";
-import { PencilIcon } from "lucide-react";
+import { getCookie, setCookie } from "@/lib/cookies";
+import { api } from "@/lib/api";
+import { getMediaUrl } from "@/lib/media";
 
 interface StoredUser {
   id_usuario?: string;
@@ -23,11 +24,11 @@ interface StoredUser {
 }
 
 export default function Page() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, refreshAuth } = useAuth();
   const [user, setUser] = useState<StoredUser | null>(null);
   const [data, setData] = useState({
     name: "",
-    profilePhoto: "/images/user/user-03.png",
+    profilePhoto: "",
     coverPhoto: "/images/cover/cover-01.png",
     email: "",
     phone: "",
@@ -40,7 +41,7 @@ export default function Page() {
       setUser(authUser as unknown as StoredUser);
       setData({
         name: authUser.nombre || "",
-        profilePhoto: (authUser as unknown as StoredUser).foto_url || "/images/user/user-03.png",
+        profilePhoto: (authUser as unknown as StoredUser).foto_url || "",
         coverPhoto: "/images/cover/cover-01.png",
         email: authUser.email || "",
         phone: (authUser as unknown as StoredUser).telefono || "",
@@ -55,7 +56,7 @@ export default function Page() {
           setUser(storedUser);
           setData({
             name: storedUser.nombre || "",
-            profilePhoto: storedUser.foto_url || "/images/user/user-03.png",
+            profilePhoto: storedUser.foto_url || "",
             coverPhoto: "/images/cover/cover-01.png",
             email: storedUser.email || "",
             phone: storedUser.telefono || "",
@@ -69,14 +70,36 @@ export default function Page() {
     }
   }, [authUser]);
 
+  // ✅ Recarga el perfil desde la API y actualiza cookie + contexto
+  const recargarPerfil = useCallback(async () => {
+    const token = getCookie("token");
+    if (!token) return;
+
+    try {
+      const profile = (await api.auth.getProfile(token)) as StoredUser;
+      setCookie("usuario", JSON.stringify(profile), 7);
+      setUser(profile);
+      setData((prev) => ({
+        ...prev,
+        name: profile.nombre || "",
+        profilePhoto: profile.foto_url || "",
+        email: profile.email || "",
+        phone: profile.telefono || "",
+        idioma: profile.idioma_preferido || "es",
+        moneda: profile.moneda_preferida || "MXN",
+      }));
+      refreshAuth();
+    } catch (error) {
+      console.error("Error recargando perfil:", error);
+    }
+  }, [refreshAuth]);
+
+  useEffect(() => {
+    recargarPerfil();
+  }, [authUser?.id_usuario]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.name === "profilePhoto") {
-      const file = e.target?.files?.[0];
-      setData({
-        ...data,
-        profilePhoto: file ? URL.createObjectURL(file) : data.profilePhoto,
-      });
-    } else if (e.target.name === "coverPhoto") {
+    if (e.target.name === "coverPhoto") {
       const file = e.target?.files?.[0];
       setData({
         ...data,
@@ -90,11 +113,7 @@ export default function Page() {
     }
   };
 
-  const fullName = [
-    data.name,
-    user?.apellido_paterno,
-    user?.apellido_materno,
-  ]
+  const fullName = [data.name, user?.apellido_paterno, user?.apellido_materno]
     .filter(Boolean)
     .join(" ");
 
@@ -110,10 +129,7 @@ export default function Page() {
             className="h-full w-full rounded-tl-[10px] rounded-tr-[10px] object-cover object-center"
             width={970}
             height={260}
-            style={{
-              width: "auto",
-              height: "auto",
-            }}
+            style={{ width: "auto", height: "auto" }}
           />
           <div className="absolute bottom-1 right-1 z-10 xsm:bottom-4 xsm:right-4">
             <label
@@ -133,36 +149,42 @@ export default function Page() {
             </label>
           </div>
         </div>
+
         <div className="px-4 pb-6 text-center lg:pb-8 xl:pb-11.5">
-          <div className="relative z-30 mx-auto -mt-22 h-30 w-full max-w-30 rounded-full bg-white/20 p-1 backdrop-blur sm:h-44 sm:max-w-[176px] sm:p-3">
-            <div className="relative drop-shadow-2">
-              {data?.profilePhoto && (
-                <>
-                  <Image
-                    src={data?.profilePhoto}
-                    width={160}
-                    height={160}
-                    className="overflow-hidden rounded-full"
-                    alt="profile"
-                  />
-                  <label
-                    htmlFor="profilePhoto"
-                    className="absolute bottom-0 right-0 flex size-8.5 cursor-pointer items-center justify-center rounded-full bg-primary text-white hover:bg-opacity-90 sm:bottom-2 sm:right-2"
-                  >
-                    <CameraIcon />
-                    <input
-                      type="file"
-                      name="profilePhoto"
-                      id="profilePhoto"
-                      className="sr-only"
-                      onChange={handleChange}
-                      accept="image/png, image/jpg, image/jpeg"
-                    />
-                  </label>
-                </>
+          <div className="relative z-30 mx-auto -mt-22 h-30 w-30 rounded-full bg-white/20 p-1 backdrop-blur sm:h-44 sm:w-44 sm:p-3">
+            <div className="relative h-full w-full overflow-hidden rounded-full drop-shadow-2">
+              {data.profilePhoto ? (
+                <img
+                  src={getMediaUrl(data.profilePhoto)}
+                  alt="profile"
+                  className="h-full w-full object-cover object-center"
+                />
+              ) : (
+                <Image
+                  src="/images/user/user-03.png"
+                  width={160}
+                  height={160}
+                  className="h-full w-full object-cover rounded-full"
+                  alt="profile"
+                />
               )}
+              <label
+                htmlFor="profilePhoto"
+                className="absolute bottom-0 right-0 flex size-8.5 cursor-pointer items-center justify-center rounded-full bg-primary text-white hover:bg-opacity-90 sm:bottom-2 sm:right-2"
+              >
+                <CameraIcon />
+                <input
+                  type="file"
+                  name="profilePhoto"
+                  id="profilePhoto"
+                  className="sr-only"
+                  onChange={handleChange}
+                  accept="image/png, image/jpg, image/jpeg"
+                />
+              </label>
             </div>
           </div>
+
           <div className="mt-4">
             <h3 className="mb-1 text-heading-6 font-bold text-dark dark:text-white">
               {fullName || "Productor"}
@@ -184,27 +206,27 @@ export default function Page() {
               <div className="mt-4 grid grid-cols-1 gap-3 sm:gap-4 text-left md:grid-cols-2">
                 <div>
                   <p className="text-body-sm text-gray-500">Nombre</p>
-                  <p className="font-medium">{data.name}</p>
+                  <p className="font-medium dark:text-white">{data.name}</p>
                 </div>
                 <div>
                   <p className="text-body-sm text-gray-500">Apellido Paterno</p>
-                  <p className="font-medium">{user?.apellido_paterno || "-"}</p>
+                  <p className="font-medium dark:text-white">{user?.apellido_paterno || "-"}</p>
                 </div>
                 <div>
                   <p className="text-body-sm text-gray-500">Apellido Materno</p>
-                  <p className="font-medium">{user?.apellido_materno || "-"}</p>
+                  <p className="font-medium dark:text-white">{user?.apellido_materno || "-"}</p>
                 </div>
                 <div>
                   <p className="text-body-sm text-gray-500">Email</p>
-                  <p className="font-medium">{data.email}</p>
+                  <p className="font-medium dark:text-white">{data.email}</p>
                 </div>
                 <div>
                   <p className="text-body-sm text-gray-500">Teléfono</p>
-                  <p className="font-medium">{data.phone || "-"}</p>
+                  <p className="font-medium dark:text-white">{data.phone || "-"}</p>
                 </div>
                 <div>
                   <p className="text-body-sm text-gray-500">Moneda Preferida</p>
-                  <p className="font-medium">{data.moneda}</p>
+                  <p className="font-medium dark:text-white">{data.moneda}</p>
                 </div>
               </div>
             </div>

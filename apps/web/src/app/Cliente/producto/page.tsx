@@ -2,9 +2,7 @@ import { Metadata } from "next";
 import ProductCatalogClient from "@/components/catalog/Client";
 
 export const metadata: Metadata = {
-  title: {
-    absolute: "Productos",
-  },
+  title: { absolute: "Productos" },
 };
 
 export default function ProductoPage() {
@@ -15,14 +13,10 @@ export default function ProductoPage() {
           <h1 className="text-2xl font-bold text-dark dark:text-white">
             Nuestros Productos
           </h1>
-          <p className="text-gray-500">
-            Descubre los mejores productos frescos
-          </p>
+          <p className="text-gray-500">Descubre los mejores productos frescos</p>
         </div>
       </div>
-
       <ProductCatalogClient />
     </div>
   );
 }
-

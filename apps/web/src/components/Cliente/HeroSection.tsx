@@ -28,41 +28,6 @@ export default function HeroSection() {
                 <div className="absolute inset-0 bg-black/30" />
             </div>
 
-            {/* NAVBAR */}
-            <nav
-                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-                    scrolled ? "bg-white shadow-md" : "bg-white"
-                }`}
-            >
-                <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-                    {/* Logo */}
-                    <div className="flex items-center gap-2">
-                        <img
-                            src="/logo.png"
-                            alt="Guardianas del Mezcal"
-                            className="h-12 w-auto object-contain"
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = "none";
-                            }}
-                        />
-                    </div>
-
-                    {/* Links centrales */}
-                    <div className="flex items-center gap-10">
-                        <NavItem icon="🏠" label="INICIO" href="#inicio" />
-                        <NavItem icon="🍾" label="PRODUCTOS" href="#productos" />
-                    </div>
-
-                    {/* Acciones derecha */}
-                    <div className="flex items-center gap-6">
-                        <NavAction icon="🌐" label="ES / EN" />
-                        <NavAction icon="🛒" label="CARRITO" />
-                        <NavAction icon="👤" label="PERFIL" />
-                        <NavAction icon="🔍" label="BUSCAR" />
-                    </div>
-                </div>
-            </nav>
-
             {/* Contenido Hero */}
             <div className="relative z-10 flex items-end justify-start h-full pb-16 px-12">
                 <div className="text-white">
