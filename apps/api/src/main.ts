@@ -24,9 +24,9 @@ async function bootstrap() {
     ? rawOrigins.split(',').map((o) => o.trim())
     : rawOrigins;
   app.enableCors({
-    origin: corsOrigin,
-    credentials: true,
-  });
+  origin: ['https://marketplace-mezcal.vercel.app'],
+  credentials: true,
+});
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
