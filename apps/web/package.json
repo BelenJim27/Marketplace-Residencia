@@ -36,7 +36,7 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "@types/node": "^22.19.17",
+    "@types/node": "^20.0.0",
     "@types/react": "^19.0.8",
     "@types/react-dom": "19.0.3",
     "cross-env": "^10.1.0",
@@ -44,6 +44,6 @@
     "eslint-config-next": "^15.1.6",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
-    "typescript": "^5.9.3"
+    "typescript": "^5.0.0"
   }
 }
