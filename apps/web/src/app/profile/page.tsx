@@ -214,7 +214,7 @@ export default function Page() {
             </h3>
             <p className="font-medium">{data.email}</p>
             <div className="mx-auto mb-5.5 mt-5 grid max-w-[370px] grid-cols-3 rounded-[5px] border border-stroke py-[9px] shadow-1 dark:border-dark-3 dark:bg-dark-2 dark:shadow-card">
-              
+
               <div className="flex flex-col items-center justify-center gap-1 px-4 xsm:flex-row">
                 <span className="font-medium text-dark dark:text-white">
                   {data.idioma.toUpperCase()}
@@ -280,6 +280,10 @@ export default function Page() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => {
+          // 1. Forzamos la actualización del contexto global
+          const { user: authUser, refreshAuth } = useAuth();
+          
+          // 2. Actualizamos el estado local de esta página
           const usuarioStr = getCookie("usuario");
           if (usuarioStr) {
             try {
@@ -294,8 +298,8 @@ export default function Page() {
                 idioma: storedUser.idioma_preferido || "es",
                 moneda: storedUser.moneda_preferida || "MXN",
               });
-            } catch {
-              console.error("Error parsing user data");
+            } catch (e) {
+              console.error("Error parsing user data", e);
             }
           }
         }}

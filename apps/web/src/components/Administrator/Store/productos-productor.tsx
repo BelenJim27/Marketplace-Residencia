@@ -95,17 +95,14 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
   const loadProducts = async () => {
     setLoading(true);
     setError(null);
-
     try {
       const response = await fetch(`/api/productos?id_productor=${idProductor}`);
-
       if (!response.ok) {
         const payload = await response
           .json()
           .catch(() => ({ message: "No fue posible cargar los productos del productor." }));
         throw new Error(payload.message || "No fue posible cargar los productos del productor.");
       }
-
       const data = await response.json();
       const normalized = Array.isArray(data)
         ? data.map((item) => normalizeProduct(item as ProductItem))
@@ -142,12 +139,12 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
     setForm(
       product
         ? {
-          nombre: product.nombre,
-          descripcion: product.descripcion ?? "",
-          precio_base: String(product.precio_base ?? "0"),
-          moneda_base: product.moneda_base ?? product.moneda ?? "MXN",
-          status: String(product.status ?? "activo").toLowerCase(),
-        }
+            nombre: product.nombre,
+            descripcion: product.descripcion ?? "",
+            precio_base: String(product.precio_base ?? "0"),
+            moneda_base: product.moneda_base ?? product.moneda ?? "MXN",
+            status: String(product.status ?? "activo").toLowerCase(),
+          }
         : EMPTY_FORM,
     );
   };
@@ -159,13 +156,8 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
   };
 
   const handleDelete = async (product: ProductItem) => {
-    if (!token) {
-      setError("No autorizado para eliminar productos.");
-      return;
-    }
-
+    if (!token) { setError("No autorizado para eliminar productos."); return; }
     if (!confirm(`¿Eliminar ${product.nombre}?`)) return;
-
     try {
       await api.productos.delete(token, String(product.id_producto));
       setSuccess("Producto eliminado correctamente.");
@@ -176,19 +168,10 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
   };
 
   const handleSave = async () => {
-    if (!selected || !token) {
-      setError("No autorizado para editar productos.");
-      return;
-    }
-
-    if (!selected.id_tienda) {
-      setError("No se pudo identificar la tienda del producto.");
-      return;
-    }
-
+    if (!selected || !token) { setError("No autorizado para editar productos."); return; }
+    if (!selected.id_tienda) { setError("No se pudo identificar la tienda del producto."); return; }
     setSaving(true);
     setError(null);
-
     try {
       const payload = new FormData();
       payload.append("id_tienda", String(selected.id_tienda));
@@ -198,7 +181,6 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
       payload.append("moneda_base", form.moneda_base);
       payload.append("status", form.status);
       if (user?.id_usuario) payload.append("actualizado_por", user.id_usuario);
-
       await api.productos.update(token, String(selected.id_producto), payload);
       setSuccess("Producto actualizado correctamente.");
       closeModal();
@@ -211,19 +193,10 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
   };
 
   const handleCreate = async () => {
-    if (!token) {
-      setError("No autorizado para crear productos.");
-      return;
-    }
-
-    if (!form.nombre.trim()) {
-      setError("El nombre del producto es obligatorio.");
-      return;
-    }
-
+    if (!token) { setError("No autorizado para crear productos."); return; }
+    if (!form.nombre.trim()) { setError("El nombre del producto es obligatorio."); return; }
     setSaving(true);
     setError(null);
-
     try {
       const payload = new FormData();
       payload.append("id_productor", String(idProductor));
@@ -233,7 +206,6 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
       payload.append("moneda_base", form.moneda_base);
       payload.append("status", form.status);
       if (user?.id_usuario) payload.append("creado_por", user.id_usuario);
-
       await api.productos.create(token, payload);
       setSuccess("Producto creado correctamente.");
       closeModal();
@@ -247,7 +219,8 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
 
   return (
     <div className="space-y-6">
-      {/* ── Encabezado con botón Nuevo Producto ── */}
+
+      {/* ── Botón Nuevo Producto ── */}
       <div className="flex justify-end mb-6">
         <button
           type="button"
@@ -262,28 +235,27 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
       {/* ── Tarjetas de resumen ── */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <SummaryCard label="Total productos" value={products.length} />
-        <SummaryCard label="Activos" value={activeCount} accent="text-green-600" />
-        <SummaryCard label="Stock total" value={totalStock} accent="text-blue-600" />
+        <SummaryCard label="Activos" value={activeCount} accent="text-green-600 dark:text-green-400" />
+        <SummaryCard label="Stock total" value={totalStock} accent="text-blue-600 dark:text-blue-400" />
       </div>
 
       {/* ── Notificaciones ── */}
-      {error ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      {error && (
+        <div className="rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           {error}
         </div>
-      ) : null}
-
-      {success ? (
-        <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+      )}
+      {success && (
+        <div className="rounded-2xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-3 text-sm text-green-700 dark:text-green-400">
           {success}
         </div>
-      ) : null}
+      )}
 
       {/* ── Tabla ── */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] text-left">
-            <thead className="bg-gray-50 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+            <thead className="bg-gray-50 dark:bg-gray-700/60 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-400">
               <tr>
                 <th className="px-5 py-4">Imagen</th>
                 <th className="px-5 py-4">Nombre</th>
@@ -297,13 +269,13 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                     Cargando productos...
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                     Este productor no tiene productos registrados.
                   </td>
                 </tr>
@@ -311,23 +283,25 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
                 products.map((product) => (
                   <tr
                     key={product.id_producto}
-                    className="border-t border-stroke text-sm dark:border-dark-3"
+                    className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors text-sm"
                   >
                     <td className="px-5 py-4">
                       <ProductThumbnail src={product.imagen_url ?? null} alt={product.nombre} />
                     </td>
-                    <td className="px-5 py-4 font-medium text-dark dark:text-white">
+                    <td className="px-5 py-4 font-medium text-gray-900 dark:text-white">
                       {product.nombre}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 text-gray-700 dark:text-gray-300">
                       {Number(product.precio_base ?? 0).toFixed(2)}
                     </td>
-                    <td className="px-5 py-4">{product.moneda_base || "MXN"}</td>
+                    <td className="px-5 py-4 text-gray-700 dark:text-gray-300">
+                      {product.moneda_base || "MXN"}
+                    </td>
                     <td className="px-5 py-4">
                       <StatusBadge status={String(product.status ?? "activo")} />
                     </td>
                     <td className="px-5 py-4">
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+                      <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300">
                         {product.stock ?? 0}
                       </span>
                     </td>
@@ -337,7 +311,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
                           type="button"
                           title="Ver"
                           onClick={() => openModal("view", product)}
-                          className="rounded-lg p-2 text-gray-500 hover:bg-green-50 hover:text-green-600"
+                          className="rounded-lg p-2 text-gray-500 dark:text-gray-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400"
                         >
                           <Eye size={16} />
                         </button>
@@ -345,7 +319,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
                           type="button"
                           title="Editar"
                           onClick={() => openModal("edit", product)}
-                          className="rounded-lg p-2 text-gray-500 hover:bg-blue-50 hover:text-blue-600"
+                          className="rounded-lg p-2 text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400"
                         >
                           <Pencil size={16} />
                         </button>
@@ -353,7 +327,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
                           type="button"
                           title="Eliminar"
                           onClick={() => void handleDelete(product)}
-                          className="rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                          className="rounded-lg p-2 text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -368,11 +342,11 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
       </div>
 
       {/* ── Modal Ver / Editar / Crear ── */}
-      {mode ? (
+      {mode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-8 shadow-2xl">
+          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-800 p-8 shadow-2xl">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-800">
+              <h2 className="text-xl font-bold text-slate-800 dark:text-white">
                 {mode === "create"
                   ? "Nuevo Producto"
                   : mode === "edit"
@@ -382,7 +356,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                className="rounded-lg p-2 text-gray-400 dark:text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 ✕
               </button>
@@ -448,11 +422,10 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-xl border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+                className="rounded-xl border border-gray-200 dark:border-gray-600 px-5 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Cancelar
               </button>
-
               {mode === "edit" && (
                 <button
                   type="button"
@@ -463,7 +436,6 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
                   {saving ? "Guardando..." : "Guardar cambios"}
                 </button>
               )}
-
               {mode === "create" && (
                 <button
                   type="button"
@@ -477,7 +449,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
             </div>
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -487,15 +459,17 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
 function SummaryCard({
   label,
   value,
-  accent = "text-slate-800",
+  accent = "text-slate-800 dark:text-white",
 }: {
   label: string;
   value: number;
   accent?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</p>
+    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+        {label}
+      </p>
       <h2 className={`mt-1 text-2xl font-black ${accent}`}>{value}</h2>
     </div>
   );
@@ -504,7 +478,7 @@ function SummaryCard({
 function ProductThumbnail({ src, alt }: { src: string | null; alt: string }) {
   if (!src) {
     return (
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-[10px] font-semibold uppercase text-gray-400">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-700 text-[10px] font-semibold uppercase text-gray-400 dark:text-gray-500">
         Sin
       </div>
     );
@@ -515,7 +489,9 @@ function ProductThumbnail({ src, alt }: { src: string | null; alt: string }) {
 function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
   const className =
-    normalized === "activo" ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600";
+    normalized === "activo"
+      ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400";
   return (
     <span className={`rounded-full px-3 py-1 text-xs font-medium ${className}`}>
       {normalized}
@@ -538,12 +514,12 @@ function Field({
   textarea?: boolean;
   type?: string;
 }) {
-  const className =
-    "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-60";
+  const inputClass =
+    "w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4 py-3 text-gray-700 dark:text-gray-200 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <label className="block space-y-1">
-      <span className="ml-1 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500">
+      <span className="ml-1 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500 dark:text-gray-400">
         {label}
       </span>
       {textarea ? (
@@ -552,7 +528,7 @@ function Field({
           onChange={(e) => onChange?.(e.target.value)}
           disabled={disabled}
           rows={4}
-          className={className}
+          className={inputClass}
         />
       ) : (
         <input
@@ -560,7 +536,7 @@ function Field({
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
           disabled={disabled}
-          className={className}
+          className={inputClass}
         />
       )}
     </label>
@@ -582,14 +558,14 @@ function SelectField({
 }) {
   return (
     <label className="block space-y-1">
-      <span className="ml-1 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500">
+      <span className="ml-1 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500 dark:text-gray-400">
         {label}
       </span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4 py-3 text-gray-700 dark:text-gray-200 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>

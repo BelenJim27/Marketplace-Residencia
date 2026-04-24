@@ -74,15 +74,18 @@ export default function AuditoriaUI() {
 
   const getAccionColor = (accion: string) => {
     const colors: Record<string, string> = {
-      CREATE: "bg-green-100 text-green-800",
-      UPDATE: "bg-blue-100 text-blue-800",
-      DELETE: "bg-red-100 text-red-800",
-      LOGIN: "bg-purple-100 text-purple-800",
-      LOGOUT: "bg-gray-100 text-gray-800",
-      REGISTER: "bg-emerald-100 text-emerald-800",
+      CREATE:   "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400",
+      UPDATE:   "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400",
+      DELETE:   "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400",
+      LOGIN:    "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400",
+      LOGOUT:   "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300",
+      REGISTER: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400",
     };
-    return colors[accion] || "bg-gray-100 text-gray-800";
+    return colors[accion] || "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300";
   };
+
+  const selectClass =
+    "px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm";
 
   if (loading) {
     return (
@@ -94,8 +97,8 @@ export default function AuditoriaUI() {
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-600">{error}</p>
+      <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <p className="text-red-600 dark:text-red-400">{error}</p>
         <button
           onClick={fetchAuditoria}
           className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
@@ -108,122 +111,118 @@ export default function AuditoriaUI() {
 
   return (
     <div className="p-6 space-y-4">
+
+      {/* Título */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <FileText className="w-6 h-6" />
           Auditoría
         </h1>
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-gray-500 dark:text-gray-400">
           {filteredAuditoria.length} registros
         </span>
       </div>
 
+      {/* Filtros */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
             placeholder="Buscar..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-400" />
+          <Filter className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           <select
             value={filterAccion}
             onChange={(e) => setFilterAccion(e.target.value)}
-            className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+            className={selectClass}
           >
             <option value="todas">Todas las acciones</option>
             {accionesUnicas.map((acc) => (
-              <option key={acc} value={acc}>
-                {acc}
-              </option>
+              <option key={acc} value={acc}>{acc}</option>
             ))}
           </select>
 
           <select
             value={filterTabla}
             onChange={(e) => setFilterTabla(e.target.value)}
-            className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+            className={selectClass}
           >
             <option value="todas">Todas las tablas</option>
             {tablasUnicas.map((tab) => (
-              <option key={tab} value={tab}>
-                {tab}
-              </option>
+              <option key={tab} value={tab}>{tab}</option>
             ))}
           </select>
         </div>
       </div>
 
-      <div className="overflow-x-auto border rounded-lg">
+      {/* Tabla */}
+      <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-gray-700/60">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 <Table className="w-4 h-4 inline mr-1" />
                 Acción
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Tabla
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 <User className="w-4 h-4 inline mr-1" />
                 Usuario
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Registro ID
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 <Clock className="w-4 h-4 inline mr-1" />
                 Fecha
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 IP
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
             {filteredAuditoria.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                   No hay registros de auditoría
                 </td>
               </tr>
             ) : (
               filteredAuditoria.map((item) => (
-                <tr key={item.id_auditoria} className="hover:bg-gray-50">
+                <tr key={item.id_auditoria} className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
                   <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getAccionColor(
-                        item.accion
-                      )}`}
-                    >
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getAccionColor(item.accion)}`}>
                       {item.accion}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                     {item.tabla_afectada}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <div className="text-gray-900">
+                    <div className="text-gray-900 dark:text-gray-100">
                       {item.usuarios?.nombre || "Sistema"}
                     </div>
-                    <div className="text-gray-500 text-xs">
+                    <div className="text-gray-500 dark:text-gray-400 text-xs">
                       {item.usuarios?.email || ""}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 font-mono text-xs">
+                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono text-xs">
                     {item.registro_id || "-"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
+                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                     {formatDate(item.fecha)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 font-mono">
+                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">
                     {item.ip_origen || "-"}
                   </td>
                 </tr>
@@ -232,6 +231,7 @@ export default function AuditoriaUI() {
           </tbody>
         </table>
       </div>
+
     </div>
   );
 }

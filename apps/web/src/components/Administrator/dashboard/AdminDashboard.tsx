@@ -4,9 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
-import { AdminCharts } from "./AdminCharts";   // ← importa las gráficas
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { AdminCharts } from "./AdminCharts";
 
 type Stats = {
   totalUsuarios: number;
@@ -16,8 +14,6 @@ type Stats = {
   pedidosPendientes: number;
   productoresActivos: number;
 };
-
-// ─── Componente principal ─────────────────────────────────────────────────────
 
 export function AdminDashboard() {
   const { loading: authLoading } = useAuth();
@@ -54,7 +50,6 @@ export function AdminDashboard() {
     return Math.max(0, stats.totalProductores - stats.productoresActivos);
   }, [stats]);
 
-  // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -63,60 +58,37 @@ export function AdminDashboard() {
     );
   }
 
-  // ── Error ────────────────────────────────────────────────────────────────
   if (error) {
     return <div className="text-red-600 p-4">Error: {error}</div>;
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-8">
-
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard Administrador</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Resumen general del sistema</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Dashboard Administrador</h1>
+        <p className="text-sm text-gray-400 dark:text-dark-6 mt-0.5">Resumen general del sistema</p>
       </div>
 
-      {/* ── Stat cards ──────────────────────────────────────────────────── */}
+      {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="TOTAL USUARIOS"
-          value={stats?.totalUsuarios ?? 0}
-          color="default"
-        />
-        <StatCard
-          label="TOTAL PRODUCTORES"
-          value={stats?.totalProductores ?? 0}
-          color="default"
-        />
-        <StatCard
-          label="PRODUCTORES ACTIVOS"
-          value={stats?.productoresActivos ?? 0}
-          color="green"
-        />
-        <StatCard
-          label="PRODUCTORES INACTIVOS"
-          value={productoresInactivos}
-          color="orange"
-        />
+        <StatCard label="TOTAL USUARIOS"          value={stats?.totalUsuarios ?? 0}        color="default" />
+        <StatCard label="TOTAL PRODUCTORES"       value={stats?.totalProductores ?? 0}     color="default" />
+        <StatCard label="PRODUCTORES ACTIVOS"     value={stats?.productoresActivos ?? 0}   color="green"   />
+        <StatCard label="PRODUCTORES INACTIVOS"   value={productoresInactivos}             color="orange"  />
       </div>
 
-      {/* ── Sección de gráficas ──────────────────────────────────────────── */}
+      {/* Gráficas */}
       <div>
         <div className="flex items-center gap-3 mb-5">
-          <h2 className="text-lg font-bold text-gray-800">Análisis y Estadísticas</h2>
-          <span className="h-px flex-1 bg-gray-100" />
+          <h2 className="text-lg font-bold text-gray-800 dark:text-white">Análisis y Estadísticas</h2>
+          <span className="h-px flex-1 bg-gray-100 dark:bg-dark-3" />
         </div>
-        {/* AdminCharts maneja su propio fetching, loading y errores */}
         <AdminCharts />
       </div>
-
     </div>
   );
 }
-
-// ─── StatCard ─────────────────────────────────────────────────────────────────
 
 type StatColor = "default" | "green" | "blue" | "orange" | "purple";
 
@@ -130,7 +102,7 @@ function StatCard({
   color?: StatColor;
 }) {
   const valueColors: Record<StatColor, string> = {
-    default: "text-gray-800",
+    default: "text-gray-800 dark:text-white",
     green:   "text-green-500",
     blue:    "text-blue-500",
     orange:  "text-orange-400",
@@ -138,8 +110,8 @@ function StatCard({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-      <p className="text-[11px] font-semibold tracking-widest text-gray-400 uppercase mb-3">
+    <div className="bg-white dark:bg-dark-2 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-3 p-6 hover:shadow-md transition-shadow">
+      <p className="text-[11px] font-semibold tracking-widest text-gray-400 dark:text-dark-6 uppercase mb-3">
         {label}
       </p>
       <p className={`text-4xl font-bold ${valueColors[color]}`}>{value}</p>

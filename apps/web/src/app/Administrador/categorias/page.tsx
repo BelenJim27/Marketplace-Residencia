@@ -15,152 +15,92 @@ type Categoria = {
   categorias?: Categoria[];
 };
 
-type Notice = {
-  type: "error" | "success";
-  message: string;
-};
+type Notice = { type: "error" | "success"; message: string };
 
 const API_URL = "";
 
 export default function CategoriasAdminPage() {
-  const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [notice, setNotice] = useState<Notice | null>(null);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [showModal, setShowModal] = useState(false);
+  const [query, setQuery]                       = useState("");
+  const [loading, setLoading]                   = useState(true);
+  const [notice, setNotice]                     = useState<Notice | null>(null);
+  const [categorias, setCategorias]             = useState<Categoria[]>([]);
+  const [showModal, setShowModal]               = useState(false);
   const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null);
-  const [formData, setFormData] = useState({
-    nombre: "",
-    slug: "",
-    descripcion: "",
-    tipo: "general",
-    activo: true,
-    id_padre: "",
-  });
+  const [formData, setFormData] = useState({ nombre: "", slug: "", descripcion: "", tipo: "general", activo: true, id_padre: "" });
 
-  useEffect(() => {
-    loadCategorias();
-  }, []);
+  useEffect(() => { loadCategorias(); }, []);
 
   const loadCategorias = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/categorias`, { cache: "no-store" });
+      const res  = await fetch(`${API_URL}/categorias`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Error al cargar categorías");
       setCategorias(Array.isArray(data) ? data : []);
     } catch (error) {
-      setNotice({
-        type: "error",
-        message: error instanceof Error ? error.message : "Error al cargar categorías",
-      });
-    } finally {
-      setLoading(false);
-    }
+      setNotice({ type: "error", message: error instanceof Error ? error.message : "Error al cargar categorías" });
+    } finally { setLoading(false); }
   };
 
   const filteredCategorias = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return categorias;
-    return categorias.filter(
-      (c) =>
-        c.nombre.toLowerCase().includes(normalized) ||
-        c.descripcion?.toLowerCase().includes(normalized),
-    );
+    return categorias.filter((c) => c.nombre.toLowerCase().includes(normalized) || c.descripcion?.toLowerCase().includes(normalized));
   }, [categorias, query]);
 
   const openCreateModal = (parentId?: number) => {
     setEditingCategoria(null);
-    setFormData({
-      nombre: "",
-      slug: "",
-      descripcion: "",
-      tipo: "general",
-      activo: true,
-      id_padre: parentId ? String(parentId) : "",
-    });
+    setFormData({ nombre: "", slug: "", descripcion: "", tipo: "general", activo: true, id_padre: parentId ? String(parentId) : "" });
     setShowModal(true);
   };
 
   const openEditModal = (c: Categoria) => {
     setEditingCategoria(c);
-    setFormData({
-      nombre: c.nombre,
-      slug: c.slug,
-      descripcion: c.descripcion || "",
-      tipo: c.tipo,
-      activo: c.activo,
-      id_padre: c.id_padre ? String(c.id_padre) : "",
-    });
+    setFormData({ nombre: c.nombre, slug: c.slug, descripcion: c.descripcion || "", tipo: c.tipo, activo: c.activo, id_padre: c.id_padre ? String(c.id_padre) : "" });
     setShowModal(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setNotice(null);
-
     const method = editingCategoria ? "PATCH" : "POST";
-    const url = editingCategoria
-      ? `${API_URL}/categorias/${editingCategoria.id_categoria}`
-      : `${API_URL}/categorias`;
-
-    const payload = {
-      nombre: formData.nombre,
-      slug: formData.slug,
-      descripcion: formData.descripcion || null,
-      tipo: formData.tipo,
-      activo: formData.activo,
-      id_padre: formData.id_padre ? parseInt(formData.id_padre) : null,
-    };
-
+    const url    = editingCategoria ? `${API_URL}/categorias/${editingCategoria.id_categoria}` : `${API_URL}/categorias`;
+    const payload = { nombre: formData.nombre, slug: formData.slug, descripcion: formData.descripcion || null, tipo: formData.tipo, activo: formData.activo, id_padre: formData.id_padre ? parseInt(formData.id_padre) : null };
     try {
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res  = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.message || "Error al guardar");
-
       setNotice({ type: "success", message: "Categoría guardada correctamente" });
       setShowModal(false);
       loadCategorias();
     } catch (error) {
-      setNotice({
-        type: "error",
-        message: error instanceof Error ? error.message : "Error al guardar",
-      });
+      setNotice({ type: "error", message: error instanceof Error ? error.message : "Error al guardar" });
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("¿Estás seguro de eliminar esta categoría?")) return;
-
     try {
-      const res = await fetch(`${API_URL}/categorias/${id}`, { method: "DELETE" });
+      const res  = await fetch(`${API_URL}/categorias/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Error al eliminar");
       setNotice({ type: "success", message: "Categoría eliminada" });
       loadCategorias();
     } catch (error) {
-      setNotice({
-        type: "error",
-        message: error instanceof Error ? error.message : "Error al eliminar",
-      });
+      setNotice({ type: "error", message: error instanceof Error ? error.message : "Error al eliminar" });
     }
   };
 
+  const fieldCls  = "mt-1 w-full rounded-lg border border-gray-300 dark:border-dark-3 bg-white dark:bg-dark-3 text-slate-800 dark:text-white px-3 py-2 text-sm outline-none focus:border-green-500";
+  const labelCls  = "block text-sm font-medium text-gray-700 dark:text-dark-7";
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-            Gestión de Categorías
-          </h1>
-          <p className="mt-0.5 text-sm text-gray-500">
-            Administra las categorías y subcategorías del sistema.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Gestión de Categorías</h1>
+          <p className="mt-0.5 text-sm text-gray-500 dark:text-dark-6">Administra las categorías y subcategorías del sistema.</p>
         </div>
         <button
           type="button"
@@ -171,30 +111,31 @@ export default function CategoriasAdminPage() {
         </button>
       </div>
 
+      {/* Notice */}
       {notice && (
-        <div
-          className={`rounded-2xl border px-4 py-3 text-sm ${notice.type === "success" ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}
-        >
+        <div className={`rounded-2xl border px-4 py-3 text-sm ${notice.type === "success" ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
           {notice.message}
         </div>
       )}
 
-      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+      {/* Search */}
+      <div className="rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-dark-2 p-6 shadow-sm">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-dark-6" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar categorías..."
-            className="w-full rounded-xl border border-gray-100 bg-gray-50 py-3 pl-12 pr-4 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+            className="w-full rounded-xl border border-gray-100 dark:border-dark-3 bg-gray-50 dark:bg-dark-3 py-3 pl-12 pr-4 text-sm text-slate-700 dark:text-white placeholder-gray-400 dark:placeholder-dark-6 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
           />
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+      {/* Table */}
+      <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-dark-2 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-left">
-            <thead className="bg-gray-50 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+            <thead className="bg-gray-50 dark:bg-dark-3 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-dark-6">
               <tr>
                 <th className="p-4">Nombre</th>
                 <th className="p-4">Slug</th>
@@ -203,55 +144,31 @@ export default function CategoriasAdminPage() {
                 <th className="p-4 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-dark-3">
               {loading ? (
-                <tr>
-                  <td colSpan={5} className="p-10 text-center text-gray-500">
-                    Cargando...
-                  </td>
-                </tr>
+                <tr><td colSpan={5} className="p-10 text-center text-gray-500 dark:text-dark-6">Cargando...</td></tr>
               ) : filteredCategorias.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="p-10 text-center text-gray-500">
-                    No hay categorías.
-                  </td>
-                </tr>
+                <tr><td colSpan={5} className="p-10 text-center text-gray-500 dark:text-dark-6">No hay categorías.</td></tr>
               ) : (
                 filteredCategorias.map((cat) => (
-                  <tr key={cat.id_categoria} className="group hover:bg-gray-50/60">
-                    <td className="p-4 font-semibold text-slate-800">
+                  <tr key={cat.id_categoria} className="group hover:bg-gray-50/60 dark:hover:bg-dark-3/60">
+                    <td className="p-4 font-semibold text-slate-800 dark:text-white">
                       {cat.nombre}
                       {cat.categorias && cat.categorias.length > 0 && (
-                        <span className="ml-2 text-xs text-gray-400">
-                          ({cat.categorias.length} sub)
-                        </span>
+                        <span className="ml-2 text-xs text-gray-400 dark:text-dark-6">({cat.categorias.length} sub)</span>
                       )}
                     </td>
-                    <td className="p-4 text-sm text-gray-500">{cat.slug}</td>
-                    <td className="p-4 text-sm text-gray-500">{cat.tipo}</td>
+                    <td className="p-4 text-sm text-gray-500 dark:text-dark-6">{cat.slug}</td>
+                    <td className="p-4 text-sm text-gray-500 dark:text-dark-6">{cat.tipo}</td>
                     <td className="p-4 text-center">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cat.activo ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"}`}
-                      >
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cat.activo ? "bg-green-50 text-green-700" : "bg-gray-100 dark:bg-dark-3 text-gray-600 dark:text-dark-6"}`}>
                         {cat.activo ? "Activo" : "Inactivo"}
                       </span>
                     </td>
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(cat)}
-                          className="rounded-lg p-2 text-slate-400 hover:bg-green-50 hover:text-green-700"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(cat.id_categoria)}
-                          className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <button type="button" onClick={() => openEditModal(cat)}  className="rounded-lg p-2 text-slate-400 hover:bg-green-50 hover:text-green-700"><Edit2  className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => handleDelete(cat.id_categoria)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -262,92 +179,43 @@ export default function CategoriasAdminPage() {
         </div>
       </div>
 
+      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-xl bg-white dark:bg-dark-2 p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">
-                {editingCategoria ? "Editar" : "Nueva"} Categoría
-              </h2>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="rounded-lg p-1 hover:bg-gray-100"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-white">{editingCategoria ? "Editar" : "Nueva"} Categoría</h2>
+              <button type="button" onClick={() => setShowModal(false)} className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-dark-3 text-gray-500 dark:text-dark-6"><X className="h-5 w-5" /></button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Nombre</label>
-                <input
-                  type="text"
-                  value={formData.nombre}
-                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  required
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500"
-                />
+                <label className={labelCls}>Nombre</label>
+                <input type="text" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} required className={fieldCls} />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700">Slug</label>
-                <input
-                  type="text"
-                  value={formData.slug}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                  required
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500"
-                />
+                <label className={labelCls}>Slug</label>
+                <input type="text" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} required className={fieldCls} />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700">Descripción</label>
-                <textarea
-                  value={formData.descripcion}
-                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                  rows={2}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500"
-                />
+                <label className={labelCls}>Descripción</label>
+                <textarea value={formData.descripcion} onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })} rows={2} className={fieldCls} />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700">Tipo</label>
-                <select
-                  value={formData.tipo}
-                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500"
-                >
+                <label className={labelCls}>Tipo</label>
+                <select value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value })} className={fieldCls}>
                   <option value="general">General</option>
                   <option value="maguey">Maguey</option>
                   <option value="tipo_mezcal">Tipo Mezcal</option>
                 </select>
               </div>
-
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.activo}
-                  onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-green-600"
-                />
-                <label className="text-sm text-gray-700">Activo</label>
+                <input type="checkbox" checked={formData.activo} onChange={(e) => setFormData({ ...formData, activo: e.target.checked })} className="h-4 w-4 rounded border-gray-300 text-green-600" />
+                <label className="text-sm text-gray-700 dark:text-dark-7">Activo</label>
               </div>
-
               <div className="flex justify-end gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-                >
-                  Guardar
-                </button>
+                <button type="button" onClick={() => setShowModal(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 dark:text-dark-6 hover:bg-gray-100 dark:hover:bg-dark-3">Cancelar</button>
+                <button type="submit" className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Guardar</button>
               </div>
             </form>
           </div>

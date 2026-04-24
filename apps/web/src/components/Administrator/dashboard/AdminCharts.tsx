@@ -80,8 +80,8 @@ function CustomTooltip({
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="bg-white border border-gray-100 rounded-xl shadow-lg px-4 py-3 text-sm">
-      {label && <p className="font-semibold text-gray-700 mb-1">{label}</p>}
+    <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-lg px-4 py-3 text-sm">
+      {label && <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">{label}</p>}
       {payload.map((entry, i) => (
         <p key={i} style={{ color: entry.color }} className="font-medium">
           {entry.name}:{" "}
@@ -110,15 +110,15 @@ function PeriodSelector({
   options: { label: string; value: Period }[];
 }) {
   return (
-    <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+    <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
       {options.map((opt) => (
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
           className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
             value === opt.value
-              ? "bg-white text-gray-800 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
           }`}
         >
           {opt.label}
@@ -142,11 +142,11 @@ function ChartCard({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h3 className="text-base font-bold text-gray-800">{title}</h3>
-          {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+          <h3 className="text-base font-bold text-gray-800 dark:text-white">{title}</h3>
+          {subtitle && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -160,8 +160,8 @@ function ChartCard({
 function ChartSkeleton() {
   return (
     <div className="animate-pulse space-y-3">
-      <div className="h-4 bg-gray-100 rounded w-1/3" />
-      <div className="h-48 bg-gray-100 rounded-xl" />
+      <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded w-1/3" />
+      <div className="h-48 bg-gray-100 dark:bg-gray-700 rounded-xl" />
     </div>
   );
 }
@@ -170,7 +170,7 @@ function ChartSkeleton() {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center h-48 text-gray-300">
+    <div className="flex flex-col items-center justify-center h-48 text-gray-300 dark:text-gray-600">
       <svg className="w-10 h-10 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path
           strokeLinecap="round"
@@ -208,10 +208,35 @@ function estaEnPeriodo(fecha: Date, period: Period): boolean {
   return fecha >= limite;
 }
 
+// ─── Colores de ejes para dark mode ──────────────────────────────────────────
+// Recharts no lee clases Tailwind, así que usamos variables inline.
+// Detectamos el tema consultando la clase "dark" en <html>.
+
+function useIsDark() {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const check = () =>
+      setDark(document.documentElement.classList.contains("dark"));
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
+  return dark;
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export function AdminCharts() {
   const token = getCookie("token");
+  const isDark = useIsDark();
+
+  const axisColor   = isDark ? "#6b7280" : "#94a3b8"; // gray-500 / slate-400
+  const gridColor   = isDark ? "#374151" : "#f1f5f9"; // gray-700 / slate-50
+  const labelColor  = isDark ? "#9ca3af" : "#64748b"; // gray-400 / slate-500
 
   const [ventasPeriod, setVentasPeriod] = useState<Period>("mes");
   const [usuariosPeriod, setUsuariosPeriod] = useState<Period>("mes");
@@ -221,95 +246,94 @@ export function AdminCharts() {
   const [error, setError] = useState<string | null>(null);
 
   const loadCharts = useCallback(async () => {
-  setLoading(true);
-  setError(null);
-  try {
-    const [pedidosRes, usuariosRes, productoresRes, productosRes] = await Promise.all([
-      api.pedidos.getAll(),
-      api.usuarios.getAll(token ?? ""),
-      api.productores.getAll(),
-      api.productos.getAll(),
-    ]);
+    setLoading(true);
+    setError(null);
+    try {
+      const [pedidosRes, usuariosRes, productoresRes, productosRes] = await Promise.all([
+        api.pedidos.getAll(),
+        api.usuarios.getAll(token ?? ""),
+        api.productores.getAll(),
+        api.productos.getAll(),
+      ]);
 
-    const pedidos: any[]    = Array.isArray(pedidosRes)    ? pedidosRes    : [];
-    const usuarios: any[]   = Array.isArray(usuariosRes)   ? usuariosRes   : [];
-    const productores: any[] = Array.isArray(productoresRes) ? productoresRes : [];
-    const productos: any[]  = Array.isArray(productosRes)  ? productosRes  : [];
+      const pedidos: any[]     = Array.isArray(pedidosRes)     ? pedidosRes     : [];
+      const usuarios: any[]    = Array.isArray(usuariosRes)    ? usuariosRes    : [];
+      const productores: any[] = Array.isArray(productoresRes) ? productoresRes : [];
+      const productos: any[]   = Array.isArray(productosRes)   ? productosRes   : [];
 
-    // ── Mapa id_usuario → nombre
-    const usuarioNombreMap = new Map<string, string>();
-    usuarios.forEach((u) => {
-      usuarioNombreMap.set(u.id_usuario, u.nombre ?? "Sin nombre");
-    });
-
-    // ── Mapa id_productor → nombre (via usuarios)
-    const productorNombreMap = new Map<number, string>();
-    productores.forEach((p) => {
-      const nombre = usuarioNombreMap.get(p.id_usuario) ?? "Sin nombre";
-      productorNombreMap.set(p.id_productor, nombre);
-    });
-
-    // ── Mapa id_producto → id_productor (via lotes)
-    const productoProductorMap = new Map<number, number>();
-    productos.forEach((prod) => {
-      const id_productor = prod.lotes?.id_productor;
-      if (id_productor != null) {
-        productoProductorMap.set(prod.id_producto, id_productor);
-      }
-    });
-
-    // ── 1. Ventas por productor
-    const ventasMap = new Map<string, { total: number; pedidos: number }>();
-    pedidos.forEach((p) => {
-      const items: any[] = p.detalle_pedido ?? [];
-      items.forEach((item) => {
-        const id_productor = productoProductorMap.get(item.id_producto);
-        const nombre = id_productor != null
-          ? (productorNombreMap.get(id_productor) ?? "Sin nombre")
-          : "Sin nombre";
-        const total = Number(p.total ?? 0) / items.length; // distribuye el total entre items
-        const prev = ventasMap.get(nombre) ?? { total: 0, pedidos: 0 };
-        ventasMap.set(nombre, { total: prev.total + total, pedidos: prev.pedidos + 1 });
+      const usuarioNombreMap = new Map<string, string>();
+      usuarios.forEach((u) => {
+        usuarioNombreMap.set(u.id_usuario, u.nombre ?? "Sin nombre");
       });
-    });
-    const ventasPorProductor: VentaProductor[] = Array.from(ventasMap.entries())
-      .map(([nombre, v]) => ({ nombre, ...v }))
-      .sort((a, b) => b.total - a.total);
 
-    // ── 2. Productos más vendidos
-    const productosMap = new Map<string, number>();
-    pedidos.forEach((p) => {
-      const items: any[] = p.detalle_pedido ?? [];
-      items.forEach((item) => {
-        const prod = productos.find((pr) => pr.id_producto === item.id_producto);
-        const nombre = prod?.nombre ?? `Producto #${item.id_producto}`;
-        const cantidad = Number(item.cantidad ?? 1);
-        productosMap.set(nombre, (productosMap.get(nombre) ?? 0) + cantidad);
+      const productorNombreMap = new Map<number, string>();
+      productores.forEach((p) => {
+        const nombre = usuarioNombreMap.get(p.id_usuario) ?? "Sin nombre";
+        productorNombreMap.set(p.id_productor, nombre);
       });
-    });
-    const productosMasVendidos: ProductoVendido[] = Array.from(productosMap.entries())
-      .map(([nombre, cantidad]) => ({ nombre, cantidad }))
-      .sort((a, b) => b.cantidad - a.cantidad)
-      .slice(0, 8);
 
-    // ── 3. Registros de usuarios (sin cambios)
-    const registrosMap = new Map<string, number>();
-    usuarios.forEach((u) => {
-      const fecha = getFechaUsuario(u);
-      if (!fecha || !estaEnPeriodo(fecha, usuariosPeriod)) return;
-      const key = getFechaKey(fecha, usuariosPeriod);
-      registrosMap.set(key, (registrosMap.get(key) ?? 0) + 1);
-    });
-    const registrosUsuarios: RegistroUsuario[] = Array.from(registrosMap.entries())
-      .map(([fecha, total]) => ({ fecha, total }));
+      const productoProductorMap = new Map<number, number>();
+      productos.forEach((prod) => {
+        const id_productor = prod.lotes?.id_productor;
+        if (id_productor != null) {
+          productoProductorMap.set(prod.id_producto, id_productor);
+        }
+      });
 
-    setData({ ventasPorProductor, productosMasVendidos, registrosUsuarios });
-  } catch (err) {
-    setError(err instanceof Error ? err.message : "Error al cargar gráficas");
-  } finally {
-    setLoading(false);
-  }
-}, [token, ventasPeriod, usuariosPeriod]);
+      // 1. Ventas por productor
+      const ventasMap = new Map<string, { total: number; pedidos: number }>();
+      pedidos.forEach((p) => {
+        const items: any[] = p.detalle_pedido ?? [];
+        items.forEach((item) => {
+          const id_productor = productoProductorMap.get(item.id_producto);
+          const nombre =
+            id_productor != null
+              ? (productorNombreMap.get(id_productor) ?? "Sin nombre")
+              : "Sin nombre";
+          const total = Number(p.total ?? 0) / items.length;
+          const prev = ventasMap.get(nombre) ?? { total: 0, pedidos: 0 };
+          ventasMap.set(nombre, { total: prev.total + total, pedidos: prev.pedidos + 1 });
+        });
+      });
+      const ventasPorProductor: VentaProductor[] = Array.from(ventasMap.entries())
+        .map(([nombre, v]) => ({ nombre, ...v }))
+        .sort((a, b) => b.total - a.total);
+
+      // 2. Productos más vendidos
+      const productosMap = new Map<string, number>();
+      pedidos.forEach((p) => {
+        const items: any[] = p.detalle_pedido ?? [];
+        items.forEach((item) => {
+          const prod = productos.find((pr) => pr.id_producto === item.id_producto);
+          const nombre = prod?.nombre ?? `Producto #${item.id_producto}`;
+          const cantidad = Number(item.cantidad ?? 1);
+          productosMap.set(nombre, (productosMap.get(nombre) ?? 0) + cantidad);
+        });
+      });
+      const productosMasVendidos: ProductoVendido[] = Array.from(productosMap.entries())
+        .map(([nombre, cantidad]) => ({ nombre, cantidad }))
+        .sort((a, b) => b.cantidad - a.cantidad)
+        .slice(0, 8);
+
+      // 3. Registros de usuarios
+      const registrosMap = new Map<string, number>();
+      usuarios.forEach((u) => {
+        const fecha = getFechaUsuario(u);
+        if (!fecha || !estaEnPeriodo(fecha, usuariosPeriod)) return;
+        const key = getFechaKey(fecha, usuariosPeriod);
+        registrosMap.set(key, (registrosMap.get(key) ?? 0) + 1);
+      });
+      const registrosUsuarios: RegistroUsuario[] = Array.from(registrosMap.entries()).map(
+        ([fecha, total]) => ({ fecha, total }),
+      );
+
+      setData({ ventasPorProductor, productosMasVendidos, registrosUsuarios });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al cargar gráficas");
+    } finally {
+      setLoading(false);
+    }
+  }, [token, ventasPeriod, usuariosPeriod]);
 
   useEffect(() => {
     loadCharts();
@@ -322,8 +346,8 @@ export function AdminCharts() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-600 rounded-2xl p-6 text-sm">
-         {error}
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-2xl p-6 text-sm">
+        {error}
       </div>
     );
   }
@@ -352,15 +376,15 @@ export function AdminCharts() {
               margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
               barSize={36}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
               <XAxis
                 dataKey="nombre"
-                tick={{ fontSize: 12, fill: "#94a3b8" }}
+                tick={{ fontSize: 12, fill: axisColor }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: axisColor }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v) =>
@@ -400,10 +424,10 @@ export function AdminCharts() {
               margin={{ top: 4, right: 24, left: 8, bottom: 4 }}
               barSize={22}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} horizontal={false} />
               <XAxis
                 type="number"
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: axisColor }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -411,7 +435,7 @@ export function AdminCharts() {
                 dataKey="nombre"
                 type="category"
                 width={130}
-                tick={{ fontSize: 12, fill: "#64748b" }}
+                tick={{ fontSize: 12, fill: labelColor }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -454,15 +478,15 @@ export function AdminCharts() {
                   <stop offset="95%" stopColor={COLORS.green} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
               <XAxis
                 dataKey="fecha"
-                tick={{ fontSize: 12, fill: "#94a3b8" }}
+                tick={{ fontSize: 12, fill: axisColor }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: axisColor }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
