@@ -16,7 +16,7 @@ type Stats = {
   productoresActivos: number;
 };
 
-export function AdminDashboard() {
+export default function InventarioUI() {  // ← export default
   const { loading: authLoading } = useAuth();
   const token = getCookie("token");
 
