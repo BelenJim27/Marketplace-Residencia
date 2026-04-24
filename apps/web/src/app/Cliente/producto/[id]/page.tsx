@@ -7,6 +7,7 @@ import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap } from "lucide
 import { api } from "@/lib/api";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/format-number";
 import { useDHLShipping, DHLServiceType } from "@/hooks/useDHLShipping";
 
@@ -60,6 +61,7 @@ export default function ProductoDetallePage() {
   const router = useRouter();
   const { agregarProducto } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
+  const { isAuthenticated } = useAuth();
   
   const [producto, setProducto] = useState<Producto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,6 +110,10 @@ export default function ProductoDetallePage() {
 
   const handleComprarAhora = () => {
     if (!producto) return;
+    if (!isAuthenticated) {
+      router.push("/auth/sign-in?redirect=/tienda/checkout");
+      return;
+    }
     agregarProducto({
       id_producto: producto.id_producto,
       nombre: producto.nombre,
@@ -434,6 +440,10 @@ export default function ProductoDetallePage() {
                 <button
                   onClick={() => {
                     if (!producto) return;
+                    if (!isAuthenticated) {
+                      router.push(`/auth/sign-in?redirect=/Cliente/producto/${producto.id_producto}`);
+                      return;
+                    }
                     if (isInWishlist(producto.id_producto)) {
                       eliminarWishlist(producto.id_producto);
                     } else {

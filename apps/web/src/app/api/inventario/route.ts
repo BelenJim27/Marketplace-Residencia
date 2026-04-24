@@ -1,77 +1,19 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    // Obtener todos los productos con inventario, tienda y productor
-    const productos = await prisma.productos.findMany({
-      where: {
-        eliminado_en: null,
-      },
-      include: {
-        inventario: true,
-        tiendas: {
-          include: {
-            productores: {
-              include: {
-                usuarios: {
-                  select: {
-                    nombre: true,
-                  },
-                },
-                regiones: {
-                  select: {
-                    nombre: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    const response = await fetch(`${API_URL}/inventario/dashboard`);
 
-    const items = productos.map((prod) => {
-      const inv = prod.inventario[0]; // Generalmente hay un inventario por producto
-      const productor = prod.tiendas.productores;
-      return {
-        id_producto: prod.id_producto.toString(),
-        nombre_producto: prod.nombre,
-        productor: productor.usuarios.nombre,
-        region: productor.regiones?.nombre || "N/A",
-        stock: inv?.stock || 0,
-        status: prod.status?.toUpperCase() || "ACTIVO",
-        imagen: prod.imagen_principal_url,
-      };
-    });
+    if (!response.ok) {
+      throw new Error(`NestJS API error: ${response.status}`);
+    }
 
-    // Calcular resumen
-    const productosActivos = items.filter((item) => item.status === "ACTIVO").length;
-    const productosInactivos = items.filter((item) => item.status === "INACTIVO").length;
-
-    // Obtener total de productores únicos
-    const productoresUnicos = await prisma.productores.findMany({
-      where: {
-        eliminado_en: null,
-      },
-      select: {
-        id_productor: true,
-      },
-    });
-
-    const summary = {
-      productos_activos: productosActivos,
-      productos_inactivos: productosInactivos,
-      total_productos: items.length,
-      total_productores: productoresUnicos.length,
-    };
-
-    return NextResponse.json({
-      summary,
-      items,
-    });
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
     console.error("Error cargando inventario:", error);
     return NextResponse.json(
@@ -98,23 +40,39 @@ export async function POST(request: Request) {
       );
     }
 
-    // Crear producto
-    const producto = await prisma.productos.create({
-      data: {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+    // Crear producto en NestJS
+    const productoResponse = await fetch(`${API_URL}/productos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         nombre: nombre_producto,
         id_tienda: Number(id_tienda),
         status: status.toLowerCase(),
-        precio_base: 0,
-      },
+        precio_base: "0",
+      }),
     });
 
-    // Crear inventario
-    await prisma.inventario.create({
-      data: {
+    if (!productoResponse.ok) {
+      throw new Error(`Error creando producto: ${productoResponse.status}`);
+    }
+
+    const producto = await productoResponse.json();
+
+    // Crear inventario en NestJS
+    const inventarioResponse = await fetch(`${API_URL}/inventario`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         id_producto: producto.id_producto,
         stock: Number(stock) || 0,
-      },
+      }),
     });
+
+    if (!inventarioResponse.ok) {
+      throw new Error(`Error creando inventario: ${inventarioResponse.status}`);
+    }
 
     return NextResponse.json(
       {

@@ -7,6 +7,7 @@ import Image from "next/image";
 import { ShoppingCart, Search, X, Heart, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/format-number";
 
 interface Producto {
@@ -65,6 +66,7 @@ export default function ProductCatalogClient() {
   const router = useRouter();
   const { agregarProducto } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
+  const { isAuthenticated } = useAuth();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +163,10 @@ export default function ProductCatalogClient() {
   const cantidadFiltros = filtrosActivos.length;
 
   const toggleWishlist = (producto: Producto) => {
+    if (!isAuthenticated) {
+      router.push("/auth/sign-in?redirect=/Cliente/producto");
+      return;
+    }
     if (isInWishlist(producto.id_producto)) {
       eliminarWishlist(producto.id_producto);
     } else {
