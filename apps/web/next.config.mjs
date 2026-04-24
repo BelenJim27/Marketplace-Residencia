@@ -8,6 +8,8 @@ const nextConfig = {
   output: 'standalone',
   experimental: {
     missingSuspenseWithCSRBailout: false,
+    workerThreads: false,
+    cpus: 1,
   },
   turbopack: {
     resolveAlias: {
@@ -17,14 +19,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   productionBrowserSourceMaps: false,
-  experimental: {
-    workerThreads: false,
-    cpus: 1,
-  },
   webpack: (config, { dev }) => {
     if (!dev) {
       config.devtool = false;
@@ -67,10 +62,7 @@ const nextConfig = {
       { protocol: "https", hostname: "cdn.sanity.io" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
-      {
-        protocol: "https",
-        hostname: "pub-b7fd9c30cdbf439183b75041f5f71b92.r2.dev",
-      },
+      { protocol: "https", hostname: "pub-b7fd9c30cdbf439183b75041f5f71b92.r2.dev" },
       { protocol: "https", hostname: "res.cloudinary.com" },
     ],
   },
