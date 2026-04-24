@@ -1,9 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
 import { Loader2, Plus, Trash2, Key, X } from "lucide-react";
-import { getCookie } from "@/lib/cookies";
 
 interface Permiso {
   id_permiso: number;
@@ -29,7 +26,7 @@ export default function PermisosPage() {
     try {
       setLoading(true);
       const token = getToken();
-      if (!token) throw new Error("No hay sesión activa");
+      if (!token) throw new Error("No hay sesiÃ³n activa");
       const data = await api.permisos.getAll();
       setPermisos(data as Permiso[]);
     } catch (err) {
@@ -44,7 +41,7 @@ export default function PermisosPage() {
     try {
       setSaving(true);
       const token = getToken();
-      if (!token) throw new Error("No hay sesión activa");
+      if (!token) throw new Error("No hay sesiÃ³n activa");
       await api.permisos.create(token, { nombre: formData.nombre });
       setShowModal(false);
       setFormData({ nombre: "" });
@@ -57,10 +54,10 @@ export default function PermisosPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("¿Estás seguro de eliminar este permiso?")) return;
+    if (!confirm("Â¿EstÃ¡s seguro de eliminar este permiso?")) return;
     try {
       const token = getToken();
-      if (!token) throw new Error("No hay sesión activa");
+      if (!token) throw new Error("No hay sesiÃ³n activa");
       await api.permisos.delete(token, id);
       fetchPermisos();
     } catch (err) {
@@ -85,7 +82,7 @@ export default function PermisosPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-            Gestión de Permisos
+            GestiÃ³n de Permisos
           </h1>
           <p className="mt-0.5 text-sm text-gray-500">
             Administra los permisos del sistema
@@ -119,7 +116,7 @@ export default function PermisosPage() {
             En Uso
           </p>
           <h2 className="mt-1 text-2xl font-black text-green-600">
-            {new Set(permisos.map((p) => p.nombre.split("_")[0])).size} módulos
+            {new Set(permisos.map((p) => p.nombre.split("_")[0])).size} mÃ³dulos
           </h2>
         </div>
       </div>
@@ -191,7 +188,7 @@ export default function PermisosPage() {
                   required
                 />
                 <p className="mt-2 text-xs text-gray-400">
-                  Usa el formato: acción_objeto (ej: gestionar_usuarios)
+                  Usa el formato: acciÃ³n_objeto (ej: gestionar_usuarios)
                 </p>
               </div>
               <div className="flex gap-3">

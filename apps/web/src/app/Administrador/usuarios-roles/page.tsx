@@ -1,9 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
 import { Loader2, Plus, Pencil, Trash2, User, X, Check } from "lucide-react";
-import { getCookie } from "@/lib/cookies";
 
 interface Usuario {
   id_usuario: string;
@@ -44,7 +41,7 @@ export default function UsuariosAdminPage() {
     try {
       setLoading(true);
       const token = getToken();
-      if (!token) throw new Error("No hay sesión activa");
+      if (!token) throw new Error("No hay sesiÃ³n activa");
 
       const [usuariosRes, rolesRes] = await Promise.all([
         api.usuarios.getAll(),
@@ -75,7 +72,7 @@ export default function UsuariosAdminPage() {
     try {
       setSaving(true);
       const token = getToken();
-      if (!token) throw new Error("No hay sesión activa");
+      if (!token) throw new Error("No hay sesiÃ³n activa");
 
       const currentRoles =
         selectedUser.usuario_rol
@@ -135,7 +132,7 @@ export default function UsuariosAdminPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-            Gestión de Usuarios y Roles
+            GestiÃ³n de Usuarios y Roles
           </h1>
           <p className="mt-0.5 text-sm text-gray-500">
             Asigna roles a los usuarios del sistema

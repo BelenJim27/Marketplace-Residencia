@@ -1,39 +1,39 @@
-"use client";
+﻿"use client";
 
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
 export default function Configuracion() {
   return (
     <>
-      <Breadcrumb pageName="Configuración" />
+      <Breadcrumb pageName="ConfiguraciÃ³n" />
 
       <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card p-7.5">
         <div className="mb-6">
           <h2 className="text-title-md2 font-bold text-black dark:text-white mb-4">
-            Configuración del Sistema
+            ConfiguraciÃ³n del Sistema
           </h2>
           <p className="text-body text-bodydark mb-4">
-            Administra la configuración general de la aplicación
+            Administra la configuraciÃ³n general de la aplicaciÃ³n
           </p>
         </div>
 
-        {/* Configuración General */}
+        {/* ConfiguraciÃ³n General */}
         <div className="mb-7.5">
           <h3 className="mb-4 text-xl font-semibold text-black dark:text-white">
-            Configuración General
+            ConfiguraciÃ³n General
           </h3>
           
           <div className="space-y-5">
-            {/* Nombre de la Aplicación */}
+            {/* Nombre de la AplicaciÃ³n */}
             <div>
               <label className="mb-3 block text-body font-medium text-black dark:text-white">
-                Nombre de la Aplicación
+                Nombre de la AplicaciÃ³n
               </label>
               <input
                 type="text"
-                placeholder="Mi Aplicación"
+                placeholder="Mi AplicaciÃ³n"
                 className="relative z-20 inline-flex w-full rounded border border-stroke bg-transparent px-5 py-3 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                defaultValue="Sistema de Gestión"
+                defaultValue="Sistema de GestiÃ³n"
               />
             </div>
 
@@ -50,10 +50,10 @@ export default function Configuracion() {
               />
             </div>
 
-            {/* Teléfono de Soporte */}
+            {/* TelÃ©fono de Soporte */}
             <div>
               <label className="mb-3 block text-body font-medium text-black dark:text-white">
-                Teléfono de Soporte
+                TelÃ©fono de Soporte
               </label>
               <input
                 type="tel"
@@ -65,21 +65,21 @@ export default function Configuracion() {
           </div>
         </div>
 
-        {/* Configuración de Seguridad */}
+        {/* ConfiguraciÃ³n de Seguridad */}
         <div className="mb-7.5">
           <h3 className="mb-4 text-xl font-semibold text-black dark:text-white">
             Seguridad
           </h3>
           
           <div className="space-y-4">
-            {/* Autenticación de Dos Factores */}
+            {/* AutenticaciÃ³n de Dos Factores */}
             <div className="flex items-center justify-between rounded border border-gray-3 p-4 dark:border-dark-3">
               <div>
                 <h4 className="font-medium text-black dark:text-white">
-                  Autenticación de Dos Factores (2FA)
+                  AutenticaciÃ³n de Dos Factores (2FA)
                 </h4>
                 <p className="text-sm text-bodydark">
-                  Requerir código de verificación en el acceso
+                  Requerir cÃ³digo de verificaciÃ³n en el acceso
                 </p>
               </div>
               <input type="checkbox" className="w-5 h-5" defaultChecked />
@@ -98,14 +98,14 @@ export default function Configuracion() {
               <input type="checkbox" className="w-5 h-5" defaultChecked />
             </div>
 
-            {/* Mantener Sesión Activa */}
+            {/* Mantener SesiÃ³n Activa */}
             <div className="flex items-center justify-between rounded border border-gray-3 p-4 dark:border-dark-3">
               <div>
                 <h4 className="font-medium text-black dark:text-white">
-                  Mantener Sesión Activa
+                  Mantener SesiÃ³n Activa
                 </h4>
                 <p className="text-sm text-bodydark">
-                  No cerrar sesión automáticamente
+                  No cerrar sesiÃ³n automÃ¡ticamente
                 </p>
               </div>
               <input type="checkbox" className="w-5 h-5" />
@@ -113,7 +113,7 @@ export default function Configuracion() {
           </div>
         </div>
 
-        {/* Configuración de Respaldo */}
+        {/* ConfiguraciÃ³n de Respaldo */}
         <div className="mb-7.5">
           <h3 className="mb-4 text-xl font-semibold text-black dark:text-white">
             Respaldo y Base de Datos
@@ -122,7 +122,7 @@ export default function Configuracion() {
           <div className="space-y-4">
             <div className="rounded border border-gray-3 p-4 dark:border-dark-3">
               <p className="mb-3 text-bodydark">
-                <strong>Último respaldo:</strong> 20 de marzo de 2024 a las 14:30
+                <strong>Ãšltimo respaldo:</strong> 20 de marzo de 2024 a las 14:30
               </p>
               <button className="inline-flex rounded bg-primary px-5 py-2.5 font-medium text-gray hover:bg-opacity-90">
                 Hacer Respaldo Ahora
@@ -131,7 +131,7 @@ export default function Configuracion() {
           </div>
         </div>
 
-        {/* Botones de Acción */}
+        {/* Botones de AcciÃ³n */}
         <div className="flex gap-3 pt-5">
           <button className="inline-flex rounded bg-primary px-8 py-2.5 font-medium text-gray hover:bg-opacity-90">
             Guardar Cambios
