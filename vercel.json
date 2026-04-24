@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
   "buildCommand": "cd ../../packages/database && npx prisma generate && cd ../../apps/web && next build",
-  "installCommand": "cd ../.. && npm install",
+  "installCommand": "cd ../.. && npm install && cd apps/web && npm install",
   "outputDirectory": ".next"
 }
