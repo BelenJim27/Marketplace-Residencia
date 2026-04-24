@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,32 +21,24 @@ export async function GET(_: Request, { params }: RouteContext) {
   }
 
   try {
-    const productor = await prisma.productores.findFirst({
-      where: {
-        id_productor: idProductor,
-        eliminado_en: null,
-      },
-      select: {
-        id_productor: true,
-        id_usuario: true,
-        biografia: true,
-      },
-    });
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    const response = await fetch(`${API_URL}/productores/${idProductor}`);
 
-    if (!productor) {
+    if (response.status === 404) {
       return NextResponse.json(
         { message: "Productor no encontrado." },
         { status: 404 },
       );
     }
 
+    if (!response.ok) {
+      throw new Error(`NestJS API error: ${response.status}`);
+    }
+
+    const productor = await response.json();
     return NextResponse.json(productor);
   } catch (error) {
-    console.error("ERROR EN API PRODUCTOR:", {
-      route: "/api/productores/[id]",
-      idProductor,
-      error,
-    });
+    console.error("Error cargando productor:", error);
     return NextResponse.json(
       { error: String(error) },
       { status: 500 },

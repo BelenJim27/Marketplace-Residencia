@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,19 +23,16 @@ export async function GET(request: Request) {
       );
     }
 
-    const tiendas = await prisma.tiendas.findMany({
-      where: {
-        id_productor: idProductorNum,
-        eliminado_en: null,
-      },
-      select: {
-        id_tienda: true,
-        nombre: true,
-      },
-    });
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    const response = await fetch(`${API_URL}/tiendas?id_productor=${idProductorNum}`);
 
-    // Transformar los datos al formato esperado por el frontend
-    const transformed = tiendas.map((tienda) => ({
+    if (!response.ok) {
+      throw new Error(`NestJS API error: ${response.status}`);
+    }
+
+    const tiendas = await response.json();
+
+    const transformed = tiendas.map((tienda: any) => ({
       id: tienda.id_tienda.toString(),
       nombre: tienda.nombre,
     }));

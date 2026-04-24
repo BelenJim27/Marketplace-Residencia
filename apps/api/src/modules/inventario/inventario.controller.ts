@@ -27,6 +27,9 @@ export class InventarioController {
     return this.service.createMovimiento(dto);
   }
 
+  @Get("dashboard") getDashboard() {
+    return this.service.listInventario();
+  }
   @Get() listInventario() {
     return this.service.listInventario();
   }

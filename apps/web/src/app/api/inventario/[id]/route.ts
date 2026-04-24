@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,31 +24,52 @@ export async function PUT(
       status = "ACTIVO",
     } = body;
 
-    // Actualizar producto
-    await prisma.productos.update({
-      where: { id_producto },
-      data: {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+    // Actualizar producto en NestJS
+    const productoResponse = await fetch(`${API_URL}/productos/${id_producto.toString()}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         nombre: nombre_producto,
         status: status.toLowerCase(),
-      },
+      }),
     });
 
-    // Actualizar inventario
-    const inventario = await prisma.inventario.findFirst({
-      where: { id_producto },
-    });
+    if (!productoResponse.ok) {
+      throw new Error(`Error actualizando producto: ${productoResponse.status}`);
+    }
 
-    if (inventario) {
-      await prisma.inventario.update({
-        where: { id_inventario: inventario.id_inventario },
-        data: { stock: Number(stock) || 0 },
+    // Obtener inventario para este producto
+    const inventarioListResponse = await fetch(
+      `${API_URL}/inventario/producto/${id_producto.toString()}`
+    );
+
+    let inventarioId: string | null = null;
+    if (inventarioListResponse.ok) {
+      const inventario = await inventarioListResponse.json();
+      if (inventario) {
+        inventarioId = inventario.id_inventario?.toString() || null;
+      }
+    }
+
+    // Actualizar o crear inventario
+    if (inventarioId) {
+      await fetch(`${API_URL}/inventario/${inventarioId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stock: Number(stock) || 0,
+        }),
       });
     } else {
-      await prisma.inventario.create({
-        data: {
-          id_producto,
+      await fetch(`${API_URL}/inventario`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id_producto: id_producto.toString(),
           stock: Number(stock) || 0,
-        },
+        }),
       });
     }
 
