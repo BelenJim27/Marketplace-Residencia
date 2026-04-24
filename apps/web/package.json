@@ -16,6 +16,7 @@
     "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
     "flatpickr": "^4.6.13",
+    "fraction.js": "^5.3.4",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jsvectormap": "^1.6.0",
