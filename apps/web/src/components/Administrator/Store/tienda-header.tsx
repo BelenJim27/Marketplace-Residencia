@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { ShoppingCart, Package, User, UserPlus, Heart, Store, ChevronDown } from "lucide-react";
+import { ShoppingCart, Package, User, UserPlus, Heart, Store, Home } from "lucide-react";
 import { UserInfo } from "@/components/Layouts/header/user-info";
 import { useAuth } from "@/context/AuthContext";
 import { useCarrito } from "@/context/CarritoContext";
@@ -45,13 +45,25 @@ export function TiendaHeader() {
     }
   };
 
+  // ✅ Ícono de inicio reutilizable
+  const HomeIcon = () => (
+    <Link
+      href="/Cliente/inicio"
+      className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
+    >
+      <Home size={24} />
+      <span className="hidden sm:inline text-xs">Inicio</span>
+    </Link>
+  );
+
   return (
-    <header 
-    style={{ 
-        borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)", 
-        backgroundColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.08)" 
+    <header
+      style={{
+        borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)",
+        backgroundColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.08)",
       }}
-        className="relative top-0 z-30 flex items-center justify-between border-b border-green-200 bg-green-100 px-4 py-4 shadow-sm md:px-8">
+      className="relative top-0 z-30 flex items-center justify-between border-b border-green-200 bg-green-100 px-4 py-4 shadow-sm md:px-8"
+    >
       <Link href="/producto" className="flex items-center gap-3">
         <Image
           src="/images/logo/tierra_agaves.png"
@@ -65,6 +77,9 @@ export function TiendaHeader() {
       <nav className="flex items-center gap-6">
         {isClient ? (
           <>
+            {/* ✅ Inicio */}
+            <HomeIcon />
+
             <button
               onClick={handleMyPurchasesClick}
               className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
@@ -111,6 +126,9 @@ export function TiendaHeader() {
           </>
         ) : isAuthenticated ? (
           <>
+            {/* ✅ Inicio */}
+            <HomeIcon />
+
             <button
               onClick={handleMyPurchasesClick}
               className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
@@ -139,6 +157,9 @@ export function TiendaHeader() {
           </>
         ) : (
           <>
+            {/* ✅ Inicio */}
+            <HomeIcon />
+
             <button
               onClick={handleSellClick}
               className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
