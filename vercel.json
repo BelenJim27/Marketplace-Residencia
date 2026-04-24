@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd apps/web && NODE_OPTIONS='--max-old-space-size=6144' next build",
+  "buildCommand": "cd apps/web && NODE_OPTIONS='--max-old-space-size=3072' next build",
   "outputDirectory": "apps/web/.next",
   "installCommand": "npm install && npm run db:generate -w database",
   "framework": "nextjs",

@@ -1,14 +1,12 @@
 import "@/css/satoshi.css";
 import "@/css/style.css";
 
-import "flatpickr/dist/flatpickr.min.css";
-import "jsvectormap/dist/jsvectormap.css";
-
 import type { Metadata } from "next";
 import NextTopLoader from "nextjs-toploader";
 import type { PropsWithChildren } from "react";
 import { Providers } from "./providers";
 import { RootContent } from "./root-content";
+
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: {

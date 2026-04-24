@@ -6,8 +6,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 const nextConfig = {
   experimental: {
-    workerThreads: false,
-    cpus: 1,
+    workerThreads: true,
+    cpus: 4,
   },
   typescript: {
     ignoreBuildErrors: true,

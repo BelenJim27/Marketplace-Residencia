@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PaymentsOverviewChart } from "@/components/Charts/payments-overview/chart";
-import { WeeksProfitChart } from "@/components/Charts/weeks-profit/chart";
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -18,47 +16,6 @@ export default function DashboardPage() {
     { label: "Productos", value: "89", change: "+3.1%", up: true },
     { label: "Usuarios", value: "567", change: "-2.3%", up: false },
   ];
-
-  const chartData = {
-    payments: {
-      received: [
-        { x: "Ene", y: 4500 },
-        { x: "Feb", y: 5200 },
-        { x: "Mar", y: 4800 },
-        { x: "Abr", y: 6100 },
-        { x: "May", y: 5900 },
-        { x: "Jun", y: 7200 },
-      ],
-      due: [
-        { x: "Ene", y: 3200 },
-        { x: "Feb", y: 3800 },
-        { x: "Mar", y: 4100 },
-        { x: "Abr", y: 3500 },
-        { x: "May", y: 4200 },
-        { x: "Jun", y: 4800 },
-      ],
-    },
-    profit: {
-      sales: [
-        { x: "Lun", y: 45 },
-        { x: "Mar", y: 50 },
-        { x: "Mié", y: 38 },
-        { x: "Jue", y: 65 },
-        { x: "Vie", y: 58 },
-        { x: "Sáb", y: 82 },
-        { x: "Dom", y: 71 },
-      ],
-      revenue: [
-        { x: "Lun", y: 28 },
-        { x: "Mar", y: 35 },
-        { x: "Mié", y: 22 },
-        { x: "Jue", y: 45 },
-        { x: "Vie", y: 38 },
-        { x: "Sáb", y: 55 },
-        { x: "Dom", y: 48 },
-      ],
-    },
-  };
 
   const recentOrders = [
     {
@@ -145,22 +102,6 @@ export default function DashboardPage() {
             </h3>
           </div>
         ))}
-      </div>
-
-      <div className="grid grid-cols-12 gap-4 md:gap-6">
-        <div className="dark:border-form-strokedark dark:bg-form-input col-span-12 rounded-[10px] border border-stroke bg-white p-6 shadow-sm xl:col-span-8">
-          <h4 className="mb-4 text-lg font-semibold text-dark dark:text-white">
-            Ventas Mensuales
-          </h4>
-          <PaymentsOverviewChart data={chartData.payments} />
-        </div>
-
-        <div className="dark:border-form-strokedark dark:bg-form-input col-span-12 rounded-[10px] border border-stroke bg-white p-6 shadow-sm xl:col-span-4">
-          <h4 className="mb-4 text-lg font-semibold text-dark dark:text-white">
-            Ganancias por Semana
-          </h4>
-          <WeeksProfitChart data={chartData.profit} />
-        </div>
       </div>
 
       <div className="dark:border-form-strokedark dark:bg-form-input rounded-[10px] border border-stroke bg-white p-6 shadow-sm">

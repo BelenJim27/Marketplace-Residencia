@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { setCookie, getCookie } from "@/lib/cookies";
 import { useSession } from "next-auth/react";
 
+export const dynamic = 'force-dynamic';
+
 function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
