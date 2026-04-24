@@ -1,4 +1,4 @@
 {
   "framework": "nextjs",
-  "buildCommand": "turbo run build --filter=@repo/web"
+  "buildCommand": "turbo run build --filter=web"
 }
