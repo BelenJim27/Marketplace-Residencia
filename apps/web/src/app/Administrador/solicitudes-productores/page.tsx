@@ -1,9 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import { getCookie } from "@/lib/cookies";
-import { api } from "@/lib/api";
 import { AlertCircle, CheckCircle2, XCircle, FileText, Eye, Loader2, User, Building2, CreditCard } from "lucide-react";
 import Image from "next/image";
 
@@ -330,7 +328,7 @@ export default function SolicitudesProductoresPage() {
               <div>
                 <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
                   <User className="h-5 w-5" />
-                  Información del Usuario
+                  InformaciÃ³n del Usuario
                 </h3>
                 <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-1 p-4 dark:bg-dark-2">
                   <div>
@@ -346,7 +344,7 @@ export default function SolicitudesProductoresPage() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Teléfono</p>
+                    <p className="text-xs text-gray-500">TelÃ©fono</p>
                     <p className="text-sm font-medium text-dark dark:text-white">
                       {selectedSolicitud.usuarios?.telefono || "No proporcionado"}
                     </p>
@@ -367,7 +365,7 @@ export default function SolicitudesProductoresPage() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Razón Social</p>
+                    <p className="text-xs text-gray-500">RazÃ³n Social</p>
                     <p className="text-sm font-medium text-dark dark:text-white">
                       {selectedSolicitud.razon_social || "No proporcionada"}
                     </p>
@@ -387,7 +385,7 @@ export default function SolicitudesProductoresPage() {
                   </p>
                   {selectedSolicitud.revisado_en && (
                     <>
-                      <p className="text-xs text-gray-500 mt-2">Fecha de resolución</p>
+                      <p className="text-xs text-gray-500 mt-2">Fecha de resoluciÃ³n</p>
                       <p className="text-sm font-medium text-dark dark:text-white">
                         {new Date(selectedSolicitud.revisado_en).toLocaleString("es-MX")}
                       </p>
@@ -482,14 +480,14 @@ export default function SolicitudesProductoresPage() {
               Aprobar Solicitud
             </h2>
             <p className="text-gray-500 mb-4">
-              ¿Estás seguro de que deseas aprobar esta solicitud de productor? El usuario deberá completar su perfil y subir su certificado antes de poder vender.
+              Â¿EstÃ¡s seguro de que deseas aprobar esta solicitud de productor? El usuario deberÃ¡ completar su perfil y subir su certificado antes de poder vender.
             </p>
             <textarea
               value={approveReason}
               onChange={(e) => setApproveReason(e.target.value)}
               rows={3}
               className="w-full rounded-lg border border-gray-4 bg-gray-1 px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark-2 dark:text-white mb-4"
-              placeholder="Motivo de aprobación (opcional)..."
+              placeholder="Motivo de aprobaciÃ³n (opcional)..."
             />
             <div className="flex gap-4">
               <button

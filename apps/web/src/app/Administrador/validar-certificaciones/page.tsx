@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Eye, CheckCircle, XCircle, FileText, Download } from "lucide-react";
@@ -18,7 +18,7 @@ const certificacionesMock: Certificacion[] = [
   {
     id: "1",
     nombreArchivo: "certificado_nom070_lote001.pdf",
-    productor: "Juan Pérez López",
+    productor: "Juan PÃ©rez LÃ³pez",
     email: "juan@example.com",
     fechaSubida: "2024-01-15",
     estado: "pendiente",
@@ -26,7 +26,7 @@ const certificacionesMock: Certificacion[] = [
   {
     id: "2",
     nombreArchivo: "certificado_nom070_lote002.pdf",
-    productor: "Maria García",
+    productor: "Maria GarcÃ­a",
     email: "maria@example.com",
     fechaSubida: "2024-01-14",
     estado: "pendiente",
@@ -38,7 +38,7 @@ const certificacionesMock: Certificacion[] = [
     email: "carlos@example.com",
     fechaSubida: "2024-01-10",
     estado: "aprobado",
-    observaciones: "Documentación validada correctamente",
+    observaciones: "DocumentaciÃ³n validada correctamente",
   },
 ];
 
@@ -117,7 +117,7 @@ export default function ValidarCertificaciones() {
       <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card p-7.5">
         <div className="mb-6">
           <h2 className="text-title-md2 font-bold text-black dark:text-white mb-2">
-            Validación de Certificaciones NOM-070
+            ValidaciÃ³n de Certificaciones NOM-070
           </h2>
           <p className="text-body text-bodydark">
             Revisa y valida las certificaciones subidas por los productores
@@ -231,7 +231,7 @@ export default function ValidarCertificaciones() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-900">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-              {observaciones === "" ? "Rechazar" : "Aprobar"} Certificación
+              {observaciones === "" ? "Rechazar" : "Aprobar"} CertificaciÃ³n
             </h3>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
               Productor: {certificadoSeleccionado.productor}
@@ -247,7 +247,7 @@ export default function ValidarCertificaciones() {
               <textarea
                 value={observaciones}
                 onChange={(e) => setObservaciones(e.target.value)}
-                placeholder="Agrega una observación (opcional para aprobar, requerido para rechazar)"
+                placeholder="Agrega una observaciÃ³n (opcional para aprobar, requerido para rechazar)"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-800 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                 rows={3}
               />

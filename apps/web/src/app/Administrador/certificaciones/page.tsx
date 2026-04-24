@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
@@ -22,7 +22,7 @@ export default function Certificaciones() {
           <div className="border border-gray-3 rounded-lg p-5 dark:border-dark-3">
             <div className="flex items-start justify-between mb-3">
               <h3 className="font-semibold text-black dark:text-white">
-                Certificación SSL
+                CertificaciÃ³n SSL
               </h3>
               <span className="inline-flex rounded-full bg-green-1 px-3 py-1 text-sm font-medium text-green-7 dark:bg-green-9 dark:text-green-2">
                 Activo
@@ -40,14 +40,14 @@ export default function Certificaciones() {
           <div className="border border-gray-3 rounded-lg p-5 dark:border-dark-3">
             <div className="flex items-start justify-between mb-3">
               <h3 className="font-semibold text-black dark:text-white">
-                Certificación PCI-DSS
+                CertificaciÃ³n PCI-DSS
               </h3>
               <span className="inline-flex rounded-full bg-green-1 px-3 py-1 text-sm font-medium text-green-7 dark:bg-green-9 dark:text-green-2">
                 Activo
               </span>
             </div>
             <p className="text-sm text-bodydark2 mb-4">
-              Cumplimiento de estándares de seguridad para procesamiento de pagos
+              Cumplimiento de estÃ¡ndares de seguridad para procesamiento de pagos
             </p>
             <p className="text-xs text-bodydark">
               <strong>Vencimiento:</strong> 22 de febrero 2025
@@ -58,14 +58,14 @@ export default function Certificaciones() {
           <div className="border border-gray-3 rounded-lg p-5 dark:border-dark-3">
             <div className="flex items-start justify-between mb-3">
               <h3 className="font-semibold text-black dark:text-white">
-                Certificación GDPR
+                CertificaciÃ³n GDPR
               </h3>
               <span className="inline-flex rounded-full bg-yellow-1 px-3 py-1 text-sm font-medium text-yellow-7 dark:bg-yellow-9 dark:text-yellow-2">
                 Por renovar
               </span>
             </div>
             <p className="text-sm text-bodydark2 mb-4">
-              Cumplimiento de regulaciones de protección de datos
+              Cumplimiento de regulaciones de protecciÃ³n de datos
             </p>
             <p className="text-xs text-bodydark">
               <strong>Vencimiento:</strong> 10 de abril 2024
@@ -76,7 +76,7 @@ export default function Certificaciones() {
         {/* Info Section */}
         <div className="mt-8 rounded-lg bg-blue-1 p-5 dark:bg-blue-9">
           <h3 className="mb-2 font-semibold text-blue-9 dark:text-blue-1">
-            Información
+            InformaciÃ³n
           </h3>
           <p className="text-sm text-blue-7 dark:text-blue-3">
             Las certificaciones vigentes garantizan la seguridad y cumplimiento normativo del sistema.
