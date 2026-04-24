@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd packages/database && npx prisma generate && cd ../../apps/web && NODE_OPTIONS='--max-old-space-size=3072' next build",
+  "buildCommand": "cd packages/database && npx prisma generate && cd ../../apps/web && NODE_OPTIONS='--max-old-space-size=3072' next build --no-turbopack",
   "outputDirectory": "apps/web/.next",
   "installCommand": "npm install",
   "framework": "nextjs",
