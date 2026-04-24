@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --debug",
     "start": "next start",
     "lint": "next lint"
   },
@@ -30,6 +30,7 @@
     "object-hash": "^3.0.0",
     "postcss": "^8.5.10",
     "postcss-selector-parser": "^6.1.2",
+    "@prisma/client": "^5.22.0",
     "react": "^19.2.0",
     "react-apexcharts": "^1.7.0",
     "react-dom": "^19.2.0",

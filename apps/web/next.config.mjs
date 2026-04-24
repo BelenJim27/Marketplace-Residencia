@@ -6,11 +6,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 const nextConfig = {
   output: 'standalone',
-  experimental: {
-    missingSuspenseWithCSRBailout: false,
-    workerThreads: false,
-    cpus: 1,
-  },
   turbopack: {
     resolveAlias: {
       pako: "pako/dist/pako.js",
