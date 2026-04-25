@@ -46,22 +46,37 @@ export default function SobreElMezcal() {
                 </div>
 
                 {/* IMAGEN */}
-                <div className="relative rounded-2xl overflow-hidden shadow-xl h-80 md:h-96">
-                    <img
-                        src="/placeholder-proceso.jpg"
-                        alt="Proceso artesanal del mezcal"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            const el = e.target as HTMLImageElement;
-                            el.style.display = "none";
-                            el.parentElement!.style.background =
-                                "linear-gradient(135deg, #c8a97a 0%, #8b6914 100%)";
-                            el.parentElement!.innerHTML = `
-                                <div style="display:flex;align-items:center;justify-content:center;height:100%;color:white;font-size:14px;font-family:Georgia,serif;text-align:center;padding:20px;">
-                                    Imagen: Proceso artesanal del mezcal
-                                </div>`;
-                        }}
-                    />
+                {/* GRID DE IMÁGENES */}
+                <div className="grid grid-cols-3 grid-rows-3 gap-2 h-80 md:h-96">
+                    {/* Imagen grande izquierda */}
+                    <div className="col-span-1 row-span-2 rounded-xl overflow-hidden">
+                        <img src="/fotos/22.jpeg" alt="Mezcal 1" className="w-full h-full object-cover" />
+                    </div>
+
+                    {/* Imagen mediana arriba centro */}
+                    <div className="col-span-2 row-span-1 rounded-xl overflow-hidden">
+                        <img src="/fotos/24.jpeg" alt="Mezcal 2" className="w-full h-full object-cover" />
+                    </div>
+
+                    {/* Imagen pequeña derecha */}
+                    <div className="col-span-1 row-span-1 rounded-xl overflow-hidden">
+                        <img src="/fotos/20.jpeg" alt="Mezcal 3" className="w-full h-full object-cover" />
+                    </div>
+
+                    {/* Imagen grande abajo izquierda */}
+                    <div className="col-span-1 row-span-1 rounded-xl overflow-hidden">
+                        <img src="/fotos/16.jpg" alt="Mezcal 4" className="w-full h-full object-cover" />
+                    </div>
+
+                    {/* Imagen mediana abajo centro */}
+                    <div className="col-span-2 row-span-1 rounded-xl overflow-hidden">
+                        <img src="/fotos/15.jpg" alt="Mezcal 5" className="w-full h-full object-cover" />
+                    </div>
+
+                    {/* Imagen pequeña abajo derecha */}
+                    <div className="col-span-1 row-span-1 rounded-xl overflow-hidden">
+                        <img src="/fotos/5.jpg" alt="Mezcal 6" className="w-full h-full object-cover" />
+                    </div>
                 </div>
             </div>
         </section>

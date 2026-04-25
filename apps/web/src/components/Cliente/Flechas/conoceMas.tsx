@@ -1,19 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const SLIDES = [
     {
         id: 1,
         tipo: "productor",
-        tarjeta: {
-            imagen: "/placeholder-botella-grande.jpg",
-            fondo: "#b07850",
-        },
+        tarjeta: { imagen: "/fotos/20.jpeg", fondo: "#b07850" },
         circulos: [
-            { imagen: "/placeholder-productor.jpg", etiqueta: "Maestro mezcalero" },
-            { imagen: "/placeholder-botella-1.jpg", etiqueta: null },
-            { imagen: "/placeholder-botella-2.jpg", etiqueta: null },
+            { imagen: "/fotos/22.jpeg", etiqueta: "Maestro mezcalero" },
+            { imagen: "/fotos/24.jpeg", etiqueta: null },
+            { imagen: "/fotos/16.jpg", etiqueta: null },
         ],
     },
     {
@@ -24,9 +22,9 @@ const SLIDES = [
             fondo: "#b07850",
         },
         circulos: [
-            { imagen: "/placeholder-botella-3.jpg", etiqueta: null },
-            { imagen: "/placeholder-botella-4.jpg", etiqueta: null },
-            { imagen: "/placeholder-botella-5.jpg", etiqueta: null },
+            { imagen: "/fotos/5.jpg", etiqueta: null },
+            { imagen: "/fotos/15.jpg", etiqueta: null },
+            { imagen: "/fotos/28.1.png", etiqueta: null },
         ],
     },
 ];
@@ -34,12 +32,12 @@ const SLIDES = [
 export default function ConoceMas() {
     const [actual, setActual] = useState(0);
     const slide = SLIDES[actual];
+    const router = useRouter();
 
     return (
         <section className="w-full py-20 px-6 bg-white">
             <div className="max-w-6xl mx-auto">
 
-                {/* Título */}
                 <h2
                     className="text-center text-4xl mb-12"
                     style={{ fontFamily: "Georgia, serif", color: "#8b6914", fontStyle: "italic" }}
@@ -57,27 +55,17 @@ export default function ConoceMas() {
                         {slide.tipo === "productor" ? (
                             <img
                                 src={slide.tarjeta.imagen}
-                                alt="Botella destacada"
+                                alt="Imagen destacada"
                                 className="h-full w-full object-cover"
-                                onError={(e) => {
-                                    const el = e.target as HTMLImageElement;
-                                    el.style.display = "none";
-                                    el.parentElement!.innerHTML = `
-                                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:white;font-family:Georgia,serif;text-align:center;padding:32px;">
-                                            <div style="width:80px;height:200px;background:rgba(255,255,255,0.2);border-radius:8px;margin-bottom:12px;"></div>
-                                            <span style="font-size:13px;opacity:0.8;">Imagen de botella</span>
-                                        </div>`;
-                                }}
                             />
                         ) : (
-                            <div className="p-10 text-center">
+                            <div className="p-10 text-center relative">
                                 <p
                                     className="text-white text-xl leading-relaxed italic mb-8"
                                     style={{ fontFamily: "Georgia, serif" }}
                                 >
                                     {slide.tarjeta.frase}
                                 </p>
-                                {/* Decoración agaves */}
                                 <div className="absolute bottom-4 left-4 opacity-40 text-4xl">🌿</div>
                                 <div className="absolute bottom-4 right-4 opacity-40 text-4xl">🌿</div>
                                 <div className="absolute top-6 right-8 opacity-30 text-2xl">🦇</div>
@@ -95,18 +83,6 @@ export default function ConoceMas() {
                                             src={item.imagen}
                                             alt={item.etiqueta || `Producto ${i + 1}`}
                                             className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                const el = e.target as HTMLImageElement;
-                                                el.style.display = "none";
-                                                el.parentElement!.style.background =
-                                                    i === 0 && slide.tipo === "productor"
-                                                        ? "linear-gradient(135deg,#a8c5a0,#6b9e6b)"
-                                                        : "linear-gradient(135deg,#c8a97a,#8b6914)";
-                                                el.parentElement!.innerHTML = `
-                                                    <div style="display:flex;align-items:center;justify-content:center;height:100%;color:white;font-size:11px;font-family:Georgia,serif;text-align:center;padding:8px;">
-                                                        ${item.etiqueta || "Producto"}
-                                                    </div>`;
-                                            }}
                                         />
                                     </div>
                                     {item.etiqueta && (
@@ -121,7 +97,6 @@ export default function ConoceMas() {
                             ))}
                         </div>
 
-                        {/* Controles + botón */}
                         <div className="flex items-center justify-between pt-4">
                             <div className="flex gap-2">
                                 {SLIDES.map((_, i) => (
@@ -138,7 +113,7 @@ export default function ConoceMas() {
                             <button
                                 className="px-8 py-3 rounded-full text-white font-semibold transition-all hover:opacity-90 shadow-md"
                                 style={{ background: "#8b6914", fontFamily: "Georgia, serif" }}
-                                onClick={() => setActual((p) => (p + 1) % SLIDES.length)}
+                                onClick={() => router.push("/producto")}
                             >
                                 Ver más
                             </button>

@@ -8,7 +8,7 @@ const PRODUCTOS = [
         id: 1,
         nombre: "Tobalá",
         subtitulo: "La expresión más pura de la naturaleza, custodiada por manos expertas que entienden el tiempo del agave.",
-        imagen: "/placeholder-tobala.jpg",
+        imagen: "/fotos/28.1.png",
         notas: {
             vista: "Cristalino y brillante",
             nariz: "Herbal, notas de tierra y frutas dulces.",
@@ -24,7 +24,7 @@ const PRODUCTOS = [
         id: 2,
         nombre: "Espadín",
         subtitulo: "El alma del mezcal oaxaqueño, destilado con dedicación generación tras generación.",
-        imagen: "/placeholder-espadin.jpg",
+        imagen: "/fotos/29.1.png",
         notas: {
             vista: "Dorado tenue con reflejos plateados",
             nariz: "Ahumado intenso, cítrico y mineral.",
@@ -40,7 +40,7 @@ const PRODUCTOS = [
         id: 3,
         nombre: "Madrecuixe",
         subtitulo: "Un mezcal silvestre de carácter indomable, con la fiereza del agave en su estado más puro.",
-        imagen: "/placeholder-madrecuixe.jpg",
+        imagen: "/fotos/30.1.png",
         notas: {
             vista: "Transparente con destellos verdes",
             nariz: "Vegetal, herbal y notas de maguey fresco.",
@@ -70,45 +70,30 @@ export default function CarruselProductos() {
         >
             <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
 
-                {/* LADO IZQUIERDO — Botella con anotaciones */}
                 <div className="relative h-[480px] flex items-center justify-center">
-                    {/* Fondo circular */}
                     <div
                         className="absolute w-80 h-80 rounded-full"
                         style={{ background: "#f0ebe0" }}
                     />
 
-                    {/* Anotaciones */}
                     {producto.anotaciones.map((a, i) => (
                         <div
                             key={i}
                             className={`absolute ${a.posicion} text-xs text-gray-600 leading-snug z-10`}
                             style={{ fontFamily: "Georgia, serif" }}
                         >
-                            {a.texto.split(/\*\*(.*?)\*\*/g).map((part, j) =>
-                                j % 2 === 1 ? <strong key={j}>{part}</strong> : part
-                            )}
+                            {a.texto}
                         </div>
                     ))}
 
-                    {/* Imagen botella */}
-                    <div className="relative z-20 h-72 w-32 flex items-center justify-center">
+                    <div className="relative z-20 w-64 h-64 rounded-full overflow-hidden">
                         <img
                             src={producto.imagen}
                             alt={producto.nombre}
-                            className="h-full w-auto object-contain drop-shadow-2xl"
-                            onError={(e) => {
-                                const el = e.target as HTMLImageElement;
-                                el.style.display = "none";
-                                el.parentElement!.innerHTML = `
-                                    <div style="width:80px;height:220px;background:linear-gradient(180deg,#e8e0d0,#c8b89a);border-radius:8px 8px 4px 4px;display:flex;align-items:center;justify-content:center;color:#5c3d1e;font-size:11px;text-align:center;padding:8px;font-family:Georgia,serif;">
-                                        Botella ${producto.nombre}
-                                    </div>`;
-                            }}
+                            className="w-full h-full object-cover"
                         />
                     </div>
 
-                    {/* Líneas decorativas hacia anotaciones */}
                     <div className="absolute inset-0 pointer-events-none z-10">
                         <svg className="w-full h-full" viewBox="0 0 400 480">
                             <line x1="200" y1="150" x2="80" y2="60" stroke="#c8a97a" strokeWidth="0.8" strokeDasharray="4,4" opacity="0.6" />
@@ -118,7 +103,6 @@ export default function CarruselProductos() {
                     </div>
                 </div>
 
-                {/* LADO DERECHO — Info del producto */}
                 <div className="space-y-6">
                     <h2
                         className="text-6xl font-bold"
@@ -151,7 +135,6 @@ export default function CarruselProductos() {
                         </div>
                     </div>
 
-                    {/* Controles carrusel */}
                     <div className="flex items-center gap-4 pt-4">
                         <button
                             onClick={anterior}
@@ -160,15 +143,12 @@ export default function CarruselProductos() {
                             <ChevronLeft size={20} />
                         </button>
 
-                        {/* Indicadores */}
                         <div className="flex gap-2">
                             {PRODUCTOS.map((_, i) => (
                                 <button
                                     key={i}
                                     onClick={() => setActual(i)}
-                                    className={`w-2 h-2 rounded-full transition-all ${
-                                        i === actual ? "bg-[#8b6914] w-6" : "bg-gray-300"
-                                    }`}
+                                    className={`w-2 h-2 rounded-full transition-all ${i === actual ? "bg-[#8b6914] w-6" : "bg-gray-300"}`}
                                 />
                             ))}
                         </div>

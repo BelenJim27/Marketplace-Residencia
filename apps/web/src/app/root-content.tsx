@@ -41,11 +41,13 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
-  // ✅ Inicio del cliente: sin header ni padding, pantalla completa
   if (isClientHome) {
     return (
-      <div className="min-h-screen">
-        {children}
+      <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+        <TiendaHeader />
+        <main>
+          {children}
+        </main>
       </div>
     );
   }
