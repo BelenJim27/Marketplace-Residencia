@@ -9,7 +9,6 @@ import { MenuIcon, CloseIcon } from "./icons";
 import { Notification } from "./notification";
 import { ThemeToggleSwitch } from "./theme-toggle";
 import { UserInfo } from "./user-info";
-import { Home } from "lucide-react";
 
 export function Header() {
   const { toggleSidebar, isOpen, isMobile } = useSidebarContext();
@@ -64,18 +63,7 @@ export function Header() {
         </Link>
       )}
 
-      // DERECHA
       <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2 md:gap-4">
-
-        {/* ✅ ÍCONO INICIO - siempre visible */}
-        <Link
-          href="/Cliente/inicio"
-          className="flex flex-col items-center gap-0.5 text-[#2d7a3e] hover:opacity-80 transition-opacity"
-          title="Ir al inicio"
-        >
-          <Home className="size-6" />
-          <span className="text-[10px] font-semibold hidden sm:block">Inicio</span>
-        </Link>
 
         {/* Icono buscar visible solo en tablet/md */}
         <button
