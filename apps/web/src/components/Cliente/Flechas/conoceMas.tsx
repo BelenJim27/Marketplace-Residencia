@@ -1,38 +1,108 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-const SLIDES = [
+interface Slide {
+    id: number;
+    imagen: string;
+    circulos: { imagen: string; etiqueta?: string }[];
+}
+
+const SLIDES: Slide[] = [
     {
         id: 1,
-        tipo: "productor",
-        tarjeta: { imagen: "/fotos/20.jpeg", fondo: "#b07850" },
+        imagen: "/fotos/28.1.png",
         circulos: [
-            { imagen: "/fotos/22.jpeg", etiqueta: "Maestro mezcalero" },
-            { imagen: "/fotos/24.jpeg", etiqueta: null },
-            { imagen: "/fotos/16.jpg", etiqueta: null },
+            { imagen: "/fotos/5.jpg" },
+            { imagen: "/fotos/20.jpeg", etiqueta: "Maestro mezcalero" },
+            { imagen: "/fotos/22.jpeg" },
         ],
     },
     {
         id: 2,
-        tipo: "frase",
-        tarjeta: {
-            frase: "Tradición que se destila, carácter que se disfruta: descubre el mezcal que transforma cada momento en algo extraordinario.",
-            fondo: "#b07850",
-        },
+        imagen: "/fotos/29.1.png",
         circulos: [
-            { imagen: "/fotos/5.jpg", etiqueta: null },
-            { imagen: "/fotos/15.jpg", etiqueta: null },
-            { imagen: "/fotos/28.1.png", etiqueta: null },
+            { imagen: "/fotos/15.jpg" },
+            { imagen: "/fotos/24.jpeg" },
+            { imagen: "/fotos/22.jpeg" },
+        ],
+    },
+    {
+        id: 3,
+        imagen: "/fotos/30.1.png",
+        circulos: [
+            { imagen: "/fotos/16.jpg" },
+            { imagen: "/fotos/22.jpeg" },
+            { imagen: "/fotos/20.jpeg" },
+        ],
+    },
+    {
+        id: 4,
+        imagen: "/fotos/31.1.png",
+        circulos: [
+            { imagen: "/fotos/22.jpeg" },
+            { imagen: "/fotos/20.jpeg" },
+            { imagen: "/fotos/15.jpg" },
         ],
     },
 ];
 
+const INTERVAL = 5000;
+
 export default function ConoceMas() {
     const [actual, setActual] = useState(0);
-    const slide = SLIDES[actual];
+    const [visible, setVisible] = useState(true);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const progressRef = useRef<HTMLDivElement | null>(null);
     const router = useRouter();
+
+    const slide = SLIDES[actual];
+
+    const startProgress = () => {
+        if (progressRef.current) {
+            progressRef.current.style.transition = "none";
+            progressRef.current.style.width = "0%";
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    if (progressRef.current) {
+                        progressRef.current.style.transition = `width ${INTERVAL}ms linear`;
+                        progressRef.current.style.width = "100%";
+                    }
+                });
+            });
+        }
+    };
+
+    const handleGo = (idx: number) => {
+        const next = (idx + SLIDES.length) % SLIDES.length;
+        setVisible(false);
+        setTimeout(() => {
+            setActual(next);
+            setVisible(true);
+        }, 300);
+        if (timerRef.current) clearInterval(timerRef.current);
+        startProgress();
+        timerRef.current = setInterval(() => {
+            handleGo(next + 1);
+        }, INTERVAL);
+    };
+
+    useEffect(() => {
+        startProgress();
+        timerRef.current = setInterval(() => {
+            setActual((prev) => {
+                const next = (prev + 1) % SLIDES.length;
+                setVisible(false);
+                setTimeout(() => setVisible(true), 300);
+                return next;
+            });
+            startProgress();
+        }, INTERVAL);
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, []);
 
     return (
         <section className="w-full py-20 px-6 bg-white">
@@ -47,41 +117,82 @@ export default function ConoceMas() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
 
-                    {/* TARJETA IZQUIERDA */}
-                    <div
-                        className="rounded-3xl overflow-hidden h-80 md:h-96 relative flex items-center justify-center"
-                        style={{ background: slide.tarjeta.fondo }}
-                    >
-                        {slide.tipo === "productor" ? (
-                            <img
-                                src={slide.tarjeta.imagen}
-                                alt="Imagen destacada"
-                                className="h-full w-full object-cover"
+                    {/* IMAGEN GRANDE con carrusel */}
+                    <div className="relative rounded-3xl overflow-hidden h-80 md:h-96 shadow-lg group">
+                        <img
+                            src={slide.imagen}
+                            alt={`Slide ${actual + 1}`}
+                            className="w-full h-full object-contain"
+                            style={{
+                                opacity: visible ? 1 : 0,
+                                transition: "opacity 0.3s ease",
+                                background: "#f5f0e8", // fondo crema para los espacios vacíos
+                            }}
+                        />
+
+                        {/* Flecha izquierda */}
+                        <button
+                            onClick={() => handleGo(actual - 1)}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
+                            style={{
+                                background: "rgba(250,248,244,0.85)",
+                                border: "1.5px solid #c8a97a",
+                                color: "#8b6914",
+                                backdropFilter: "blur(4px)",
+                            }}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="15 18 9 12 15 6" />
+                            </svg>
+                        </button>
+
+                        {/* Flecha derecha */}
+                        <button
+                            onClick={() => handleGo(actual + 1)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
+                            style={{
+                                background: "rgba(250,248,244,0.85)",
+                                border: "1.5px solid #c8a97a",
+                                color: "#8b6914",
+                                backdropFilter: "blur(4px)",
+                            }}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="9 6 15 12 9 18" />
+                            </svg>
+                        </button>
+
+                        {/* Barra de progreso sobre la imagen */}
+                        <div
+                            className="absolute bottom-0 left-0 right-0 h-0.5"
+                            style={{ background: "rgba(200,169,122,0.3)" }}
+                        >
+                            <div
+                                ref={progressRef}
+                                style={{ height: "100%", background: "#c8a97a", width: "0%" }}
                             />
-                        ) : (
-                            <div className="p-10 text-center relative">
-                                <p
-                                    className="text-white text-xl leading-relaxed italic mb-8"
-                                    style={{ fontFamily: "Georgia, serif" }}
-                                >
-                                    {slide.tarjeta.frase}
-                                </p>
-                                <div className="absolute bottom-4 left-4 opacity-40 text-4xl">🌿</div>
-                                <div className="absolute bottom-4 right-4 opacity-40 text-4xl">🌿</div>
-                                <div className="absolute top-6 right-8 opacity-30 text-2xl">🦇</div>
-                            </div>
-                        )}
+                        </div>
                     </div>
 
-                    {/* CÍRCULOS DERECHA */}
+                    {/* DERECHA: círculos + dots + botón */}
                     <div className="space-y-6">
+
+                        {/* Círculos sincronizados */}
                         <div className="flex items-start gap-6 flex-wrap">
                             {slide.circulos.map((item, i) => (
-                                <div key={i} className="flex flex-col items-center gap-2">
+                                <div
+                                    key={`${actual}-${i}`}
+                                    className="flex flex-col items-center gap-2"
+                                    style={{
+                                        opacity: visible ? 1 : 0,
+                                        transform: visible ? "translateY(0)" : "translateY(8px)",
+                                        transition: `opacity 0.35s ease ${i * 0.07}s, transform 0.35s ease ${i * 0.07}s`,
+                                    }}
+                                >
                                     <div className="w-36 h-36 rounded-full overflow-hidden border-4 border-gray-100 shadow-md flex-shrink-0">
                                         <img
                                             src={item.imagen}
-                                            alt={item.etiqueta || `Producto ${i + 1}`}
+                                            alt={item.etiqueta || `Imagen ${i + 1}`}
                                             className="w-full h-full object-cover"
                                         />
                                     </div>
@@ -97,15 +208,19 @@ export default function ConoceMas() {
                             ))}
                         </div>
 
+                        {/* Dots + botón */}
                         <div className="flex items-center justify-between pt-4">
-                            <div className="flex gap-2">
-                                {SLIDES.map((_, i) => (
+                            <div className="flex gap-2 items-center">
+                                {SLIDES.map((_: Slide, i: number) => (
                                     <button
                                         key={i}
-                                        onClick={() => setActual(i)}
-                                        className={`h-2 rounded-full transition-all ${
-                                            i === actual ? "w-6 bg-[#8b6914]" : "w-2 bg-gray-300"
-                                        }`}
+                                        onClick={() => handleGo(i)}
+                                        className="h-2 rounded-full border-none"
+                                        style={{
+                                            width: i === actual ? "24px" : "8px",
+                                            background: i === actual ? "#8b6914" : "#d4c9b6",
+                                            transition: "all 0.3s ease",
+                                        }}
                                     />
                                 ))}
                             </div>
@@ -113,12 +228,13 @@ export default function ConoceMas() {
                             <button
                                 className="px-8 py-3 rounded-full text-white font-semibold transition-all hover:opacity-90 shadow-md"
                                 style={{ background: "#8b6914", fontFamily: "Georgia, serif" }}
-                                onClick={() => router.push("/producto")}
+                                onClick={() => router.push("/productos")}
                             >
                                 Ver más
                             </button>
                         </div>
                     </div>
+
                 </div>
             </div>
         </section>
