@@ -123,11 +123,10 @@ export default function CarruselProductos() {
     <section
       id="productos"
       className="w-full py-20 px-8 relative"
-      style={{ background: "rgba(92, 48, 24, 0.55)" }}  // ✅ mismo tono que las demás secciones
+      style={{ background: "rgba(60, 28, 8, 0.50)" }}
       onMouseEnter={() => setSectionHover(true)}
       onMouseLeave={() => setSectionHover(false)}
     >
-      {/* Flechas */}
       {(["left", "right"] as const).map((dir) => (
         <button
           key={dir}
@@ -149,8 +148,6 @@ export default function CarruselProductos() {
       ))}
 
       <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-
-        {/* Imagen */}
         <div
           className="relative h-[460px] flex items-center justify-center"
           onMouseEnter={() => setImageHover(true)}
@@ -187,7 +184,6 @@ export default function CarruselProductos() {
           </div>
         </div>
 
-        {/* Texto */}
         <div className="space-y-5" style={{ opacity: visible ? 1 : 0, transition: "opacity 0.3s ease" }}>
           <h2
             className="font-bold leading-none"

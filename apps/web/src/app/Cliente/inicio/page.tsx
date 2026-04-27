@@ -6,10 +6,11 @@ import { ScrollReveal } from '@/components/Cliente/ScrollReveal';
 import SobreElMezcal from '@/components/Cliente/Mezcal';
 import CarruselProductos from '@/components/Cliente/carruselProductos';
 import ConoceMas from '@/components/Cliente/Flechas/conoceMas';
+import Footer from "@/components/Cliente/Footer";
 
 export default function InicioPage() {
   return (
-    <>
+    <div style={{ position: 'relative' }}>
       <MezcalCanvas />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
@@ -33,6 +34,12 @@ export default function InicioPage() {
           <ConoceMas />
         </div>
       </ScrollReveal>
-    </>
+
+      <ScrollReveal delay={100}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <Footer />
+        </div>
+      </ScrollReveal>
+    </div>
   );
 }
