@@ -105,20 +105,24 @@ export default function ConoceMas() {
     }, []);
 
     return (
-        <section className="w-full py-20 px-6 bg-white">
+        <section
+            className="w-full py-20 px-6"
+            style={{ background: "rgba(92, 48, 24, 0.55)" }}  // ✅ mismo tono que las demás secciones
+        >
             <div className="max-w-6xl mx-auto">
 
                 <h2
                     className="text-center text-4xl mb-12"
-                    style={{ fontFamily: "Georgia, serif", color: "#8b6914", fontStyle: "italic" }}
+                    style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontStyle: "italic" }}
                 >
                     Conoce más de nuestros productos
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
 
-                    {/* IMAGEN GRANDE con carrusel */}
-                    <div className="relative rounded-3xl overflow-hidden h-80 md:h-96 shadow-lg group">
+                    {/* IMAGEN GRANDE */}
+                    <div className="relative rounded-3xl overflow-hidden h-80 md:h-96 shadow-lg group"
+                        style={{ boxShadow: "0 8px 40px rgba(200,100,20,0.25)" }}>
                         <img
                             src={slide.imagen}
                             alt={`Slide ${actual + 1}`}
@@ -126,58 +130,37 @@ export default function ConoceMas() {
                             style={{
                                 opacity: visible ? 1 : 0,
                                 transition: "opacity 0.3s ease",
-                                background: "#f5f0e8", // fondo crema para los espacios vacíos
+                                background: "rgba(92, 48, 24, 0.4)",
                             }}
                         />
 
-                        {/* Flecha izquierda */}
                         <button
                             onClick={() => handleGo(actual - 1)}
                             className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
-                            style={{
-                                background: "rgba(250,248,244,0.85)",
-                                border: "1.5px solid #c8a97a",
-                                color: "#8b6914",
-                                backdropFilter: "blur(4px)",
-                            }}
+                            style={{ background: "rgba(50,22,5,0.85)", border: "1.5px solid #c8a97a", color: "#e8c060", backdropFilter: "blur(4px)" }}
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="15 18 9 12 15 6" />
                             </svg>
                         </button>
 
-                        {/* Flecha derecha */}
                         <button
                             onClick={() => handleGo(actual + 1)}
                             className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
-                            style={{
-                                background: "rgba(250,248,244,0.85)",
-                                border: "1.5px solid #c8a97a",
-                                color: "#8b6914",
-                                backdropFilter: "blur(4px)",
-                            }}
+                            style={{ background: "rgba(50,22,5,0.85)", border: "1.5px solid #c8a97a", color: "#e8c060", backdropFilter: "blur(4px)" }}
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="9 6 15 12 9 18" />
                             </svg>
                         </button>
 
-                        {/* Barra de progreso sobre la imagen */}
-                        <div
-                            className="absolute bottom-0 left-0 right-0 h-0.5"
-                            style={{ background: "rgba(200,169,122,0.3)" }}
-                        >
-                            <div
-                                ref={progressRef}
-                                style={{ height: "100%", background: "#c8a97a", width: "0%" }}
-                            />
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "rgba(200,169,122,0.2)" }}>
+                            <div ref={progressRef} style={{ height: "100%", background: "#c8a97a", width: "0%" }} />
                         </div>
                     </div>
 
-                    {/* DERECHA: círculos + dots + botón */}
+                    {/* DERECHA */}
                     <div className="space-y-6">
-
-                        {/* Círculos sincronizados */}
                         <div className="flex items-start gap-6 flex-wrap">
                             {slide.circulos.map((item, i) => (
                                 <div
@@ -189,18 +172,12 @@ export default function ConoceMas() {
                                         transition: `opacity 0.35s ease ${i * 0.07}s, transform 0.35s ease ${i * 0.07}s`,
                                     }}
                                 >
-                                    <div className="w-36 h-36 rounded-full overflow-hidden border-4 border-gray-100 shadow-md flex-shrink-0">
-                                        <img
-                                            src={item.imagen}
-                                            alt={item.etiqueta || `Imagen ${i + 1}`}
-                                            className="w-full h-full object-cover"
-                                        />
+                                    <div className="w-36 h-36 rounded-full overflow-hidden flex-shrink-0"
+                                        style={{ border: "3px solid rgba(200,169,122,0.5)", boxShadow: "0 4px 20px rgba(200,100,20,0.3)" }}>
+                                        <img src={item.imagen} alt={item.etiqueta || `Imagen ${i + 1}`} className="w-full h-full object-cover" />
                                     </div>
                                     {item.etiqueta && (
-                                        <p
-                                            className="text-sm text-gray-600 italic text-center"
-                                            style={{ fontFamily: "Georgia, serif" }}
-                                        >
+                                        <p className="text-sm italic text-center" style={{ fontFamily: "Georgia, serif", color: "#d4b080" }}>
                                             {item.etiqueta}
                                         </p>
                                     )}
@@ -208,7 +185,6 @@ export default function ConoceMas() {
                             ))}
                         </div>
 
-                        {/* Dots + botón */}
                         <div className="flex items-center justify-between pt-4">
                             <div className="flex gap-2 items-center">
                                 {SLIDES.map((_: Slide, i: number) => (
@@ -218,7 +194,7 @@ export default function ConoceMas() {
                                         className="h-2 rounded-full border-none"
                                         style={{
                                             width: i === actual ? "24px" : "8px",
-                                            background: i === actual ? "#8b6914" : "#d4c9b6",
+                                            background: i === actual ? "#e8a030" : "rgba(200,169,122,0.35)",
                                             transition: "all 0.3s ease",
                                         }}
                                     />
@@ -226,15 +202,20 @@ export default function ConoceMas() {
                             </div>
 
                             <button
-                                className="px-8 py-3 rounded-full text-white font-semibold transition-all hover:opacity-90 shadow-md"
-                                style={{ background: "#8b6914", fontFamily: "Georgia, serif" }}
+                                className="px-8 py-3 rounded-full font-semibold transition-all hover:opacity-90"
+                                style={{
+                                    background: "rgba(139,105,20,0.9)",
+                                    color: "#f5e8c0",
+                                    fontFamily: "Georgia, serif",
+                                    border: "1px solid #c8a97a",
+                                    boxShadow: "0 4px 20px rgba(200,100,20,0.3)",
+                                }}
                                 onClick={() => router.push("/productos")}
                             >
                                 Ver más
                             </button>
                         </div>
                     </div>
-
                 </div>
             </div>
         </section>

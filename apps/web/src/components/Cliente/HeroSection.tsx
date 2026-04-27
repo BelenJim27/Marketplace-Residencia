@@ -22,24 +22,22 @@ export default function HeroSection() {
                     playsInline
                     className="w-full h-full object-cover"
                 />
-                {/* Overlay oscuro para legibilidad */}
+                {/* Un solo overlay — suficiente para legibilidad */}
                 <div className="absolute inset-0 bg-black/30" />
             </div>
-            {/* Overlay oscuro para legibilidad */}
-            <div className="absolute inset-0 bg-black/30" />
 
-            {/* Contenido Hero */ }
-    <div className="relative z-10 flex items-end justify-start h-full pb-16 px-12">
-        <div className="text-white">
-            <p className="text-lg font-light tracking-widest opacity-80 mb-2" style={{ fontFamily: "Georgia, serif" }}>
-                GUARDIANAS DEL MEZCAL
-            </p>
-            <h1 className="text-5xl font-bold leading-tight" style={{ fontFamily: "Georgia, serif" }}>
-                Tradición destilada
-            </h1>
-        </div>
-    </div>
-        </section >
+            {/* Contenido Hero */}
+            <div className="relative z-10 flex items-end justify-start h-full pb-16 px-12">
+                <div className="text-white">
+                    <p className="text-lg font-light tracking-widest opacity-80 mb-2" style={{ fontFamily: "Georgia, serif" }}>
+                        GUARDIANAS DEL MEZCAL
+                    </p>
+                    <h1 className="text-5xl font-bold leading-tight" style={{ fontFamily: "Georgia, serif" }}>
+                        Tradición destilada
+                    </h1>
+                </div>
+            </div>
+        </section>
     );
 }
 
