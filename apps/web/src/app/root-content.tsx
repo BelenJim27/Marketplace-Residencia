@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import type { PropsWithChildren } from "react";
 import { Header } from "@/components/Layouts/header";
 import { Sidebar } from "@/components/Layouts/sidebar";
-import { SidebarProvider } from "@/components/Layouts/sidebar/sidebar-context";
+import { SidebarProvider } from "@/context/SidebarContext";
 import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
 import { useAuth } from "@/context/AuthContext";
 

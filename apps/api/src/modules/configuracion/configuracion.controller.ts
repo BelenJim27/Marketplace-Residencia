@@ -36,6 +36,16 @@ export class ConfiguracionController {
     }
   }
 
+  @Get('sistema/seed-biocultural')
+  async seedBiocultural() {
+    try {
+      return await this.service.seedBiocultural();
+    } catch (error: any) {
+      console.error('Error en GET /configuracion/sistema/seed-biocultural:', error);
+      return { error: error.message };
+    }
+  }
+
   @Get('sistema/seed-all')
   async seedAll() {
     try {

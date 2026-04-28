@@ -1,7 +1,7 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { DashboardPeriod, VentasAnalytics } from "../hooks/useVentasData";
+import type { DashboardPeriod, VentasAnalytics } from "@/hooks/useVentasData";
 
 type Props = {
   periodo: DashboardPeriod;

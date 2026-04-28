@@ -2,7 +2,7 @@
 
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useMemo } from "react";
-import type { DashboardPeriod, VentasAnalytics } from "../hooks/useVentasData";
+import type { DashboardPeriod, VentasAnalytics } from "@/hooks/useVentasData";
 
 type Props = {
   periodo: DashboardPeriod;

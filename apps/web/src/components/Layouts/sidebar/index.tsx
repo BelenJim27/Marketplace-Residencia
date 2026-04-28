@@ -8,7 +8,7 @@ import { useState } from "react";
 import { getNavData } from "./data";
 import { ArrowLeftIcon, ChevronLeft } from "./icons";
 import { MenuItem } from "./menu-item";
-import { useSidebarContext } from "./sidebar-context";
+import { useSidebarContext } from "@/context/SidebarContext";
 import { useAuth } from "@/context/AuthContext";
 import { ChevronDown, LogOut } from "lucide-react";
 

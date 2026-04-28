@@ -47,6 +47,11 @@ export default function SolicitarPage() {
     direccion_estado: "",
     datos_bancarios: "",
     id_region: null as number | null,
+    produccion_calle: "",
+    produccion_ciudad: "",
+    produccion_estado: "",
+    produccion_cp: "",
+    produccion_referencia: "",
   });
 
   useEffect(() => {
@@ -257,9 +262,20 @@ export default function SolicitarPage() {
         rfc: formData.rfc || undefined,
         razon_social: formData.razon_social || undefined,
         datos_bancarios: formData.datos_bancarios || undefined,
-        direccion_fiscal: formData.direccion_calle || formData.direccion_cp ? {
-          linea_1: formData.direccion_calle,
-          ubicacion: formData.direccion_cp ? { cp: formData.direccion_cp } : undefined,
+        direccion_fiscal: formData.direccion_calle || formData.direccion_ciudad ? {
+          linea_1: formData.direccion_calle || undefined,
+          ciudad: formData.direccion_ciudad || undefined,
+          estado: formData.direccion_estado || undefined,
+          codigo_postal: formData.direccion_cp || undefined,
+          pais_iso2: "MX",
+        } : undefined,
+        direccion_produccion: formData.produccion_calle || formData.produccion_ciudad ? {
+          linea_1: formData.produccion_calle || undefined,
+          ciudad: formData.produccion_ciudad || undefined,
+          estado: formData.produccion_estado || undefined,
+          codigo_postal: formData.produccion_cp || undefined,
+          referencia: formData.produccion_referencia || undefined,
+          pais_iso2: "MX",
         } : undefined,
         id_region: formData.id_region ?? undefined,
       });
@@ -421,6 +437,86 @@ export default function SolicitarPage() {
                   onChange={handleInputChange}
                   className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
                   placeholder="CDMX"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
+              <MapPin className="h-5 w-5" />
+              Lugar de Producción
+            </h3>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Calle y Número
+                </label>
+                <input
+                  type="text"
+                  name="produccion_calle"
+                  value={formData.produccion_calle}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="Av. Producción #456"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Código Postal
+                </label>
+                <input
+                  type="text"
+                  name="produccion_cp"
+                  value={formData.produccion_cp}
+                  onChange={handleInputChange}
+                  maxLength={5}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="12345"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Ciudad
+                </label>
+                <input
+                  type="text"
+                  name="produccion_ciudad"
+                  value={formData.produccion_ciudad}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="Oaxaca"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Estado
+                </label>
+                <input
+                  type="text"
+                  name="produccion_estado"
+                  value={formData.produccion_estado}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="Oaxaca"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Referencia (opcional)
+                </label>
+                <input
+                  type="text"
+                  name="produccion_referencia"
+                  value={formData.produccion_referencia}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="Ej: Cerca del río, zona de ley seca"
                 />
               </div>
             </div>

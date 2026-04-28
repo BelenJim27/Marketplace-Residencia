@@ -8,8 +8,8 @@ import { ExportButtons } from "./charts/ExportButtons";
 import { ProductosChart } from "./charts/ProductosChart";
 import { VentasChart } from "./charts/VentasChart";
 import { StatsCards } from "./StatsCards";
-import { DashboardPeriod, useVentasData } from "./hooks/useVentasData";
-import { useProductosData } from "./hooks/useProductosData";
+import { DashboardPeriod, useVentasData } from "@/hooks/useVentasData";
+import { useProductosData } from "@/hooks/useProductosData";
 
 // Definición de tipos sin duplicados
 type Producer = {

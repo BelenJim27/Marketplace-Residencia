@@ -53,7 +53,7 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         icon: LayoutDashboard,
       },
       { title: "Perfil", url: "/profile", icon: UserRound },
-      { title: "Usuarios", url: "/Administrador/usuarioss", icon: Users },
+      { title: "Usuarios", url: "/Administrador/usuarios", icon: Users },
       {
         title: "Auditoría",
         url: "/Administrador/auditoria",

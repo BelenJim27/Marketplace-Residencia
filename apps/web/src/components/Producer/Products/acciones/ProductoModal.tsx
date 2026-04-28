@@ -7,7 +7,7 @@ import type {
   StoreItem,
   CategoriaItem,
   ProductItem,
-} from "@/components/Producer/Products/acciones/useProductos";
+} from "@/hooks/useProductos";
 import type { ImagenProductoState } from "@/components/Producer/Products/ImagenProducto";
 
 // ─── Field ────────────────────────────────────────────────────────────────────

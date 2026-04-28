@@ -10,29 +10,9 @@ import {
   ReactNode,
 } from "react";
 import { getCookie } from "@/lib/cookies";
+import type { CarritoItem, CarritoContextType } from "@/types/carrito";
 
-export interface ProductoCarrito {
-  id_producto: number | bigint;
-  nombre: string;
-  precio_base: string;
-  imagen_principal_url?: string;
-  producto_imagenes?: { url: string }[];
-  cantidad: number;
-}
-
-interface CarritoItem extends ProductoCarrito {
-  cantidad: number;
-}
-
-interface CarritoContextType {
-  items: CarritoItem[];
-  cantidadTotal: number;
-  precioTotal: number;
-  agregarProducto: (producto: ProductoCarrito) => void;
-  eliminarProducto: (id_producto: number | bigint) => void;
-  actualizarCantidad: (id_producto: number | bigint, cantidad: number) => void;
-  limpiarCarrito: () => void;
-}
+export type { ProductoCarrito } from "@/types/carrito";
 
 const CarritoContext = createContext<CarritoContextType | undefined>(undefined);
 

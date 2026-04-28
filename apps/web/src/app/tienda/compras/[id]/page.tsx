@@ -177,8 +177,19 @@ export default function DetallePedidoPage() {
                 <MapPin size={16} className="text-green-600" />
                 Dirección de envío
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300">{direccion.linea_1}</p>
-              {direccion.linea_2 && <p className="text-sm text-gray-600 dark:text-gray-300">{direccion.linea_2}</p>}
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {direccion.es_internacional ? (
+                  <>
+                    {direccion.linea_1}
+                    {direccion.linea_2 && <span>, {direccion.linea_2}</span>}
+                  </>
+                ) : (
+                  <>
+                    {direccion.calle} {direccion.numero}
+                    {direccion.colonia && <span>, {direccion.colonia}</span>}
+                  </>
+                )}
+              </p>
               {direccion.referencia && <p className="mt-1 text-xs text-gray-400">{direccion.referencia}</p>}
             </div>
           )}

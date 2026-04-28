@@ -1,6 +1,6 @@
 "use client";
 
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/useMobile";
 import type { ApexOptions } from "apexcharts";
 import dynamic from "next/dynamic";
 

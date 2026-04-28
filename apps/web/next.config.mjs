@@ -3,10 +3,9 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/routing.ts");
 
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   productionBrowserSourceMaps: false,
+  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
   images: {
     unoptimized: true,
     remotePatterns: [

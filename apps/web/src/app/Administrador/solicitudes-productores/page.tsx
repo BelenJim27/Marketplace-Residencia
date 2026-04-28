@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { AlertCircle, CheckCircle2, XCircle, FileText, Eye, Loader2, User, Building2, CreditCard } from "lucide-react";
 import Image from "next/image";
+import { getCookie } from "@/lib/cookies";
 
 interface SolicitudProductor {
   id_productor: number;

@@ -94,18 +94,38 @@ model detalle_pedido {
 }
 
 model direcciones {
-  id_direccion     BigInt    @id @default(autoincrement())
-  id_usuario       String    @db.Uuid
-  ubicacion        Json      @default("{}")
-  linea_1          String?   @db.VarChar(200)
-  linea_2          String?   @db.VarChar(200)
-  referencia       String?
-  tipo             String?   @db.VarChar(20)
-  es_internacional Boolean   @default(false)
-  eliminado_en     DateTime? @db.Timestamptz(6)
-  usuarios         usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  id_direccion        BigInt    @id @default(autoincrement())
+  id_usuario          String    @db.Uuid
+  nombre_destinatario String?   @db.VarChar(150)
+  telefono            String?   @db.VarChar(30)
+  nombre_etiqueta     String?   @db.VarChar(60)
+  es_predeterminada   Boolean   @default(false)
+  es_internacional    Boolean   @default(false)
+  
+  // Campos para direcciones nacionales (México)
+  calle               String?   @db.VarChar(200)
+  numero              String?   @db.VarChar(20)
+  colonia             String?   @db.VarChar(150)
+  
+  // Campos para direcciones internacionales
+  linea_1             String?   @db.VarChar(200)
+  linea_2             String?   @db.VarChar(200)
+  
+  // Campos comunes
+  ciudad              String?   @db.VarChar(100)
+  estado              String?   @db.VarChar(100)
+  codigo_postal       String?   @db.VarChar(20)
+  pais_iso2           String?   @db.Char(2)
+  referencia          String?
+  tipo                String?   @db.VarChar(20)
+  ubicacion           Json      @default("{}")
+  eliminado_en        DateTime? @db.Timestamptz(6)
+  usuarios            usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  pedidos             pedidos[] @relation("DireccionEnvioPedido")
 
   @@index([ubicacion], map: "idx_direcciones_ubicacion", type: Gin)
+  @@index([id_usuario, es_predeterminada], map: "idx_direcciones_predeterminada")
+  @@index([es_internacional], map: "idx_direcciones_internacional")
 }
 
 model envio_cotizaciones {
@@ -187,6 +207,7 @@ model envios {
   fecha_entrega_estimada DateTime?        @db.Timestamptz(6)
   fecha_entrega          DateTime?        @db.Timestamptz(6)
   envio_guias            envio_guias[]
+  pedido_productor       pedido_productor[]
   pedidos                pedidos          @relation(fields: [id_pedido], references: [id_pedido], onUpdate: NoAction)
   servicios_envio        servicios_envio? @relation(fields: [id_servicio], references: [id_servicio], onUpdate: NoAction)
   transportistas         transportistas?  @relation(fields: [id_transportista], references: [id_transportista], onUpdate: NoAction)
@@ -397,6 +418,7 @@ model password_reset_tokens {
 model pedidos {
   id_pedido                      BigInt                   @id @default(autoincrement())
   id_usuario                     String                   @db.Uuid
+  id_direccion_envio             BigInt?
   estado                         String                   @default("pendiente") @db.VarChar(30)
   total                          Decimal                  @db.Decimal(14, 2)
   moneda                         String                   @db.Char(3)
@@ -418,8 +440,10 @@ model pedidos {
   facturas                       facturas[]
   movimientos_inventario         movimientos_inventario[]
   pagos                          pagos[]
+  pedido_productor               pedido_productor[]
   usuarios                       usuarios                 @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
   monedas                        monedas                  @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
+  direccion_envio                direcciones?             @relation("DireccionEnvioPedido", fields: [id_direccion_envio], references: [id_direccion], onUpdate: NoAction)
 
   @@index([estado], map: "idx_pedidos_estado")
   @@index([id_usuario], map: "idx_pedidos_usuario")
@@ -467,6 +491,7 @@ model productores {
   usuarios              usuarios  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
   revisor               usuarios? @relation("RevisorProductor", fields: [revisado_por], references: [id_usuario], onUpdate: NoAction)
   tiendas               tiendas[]
+  pedido_productor      pedido_productor[]
 }
 
 model productos {
@@ -607,17 +632,23 @@ model tasas_impuesto {
 }
 
 model tiendas {
-  id_tienda      Int         @id @default(autoincrement())
-  id_productor   Int
-  nombre         String      @db.VarChar(150)
-  descripcion    String?
-  pais_operacion String      @default("MX") @db.Char(2)
-  status         String      @default("activa") @db.VarChar(20)
-  fecha_creacion DateTime    @default(dbgenerated("CURRENT_DATE")) @db.Date
-  actualizado_en DateTime    @default(now()) @db.Timestamptz(6)
-  eliminado_en   DateTime?   @db.Timestamptz(6)
-  productos      productos[]
-  productores    productores @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  id_tienda          Int         @id @default(autoincrement())
+  id_productor       Int
+  nombre             String      @db.VarChar(150)
+  descripcion        String?
+  pais_operacion     String      @default("MX") @db.Char(2)
+  status             String      @default("activa") @db.VarChar(20)
+  nombre_contacto    String?     @db.VarChar(150)
+  telefono_contacto  String?     @db.VarChar(30)
+  direccion_origen   String?     @db.VarChar(200)
+  ciudad_origen      String?     @db.VarChar(100)
+  estado_origen      String?     @db.VarChar(100)
+  codigo_postal_orig String?     @db.VarChar(20)
+  fecha_creacion     DateTime    @default(dbgenerated("CURRENT_DATE")) @db.Date
+  actualizado_en     DateTime    @default(now()) @db.Timestamptz(6)
+  eliminado_en       DateTime?   @db.Timestamptz(6)
+  productos          productos[]
+  productores        productores @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
 
   @@index([id_productor], map: "idx_tiendas_productor")
 }
@@ -694,4 +725,20 @@ model categorias_productos {
 
   @@id([id_categoria, id_producto])
   @@index([id_producto], map: "idx_cat_prod_producto")
+}
+
+model pedido_productor {
+  id_pedido      BigInt
+  id_productor   Int
+  estado         String    @default("pendiente") @db.VarChar(30)
+  id_envio       BigInt?
+  creado_en      DateTime  @default(now()) @db.Timestamptz(6)
+  actualizado_en DateTime  @default(now()) @db.Timestamptz(6)
+  pedidos        pedidos     @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade, onUpdate: NoAction)
+  productores    productores @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  envios         envios?     @relation(fields: [id_envio], references: [id_envio], onUpdate: NoAction)
+
+  @@id([id_pedido, id_productor])
+  @@index([id_pedido], map: "idx_pedido_prod_pedido")
+  @@index([id_productor], map: "idx_pedido_prod_productor")
 }

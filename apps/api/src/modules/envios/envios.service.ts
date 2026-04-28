@@ -11,4 +11,18 @@ export class EnviosService {
   async create(dto: CreateEnvioDto) { return serializeBigInts(await this.prisma.envios.create({ data: { id_pedido: toBigIntId(dto.id_pedido), id_transportista: dto.id_transportista ?? null, id_servicio: dto.id_servicio ?? null, numero_rastreo: dto.numero_rastreo ?? null, valor_declarado_aduana: dto.valor_declarado_aduana ?? null, moneda_aduana: dto.moneda_aduana?.trim() ?? 'MXN', codigo_hs: dto.codigo_hs ?? null, peso_kg: dto.peso_kg ?? null, alto_cm: dto.alto_cm ?? null, ancho_cm: dto.ancho_cm ?? null, largo_cm: dto.largo_cm ?? null, costo_envio: dto.costo_envio ?? null, moneda_costo: dto.moneda_costo?.trim() ?? 'MXN', estado: dto.estado?.trim() ?? 'preparando', fecha_envio: dto.fecha_envio ? new Date(dto.fecha_envio) : null, fecha_entrega_estimada: dto.fecha_entrega_estimada ? new Date(dto.fecha_entrega_estimada) : null, fecha_entrega: dto.fecha_entrega ? new Date(dto.fecha_entrega) : null } })); }
   async update(id: string, dto: UpdateEnvioDto) { return serializeBigInts(await this.prisma.envios.update({ where: { id_envio: toBigIntId(id) }, data: { id_pedido: dto.id_pedido ? toBigIntId(dto.id_pedido) : undefined, id_transportista: dto.id_transportista, id_servicio: dto.id_servicio, numero_rastreo: dto.numero_rastreo, valor_declarado_aduana: dto.valor_declarado_aduana, moneda_aduana: dto.moneda_aduana?.trim(), codigo_hs: dto.codigo_hs, peso_kg: dto.peso_kg, alto_cm: dto.alto_cm, ancho_cm: dto.ancho_cm, largo_cm: dto.largo_cm, costo_envio: dto.costo_envio, moneda_costo: dto.moneda_costo?.trim(), estado: dto.estado?.trim(), fecha_envio: dto.fecha_envio ? new Date(dto.fecha_envio) : undefined, fecha_entrega_estimada: dto.fecha_entrega_estimada ? new Date(dto.fecha_entrega_estimada) : undefined, fecha_entrega: dto.fecha_entrega ? new Date(dto.fecha_entrega) : undefined } })); }
   async remove(id: string) { await this.prisma.envios.delete({ where: { id_envio: toBigIntId(id) } }); return { message: 'Envio eliminado' }; }
+
+  async guardarCotizacion(idPedido: number, payload: any) {
+    const addHours = (date: Date, hours: number) => new Date(date.getTime() + hours * 3600000);
+    return serializeBigInts(await this.prisma.envio_cotizaciones.create({
+      data: {
+        id_pedido: toBigIntId(idPedido),
+        payload_request: payload.request ?? {},
+        payload_response: payload.response ?? null,
+        precio_total: payload.precioTotal,
+        tiempo_entrega_estimado: payload.fechaEntregaEstimada,
+        valida_hasta: addHours(new Date(), 4),
+      }
+    }));
+  }
 }

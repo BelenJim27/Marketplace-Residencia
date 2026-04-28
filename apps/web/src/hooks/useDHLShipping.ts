@@ -1,37 +1,68 @@
-export type DHLServiceType = "express" | "estandar" | "economico";
+"use client";
 
-export interface DHLQuote {
-  proveedor: "DHL";
-  servicio: string;
-  precio: number;
-  diasEntrega: string;
-  pesoKg: number;
+import { useState, useCallback } from "react";
+import { getCookie } from "@/lib/cookies";
+
+export interface DireccionDestino {
+  pais: string;
+  ciudad: string;
+  estado: string;
+  codigo_postal: string;
 }
 
-const SERVICIOS: Record<DHLServiceType, { nombre: string; base: number; porKg: number; dias: string }> = {
-  express: { nombre: "DHL Express", base: 250, porKg: 30, dias: "1-2 días hábiles" },
-  estandar: { nombre: "DHL Estándar", base: 150, porKg: 20, dias: "3-5 días hábiles" },
-  economico: { nombre: "DHL Económico", base: 80, porKg: 10, dias: "7-10 días hábiles" },
-};
+export interface DHLQuote {
+  productCode: string;
+  productName: string;
+  tipo: 'nacional' | 'internacional';
+  precioTotal: number;
+  moneda: string;
+  fechaEntregaEstimada: string;
+  diasHabilesEstimados: number;
+}
 
 export function useDHLShipping() {
-  function calcular(pesoKg: number, _destino: string, tipo: DHLServiceType): DHLQuote {
-    const servicio = SERVICIOS[tipo];
-    const precio = Math.round(servicio.base + pesoKg * servicio.porKg);
-    return {
-      proveedor: "DHL",
-      servicio: servicio.nombre,
-      precio,
-      diasEntrega: servicio.dias,
-      pesoKg,
-    };
-  }
+  const [opciones, setOpciones] = useState<DHLQuote[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [seleccionado, setSeleccionado] = useState<DHLQuote | null>(null);
 
-  function cotizarTodos(pesoKg: number, destino: string): DHLQuote[] {
-    return (["express", "estandar", "economico"] as DHLServiceType[]).map((tipo) =>
-      calcular(pesoKg, destino, tipo)
-    );
-  }
+  const cotizarTodos = useCallback(async (pesoKg: number, destino: DireccionDestino | null) => {
+    if (!destino?.codigo_postal) {
+      setOpciones([]);
+      setSeleccionado(null);
+      return;
+    }
 
-  return { calcular, cotizarTodos };
+    setLoading(true);
+    setError(null);
+    try {
+      const token = getCookie("token") || "";
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/envios/cotizar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          destino,
+          peso_kg: pesoKg,
+          alto_cm: 15,
+          ancho_cm: 15,
+          largo_cm: 20,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Cotización fallida');
+      const data = await res.json();
+      setOpciones(data);
+      setSeleccionado(data[0] || null);
+    } catch (err) {
+      setError('No se pudo obtener cotización de DHL');
+      setOpciones([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { opciones, loading, error, seleccionado, cotizarTodos, setSeleccionado };
 }

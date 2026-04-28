@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dropdown";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/useMobile";
 import { getCookie } from "@/lib/cookies";
 import { cn } from "@/lib/utils";
 import Link from "next/link";

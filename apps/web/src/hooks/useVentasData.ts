@@ -4,32 +4,9 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
+import type { DashboardPeriod, VentasAnalytics } from "@/types/producer";
 
-export type DashboardPeriod = "semana" | "mes" | "año";
-
-export type VentasRow = {
-  x: string;
-  y: number;
-};
-
-export type VentasAnalytics = {
-  periodo: string;
-  resumen: {
-    pedidos: number;
-    productosVendidos: number;
-    ingresos: number;
-  };
-  ventas: VentasRow[];
-  productos: { x: string; y: number; monto: number }[];
-  rawRows: Array<{
-    fecha: string;
-    producto: string;
-    cantidad: number;
-    monto: number;
-    tienda: string;
-    status: string;
-  }>;
-};
+export type { DashboardPeriod, VentasRow, VentasAnalytics } from "@/types/producer";
 
 const PERIOD_MAP: Record<DashboardPeriod, "week" | "month" | "year"> = {
   semana: "week",

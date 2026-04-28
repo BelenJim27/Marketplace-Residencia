@@ -1,6 +1,6 @@
 "use client";
 
-import { useProductos } from "@/components/Producer/Products/acciones/useProductos";
+import { useProductos } from "@/hooks/useProductos";
 import { ProductoModal } from "@/components/Producer/Products/acciones/ProductoModal";
 import {
   ProductoHeader,

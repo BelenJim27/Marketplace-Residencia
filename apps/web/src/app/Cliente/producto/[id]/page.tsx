@@ -71,7 +71,7 @@ export default function ProductoDetallePage() {
   const [agregado, setAgregado] = useState(false);
   const [envioSeleccionado, setEnvioSeleccionado] = useState<DHLServiceType>("estandar");
   const { cotizarTodos } = useDHLShipping();
-  const cotizacionesDHL = cotizarTodos(0.75, "MX");
+  const [cotizacionesDHL, setCotizacionesDHL] = useState<any[]>([]);
 
   const fetchProducto = useCallback(async () => {
     const id = params.id;
@@ -93,6 +93,10 @@ export default function ProductoDetallePage() {
   useEffect(() => {
     fetchProducto();
   }, [fetchProducto]);
+
+  useEffect(() => {
+    cotizarTodos(0.75, null);
+  }, []);
 
   const handleAgregar = () => {
     if (!producto) return;
@@ -172,10 +176,11 @@ export default function ProductoDetallePage() {
   }
 
   return (
-    <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8">
+    <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8" style={{ backgroundColor: "var(--bio-color-fondo, #faf8f4)", minHeight: "100vh" }}>
       <button
         onClick={() => router.back()}
-        className="mb-6 flex items-center gap-2 text-gray-600 hover:text-green-600"
+        className="mb-6 flex items-center gap-2 hover:opacity-80 transition-opacity"
+        style={{ color: "var(--bio-color-precio, #8b6914)" }}
       >
         <ArrowLeft size={20} />
         Volver a productos
@@ -205,11 +210,10 @@ export default function ProductoDetallePage() {
                 <button
                   key={idx}
                   onClick={() => setImagenSeleccionada(idx)}
-                  className={`relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border-2 ${
-                    idx === imagenSeleccionada
-                      ? "border-green-600"
-                      : "border-transparent"
-                  }`}
+                  className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border-2"
+                  style={{
+                    borderColor: idx === imagenSeleccionada ? "var(--bio-color-precio, #8b6914)" : "transparent",
+                  }}
                 >
                   <Image
                     src={img}
@@ -226,18 +230,18 @@ export default function ProductoDetallePage() {
 
         <div className="space-y-6">
           <div>
-            <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
               {producto.nombre}
             </h1>
-            <p className="text-2xl font-bold text-green-600">
+            <p className="text-2xl font-bold" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}>
               ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
             </p>
           </div>
 
           {productor && (
-            <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-              <h3 className="mb-2 font-semibold text-gray-900 dark:text-white">
-                Productor
+            <div className="rounded-lg p-4" style={{ backgroundColor: "#f0ebe0", border: "1px solid #e8dcc8" }}>
+              <h3 className="mb-2 font-semibold" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+                Maestro Productor
               </h3>
               <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
                 <p className="font-medium">{nombreProductor}</p>
@@ -265,9 +269,9 @@ export default function ProductoDetallePage() {
 
           <div className="grid grid-cols-2 gap-4">
             {producto.tipo_mezcal && (
-              <div>
-                <span className="text-sm text-gray-500">Tipo de Mezcal</span>
-                <p className="font-medium text-gray-900 dark:text-white">
+              <div style={{ borderBottom: "1px solid #e8dcc8", paddingBottom: "1rem" }}>
+                <span className="text-sm" style={{ color: "var(--bio-color-precio, #8b6914)", textTransform: "uppercase", letterSpacing: "2px", fontSize: "10px", fontWeight: "600" }}>Tipo de Mezcal</span>
+                <p className="font-medium mt-1" style={{ color: "var(--bio-color-titulo, #5c3d1e)", fontFamily: "var(--bio-fuente-titulo, Georgia, serif)" }}>
                   {producto.tipo_mezcal}
                 </p>
               </div>
@@ -388,14 +392,16 @@ export default function ProductoDetallePage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCantidad(Math.max(1, cantidad - 1))}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg hover:opacity-80 transition-opacity"
+                    style={{ border: "1px solid #e8dcc8", backgroundColor: "#f0ebe0", color: "var(--bio-color-titulo, #5c3d1e)" }}
                   >
                     -
                   </button>
-                  <span className="w-12 text-center font-medium">{cantidad}</span>
+                  <span className="w-12 text-center font-medium" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>{cantidad}</span>
                   <button
                     onClick={() => setCantidad(cantidad + 1)}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg hover:opacity-80 transition-opacity"
+                    style={{ border: "1px solid #e8dcc8", backgroundColor: "#f0ebe0", color: "var(--bio-color-titulo, #5c3d1e)" }}
                   >
                     +
                   </button>
@@ -404,10 +410,10 @@ export default function ProductoDetallePage() {
             </div>
 
             {/* Sección de envío DHL */}
-            <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+            <div className="rounded-lg p-4" style={{ border: "1px solid #e8dcc8" }}>
               <div className="mb-3 flex items-center gap-2">
-                <Truck size={16} className="text-yellow-500" />
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">Opciones de envío</span>
+                <Truck size={16} style={{ color: "var(--bio-color-precio, #8b6914)" }} />
+                <span className="text-sm font-semibold" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>Opciones de envío</span>
               </div>
               <div className="space-y-2">
                 {cotizacionesDHL.map((cot, idx) => {
@@ -416,8 +422,11 @@ export default function ProductoDetallePage() {
                   return (
                     <label
                       key={cot.servicio}
-                      className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors
-                        ${envioSeleccionado === tipo ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "border-gray-200 dark:border-gray-700"}`}
+                      className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors"
+                      style={{
+                        border: envioSeleccionado === tipo ? `1px solid var(--bio-color-precio, #8b6914)` : "1px solid #e8dcc8",
+                        backgroundColor: envioSeleccionado === tipo ? "#fdf7ee" : "transparent",
+                      }}
                     >
                       <input
                         type="radio"
@@ -456,11 +465,12 @@ export default function ProductoDetallePage() {
                       });
                     }
                   }}
-                  className={`flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${
-                    producto && isInWishlist(producto.id_producto)
-                      ? "bg-red-100 text-red-600 border border-red-300 hover:bg-red-200"
-                      : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-dark dark:border-gray-600 dark:text-gray-300"
-                  }`}
+                  className="flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors"
+                  style={{
+                    backgroundColor: producto && isInWishlist(producto.id_producto) ? "#fdf7ee" : "transparent",
+                    color: producto && isInWishlist(producto.id_producto) ? "var(--bio-color-precio, #8b6914)" : "var(--bio-color-titulo, #5c3d1e)",
+                    border: "1px solid #e8dcc8",
+                  }}
                 >
                   <Heart size={20} fill={producto && isInWishlist(producto.id_producto) ? "currentColor" : "none"} />
                   {producto && isInWishlist(producto.id_producto) ? "En favoritos" : "Favoritos"}
@@ -468,11 +478,8 @@ export default function ProductoDetallePage() {
                 <button
                   onClick={handleAgregar}
                   disabled={agregado}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${
-                    agregado
-                      ? "bg-green-700 text-white"
-                      : "bg-green-600 text-white hover:bg-green-700"
-                  }`}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors text-white hover:opacity-90"
+                  style={{ backgroundColor: "var(--bio-color-boton, #5c3d1e)" }}
                 >
                   <ShoppingCart size={20} />
                   {agregado ? "Agregado" : "Agregar al carrito"}
@@ -480,7 +487,8 @@ export default function ProductoDetallePage() {
               </div>
               <button
                 onClick={handleComprarAhora}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-amber-700"
+                className="flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 font-semibold text-white transition-colors hover:opacity-90"
+                style={{ backgroundColor: "var(--bio-color-boton2, #8b6914)" }}
               >
                 <Zap size={20} />
                 Comprar ahora

@@ -196,17 +196,81 @@ export class ProductoresService {
     }
 
     if (dto.direccion_fiscal) {
-      await this.prisma.direcciones.create({
-        data: {
-          id_usuario,
-          ubicacion: (dto.direccion_fiscal.ubicacion ?? {}) as any,
-          linea_1: dto.direccion_fiscal.linea_1 ?? null,
-          linea_2: dto.direccion_fiscal.linea_2 ?? null,
-          referencia: dto.direccion_fiscal.referencia ?? null,
-          tipo: "facturacion",
-          es_internacional: dto.direccion_fiscal.es_internacional ?? false,
-        },
+      const direccionFiscalExistente = await this.prisma.direcciones.findFirst({
+        where: { id_usuario, tipo: "facturacion", eliminado_en: null },
       });
+
+      if (direccionFiscalExistente) {
+        await this.prisma.direcciones.update({
+          where: { id_direccion: direccionFiscalExistente.id_direccion },
+          data: {
+            ubicacion: (dto.direccion_fiscal.ubicacion ?? {}) as any,
+            linea_1: dto.direccion_fiscal.linea_1 ?? null,
+            linea_2: dto.direccion_fiscal.linea_2 ?? null,
+            ciudad: dto.direccion_fiscal.ciudad ?? null,
+            estado: dto.direccion_fiscal.estado ?? null,
+            codigo_postal: dto.direccion_fiscal.codigo_postal ?? null,
+            pais_iso2: dto.direccion_fiscal.pais_iso2 ?? null,
+            referencia: dto.direccion_fiscal.referencia ?? null,
+            es_internacional: dto.direccion_fiscal.es_internacional ?? false,
+          },
+        });
+      } else {
+        await this.prisma.direcciones.create({
+          data: {
+            id_usuario,
+            ubicacion: (dto.direccion_fiscal.ubicacion ?? {}) as any,
+            linea_1: dto.direccion_fiscal.linea_1 ?? null,
+            linea_2: dto.direccion_fiscal.linea_2 ?? null,
+            ciudad: dto.direccion_fiscal.ciudad ?? null,
+            estado: dto.direccion_fiscal.estado ?? null,
+            codigo_postal: dto.direccion_fiscal.codigo_postal ?? null,
+            pais_iso2: dto.direccion_fiscal.pais_iso2 ?? null,
+            referencia: dto.direccion_fiscal.referencia ?? null,
+            tipo: "facturacion",
+            es_internacional: dto.direccion_fiscal.es_internacional ?? false,
+          },
+        });
+      }
+    }
+
+    if (dto.direccion_produccion) {
+      const direccionProduccionExistente = await this.prisma.direcciones.findFirst({
+        where: { id_usuario, tipo: "produccion", eliminado_en: null },
+      });
+
+      if (direccionProduccionExistente) {
+        await this.prisma.direcciones.update({
+          where: { id_direccion: direccionProduccionExistente.id_direccion },
+          data: {
+            ubicacion: (dto.direccion_produccion.ubicacion ?? {}) as any,
+            linea_1: dto.direccion_produccion.linea_1 ?? null,
+            linea_2: dto.direccion_produccion.linea_2 ?? null,
+            ciudad: dto.direccion_produccion.ciudad ?? null,
+            estado: dto.direccion_produccion.estado ?? null,
+            codigo_postal: dto.direccion_produccion.codigo_postal ?? null,
+            pais_iso2: dto.direccion_produccion.pais_iso2 ?? null,
+            referencia: dto.direccion_produccion.referencia ?? null,
+            es_internacional: dto.direccion_produccion.es_internacional ?? false,
+          },
+        });
+      } else {
+        await this.prisma.direcciones.create({
+          data: {
+            id_usuario,
+            ubicacion: (dto.direccion_produccion.ubicacion ?? {}) as any,
+            linea_1: dto.direccion_produccion.linea_1 ?? null,
+            linea_2: dto.direccion_produccion.linea_2 ?? null,
+            ciudad: dto.direccion_produccion.ciudad ?? null,
+            estado: dto.direccion_produccion.estado ?? null,
+            codigo_postal: dto.direccion_produccion.codigo_postal ?? null,
+            pais_iso2: dto.direccion_produccion.pais_iso2 ?? null,
+            referencia: dto.direccion_produccion.referencia ?? null,
+            tipo: "produccion",
+            es_internacional: dto.direccion_produccion.es_internacional ?? false,
+          },
+        });
+      }
     }
 
     await this.notificaciones.create({

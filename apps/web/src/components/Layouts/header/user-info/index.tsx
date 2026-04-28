@@ -13,6 +13,7 @@ import { useState } from "react";
 import { LogOutIcon, SettingsIcon, UserIcon } from "./icons";
 import { useAuth } from "@/context/AuthContext";
 import { useSession, signOut } from "next-auth/react";
+import { MapPin } from "lucide-react";
 
 const ROLE_LABELS: Record<string, { label: string; className: string }> = {
   administrador: { label: "Administrador", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
@@ -146,6 +147,15 @@ export function UserInfo() {
           >
             <UserIcon />
             <span className="mr-auto text-base font-medium">Ver perfil</span>
+          </Link>
+
+          <Link
+            href="/Cliente/direcciones"
+            onClick={() => setIsOpen(false)}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
+          >
+            <MapPin className="h-5 w-5" />
+            <span className="mr-auto text-base font-medium">Mis Direcciones</span>
           </Link>
 
           <Link

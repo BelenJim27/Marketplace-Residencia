@@ -1,6 +1,6 @@
 "use client";
 
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/useMobile";
 import { createContext, useContext, useEffect, useState } from "react";
 
 type SidebarContextType = {

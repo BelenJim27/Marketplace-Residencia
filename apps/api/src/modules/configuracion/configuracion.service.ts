@@ -66,6 +66,28 @@ export class ConfiguracionService {
     return this.upsertConfigs(defaults);
   }
 
+  async seedBiocultural() {
+    const bioculturalTokens = [
+      { clave: 'bio_color_fondo', valor: '#faf8f4', tipo: 'color', descripcion: 'Fondo principal de la tienda' },
+      { clave: 'bio_color_tarjeta', valor: '#f0ebe0', tipo: 'color', descripcion: 'Fondo de tarjetas de producto' },
+      { clave: 'bio_color_titulo', valor: '#5c3d1e', tipo: 'color', descripcion: 'Color de títulos y nombres' },
+      { clave: 'bio_color_precio', valor: '#8b6914', tipo: 'color', descripcion: 'Color de precios y acento dorado' },
+      { clave: 'bio_color_boton', valor: '#5c3d1e', tipo: 'color', descripcion: 'Botón primario (Agregar al carrito)' },
+      { clave: 'bio_color_boton2', valor: '#8b6914', tipo: 'color', descripcion: 'Botón secundario (Comprar ahora)' },
+      { clave: 'bio_fuente_titulo', valor: 'Georgia, serif', tipo: 'texto', descripcion: 'Fuente de títulos de producto' },
+    ];
+    const results = [];
+    for (const config of bioculturalTokens) {
+      const result = await this.prisma.configuracion_sistema.upsert({
+        where: { clave: config.clave },
+        update: {},
+        create: { clave: config.clave, valor: config.valor, tipo: config.tipo, descripcion: config.descripcion },
+      });
+      results.push(serializeBigInts(result));
+    }
+    return results;
+  }
+
   async seedAll() {
     const results: Record<string, unknown> = {};
 

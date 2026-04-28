@@ -29,7 +29,10 @@
   },
   "dependencies": {
     "@cloudflare/next-on-pages": "^1.13.16",
+    "@nestjs/axios": "^4.0.1",
+    "@nestjs/config": "^4.0.4",
     "@prisma/client": "^5.22.0",
+    "axios": "^1.15.2",
     "jsvectormap": "^1.7.0",
     "pg": "^8.20.0"
   },

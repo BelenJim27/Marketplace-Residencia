@@ -262,7 +262,7 @@ export const api = {
     getRegiones: () => fetchJson(endpoint("/productores/regiones")),
     getMiSolicitud: (token: string) =>
       fetchJson(endpoint("/productores/mi-solicitud"), { headers: headers(token) }),
-    solicitar: (token: string, data: { id_region?: number; rfc?: string; razon_social?: string; datos_bancarios?: string; direccion_fiscal?: { linea_1?: string; linea_2?: string; referencia?: string; ubicacion?: Record<string, unknown>; es_internacional?: boolean } }) =>
+    solicitar: (token: string, data: { id_region?: number; rfc?: string; razon_social?: string; datos_bancarios?: string; direccion_fiscal?: { linea_1?: string; linea_2?: string; ciudad?: string; estado?: string; codigo_postal?: string; pais_iso2?: string; referencia?: string; ubicacion?: Record<string, unknown>; es_internacional?: boolean }; direccion_produccion?: { linea_1?: string; linea_2?: string; ciudad?: string; estado?: string; codigo_postal?: string; pais_iso2?: string; referencia?: string; ubicacion?: Record<string, unknown>; es_internacional?: boolean } }) =>
       fetchJson(endpoint("/productores/solicitar"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     getSolicitudesPendientes: (token: string) =>
       fetchJson(endpoint("/admin/productores/solicitudes"), { headers: headers(token) }),
@@ -301,6 +301,10 @@ export const api = {
       fetchJson(endpoint(`/envios/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
     delete: (token: string, id: string) =>
       fetchJson(endpoint(`/envios/${id}`), { method: "DELETE", headers: headers(token) }),
+    cotizar: (token: string, data: any) =>
+      fetchJson(endpoint("/envios/cotizar"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+    guardarCotizacion: (token: string, data: any) =>
+      fetchJson(endpoint("/envios/cotizaciones"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
   },
 
   transportistas: {
@@ -484,8 +488,9 @@ export const api = {
   },
 
   direcciones: {
-    getAll: () => fetchJson(endpoint("/direcciones")),
-    getByUsuario: (usuarioId: string) => fetchJson(endpoint(`/direcciones/${usuarioId}`)),
+    getAll: (token: string) => fetchJson(endpoint("/direcciones"), { headers: headers(token) }),
+    getByUsuario: (usuarioId: string, token: string) =>
+      fetchJson(endpoint(`/direcciones/${usuarioId}`), { headers: headers(token) }),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/direcciones"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: string, data: any) =>
@@ -508,6 +513,12 @@ export const api = {
         method: "POST",
         headers: headers(token),
         body: JSON.stringify(data),
+      }),
+    bulkUpsert: (token: string, items: { clave: string; valor: string; tipo?: string }[]) =>
+      fetchJson(endpoint("/configuracion/sistema/bulk"), {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify(items),
       }),
   },
 

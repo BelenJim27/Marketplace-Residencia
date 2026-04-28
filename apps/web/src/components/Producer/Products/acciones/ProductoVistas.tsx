@@ -2,7 +2,7 @@
 
 import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { ProductoThumbnail } from "@/components/Producer/Products/ImagenProducto";
-import type { ProductItem, StoreItem } from "@/components/Producer/Products/acciones/useProductos";
+import type { ProductItem, StoreItem } from "@/hooks/useProductos";
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 

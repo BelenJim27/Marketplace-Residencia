@@ -38,6 +38,21 @@ function applyColors(map: Record<string, string>) {
   root.style.setProperty("--color-primary-rgb", hexToRgb(primary));
   root.style.setProperty("--color-secondary-rgb", hexToRgb(secondary));
   root.style.setProperty("--color-accent-rgb", hexToRgb(accent));
+
+  // Biocultural design tokens
+  const bioKeys: Array<[string, string, string]> = [
+    ['bio_color_fondo', '--bio-color-fondo', '#faf8f4'],
+    ['bio_color_tarjeta', '--bio-color-tarjeta', '#f0ebe0'],
+    ['bio_color_titulo', '--bio-color-titulo', '#5c3d1e'],
+    ['bio_color_precio', '--bio-color-precio', '#8b6914'],
+    ['bio_color_boton', '--bio-color-boton', '#5c3d1e'],
+    ['bio_color_boton2', '--bio-color-boton2', '#8b6914'],
+    ['bio_fuente_titulo', '--bio-fuente-titulo', 'Georgia, serif'],
+  ];
+
+  bioKeys.forEach(([key, cssVar, fallback]) => {
+    root.style.setProperty(cssVar, map[key] ?? fallback);
+  });
 }
 
 export function ConfigProvider({ children }: { children: ReactNode }) {

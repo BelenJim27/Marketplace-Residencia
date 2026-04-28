@@ -1,6 +1,6 @@
 "use client";
 
-import { SidebarProvider } from "@/components/Layouts/sidebar/sidebar-context";
+import { SidebarProvider } from "@/context/SidebarContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { CarritoProvider } from "@/context/CarritoContext";
 import { WishlistProvider } from "@/context/WishlistContext";
