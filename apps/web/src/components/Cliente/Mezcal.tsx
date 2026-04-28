@@ -5,7 +5,7 @@ export default function SobreElMezcal() {
     <section
       id="inicio"
       className="w-full py-24 px-6"
-      style={{ background: "rgba(60, 28, 8, 0.50)" }}
+      style={{ background: "transparent" }}
     >
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
         <div className="flex flex-col justify-center space-y-4">
@@ -18,8 +18,8 @@ export default function SobreElMezcal() {
           ].map((texto, i) => (
             <p
               key={i}
-              className="text-lg leading-relaxed text-center md:text-left"
-              style={{ fontFamily: "Georgia, serif", fontStyle: "italic", color: "#f0ddb8" }}
+              className="text-lg leading-relaxed text-center md:text-left italic text-[#3c1c08] dark:text-white transition-colors duration-300"
+              style={{ fontFamily: "Georgia, serif" }}
             >
               {texto}
             </p>

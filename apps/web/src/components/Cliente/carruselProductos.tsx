@@ -123,7 +123,7 @@ export default function CarruselProductos() {
     <section
       id="productos"
       className="w-full py-20 px-8 relative"
-      style={{ background: "rgba(60, 28, 8, 0.50)" }}
+      style={{ background: "transparent" }}
       onMouseEnter={() => setSectionHover(true)}
       onMouseLeave={() => setSectionHover(false)}
     >
@@ -131,12 +131,11 @@ export default function CarruselProductos() {
         <button
           key={dir}
           onClick={() => handleGo(dir === "left" ? actual - 1 : actual + 1)}
-          className="absolute top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300"
+          className="absolute top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 text-[#8b4513]"
           style={{
             ...(dir === "left" ? { left: "12px" } : { right: "12px" }),
-            border: "1.5px solid #c8a97a",
-            background: "rgba(60, 25, 5, 0.75)",
-            color: "#e8c87a",
+            border: "1.5px solid #8b4513",
+            background: "rgba(139,69,19,0.12)",
             opacity: sectionHover ? 1 : 0,
             backdropFilter: "blur(4px)",
           }}
@@ -153,16 +152,15 @@ export default function CarruselProductos() {
           onMouseEnter={() => setImageHover(true)}
           onMouseLeave={() => setImageHover(false)}
         >
-          <div className="absolute w-72 h-72 rounded-full" style={{ background: "rgba(90, 45, 10, 0.5)" }} />
+          <div className="absolute w-72 h-72 rounded-full" style={{ background: "rgba(139, 69, 19, 0.08)" }} />
 
-          {producto.anotaciones.map((a: { texto: string; posicion: string }, i: number) => (
+          {producto.anotaciones.map((a, i) => (
+            /* ✅ color movido a className */
             <p
               key={i}
-              className={`absolute ${a.posicion} text-xs leading-snug z-10 max-w-[150px]`}
+              className={`absolute ${a.posicion} text-xs leading-snug z-10 max-w-[150px] italic text-[#5c2a0a] dark:text-[#c8a97a] transition-colors duration-300`}
               style={{
                 fontFamily: "Georgia, serif",
-                fontStyle: "italic",
-                color: "#e8d0a0",
                 opacity: imageHover && visible ? 1 : 0,
                 transform: imageHover ? "translateY(0)" : "translateY(6px)",
                 transition: `opacity 0.4s ease ${i * 0.08}s, transform 0.4s ease ${i * 0.08}s`,
@@ -175,7 +173,7 @@ export default function CarruselProductos() {
           <div
             className="relative z-20 w-56 h-56 rounded-full overflow-hidden cursor-pointer"
             style={{
-              boxShadow: "0 8px 40px rgba(200,100,20,0.35)",
+              boxShadow: "0 8px 40px rgba(139,69,19,0.25)",
               opacity: visible ? 1 : 0,
               transition: "opacity 0.3s ease",
             }}
@@ -185,19 +183,20 @@ export default function CarruselProductos() {
         </div>
 
         <div className="space-y-5" style={{ opacity: visible ? 1 : 0, transition: "opacity 0.3s ease" }}>
+          {/* ✅ color movido a className */}
           <h2
-            className="font-bold leading-none"
-            style={{ fontFamily: "Georgia, serif", color: "#f0d090", fontSize: "clamp(42px,6vw,64px)" }}
+            className="font-bold leading-none text-[#5c2a0a] dark:text-white transition-colors duration-300"
+            style={{ fontFamily: "Georgia, serif", fontSize: "clamp(42px,6vw,64px)" }}
           >
             {producto.nombre}
           </h2>
 
+          {/* ✅ color movido a className */}
           <p
-            className="text-lg leading-relaxed italic"
+            className="text-lg leading-relaxed italic text-[#7a4020] dark:text-[#c8a97a] transition-colors duration-300"
             style={{
               fontFamily: "Georgia, serif",
-              color: "#d4b080",
-              borderLeft: "2px solid #c8a97a",
+              borderLeft: "2px solid #8b4513",
               paddingLeft: "14px",
             }}
           >
@@ -205,7 +204,8 @@ export default function CarruselProductos() {
           </p>
 
           <div className="pt-2 space-y-2">
-            <h3 className="text-[10px] font-bold tracking-widest uppercase" style={{ color: "#c8a97a" }}>
+            {/* ✅ color movido a className */}
+            <h3 className="text-[10px] font-bold tracking-widest uppercase text-[#8b4513] dark:text-[#c8a97a] transition-colors duration-300">
               Notas de cata
             </h3>
             {(
@@ -215,8 +215,15 @@ export default function CarruselProductos() {
                 ["Boca", producto.notas.boca],
               ] as [string, string][]
             ).map(([key, val]) => (
-              <p key={key} className="text-sm pb-2" style={{ color: "#d4b890", borderBottom: "1px solid rgba(200,169,122,0.3)" }}>
-                <span className="font-bold" style={{ color: "#e8c87a" }}>{key}: </span>
+              /* ✅ colores movidos a className */
+              <p
+                key={key}
+                className="text-sm pb-2 text-[#5c3018] dark:text-white/80 transition-colors duration-300"
+                style={{ borderBottom: "1px solid rgba(139,69,19,0.2)" }}
+              >
+                <span className="font-bold text-[#8b4513] dark:text-[#c8a97a] transition-colors duration-300">
+                  {key}:{" "}
+                </span>
                 {val}
               </p>
             ))}
@@ -230,15 +237,15 @@ export default function CarruselProductos() {
                 className="h-2 rounded-full border-none"
                 style={{
                   width: i === actual ? "24px" : "8px",
-                  background: i === actual ? "#e8a030" : "rgba(200,169,122,0.4)",
+                  background: i === actual ? "#8b4513" : "rgba(139,69,19,0.3)",
                   transition: "all 0.3s ease",
                 }}
               />
             ))}
           </div>
 
-          <div className="h-px rounded-full overflow-hidden" style={{ background: "rgba(200,169,122,0.2)" }}>
-            <div ref={progressRef} style={{ height: "100%", background: "#c8a97a", width: "0%" }} />
+          <div className="h-px rounded-full overflow-hidden" style={{ background: "rgba(139,69,19,0.15)" }}>
+            <div ref={progressRef} style={{ height: "100%", background: "#8b4513", width: "0%" }} />
           </div>
         </div>
       </div>

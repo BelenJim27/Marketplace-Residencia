@@ -33,7 +33,7 @@ export default function RolesPage() {
       setLoading(true);
       const token = getToken();
       if (!token) throw new Error("No hay sesión activa");
-      const data = await api.roles.getAll();
+        const data = await api.roles.getAll(token);
       setRoles(data as Rol[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar roles");

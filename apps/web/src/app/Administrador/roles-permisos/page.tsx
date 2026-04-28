@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Loader2, Plus, Pencil, Trash2, Shield, Key, User, X, Check, UserPlus } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Shield, Key, User, X, Check, UserPlus, Filter } from "lucide-react";
 import { getCookie } from "@/lib/cookies";
 
 interface Permiso { id_permiso: number; nombre: string }
@@ -24,6 +24,9 @@ export default function RolesPermisosPage() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
   const [tab, setTab]           = useState<"roles" | "permisos" | "usuarios">("roles");
+
+  // ── Filtro de usuarios ───────────────────────────────────────────────────────
+  const [rolFilter, setRolFilter] = useState<string>("todos");
 
   const [showModalRol, setShowModalRol]           = useState(false);
   const [showModalPermiso, setShowModalPermiso]   = useState(false);
@@ -69,7 +72,6 @@ export default function RolesPermisosPage() {
     finally { setLoading(false); }
   };
 
-  // ── Rol handlers ────────────────────────────────────────────────────────────
   const handleCreateRol = async (e: React.FormEvent) => {
     e.preventDefault();
     try { setSaving(true); const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.roles.create(token, { nombre: formDataRol.nombre }); setShowModalRol(false); setFormDataRol({ nombre: "" }); fetchData(); }
@@ -88,7 +90,6 @@ export default function RolesPermisosPage() {
     catch (err) { setError(err instanceof Error ? err.message : "Error al eliminar"); }
   };
 
-  // ── Permiso handlers ─────────────────────────────────────────────────────────
   const handleCreatePermiso = async (e: React.FormEvent) => {
     e.preventDefault();
     try { setSaving(true); const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.permisos.create(token, { nombre: formDataPermiso.nombre }); setShowModalPermiso(false); setFormDataPermiso({ nombre: "" }); fetchData(); }
@@ -107,7 +108,6 @@ export default function RolesPermisosPage() {
     catch (err) { setError(err instanceof Error ? err.message : "Error al eliminar"); }
   };
 
-  // ── Permisos-Rol handlers ────────────────────────────────────────────────────
   const openAsignarPermisos = (rol: Rol) => {
     setSelectedRol(rol); setSelectedPermisos(rol.rol_permiso?.map((rp) => rp.permisos.id_permiso) || []); setSelectAllPermisos(false); setShowModalPermisosRol(true);
   };
@@ -125,7 +125,6 @@ export default function RolesPermisosPage() {
     finally { setSaving(false); }
   };
 
-  // ── Usuario-roles handlers ───────────────────────────────────────────────────
   const openAsignarRoles = (usuario: Usuario) => {
     setSelectedUser(usuario); setSelectedUserRoles(usuario.usuario_rol?.filter((ur) => ur.estado === "activo").map((ur) => ur.id_rol) || []); setShowModalAsignarRoles(true);
   };
@@ -142,7 +141,6 @@ export default function RolesPermisosPage() {
     finally { setSaving(false); }
   };
 
-  // ── Usuario CRUD handlers ────────────────────────────────────────────────────
   const handleCreateUsuario = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -181,7 +179,22 @@ export default function RolesPermisosPage() {
   };
   const getUserRoles = (u: Usuario) => u.usuario_rol?.filter((ur) => ur.estado === "activo").map((ur) => ur.roles?.nombre) || [];
 
-  // ── Shared classes ───────────────────────────────────────────────────────────
+  // ── Lógica de filtrado ───────────────────────────────────────────────────────
+  const usuariosFiltrados = usuarios.filter((u) => {
+    if (rolFilter === "todos") return true;
+    if (rolFilter === "sin_rol") return getUserRoles(u).length === 0;
+    return getUserRoles(u).some((r) => r?.toLowerCase() === rolFilter.toLowerCase());
+  });
+
+  // Conteos para los badges del filtro
+  const conteos: Record<string, number> = {
+    todos: usuarios.length,
+    administrador: usuarios.filter((u) => getUserRoles(u).some((r) => r?.toLowerCase() === "administrador" || r?.toLowerCase() === "admin")).length,
+    cliente: usuarios.filter((u) => getUserRoles(u).some((r) => r?.toLowerCase() === "cliente")).length,
+    productor: usuarios.filter((u) => getUserRoles(u).some((r) => r?.toLowerCase() === "productor")).length,
+    sin_rol: usuarios.filter((u) => getUserRoles(u).length === 0).length,
+  };
+
   const inputCls      = "w-full rounded-xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-3 text-slate-800 dark:text-white p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 placeholder-gray-400 dark:placeholder-dark-6";
   const labelCls      = "mb-2 block text-sm font-medium text-slate-700 dark:text-dark-7";
   const modalWrapCls  = "fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4";
@@ -216,9 +229,9 @@ export default function RolesPermisosPage() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${tab === key ? "bg-white dark:bg-dark-2 text-green-700 dark:text-green-400 shadow-sm" : "text-gray-500 dark:text-dark-6 hover:text-gray-700 dark:hover:text-white"}`}
+            className={`flex flex-1 items-center justify-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors ${tab === key ? "bg-white dark:bg-dark-2 text-green-700 dark:text-green-400 shadow-sm" : "text-gray-500 dark:text-dark-6 hover:text-gray-700 dark:hover:text-white"}`}
           >
-            <Icon size={18} /> {label}
+            <Icon size={16} /> {label}
           </button>
         ))}
       </div>
@@ -227,11 +240,15 @@ export default function RolesPermisosPage() {
       {tab === "roles" && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <button onClick={() => { setEditingRol(null); setFormDataRol({ nombre: "" }); setShowModalRol(true); }} className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700">
+            <button
+              onClick={() => { setEditingRol(null); setFormDataRol({ nombre: "" }); setShowModalRol(true); }}
+              className="flex items-center gap-2 rounded-xl bg-green-600 px-4 sm:px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700"
+            >
               <Plus size={18} /> Nuevo Rol
             </button>
           </div>
-          <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2">
+
+          <div className="hidden md:block overflow-hidden rounded-2xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2">
             <table className="w-full border-collapse text-left">
               <thead className="border-b border-gray-100 dark:border-dark-3 bg-gray-50/50 dark:bg-dark-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-dark-6">
                 <tr>
@@ -269,6 +286,32 @@ export default function RolesPermisosPage() {
               </tbody>
             </table>
           </div>
+
+          <div className="md:hidden space-y-3">
+            {roles.map((rol) => (
+              <div key={rol.id_rol} className="rounded-2xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <span className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-sm font-semibold ${getRoleColor(rol.nombre)}`}>
+                    <Shield size={14} className="mr-2" />{rol.nombre}
+                  </span>
+                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${rol.estado === "activo" ? "border-green-100 bg-green-50 text-green-700" : "border-gray-100 dark:border-dark-3 bg-gray-50 dark:bg-dark-3 text-gray-500 dark:text-dark-6"}`}>
+                    {rol.estado}
+                  </span>
+                </div>
+                <div className="mb-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-dark-6 mb-2">Permisos</p>
+                  <div className="flex flex-wrap gap-1">
+                    {rol.rol_permiso?.length ? rol.rol_permiso.map((rp, i) => <span key={i} className="rounded-full bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">{rp.permisos.nombre}</span>) : <span className="text-sm text-gray-400 dark:text-dark-6">Sin permisos</span>}
+                  </div>
+                </div>
+                <div className="flex gap-2 border-t border-gray-100 dark:border-dark-3 pt-3">
+                  <button onClick={() => openAsignarPermisos(rol)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 dark:border-dark-3 py-2 text-xs font-medium text-slate-600 dark:text-dark-6 transition-colors hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"><Key size={14} /> Permisos</button>
+                  <button onClick={() => { setEditingRol(rol); setFormDataRol({ nombre: rol.nombre }); setShowModalRol(true); }} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 dark:border-dark-3 py-2 text-xs font-medium text-slate-600 dark:text-dark-6 transition-colors hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"><Pencil size={14} /> Editar</button>
+                  <button onClick={() => handleDeleteRol(rol.id_rol)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 dark:border-dark-3 py-2 text-xs font-medium text-slate-600 dark:text-dark-6 transition-colors hover:bg-red-50 hover:text-red-600 hover:border-red-200"><Trash2 size={14} /> Eliminar</button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -280,7 +323,7 @@ export default function RolesPermisosPage() {
               <Plus size={18} /> Nuevo Permiso
             </button>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {permisos.map((permiso) => (
               <div key={permiso.id_permiso} className="group rounded-2xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2 p-5 transition-shadow hover:shadow-md">
                 <div className="flex items-start justify-between">
@@ -301,44 +344,116 @@ export default function RolesPermisosPage() {
       {/* ── USUARIOS TAB ── */}
       {tab === "usuarios" && (
         <div className="space-y-4">
-          <div className="flex justify-end">
+
+          {/* Header con botón */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-dark-6">
+              <Filter size={15} />
+              <span>{usuariosFiltrados.length} usuario{usuariosFiltrados.length !== 1 ? "s" : ""}</span>
+            </div>
             <button onClick={() => setShowModalUsuario(true)} className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700">
               <UserPlus size={18} /> Nuevo Usuario
             </button>
           </div>
-          <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2">
+
+          {/* ── Filtros por rol ── */}
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: "todos",         label: "Todos",          color: "bg-gray-100 dark:bg-dark-3 text-gray-700 dark:text-white border-gray-200 dark:border-dark-3",                     activeColor: "bg-slate-800 dark:bg-white text-white dark:text-slate-800 border-slate-800 dark:border-white" },
+              { key: "administrador", label: "Administrador",  color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800", activeColor: "bg-indigo-600 text-white border-indigo-600" },
+              { key: "cliente",       label: "Cliente",        color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-800",       activeColor: "bg-green-600 text-white border-green-600" },
+              { key: "productor",     label: "Productor",      color: "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800",       activeColor: "bg-amber-500 text-white border-amber-500" },
+              { key: "sin_rol",       label: "Sin rol",        color: "bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 border-red-100 dark:border-red-800",                   activeColor: "bg-red-500 text-white border-red-500" },
+            ].map(({ key, label, color, activeColor }) => (
+              <button
+                key={key}
+                onClick={() => setRolFilter(key)}
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${rolFilter === key ? activeColor : color}`}
+              >
+                {label}
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${rolFilter === key ? "bg-white/20" : "bg-black/10 dark:bg-white/10"}`}>
+                  {conteos[key] ?? 0}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Tabla desktop */}
+          <div className="hidden md:block overflow-hidden rounded-2xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2">
             <table className="w-full border-collapse text-left">
               <thead className="border-b border-gray-100 dark:border-dark-3 bg-gray-50/50 dark:bg-dark-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-dark-6">
                 <tr>
-                  <th className="px-6 py-4">Usuario</th><th className="px-6 py-4">Email</th><th className="px-6 py-4">Roles</th><th className="px-6 py-4">Fecha Registro</th><th className="px-6 py-4 text-right">Acciones</th>
+                  <th className="px-6 py-4">Usuario</th>
+                  <th className="px-6 py-4">Email</th>
+                  <th className="px-6 py-4">Roles</th>
+                  <th className="px-6 py-4">Fecha Registro</th>
+                  <th className="px-6 py-4 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-dark-3">
-                {usuarios.map((usuario) => (
-                  <tr key={usuario.id_usuario} className="transition-colors hover:bg-gray-50/50 dark:hover:bg-dark-3/50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-xs font-bold text-green-700 dark:text-green-400">{usuario.nombre?.charAt(0).toUpperCase()}</div>
-                        <span className="font-medium text-slate-800 dark:text-white">{usuario.nombre}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-dark-6">{usuario.email}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {getUserRoles(usuario).length > 0 ? getUserRoles(usuario).map((rol, i) => <span key={i} className="rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-400">{rol}</span>) : <span className="text-sm text-gray-400 dark:text-dark-6">Sin roles</span>}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-dark-6">{usuario.fecha_registro ? new Date(usuario.fecha_registro).toLocaleDateString("es-MX") : "-"}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => handleEditUsuario(usuario)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"><Pencil size={16} /></button>
-                        <button onClick={() => openAsignarRoles(usuario)}  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-green-50 hover:text-green-600"><Shield size={16} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {usuariosFiltrados.length === 0 ? (
+                  <tr><td colSpan={5} className="p-10 text-center text-sm text-gray-400 dark:text-dark-6">No hay usuarios con este tipo de rol.</td></tr>
+                ) : (
+                  usuariosFiltrados.map((usuario) => (
+                    <tr key={usuario.id_usuario} className="transition-colors hover:bg-gray-50/50 dark:hover:bg-dark-3/50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-xs font-bold text-green-700 dark:text-green-400">{usuario.nombre?.charAt(0).toUpperCase()}</div>
+                          <span className="font-medium text-slate-800 dark:text-white">{usuario.nombre}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-dark-6">{usuario.email}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {getUserRoles(usuario).length > 0 ? getUserRoles(usuario).map((rol, i) => <span key={i} className="rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-400">{rol}</span>) : <span className="text-sm text-gray-400 dark:text-dark-6">Sin roles</span>}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-dark-6">{usuario.fecha_registro ? new Date(usuario.fecha_registro).toLocaleDateString("es-MX") : "-"}</td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => handleEditUsuario(usuario)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"><Pencil size={16} /></button>
+                          <button onClick={() => openAsignarRoles(usuario)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-green-50 hover:text-green-600"><Shield size={16} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
+          </div>
+
+          {/* Cards mobile */}
+          <div className="md:hidden space-y-3">
+            {usuariosFiltrados.length === 0 ? (
+              <div className="rounded-2xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2 p-8 text-center text-sm text-gray-400 dark:text-dark-6">
+                No hay usuarios con este tipo de rol.
+              </div>
+            ) : (
+              usuariosFiltrados.map((usuario) => (
+                <div key={usuario.id_usuario} className="rounded-2xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2 p-4 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-sm font-bold text-green-700 dark:text-green-400">
+                      {usuario.nombre?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-800 dark:text-white text-sm">{usuario.nombre}</p>
+                      <p className="text-xs text-gray-500 dark:text-dark-6">{usuario.email}</p>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-dark-6 mb-1.5">Roles</p>
+                    <div className="flex flex-wrap gap-1">
+                      {getUserRoles(usuario).length > 0 ? getUserRoles(usuario).map((rol, i) => <span key={i} className="rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-400">{rol}</span>) : <span className="text-xs text-gray-400 dark:text-dark-6">Sin roles</span>}
+                    </div>
+                  </div>
+                  {usuario.fecha_registro && <p className="text-xs text-gray-400 dark:text-dark-6 mb-3">Registrado: {new Date(usuario.fecha_registro).toLocaleDateString("es-MX")}</p>}
+                  <div className="flex gap-2 border-t border-gray-100 dark:border-dark-3 pt-3">
+                    <button onClick={() => handleEditUsuario(usuario)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 dark:border-dark-3 py-2 text-xs font-medium text-slate-600 dark:text-dark-6 transition-colors hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"><Pencil size={14} /> Editar</button>
+                    <button onClick={() => openAsignarRoles(usuario)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 dark:border-dark-3 py-2 text-xs font-medium text-slate-600 dark:text-dark-6 transition-colors hover:bg-green-50 hover:text-green-600 hover:border-green-200"><Shield size={14} /> Roles</button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

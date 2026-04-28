@@ -64,7 +64,7 @@ export default function SolicitarPage() {
 
         // Obtener token (con retry si es necesario)
         let token = (session as any)?.accessToken || getCookie("token");
-        
+
         // Si no hay token inmediatamente, esperar un poco (race condition al guardar cookies)
         if (!token) {
           await new Promise(resolve => setTimeout(resolve, 300));
@@ -209,19 +209,19 @@ export default function SolicitarPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     setCertificadoFile(file);
     setUploading(true);
     setError("");
-    
+
     try {
       const token = (session as any)?.accessToken || getCookie("token");
-      
+
       if (!token) {
         setError("Error: No se detectó sesión. Por favor inicia sesión.");
         return;
       }
-      
+
       const formDataUpload = new FormData();
       formDataUpload.append("archivo", file);
       formDataUpload.append("entidad_tipo", "productor_certificado");
@@ -303,7 +303,7 @@ export default function SolicitarPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8">
       <Breadcrumb pageName="Solicitar ser Productor" />
-      
+
       <div className="mt-6 rounded-xl bg-white p-6 shadow-1 dark:bg-gray-dark sm:p-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-dark dark:text-white">
@@ -327,9 +327,23 @@ export default function SolicitarPage() {
               <Building2 className="h-5 w-5" />
               Datos Fiscales
             </h3>
-            
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
+
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Razón Social
+                </label>
+                <input
+                  type="text"
+                  name="razon_social"
+                  value={formData.razon_social}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="Mi Empresa S.A. de C.V."
+                />
+              </div>
+
+              <div className="w-44">
                 <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
                   RFC
                 </label>
@@ -343,20 +357,6 @@ export default function SolicitarPage() {
                   placeholder="XAXX010101000"
                 />
               </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                  Razón Social
-                </label>
-                <input
-                  type="text"
-                  name="razon_social"
-                  value={formData.razon_social}
-                  onChange={handleInputChange}
-                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
-                  placeholder="Mi Empresa S.A. de C.V."
-                />
-              </div>
             </div>
           </div>
 
@@ -365,7 +365,7 @@ export default function SolicitarPage() {
               <MapPin className="h-5 w-5" />
               Dirección Fiscal
             </h3>
-            
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
@@ -431,7 +431,7 @@ export default function SolicitarPage() {
               <CreditCard className="h-5 w-5" />
               Datos Bancarios (para pagos)
             </h3>
-            
+
             <div>
               <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
                 Datos de cuenta bancaria (número de cuenta o CLABE)

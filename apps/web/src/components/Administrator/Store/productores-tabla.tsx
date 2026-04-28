@@ -20,7 +20,7 @@ export function ProductoresTabla() {
   const [statusFilter, setStatusFilter] = useState("");
   const [idFilter, setIdFilter] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [activeMode, setActiveMode] = useState<"create" | "edit" | "view" | null>(null);
+  const [activeMode, setActiveMode] = useState<"view" | null>(null);
   const [selectedProductor, setSelectedProductor] = useState<ProductorAdmin | null>(null);
   const [deleting, setDeleting] = useState<ProductorAdmin | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -99,9 +99,9 @@ export function ProductoresTabla() {
     }
   }
 
-  function openModal(mode: "create" | "edit" | "view", productor?: ProductorAdmin) {
-    setSelectedProductor(productor ?? null);
-    setActiveMode(mode);
+  function openModal(productor: ProductorAdmin) {
+    setSelectedProductor(productor);
+    setActiveMode("view");
   }
   function closeModal() { setActiveMode(null); setSelectedProductor(null); }
 
@@ -110,19 +110,10 @@ export function ProductoresTabla() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Gestión de Productores</h1>
-          <p className="mt-0.5 text-sm text-gray-500 dark:text-dark-6">Administra productores y el estado operativo.</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => openModal("create")}
-          className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700"
-        >
-          <Plus className="h-4 w-4" /> Nuevo Productor
-        </button>
+      {/* Header — sin botón "Nuevo Productor" */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Gestión de Productores</h1>
+        <p className="mt-0.5 text-sm text-gray-500 dark:text-dark-6">Administra productores y el estado operativo.</p>
       </div>
 
       {/* Notice */}
@@ -198,7 +189,7 @@ export function ProductoresTabla() {
                     <td className="p-4 text-sm text-slate-600 dark:text-dark-6 text-center">{p.tienda ?? "—"}</td>
                     <td className="p-4 text-center"><StatusBadge status={p.status} /></td>
                     <td className="p-4">
-                      {/* Eliminada la opacidad 0 inicial y el hover condicional */}
+                      {/* Sin botón Editar */}
                       <div className="flex justify-center gap-2 transition-opacity">
                         <Link
                           href={`/dashboard/admin/productores/${p.id}/productos`}
@@ -206,8 +197,7 @@ export function ProductoresTabla() {
                         >
                           Ver productos
                         </Link>
-                        <ActionButton label="Ver"     onClick={() => openModal("view", p)}><Eye     className="h-4 w-4" /></ActionButton>
-                        <ActionButton label="Editar"   onClick={() => openModal("edit", p)}><Edit2   className="h-4 w-4" /></ActionButton>
+                        <ActionButton label="Ver" onClick={() => openModal(p)}><Eye className="h-4 w-4" /></ActionButton>
                         <ActionButton label="Eliminar" danger onClick={() => setDeleting(p)}><Trash2 className="h-4 w-4" /></ActionButton>
                       </div>
                     </td>
@@ -220,13 +210,13 @@ export function ProductoresTabla() {
       </div>
 
       <ProductoresForm
-        mode={activeMode ?? "create"}
+        mode={activeMode ?? "view"}
         open={activeMode !== null}
         productor={selectedProductor}
         onClose={closeModal}
         onError={(message) => setNotice({ type: "error", message })}
         onSaved={(saved, message) => {
-          setProductores((c) => activeMode === "create" ? [saved, ...c] : c.map((p) => (p.id === saved.id ? saved : p)));
+          setProductores((c) => c.map((p) => (p.id === saved.id ? saved : p)));
           setNotice({ type: "success", message });
         }}
       />
@@ -284,7 +274,6 @@ function ActionButton({ children, label, danger = false, onClick }: { children: 
       type="button"
       title={label}
       onClick={onClick}
-      // Cambiado slate-400 por slate-500 para mayor visibilidad fija
       className={`rounded-lg p-2 transition-colors ${danger ? "text-slate-500 hover:bg-red-50 hover:text-red-600" : "text-slate-500 hover:bg-green-50 hover:text-green-700"}`}
     >
       {children}

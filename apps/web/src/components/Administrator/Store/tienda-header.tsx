@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ShoppingCart, Package, User, UserPlus, Heart, Store, Home } from "lucide-react";
 import { UserInfo } from "@/components/Layouts/header/user-info";
+import { ThemeToggleSwitch } from "@/components/Layouts/header/theme-toggle"; // ✅ Importado
 import { useAuth } from "@/context/AuthContext";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -45,7 +46,6 @@ export function TiendaHeader() {
     }
   };
 
-  // ✅ Ícono de inicio reutilizable
   const HomeIcon = () => (
     <Link
       href="/Cliente/inicio"
@@ -77,7 +77,6 @@ export function TiendaHeader() {
       <nav className="flex items-center gap-6">
         {isClient ? (
           <>
-            {/* ✅ Inicio */}
             <HomeIcon />
 
             <button
@@ -122,11 +121,11 @@ export function TiendaHeader() {
               <span className="hidden sm:inline text-xs">Vender</span>
             </button>
 
+            <ThemeToggleSwitch /> {/* ✅ Botón Agregado */}
             <UserInfo />
           </>
         ) : isAuthenticated ? (
           <>
-            {/* ✅ Inicio */}
             <HomeIcon />
 
             <button
@@ -153,11 +152,11 @@ export function TiendaHeader() {
               <span className="hidden sm:inline text-xs">Vender</span>
             </button>
 
+            <ThemeToggleSwitch /> {/* ✅ Botón Agregado */}
             <UserInfo />
           </>
         ) : (
           <>
-            {/* ✅ Inicio */}
             <HomeIcon />
 
             <button
@@ -167,6 +166,8 @@ export function TiendaHeader() {
               <Store size={24} />
               <span className="hidden sm:inline text-xs">Vender</span>
             </button>
+
+            <ThemeToggleSwitch /> {/* ✅ Botón Agregado */}
 
             <div className="relative">
               <button

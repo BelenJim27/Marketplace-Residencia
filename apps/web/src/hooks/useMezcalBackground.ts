@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, MutableRefObject } from 'react';
+import { useTheme } from 'next-themes'; // ✅ Importante para detectar el cambio
 
 interface Particle {
   x: number;
@@ -11,7 +12,7 @@ interface Particle {
   drift: number;
   wobble: number;
   wobbleSpeed: number;
-  type: 'smoke' | 'ember' | 'spark';
+  type: 'dust' | 'sparkle';
 }
 
 interface AgaveShape {
@@ -21,13 +22,14 @@ interface AgaveShape {
   opacity: number;
 }
 
-export function useMezcalBackground(canvasRef: MutableRefObject<HTMLCanvasElement>): void {
+export function useMezcalBackground(canvasRef: MutableRefObject<HTMLCanvasElement | null>): void {
   const animRef = useRef<number | null>(null);
+  const { resolvedTheme } = useTheme(); // ✅ Detecta si es 'dark' o 'light'
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     let particles: Particle[] = [];
@@ -35,60 +37,61 @@ export function useMezcalBackground(canvasRef: MutableRefObject<HTMLCanvasElemen
     let width = 0;
     let height = 0;
 
+    // ─── CONFIGURACIÓN DE COLORES DINÁMICOS ──────────────────────────────────
+    const isDark = resolvedTheme === 'dark';
+    
+    // Fondo: Beige arena (#F2E8DF) para claro, Gris casi negro (#0B0B0B) para oscuro
+    const backgroundColor = isDark ? '#0B0B0B' : '#F2E8DF'; 
+    const dustColor = isDark ? '#4A4A4A' : '#8B7D77';
+    const agaveBaseColor = isDark ? '#142d0a' : '#2a5c14';
+    const agaveStrokeColor = isDark ? '#0d1f07' : '#1e4410';
+
     function resize(): void {
+      if (!canvas) return;
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
       initAgaves();
+      if (particles.length === 0) initParticles();
     }
 
     function createParticle(fromBottom = false): Particle {
-      const rand = Math.random();
+      const isSparkle = Math.random() > 0.4;
       return {
         x: Math.random() * width,
-        y: fromBottom ? height + Math.random() * 50 : Math.random() * height,
-        size: Math.random() * 4 + 0.8,
-        speed: Math.random() * 0.5 + 0.15,
-        opacity: Math.random() * 0.75 + 0.2,
-        drift: (Math.random() - 0.5) * 0.3,
+        y: fromBottom ? height + 20 : Math.random() * height,
+        size: isSparkle ? Math.random() * 2.5 + 1.5 : Math.random() * 1.2 + 0.5,
+        speed: isSparkle ? Math.random() * 0.6 + 0.3 : Math.random() * 0.3 + 0.1,
+        opacity: Math.random() * 0.7 + 0.3,
+        drift: (Math.random() - 0.5) * 0.4,
         wobble: Math.random() * Math.PI * 2,
-        wobbleSpeed: (Math.random() - 0.5) * 0.018,
-        type: rand > 0.75 ? 'ember' : rand > 0.55 ? 'spark' : 'smoke',
+        wobbleSpeed: (Math.random() - 0.5) * 0.02,
+        type: isSparkle ? 'sparkle' : 'dust',
       };
     }
 
-    function initParticles(count = 160): void {
-      particles = Array.from({ length: count }, () => createParticle());
+    function initParticles(): void {
+      particles = Array.from({ length: 90 }, () => createParticle());
     }
 
     function initAgaves(): void {
-      // Agaves en la parte inferior de la ventana visible, pero también en los lados
       agaveShapes = [
-        // Izquierda — muy al borde, grandes
-        { x: -20,          y: height,        scale: 2.4,  opacity: 1.0 },
-        { x: width * 0.10, y: height,        scale: 1.6,  opacity: 0.90 },
-        // Derecha — muy al borde, grandes
-        { x: width + 20,   y: height,        scale: 2.4,  opacity: 1.0 },
-        { x: width * 0.90, y: height,        scale: 1.6,  opacity: 0.90 },
-        // Centro — más pequeños y semitransparentes
-        { x: width * 0.50, y: height,        scale: 1.0,  opacity: 0.55 },
-        { x: width * 0.28, y: height,        scale: 0.85, opacity: 0.50 },
-        { x: width * 0.72, y: height,        scale: 0.85, opacity: 0.50 },
+        { x: width * 0.02,  y: height, scale: 1.6,  opacity: isDark ? 0.40 : 0.70 },
+        { x: width * 0.13,  y: height, scale: 1.0,  opacity: isDark ? 0.35 : 0.55 },
+        { x: width * 0.87,  y: height, scale: 1.3,  opacity: isDark ? 0.38 : 0.65 },
+        { x: width * 0.98,  y: height, scale: 0.95, opacity: isDark ? 0.30 : 0.50 },
+        { x: width * 0.48,  y: height, scale: 0.75, opacity: isDark ? 0.20 : 0.35 },
+        { x: width * 0.25,  y: height, scale: 0.65, opacity: isDark ? 0.15 : 0.30 },
+        { x: width * 0.72,  y: height, scale: 0.70, opacity: isDark ? 0.18 : 0.32 },
       ];
     }
 
     function drawAgave(x: number, y: number, scale: number, opacity: number): void {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(scale, scale);
-      ctx.globalAlpha = opacity;
+      ctx!.save();
+      ctx!.translate(x, y);
+      ctx!.scale(scale, scale);
+      ctx!.globalAlpha = opacity;
 
-      const leaves: Array<{
-        angleDeg: number;
-        length: number;
-        baseWidth: number;
-        curve: number;
-        droop: number;
-      }> = [
+      const leaves = [
         { angleDeg: -90,  length: 130, baseWidth: 14, curve:   0, droop:  10 },
         { angleDeg: -82,  length: 120, baseWidth: 12, curve:   8, droop:  15 },
         { angleDeg: -98,  length: 120, baseWidth: 12, curve:  -8, droop:  15 },
@@ -108,139 +111,101 @@ export function useMezcalBackground(canvasRef: MutableRefObject<HTMLCanvasElemen
         const rad = (leaf.angleDeg * Math.PI) / 180;
         const cos = Math.cos(rad);
         const sin = Math.sin(rad);
-        const tipX  = cos * leaf.length + leaf.curve;
-        const tipY  = sin * leaf.length + leaf.droop;
-        const cpX   = cos * leaf.length * 0.55 + leaf.curve * 0.7;
-        const cpY   = sin * leaf.length * 0.55 + leaf.droop * 0.4;
+        const tipX = cos * leaf.length + leaf.curve;
+        const tipY = sin * leaf.length + leaf.droop;
+        const cpX = cos * leaf.length * 0.55 + leaf.curve * 0.7;
+        const cpY = sin * leaf.length * 0.55 + leaf.droop * 0.4;
         const perpX = -sin;
         const perpY =  cos;
-        const hw    = leaf.baseWidth / 2;
+        const hw = leaf.baseWidth / 2;
 
-        ctx.beginPath();
-        ctx.moveTo(perpX * hw, perpY * hw);
-        ctx.quadraticCurveTo(cpX + perpX * (hw * 0.3), cpY + perpY * (hw * 0.3), tipX, tipY);
-        ctx.quadraticCurveTo(cpX - perpX * (hw * 0.3), cpY - perpY * (hw * 0.3), -perpX * hw, -perpY * hw);
-        ctx.closePath();
-        const grad = ctx.createLinearGradient(0, 0, tipX, tipY);
-        grad.addColorStop(0,   '#2a5c14');
-        grad.addColorStop(0.4, '#4a9628');
-        grad.addColorStop(1,   '#3a7520');
-        ctx.fillStyle = grad;
-        ctx.fill();
+        ctx!.beginPath();
+        ctx!.moveTo(perpX * hw, perpY * hw);
+        ctx!.quadraticCurveTo(cpX + perpX * (hw * 0.3), cpY + perpY * (hw * 0.3), tipX, tipY);
+        ctx!.quadraticCurveTo(cpX - perpX * (hw * 0.3), cpY - perpY * (hw * 0.3), -perpX * hw, -perpY * hw);
+        ctx!.closePath();
 
-        ctx.beginPath();
-        ctx.moveTo(perpX * hw, perpY * hw);
-        ctx.quadraticCurveTo(cpX + perpX * (hw * 0.3), cpY + perpY * (hw * 0.3), tipX, tipY);
-        ctx.quadraticCurveTo(cpX - perpX * (hw * 0.3), cpY - perpY * (hw * 0.3), -perpX * hw, -perpY * hw);
-        ctx.closePath();
-        ctx.strokeStyle = '#1e4410';
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
+        const grad = ctx!.createLinearGradient(0, 0, tipX, tipY);
+        grad.addColorStop(0, agaveBaseColor);
+        grad.addColorStop(0.4, isDark ? '#3a7a20' : '#4a9628');
+        grad.addColorStop(1, isDark ? '#2a5c14' : '#3a7520');
+        ctx!.fillStyle = grad;
+        ctx!.fill();
 
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.quadraticCurveTo(cpX * 0.85, cpY * 0.85, tipX * 0.9, tipY * 0.9);
-        ctx.strokeStyle = '#7dc840';
-        ctx.lineWidth = 1.2;
-        ctx.lineCap = 'round';
-        ctx.stroke();
+        ctx!.beginPath();
+        ctx!.moveTo(perpX * hw, perpY * hw);
+        ctx!.quadraticCurveTo(cpX + perpX * (hw * 0.3), cpY + perpY * (hw * 0.3), tipX, tipY);
+        ctx!.quadraticCurveTo(cpX - perpX * (hw * 0.3), cpY - perpY * (hw * 0.3), -perpX * hw, -perpY * hw);
+        ctx!.closePath();
+        ctx!.strokeStyle = agaveStrokeColor;
+        ctx!.lineWidth = 0.8;
+        ctx!.stroke();
 
-        ctx.beginPath();
-        ctx.arc(tipX, tipY, 2, 0, Math.PI * 2);
-        ctx.fillStyle = '#c8a060';
-        ctx.fill();
+        // Línea central de la penca
+        ctx!.beginPath();
+        ctx!.moveTo(0, 0);
+        ctx!.quadraticCurveTo(cpX * 0.85, cpY * 0.85, tipX * 0.9, tipY * 0.9);
+        ctx!.strokeStyle = isDark ? '#4a7a20' : '#7dc840';
+        ctx!.lineWidth = 1.2;
+        ctx!.stroke();
+
+        // Espina del ápice
+        ctx!.beginPath();
+        ctx!.arc(tipX, tipY, 2, 0, Math.PI * 2);
+        ctx!.fillStyle = isDark ? '#8b5a2b' : '#c8a060';
+        ctx!.fill();
       }
 
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 18, 10, 0, 0, Math.PI * 2);
-      ctx.fillStyle = '#1e3d0e';
-      ctx.fill();
-      ctx.strokeStyle = '#4a7a20';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      ctx.restore();
+      // Centro del Agave
+      ctx!.beginPath();
+      ctx!.ellipse(0, 0, 18, 10, 0, 0, Math.PI * 2);
+      ctx!.fillStyle = isDark ? '#0d1a06' : '#1e3d0e';
+      ctx!.fill();
+      ctx!.restore();
     }
 
     function drawParticle(p: Particle): void {
-      ctx.save();
-      ctx.globalAlpha = p.opacity;
-      if (p.type === 'ember') {
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2.2);
-        grad.addColorStop(0,   'rgba(255, 210, 80, 1)');
-        grad.addColorStop(0.5, 'rgba(255, 110, 20, 0.95)');
-        grad.addColorStop(1,   'rgba(220, 50, 0, 0)');
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * 2.2, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-      } else if (p.type === 'spark') {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * 0.6, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 240, 140, 1)';
-        ctx.shadowBlur = 14;
-        ctx.shadowColor = 'rgba(255, 180, 30, 1)';
-        ctx.fill();
+      ctx!.save();
+      if (p.type === 'sparkle') {
+        ctx!.shadowBlur = isDark ? 20 : 15;
+        ctx!.shadowColor = '#e63946';
+        ctx!.globalAlpha = isDark ? p.opacity : p.opacity * 0.8;
+        const pGrad = ctx!.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+        pGrad.addColorStop(0, '#fff');
+        pGrad.addColorStop(0.3, isDark ? '#ffca3a' : '#ffb703');
+        pGrad.addColorStop(1, '#e63946');
+        ctx!.fillStyle = pGrad;
+        ctx!.beginPath();
+        ctx!.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx!.fill();
       } else {
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
-        grad.addColorStop(0,   'rgba(200, 120, 50, 0.5)');
-        grad.addColorStop(0.5, 'rgba(160, 90, 30, 0.25)');
-        grad.addColorStop(1,   'rgba(120, 60, 10, 0)');
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
+        ctx!.globalAlpha = isDark ? p.opacity * 0.4 : p.opacity * 0.2;
+        ctx!.fillStyle = dustColor;
+        ctx!.beginPath();
+        ctx!.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx!.fill();
       }
-      ctx.restore();
-    }
-
-    function drawBackground(): void {
-      const grad = ctx.createLinearGradient(0, 0, 0, height);
-      grad.addColorStop(0,    '#5c3018');
-      grad.addColorStop(0.3,  '#8a5028');
-      grad.addColorStop(0.65, '#b87040');
-      grad.addColorStop(1,    '#e8a060');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, width, height);
-
-      const glow = ctx.createRadialGradient(width * 0.5, height, 0, width * 0.5, height, width * 0.6);
-      glow.addColorStop(0,   'rgba(210, 100, 20, 0.35)');
-      glow.addColorStop(0.5, 'rgba(170, 70, 10, 0.15)');
-      glow.addColorStop(1,   'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, width, height);
-    }
-
-    function drawStars(): void {
-      const starPositions: [number, number][] = [
-        [0.10, 0.04], [0.25, 0.02], [0.40, 0.06], [0.55, 0.01],
-        [0.70, 0.05], [0.85, 0.03], [0.15, 0.10], [0.60, 0.08],
-        [0.90, 0.07], [0.35, 0.13], [0.78, 0.11], [0.05, 0.09],
-        [0.92, 0.14], [0.48, 0.04], [0.33, 0.07],
-      ];
-      const now = Date.now() * 0.001;
-      starPositions.forEach(([sx, sy], i) => {
-        const twinkle = 0.4 + Math.sin(now * 1.5 + i * 1.7) * 0.35;
-        ctx.beginPath();
-        ctx.arc(sx * width, sy * height, 1.2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 235, 180, ${twinkle})`;
-        ctx.fill();
-      });
+      ctx!.restore();
     }
 
     function animate(): void {
-      ctx.clearRect(0, 0, width, height);
-      drawBackground();
-      drawStars();
+      ctx!.clearRect(0, 0, width, height);
+      
+      // ✅ FONDO DINÁMICO
+      ctx!.fillStyle = backgroundColor; 
+      ctx!.fillRect(0, 0, width, height);
+
       agaveShapes.forEach(a => drawAgave(a.x, a.y, a.scale, a.opacity));
 
       particles.forEach((p, i) => {
         p.wobble += p.wobbleSpeed;
-        p.x += p.drift + Math.sin(p.wobble) * 0.18;
+        p.x += p.drift + Math.sin(p.wobble) * 0.3;
         p.y -= p.speed;
-        const progress = 1 - p.y / height;
-        if (progress > 0.75) p.opacity *= 0.985;
-        if (p.y < -20 || p.opacity < 0.01) particles[i] = createParticle(true);
+
+        if (p.y < -20) {
+          particles[i] = createParticle(true);
+        }
+        
         drawParticle(p);
       });
 
@@ -248,13 +213,13 @@ export function useMezcalBackground(canvasRef: MutableRefObject<HTMLCanvasElemen
     }
 
     resize();
-    initParticles();
     animate();
+
     window.addEventListener('resize', resize);
 
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
       window.removeEventListener('resize', resize);
     };
-  }, [canvasRef]);
+  }, [canvasRef, resolvedTheme]); // ✅ Se vuelve a ejecutar cuando el tema cambia
 }

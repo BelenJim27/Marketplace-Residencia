@@ -106,20 +106,23 @@ export default function ConoceMas() {
 
   return (
     <section
-      className="w-full py-20 px-6"
-      style={{ background: "rgba(60, 28, 8, 0.50)" }}
+      className="w-full py-20 px-6 transition-colors duration-500"
+      style={{ background: "transparent" }}
     >
       <div className="max-w-6xl mx-auto">
+        {/* ✅ color movido a className */}
         <h2
-          className="text-center text-4xl mb-12"
-          style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontStyle: "italic" }}
+          className="text-center text-4xl mb-12 italic text-[#8b4513] dark:text-white transition-colors duration-300"
+          style={{ fontFamily: "Georgia, serif" }}
         >
           Conoce más de nuestros productos
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div className="relative rounded-3xl overflow-hidden h-80 md:h-96 shadow-lg group"
-            style={{ boxShadow: "0 8px 40px rgba(200,100,20,0.25)" }}>
+          <div
+            className="relative rounded-3xl overflow-hidden h-80 md:h-96 shadow-lg group"
+            style={{ boxShadow: "0 8px 40px rgba(200,100,20,0.25)" }}
+          >
             <img
               src={slide.imagen}
               alt={`Slide ${actual + 1}`}
@@ -134,7 +137,7 @@ export default function ConoceMas() {
             <button
               onClick={() => handleGo(actual - 1)}
               className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
-              style={{ background: "rgba(50,22,5,0.85)", border: "1.5px solid #c8a97a", color: "#e8c060" }}
+              style={{ background: "rgba(139,69,19,0.15)", border: "1.5px solid #8b4513", color: "#8b4513" }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6" />
@@ -168,12 +171,18 @@ export default function ConoceMas() {
                     transition: `opacity 0.35s ease ${i * 0.07}s, transform 0.35s ease ${i * 0.07}s`,
                   }}
                 >
-                  <div className="w-36 h-36 rounded-full overflow-hidden flex-shrink-0"
-                    style={{ border: "3px solid rgba(200,169,122,0.5)", boxShadow: "0 4px 20px rgba(200,100,20,0.3)" }}>
+                  <div
+                    className="w-36 h-36 rounded-full overflow-hidden flex-shrink-0"
+                    style={{ border: "3px solid rgba(200,169,122,0.5)", boxShadow: "0 4px 20px rgba(200,100,20,0.3)" }}
+                  >
                     <img src={item.imagen} alt={item.etiqueta || `Imagen ${i + 1}`} className="w-full h-full object-cover" />
                   </div>
                   {item.etiqueta && (
-                    <p className="text-sm italic text-center" style={{ fontFamily: "Georgia, serif", color: "#d4b080" }}>
+                    /* ✅ color movido a className */
+                    <p
+                      className="text-sm italic text-center text-[#d4b080] dark:text-[#e8c060] transition-colors duration-300"
+                      style={{ fontFamily: "Georgia, serif" }}
+                    >
                       {item.etiqueta}
                     </p>
                   )}
@@ -187,26 +196,19 @@ export default function ConoceMas() {
                   <button
                     key={i}
                     onClick={() => handleGo(i)}
-                    className="h-2 rounded-full border-none"
+                    className="h-2 rounded-full border-none transition-all duration-300"
                     style={{
                       width: i === actual ? "24px" : "8px",
-                      background: i === actual ? "#e8a030" : "rgba(200,169,122,0.35)",
-                      transition: "all 0.3s ease",
+                      background: i === actual ? "#8b4513" : "rgba(139,69,19,0.3)",
                     }}
                   />
                 ))}
               </div>
 
               <button
-                className="px-8 py-3 rounded-full font-semibold transition-all hover:opacity-90"
-                style={{
-                  background: "rgba(139,105,20,0.9)",
-                  color: "#f5e8c0",
-                  fontFamily: "Georgia, serif",
-                  border: "1px solid #c8a97a",
-                  boxShadow: "0 4px 20px rgba(200,100,20,0.3)",
-                }}
-                onClick={() => router.push("/productos")}
+                className="px-8 py-3 rounded-full font-semibold transition-all hover:opacity-90 bg-[#8b4513] dark:bg-[#5c2a0a] text-[#FFF8E7] dark:text-white"
+                style={{ border: "1px solid #a0522d" }}
+                onClick={() => router.push("/Cliente/producto")}
               >
                 Ver más
               </button>
