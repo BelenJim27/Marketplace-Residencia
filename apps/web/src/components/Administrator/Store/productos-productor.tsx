@@ -1,7 +1,7 @@
 "use client";
 
 import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
@@ -92,23 +92,20 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
 
   const token = getCookie("token") ?? "";
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/productos?id_productor=${idProductor}`);
-      if (!response.ok) {
-        const payload = await response
-          .json()
-          .catch(() => ({ message: "No fue posible cargar los productos del productor." }));
-        throw new Error(payload.message || "No fue posible cargar los productos del productor.");
-      }
-      const data = await response.json();
+      console.log("Loading productos for productor:", idProductor, "with token:", token);
+      const data = await api.productos.getByProductor(idProductor, token);
+      console.log("Productos data received:", data);
       const normalized = Array.isArray(data)
         ? data.map((item) => normalizeProduct(item as ProductItem))
         : [];
+      console.log("Productos normalized:", normalized);
       setProducts(normalized);
     } catch (err) {
+      console.error("Error loading productos:", err);
       setError(
         err instanceof Error
           ? err.message
@@ -117,11 +114,11 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [idProductor, token]);
 
   useEffect(() => {
     void loadProducts();
-  }, [idProductor]);
+  }, [loadProducts]);
 
   const activeCount = useMemo(
     () => products.filter((p) => String(p.status).toLowerCase() === "activo").length,

@@ -286,6 +286,16 @@ const productoInclude = {
       stock: true,
     },
   },
+  producto_imagenes: {
+    select: {
+      url: true,
+      orden: true,
+      es_principal: true,
+    },
+    orderBy: {
+      orden: "asc" as const,
+    },
+  },
   categorias_productos: {
     include: {
       categorias: {
@@ -297,9 +307,22 @@ const productoInclude = {
   },
   lotes: {
     select: {
+      id_productor: true,
       datos_api: true,
+      codigo_lote: true,
+      sitio: true,
+      grado_alcohol: true,
+      nombre_comun: true,
+      nombre_cientifico: true,
+      unidades: true,
+      fecha_elaboracion: true,
+      estado_lote: true,
+      descripcion: true,
+      marca: true,
       productores: {
         select: {
+          biografia: true,
+          otras_caracteristicas: true,
           usuarios: {
             select: {
               nombre: true,
@@ -314,6 +337,12 @@ const productoInclude = {
   tiendas: {
     select: {
       nombre: true,
+      descripcion: true,
+      ciudad_origen: true,
+      estado_origen: true,
+      pais_operacion: true,
+      nombre_contacto: true,
+      telefono_contacto: true,
       productores: {
         select: {
           usuarios: {
@@ -336,20 +365,7 @@ type UsuarioNombre = {
 } | null;
 
 type ProductoWithRelations = {
-  imagen_principal_url?: string | null;
-  inventario?: Array<{ stock?: number | null }>;
-  categorias_productos?: Array<{ categorias?: { nombre?: string | null } }>;
-  lotes?: {
-    productores?: {
-      usuarios?: UsuarioNombre;
-    } | null;
-  } | null;
-  tiendas?: {
-    nombre?: string | null;
-    productores?: {
-      usuarios?: UsuarioNombre;
-    } | null;
-  } | null;
+  [key: string]: any;
 };
 
 // FIX: Build full name joining nombre + apellido_paterno + apellido_materno
@@ -365,8 +381,8 @@ function getCategorias(item: ProductoWithRelations): string[] {
   const cats = item.categorias_productos;
   if (!cats || cats.length === 0) return [];
   return cats
-    .map((cp) => cp.categorias?.nombre)
-    .filter((n): n is string => !!n);
+    .map((cp: any) => cp.categorias?.nombre)
+    .filter((n: string | undefined): n is string => !!n);
 }
 
 function mapProductoResponse<
