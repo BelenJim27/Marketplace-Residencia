@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
+import { useLocale } from "@/context/LocaleContext";
 interface ScrollRevealProps {
   children: React.ReactNode;
   className?: string;

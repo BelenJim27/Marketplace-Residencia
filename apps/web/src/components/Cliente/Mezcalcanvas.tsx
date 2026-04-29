@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { useMezcalBackground } from '@/hooks/useMezcalBackground';
-
+import { useLocale } from "@/context/LocaleContext";
 export default function MezcalCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null!);
   useMezcalBackground(canvasRef);

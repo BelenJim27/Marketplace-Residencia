@@ -5,16 +5,19 @@ import Link from "next/link";
 import { useState } from "react";
 import { ShoppingCart, Package, User, UserPlus, Heart, Store, Home } from "lucide-react";
 import { UserInfo } from "@/components/Layouts/header/user-info";
-import { ThemeToggleSwitch } from "@/components/Layouts/header/theme-toggle"; // ✅ Importado
+import { ThemeToggleSwitch } from "@/components/Layouts/header/theme-toggle";
 import { useAuth } from "@/context/AuthContext";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useRouter } from "next/navigation";
+import LanguageSwitcher from "@/components/Layouts/LanguageSwitcher";
+import { useLocale } from "@/context/LocaleContext"; // Importamos el hook
 
 export function TiendaHeader() {
   const { user, isAuthenticated, isAdmin, isProductor } = useAuth();
   const { cantidadTotal } = useCarrito();
   const { cantidadTotal: wishlistCount } = useWishlist();
+  const { t } = useLocale(); // Extraemos la función de traducción 't'
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const router = useRouter();
 
@@ -52,7 +55,7 @@ export function TiendaHeader() {
       className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
     >
       <Home size={24} />
-      <span className="hidden sm:inline text-xs">Inicio</span>
+      <span className="hidden sm:inline text-xs">{t("Inicio")}</span>
     </Link>
   );
 
@@ -84,7 +87,7 @@ export function TiendaHeader() {
               className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
               <Package size={24} />
-              <span className="hidden sm:inline text-xs">Mis compras</span>
+              <span className="hidden sm:inline text-xs">{t("Mis compras")}</span>
             </button>
 
             <Link
@@ -92,7 +95,7 @@ export function TiendaHeader() {
               className="relative flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
               <Heart size={24} />
-              <span className="hidden sm:inline text-xs">Favoritos</span>
+              <span className="hidden sm:inline text-xs">{t("Favoritos")}</span>
               {wishlistCount > 0 && (
                 <span className="absolute top-0 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                   {wishlistCount > 9 ? "9+" : wishlistCount}
@@ -105,7 +108,7 @@ export function TiendaHeader() {
               className="relative flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
               <ShoppingCart size={24} />
-              <span className="hidden sm:inline text-xs">Carrito</span>
+              <span className="hidden sm:inline text-xs">{t("Carrito")}</span>
               {cantidadTotal > 0 && (
                 <span className="absolute top-0 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                   {cantidadTotal > 9 ? "9+" : cantidadTotal}
@@ -118,10 +121,11 @@ export function TiendaHeader() {
               className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
               <Store size={24} />
-              <span className="hidden sm:inline text-xs">Vender</span>
+              <span className="hidden sm:inline text-xs">{t("Vender")}</span>
             </button>
 
-            <ThemeToggleSwitch /> {/* ✅ Botón Agregado */}
+            <ThemeToggleSwitch />
+            <LanguageSwitcher />
             <UserInfo />
           </>
         ) : isAuthenticated ? (
@@ -133,7 +137,7 @@ export function TiendaHeader() {
               className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
               <Package size={24} />
-              <span className="hidden sm:inline text-xs">Mis compras</span>
+              <span className="hidden sm:inline text-xs">{t("Mis compras")}</span>
             </button>
 
             <button
@@ -141,7 +145,7 @@ export function TiendaHeader() {
               className="relative flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
               <ShoppingCart size={24} />
-              <span className="hidden sm:inline text-xs">Carrito</span>
+              <span className="hidden sm:inline text-xs">{t("Carrito")}</span>
             </button>
 
             <button
@@ -149,10 +153,11 @@ export function TiendaHeader() {
               className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
               <Store size={24} />
-              <span className="hidden sm:inline text-xs">Vender</span>
+              <span className="hidden sm:inline text-xs">{t("Vender")}</span>
             </button>
 
-            <ThemeToggleSwitch /> {/* ✅ Botón Agregado */}
+            <ThemeToggleSwitch />
+            <LanguageSwitcher />
             <UserInfo />
           </>
         ) : (
@@ -164,18 +169,18 @@ export function TiendaHeader() {
               className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
               <Store size={24} />
-              <span className="hidden sm:inline text-xs">Vender</span>
+              <span className="hidden sm:inline text-xs">{t("Vender")}</span>
             </button>
 
-            <ThemeToggleSwitch /> {/* ✅ Botón Agregado */}
-
+            <ThemeToggleSwitch />
+            <LanguageSwitcher />
             <div className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
               >
                 <User size={24} />
-                <span className="hidden sm:inline text-xs">Perfil</span>
+                <span className="hidden sm:inline text-xs">{t("Perfil")}</span>
               </button>
 
               {showProfileMenu && (
@@ -187,7 +192,7 @@ export function TiendaHeader() {
                   >
                     <div className="flex items-center gap-2">
                       <User size={16} />
-                      <span>Ingresar</span>
+                      <span>{t("Ingresar")}</span>
                     </div>
                   </Link>
                   <Link
@@ -197,7 +202,7 @@ export function TiendaHeader() {
                   >
                     <div className="flex items-center gap-2">
                       <UserPlus size={16} />
-                      <span>Crear cuenta</span>
+                      <span>{t("Crear cuenta")}</span>
                     </div>
                   </Link>
                 </div>

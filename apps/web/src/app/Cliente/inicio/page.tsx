@@ -1,4 +1,4 @@
-'use client';
+/* 'use client';
 
 import MezcalCanvas from '@/components/Cliente/Mezcalcanvas';
 import HeroSection from '@/components/Cliente/HeroSection';
@@ -41,5 +41,17 @@ export default function InicioPage() {
         </div>
       </ScrollReveal>
     </div>
+  );
+}*/
+
+
+// web/app/Cliente/inicio/page.tsx
+import SegundaOpcion from "@/components/Cliente/SegundaOpcion";
+
+export default function Page() {
+  return (
+    <main>
+      <SegundaOpcion />
+    </main>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useLocale } from "@/context/LocaleContext";
 
 interface Producto {
   id: number;
@@ -71,6 +72,9 @@ export default function CarruselProductos() {
   const [imageHover, setImageHover] = useState<boolean>(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const progressRef = useRef<HTMLDivElement | null>(null);
+
+  // Extraemos la función de traducción
+  const { t } = useLocale();
 
   const producto = PRODUCTOS[actual];
 
@@ -155,7 +159,6 @@ export default function CarruselProductos() {
           <div className="absolute w-72 h-72 rounded-full" style={{ background: "rgba(139, 69, 19, 0.08)" }} />
 
           {producto.anotaciones.map((a, i) => (
-            /* ✅ color movido a className */
             <p
               key={i}
               className={`absolute ${a.posicion} text-xs leading-snug z-10 max-w-[150px] italic text-[#5c2a0a] dark:text-[#c8a97a] transition-colors duration-300`}
@@ -166,7 +169,7 @@ export default function CarruselProductos() {
                 transition: `opacity 0.4s ease ${i * 0.08}s, transform 0.4s ease ${i * 0.08}s`,
               }}
             >
-              {a.texto}
+              {t(a.texto)}
             </p>
           ))}
 
@@ -178,20 +181,18 @@ export default function CarruselProductos() {
               transition: "opacity 0.3s ease",
             }}
           >
-            <img src={producto.imagen} alt={producto.nombre} className="w-full h-full object-cover" />
+            <img src={producto.imagen} alt={t(producto.nombre)} className="w-full h-full object-cover" />
           </div>
         </div>
 
         <div className="space-y-5" style={{ opacity: visible ? 1 : 0, transition: "opacity 0.3s ease" }}>
-          {/* ✅ color movido a className */}
           <h2
             className="font-bold leading-none text-[#5c2a0a] dark:text-white transition-colors duration-300"
             style={{ fontFamily: "Georgia, serif", fontSize: "clamp(42px,6vw,64px)" }}
           >
-            {producto.nombre}
+            {t(producto.nombre)}
           </h2>
 
-          {/* ✅ color movido a className */}
           <p
             className="text-lg leading-relaxed italic text-[#7a4020] dark:text-[#c8a97a] transition-colors duration-300"
             style={{
@@ -200,13 +201,13 @@ export default function CarruselProductos() {
               paddingLeft: "14px",
             }}
           >
-            &ldquo;{producto.subtitulo}&rdquo;
+            &ldquo;{t(producto.subtitulo)}&rdquo;
           </p>
 
           <div className="pt-2 space-y-2">
-            {/* ✅ color movido a className */}
             <h3 className="text-[10px] font-bold tracking-widest uppercase text-[#8b4513] dark:text-[#c8a97a] transition-colors duration-300">
-              Notas de cata
+
+              {t("Notas de cata")}
             </h3>
             {(
               [
@@ -215,16 +216,15 @@ export default function CarruselProductos() {
                 ["Boca", producto.notas.boca],
               ] as [string, string][]
             ).map(([key, val]) => (
-              /* ✅ colores movidos a className */
               <p
                 key={key}
                 className="text-sm pb-2 text-[#5c3018] dark:text-white/80 transition-colors duration-300"
                 style={{ borderBottom: "1px solid rgba(139,69,19,0.2)" }}
               >
                 <span className="font-bold text-[#8b4513] dark:text-[#c8a97a] transition-colors duration-300">
-                  {key}:{" "}
+                  {t(key)}:{" "}
                 </span>
-                {val}
+                {t(val)}
               </p>
             ))}
           </div>

@@ -8,6 +8,7 @@ import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
 import { AlertCircle, CheckCircle2, Loader2, UploadIcon, Building2, MapPin, CreditCard } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+import { useLocale } from "@/context/LocaleContext";
 
 interface Region {
   id_region: number;
@@ -191,6 +192,12 @@ export default function SolicitarPage() {
                     direccion_estado: "",
                     datos_bancarios: "",
                     id_region: null,
+                    // ← estos son los que faltan:
+                    produccion_calle: "",
+                    produccion_ciudad: "",
+                    produccion_estado: "",
+                    produccion_cp: "",
+                    produccion_referencia: "",
                   });
                 }}
                 className="rounded-lg bg-primary px-6 py-3 font-medium text-white hover:bg-opacity-90"

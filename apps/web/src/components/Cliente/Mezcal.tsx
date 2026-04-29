@@ -1,6 +1,9 @@
 "use client";
+import { useLocale } from "@/context/LocaleContext";
 
 export default function SobreElMezcal() {
+  const { t } = useLocale(); // Extraemos la función de traducción
+
   return (
     <section
       id="inicio"
@@ -21,17 +24,30 @@ export default function SobreElMezcal() {
               className="text-lg leading-relaxed text-center md:text-left italic text-[#3c1c08] dark:text-white transition-colors duration-300"
               style={{ fontFamily: "Georgia, serif" }}
             >
-              {texto}
+              {t(texto)}
             </p>
           ))}
         </div>
+        
         <div className="grid grid-cols-3 grid-rows-3 gap-2 h-80 md:h-96">
-          <div className="col-span-1 row-span-2 rounded-xl overflow-hidden"><img src="/fotos/22.jpeg" alt="Mezcal 1" className="w-full h-full object-cover" /></div>
-          <div className="col-span-2 row-span-1 rounded-xl overflow-hidden"><img src="/fotos/24.jpeg" alt="Mezcal 2" className="w-full h-full object-cover" /></div>
-          <div className="col-span-1 row-span-1 rounded-xl overflow-hidden"><img src="/fotos/20.jpeg" alt="Mezcal 3" className="w-full h-full object-cover" /></div>
-          <div className="col-span-1 row-span-1 rounded-xl overflow-hidden"><img src="/fotos/16.jpg" alt="Mezcal 4" className="w-full h-full object-cover" /></div>
-          <div className="col-span-2 row-span-1 rounded-xl overflow-hidden"><img src="/fotos/15.jpg" alt="Mezcal 5" className="w-full h-full object-cover" /></div>
-          <div className="col-span-1 row-span-1 rounded-xl overflow-hidden"><img src="/fotos/5.jpg" alt="Mezcal 6" className="w-full h-full object-cover" /></div>
+          <div className="col-span-1 row-span-2 rounded-xl overflow-hidden">
+            <img src="/fotos/22.jpeg" alt={t("Mezcal 1")} className="w-full h-full object-cover" />
+          </div>
+          <div className="col-span-2 row-span-1 rounded-xl overflow-hidden">
+            <img src="/fotos/24.jpeg" alt={t("Mezcal 2")} className="w-full h-full object-cover" />
+          </div>
+          <div className="col-span-1 row-span-1 rounded-xl overflow-hidden">
+            <img src="/fotos/20.jpeg" alt={t("Mezcal 3")} className="w-full h-full object-cover" />
+          </div>
+          <div className="col-span-1 row-span-1 rounded-xl overflow-hidden">
+            <img src="/fotos/16.jpg" alt={t("Mezcal 4")} className="w-full h-full object-cover" />
+          </div>
+          <div className="col-span-2 row-span-1 rounded-xl overflow-hidden">
+            <img src="/fotos/15.jpg" alt={t("Mezcal 5")} className="w-full h-full object-cover" />
+          </div>
+          <div className="col-span-1 row-span-1 rounded-xl overflow-hidden">
+            <img src="/fotos/5.jpg" alt={t("Mezcal 6")} className="w-full h-full object-cover" />
+          </div>
         </div>
       </div>
     </section>

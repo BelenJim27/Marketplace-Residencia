@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale } from "@/context/LocaleContext";
 
 interface Slide {
   id: number;
@@ -56,6 +57,9 @@ export default function ConoceMas() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const progressRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
+  
+  // Extraemos 't' del contexto de idioma
+  const { t } = useLocale();
 
   const slide = SLIDES[actual];
 
@@ -110,12 +114,12 @@ export default function ConoceMas() {
       style={{ background: "transparent" }}
     >
       <div className="max-w-6xl mx-auto">
-        {/* ✅ color movido a className */}
         <h2
           className="text-center text-4xl mb-12 italic text-[#8b4513] dark:text-white transition-colors duration-300"
           style={{ fontFamily: "Georgia, serif" }}
         >
-          Conoce más de nuestros productos
+          {/*  Traducimos el título */}
+          {t("Conoce más de nuestros productos")}
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -175,15 +179,15 @@ export default function ConoceMas() {
                     className="w-36 h-36 rounded-full overflow-hidden flex-shrink-0"
                     style={{ border: "3px solid rgba(200,169,122,0.5)", boxShadow: "0 4px 20px rgba(200,100,20,0.3)" }}
                   >
-                    <img src={item.imagen} alt={item.etiqueta || `Imagen ${i + 1}`} className="w-full h-full object-cover" />
+                    <img src={item.imagen} alt={item.etiqueta ? t(item.etiqueta) : `Imagen ${i + 1}`} className="w-full h-full object-cover" />
                   </div>
                   {item.etiqueta && (
-                    /* ✅ color movido a className */
                     <p
                       className="text-sm italic text-center text-[#d4b080] dark:text-[#e8c060] transition-colors duration-300"
                       style={{ fontFamily: "Georgia, serif" }}
                     >
-                      {item.etiqueta}
+                      {/*  Traducimos la etiqueta dinámica */}
+                      {t(item.etiqueta)}
                     </p>
                   )}
                 </div>
@@ -210,7 +214,8 @@ export default function ConoceMas() {
                 style={{ border: "1px solid #a0522d" }}
                 onClick={() => router.push("/Cliente/producto")}
               >
-                Ver más
+                {/* Traducimos el botón */}
+                {t("Ver más")}
               </button>
             </div>
           </div>

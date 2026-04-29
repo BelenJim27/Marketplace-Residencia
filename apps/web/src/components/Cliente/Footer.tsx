@@ -1,6 +1,9 @@
 "use client";
+import { useLocale } from "@/context/LocaleContext";
 
 export default function Footer() {
+  const { t } = useLocale();
+
   return (
     <footer
       className="w-full py-16 px-8"
@@ -13,27 +16,30 @@ export default function Footer() {
 
         <div className="space-y-3">
           <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "18px" }}>
-            Guardianas del Mezcal
+            {t("Guardianas del Mezcal")}
           </h3>
           <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", color: "#c8a97a", fontSize: "14px", lineHeight: "1.7" }}>
-            Honrrando la tierra, el fuego y las manos que transforman el agave en espíritu puro.
-            Distribuimos el mejor mezcal artesanal de México
+            {t("Honrando la tierra, el fuego y las manos que transforman el agave en espíritu puro. Distribuimos el mejor mezcal artesanal de México")}
           </p>
         </div>
 
         <div className="space-y-3">
           <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "18px" }}>
-            Explorar
+            {t("Explorar")}
           </h3>
           <ul className="space-y-2">
-            {["Mestras mezcaleras", "Historia", "Nuestro proceso"].map((item) => (
+            {[
+              "Maestras mezcaleras", 
+              "Historia", 
+              "Nuestro proceso"
+            ].map((item) => (
               <li key={item}>
                 <a
                   href="#"
                   style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "14px", textDecoration: "none" }}
                   className="hover:opacity-75 transition-opacity"
                 >
-                  {item}
+                  {t(item)}
                 </a>
               </li>
             ))}
@@ -42,7 +48,7 @@ export default function Footer() {
 
         <div className="space-y-3">
           <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "18px" }}>
-            Contacto
+            {t("Contacto")}
           </h3>
           <ul className="space-y-2">
             {[
@@ -51,7 +57,8 @@ export default function Footer() {
               "Santa Maria Zaquiltán, Oaxaca, México",
             ].map((item) => (
               <li key={item} style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "14px" }}>
-                {item}
+
+                {t(item)}
               </li>
             ))}
           </ul>
@@ -63,10 +70,10 @@ export default function Footer() {
         style={{ borderTop: "1px solid rgba(200,169,122,0.15)" }}
       >
         <p style={{ color: "#8a6a3a", fontSize: "12px", fontFamily: "Georgia, serif" }}>
-          2026 Guardianas de mezcal. Todos los derechos reservados.
+          2026 {t("Guardianas de mezcal. Todos los derechos reservados.")}
         </p>
         <a href="#" style={{ color: "#8a6a3a", fontSize: "12px", fontFamily: "Georgia, serif" }}>
-          Términos y condiciones
+          {t("Términos y condiciones")}
         </a>
       </div>
     </footer>
