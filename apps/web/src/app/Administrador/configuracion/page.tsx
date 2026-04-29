@@ -4,6 +4,7 @@ import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { useAuth } from "@/context/AuthContext";
 import { useConfig } from "@/context/ConfigContext";
 import { api } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
 import { useState, useEffect } from "react";
 import { Save, RotateCcw } from "lucide-react";
 
@@ -30,8 +31,9 @@ const DEFAULT_CONFIG = {
 };
 
 export default function ConfiguracionPage() {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { config, refreshAndUpdate } = useConfig();
+  const token = getCookie("token");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);

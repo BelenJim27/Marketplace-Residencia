@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap } from "lucide-react";
 import { api } from "@/lib/api";
@@ -9,23 +10,27 @@ import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/format-number";
-import { useDHLShipping, DHLServiceType } from "@/hooks/useDHLShipping";
+import { useDHLShipping } from "@/hooks/useDHLShipping";
 
 interface LoteData {
   datos_api?: Record<string, string>;
+  codigo_lote?: string;
+  sitio?: string;
+  grado_alcohol?: number;
+  nombre_comun?: string;
+  nombre_cientifico?: string;
+  unidades?: number;
+  fecha_elaboracion?: string;
+  estado_lote?: string;
+  descripcion?: string;
+  marca?: string;
   productores?: {
     usuarios?: {
       nombre: string;
     };
     biografia?: string;
-    ubicacion?: string;
+    otras_caracteristicas?: string;
   };
-  codigo_lote?: string;
-  sitio?: string;
-  region?: string;
-  grado_alcohol?: number;
-  nombre_comun?: string;
-  nombre_cientifico?: string;
 }
 
 interface Producto {
@@ -54,6 +59,17 @@ interface Producto {
   nombre_cientifico?: string;
   lotes?: LoteData;
   nombre_productor?: string;
+  categorias?: string[];
+  nombre_tienda?: string;
+  tiendas?: {
+    nombre?: string;
+    descripcion?: string;
+    ciudad_origen?: string;
+    estado_origen?: string;
+    pais_operacion?: string;
+    nombre_contacto?: string;
+    telefono_contacto?: string;
+  };
 }
 
 export default function ProductoDetallePage() {
@@ -69,9 +85,7 @@ export default function ProductoDetallePage() {
   const [imagenSeleccionada, setImagenSeleccionada] = useState(0);
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
-  const [envioSeleccionado, setEnvioSeleccionado] = useState<DHLServiceType>("estandar");
   const { cotizarTodos } = useDHLShipping();
-  const [cotizacionesDHL, setCotizacionesDHL] = useState<any[]>([]);
 
   const fetchProducto = useCallback(async () => {
     const id = params.id;
@@ -81,7 +95,6 @@ export default function ProductoDetallePage() {
     setError(null);
     try {
       const data = await api.productos.getOne(id as string);
-      console.log("Producto data:", JSON.stringify(data, null, 2));
       setProducto(data as Producto);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar el producto");
@@ -138,19 +151,20 @@ export default function ProductoDetallePage() {
   const loteData = producto?.lotes;
   const productor = loteData?.productores;
   const nombreProductor = producto?.nombre_productor || loteData?.productores?.usuarios?.nombre;
+  const tiendaData = producto?.tiendas;
 
   const datosApi = loteData?.datos_api || {};
-  console.log("loteData:", loteData);
-  console.log("datosApi:", datosApi);
-  
-  const region = datosApi.region || producto?.region;
-  const codigoLote = datosApi.codigo_lote || (loteData as any)?.codigo_lote || producto?.codigo_lote;
-  const sitio = datosApi.sitio || (loteData as any)?.sitio || producto?.sitio;
-  const gradoAlcohol = datosApi.grado_alcohol ? Number(datosApi.grado_alcohol) : (loteData as any)?.grado_alcohol || producto?.grado_alcohol;
-  const nombreComun = datosApi.nombre_comun || (loteData as any)?.nombre_comun || producto?.nombre_comun;
-  const nombreCientifico = datosApi.nombre_cientifico || (loteData as any)?.nombre_cientifico || producto?.nombre_cientifico;
 
-  console.log("region:", region, "codigoLote:", codigoLote, "sitio:", sitio, "gradoAlcohol:", gradoAlcohol);
+  const region = datosApi.region || loteData?.sitio;
+  const codigoLote = datosApi.codigo_lote || loteData?.codigo_lote;
+  const sitio = datosApi.sitio || loteData?.sitio;
+  const gradoAlcohol = datosApi.grado_alcohol ? Number(datosApi.grado_alcohol) : loteData?.grado_alcohol;
+  const nombreComun = datosApi.nombre_comun || loteData?.nombre_comun;
+  const nombreCientifico = datosApi.nombre_cientifico || loteData?.nombre_cientifico;
+  const unidades = loteData?.unidades;
+  const fechaElaboracion = loteData?.fecha_elaboracion ? new Date(loteData.fecha_elaboracion).toLocaleDateString("es-MX") : null;
+  const estadoLote = loteData?.estado_lote;
+  const marcaLote = datosApi.marca || loteData?.marca;
 
   if (loading) {
     return (
@@ -185,6 +199,26 @@ export default function ProductoDetallePage() {
         <ArrowLeft size={20} />
         Volver a productos
       </button>
+
+      {/* Breadcrumb de categorías */}
+      {producto?.categorias && producto.categorias.length > 0 && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          {producto.categorias.map((cat) => (
+            <Link
+              key={cat}
+              href={`/categoria/${encodeURIComponent(cat)}`}
+              className="text-xs font-medium rounded-full px-3 py-1 hover:opacity-80 transition-opacity"
+              style={{
+                backgroundColor: "#f0ebe0",
+                color: "var(--bio-color-precio, #8b6914)",
+                border: "1px solid #e8dcc8"
+              }}
+            >
+              {cat}
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-4">
@@ -244,15 +278,58 @@ export default function ProductoDetallePage() {
                 Maestro Productor
               </h3>
               <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                <p className="font-medium">{nombreProductor}</p>
-                {productor.ubicacion && (
-                  <p className="flex items-center gap-1">
-                    <MapPin size={14} />
-                    {productor.ubicacion}
-                  </p>
+                {loteData?.id_productor ? (
+                  <Link
+                    href={`/Cliente/productor/${loteData.id_productor}`}
+                    className="font-medium hover:opacity-70 transition-opacity block"
+                    style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}
+                  >
+                    {nombreProductor}
+                  </Link>
+                ) : (
+                  <p className="font-medium">{nombreProductor}</p>
                 )}
                 {productor.biografia && (
                   <p className="text-gray-500">{productor.biografia}</p>
+                )}
+                {productor.otras_caracteristicas && (
+                  <p className="text-gray-500">{productor.otras_caracteristicas}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {tiendaData && (
+            <div className="rounded-lg p-4" style={{ backgroundColor: "#f0ebe0", border: "1px solid #e8dcc8" }}>
+              <h3 className="mb-2 font-semibold" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+                Tienda
+              </h3>
+              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                {producto.id_tienda ? (
+                  <Link
+                    href={`/Cliente/tienda/${producto.id_tienda}`}
+                    className="font-medium hover:opacity-70 transition-opacity block"
+                    style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}
+                  >
+                    {tiendaData.nombre}
+                  </Link>
+                ) : (
+                  <p className="font-medium">{tiendaData.nombre}</p>
+                )}
+                {tiendaData.descripcion && (
+                  <p className="text-gray-500">{tiendaData.descripcion}</p>
+                )}
+                {(tiendaData.ciudad_origen || tiendaData.estado_origen) && (
+                  <p className="flex items-center gap-1">
+                    <MapPin size={14} />
+                    {[tiendaData.ciudad_origen, tiendaData.estado_origen].filter(Boolean).join(", ")}
+                  </p>
+                )}
+                {tiendaData.nombre_contacto && (
+                  <p className="text-gray-500">Contacto: {tiendaData.nombre_contacto}</p>
+                )}
+                {tiendaData.telefono_contacto && (
+                  <p className="text-gray-500">Teléfono: {tiendaData.telefono_contacto}</p>
                 )}
               </div>
             </div>
@@ -372,6 +449,38 @@ export default function ProductoDetallePage() {
                 </p>
               </div>
             )}
+            {unidades && (
+              <div>
+                <span className="text-sm text-gray-500">Unidades</span>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {unidades}
+                </p>
+              </div>
+            )}
+            {fechaElaboracion && (
+              <div>
+                <span className="text-sm text-gray-500">Fecha Elaboración</span>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {fechaElaboracion}
+                </p>
+              </div>
+            )}
+            {estadoLote && (
+              <div>
+                <span className="text-sm text-gray-500">Estado</span>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {estadoLote}
+                </p>
+              </div>
+            )}
+            {marcaLote && (
+              <div>
+                <span className="text-sm text-gray-500">Marca</span>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {marcaLote}
+                </p>
+              </div>
+            )}
           </div>
 
           {producto.perfil && (
@@ -409,39 +518,15 @@ export default function ProductoDetallePage() {
               </div>
             </div>
 
-            {/* Sección de envío DHL */}
-            <div className="rounded-lg p-4" style={{ border: "1px solid #e8dcc8" }}>
-              <div className="mb-3 flex items-center gap-2">
+            {/* Sección de envío */}
+            <div className="rounded-lg p-4" style={{ border: "1px solid #e8dcc8", backgroundColor: "#fdf7ee" }}>
+              <div className="flex items-center gap-2 mb-2">
                 <Truck size={16} style={{ color: "var(--bio-color-precio, #8b6914)" }} />
-                <span className="text-sm font-semibold" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>Opciones de envío</span>
+                <span className="text-sm font-semibold" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>Costo de envío</span>
               </div>
-              <div className="space-y-2">
-                {cotizacionesDHL.map((cot, idx) => {
-                  const tipos: DHLServiceType[] = ["express", "estandar", "economico"];
-                  const tipo = tipos[idx];
-                  return (
-                    <label
-                      key={cot.servicio}
-                      className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors"
-                      style={{
-                        border: envioSeleccionado === tipo ? `1px solid var(--bio-color-precio, #8b6914)` : "1px solid #e8dcc8",
-                        backgroundColor: envioSeleccionado === tipo ? "#fdf7ee" : "transparent",
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="dhl-envio"
-                        className="accent-green-600"
-                        checked={envioSeleccionado === tipo}
-                        onChange={() => setEnvioSeleccionado(tipo)}
-                      />
-                      <span className="flex-1 text-gray-700 dark:text-gray-300">{cot.servicio}</span>
-                      <span className="text-gray-500">{cot.diasEntrega}</span>
-                      <span className="font-semibold text-green-600">${formatPrice(cot.precio, { showCurrency: false })} MXN</span>
-                    </label>
-                  );
-                })}
-              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                El costo de envío se calculará automáticamente al momento del checkout, según tu dirección de entrega.
+              </p>
             </div>
 
             <div className="flex flex-col gap-3">

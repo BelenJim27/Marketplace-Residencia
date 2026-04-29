@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { ShoppingCart, Package, User, UserPlus, Heart, Store, Home } from "lucide-react";
+import { ShoppingCart, Package, User, UserPlus, Heart, Store, Home, ShoppingBag } from "lucide-react";
 import { UserInfo } from "@/components/Layouts/header/user-info";
 import { ThemeToggleSwitch } from "@/components/Layouts/header/theme-toggle";
 import { useAuth } from "@/context/AuthContext";
@@ -49,6 +49,10 @@ export function TiendaHeader() {
     }
   };
 
+  const handleProductsClick = () => {
+    router.push("/producto");
+  };
+
   const HomeIcon = () => (
     <Link
       href="/Cliente/inicio"
@@ -81,6 +85,14 @@ export function TiendaHeader() {
         {isClient ? (
           <>
             <HomeIcon />
+
+            <button
+              onClick={handleProductsClick}
+              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
+            >
+              <ShoppingBag size={24} />
+              <span className="hidden sm:inline text-xs">Productos</span>
+            </button>
 
             <button
               onClick={handleMyPurchasesClick}
@@ -133,6 +145,14 @@ export function TiendaHeader() {
             <HomeIcon />
 
             <button
+              onClick={handleProductsClick}
+              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
+            >
+              <ShoppingBag size={24} />
+              <span className="hidden sm:inline text-xs">Productos</span>
+            </button>
+
+            <button
               onClick={handleMyPurchasesClick}
               className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
             >
@@ -163,6 +183,14 @@ export function TiendaHeader() {
         ) : (
           <>
             <HomeIcon />
+
+            <button
+              onClick={handleProductsClick}
+              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
+            >
+              <ShoppingBag size={24} />
+              <span className="hidden sm:inline text-xs">Productos</span>
+            </button>
 
             <button
               onClick={handleSellClick}

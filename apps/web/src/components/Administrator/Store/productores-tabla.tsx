@@ -29,6 +29,7 @@ export function ProductoresTabla() {
     setLoading(true);
     try {
       const data = await api.productores.getAll();
+      console.log("Productores data:", data);
       const transformed = (Array.isArray(data) ? data : []).map((p: any) => ({
         id: p.id_productor as number,
         nombre: p.usuarios?.nombre || "Sin nombre",
@@ -45,6 +46,7 @@ export function ProductoresTabla() {
       setProductores(transformed);
     } catch (error) {
       setNotice({ type: "error", message: error instanceof Error ? error.message : "No fue posible cargar los productores." });
+      console.error("Error loading productores:", error);
     } finally {
       setLoading(false);
     }
