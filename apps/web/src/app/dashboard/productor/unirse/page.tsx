@@ -16,12 +16,12 @@ function ProductorLandingContent() {
   const isVenderFlow = searchParams.get("vender") === "true";
 
   if (isAuthenticated && isProductor && !isAdmin) {
-    router.push("/Productor/productor");
+    router.push("/dashboard/productor");
     return null;
   }
 
   if (isAuthenticated && isAdmin) {
-    router.push("/Administrador");
+    router.push("/administrador");
     return null;
   }
 
@@ -64,7 +64,7 @@ function ProductorLandingContent() {
               Conviértete en Productor
             </h1>
             <p className="text-gray-500 max-w-2xl mx-auto">
-              Únete a nuestra comunidad de productores locales y reaches a miles de clientes 
+              Únete a nuestra comunidad de productores locales y reaches a miles de clientes
               que valoran productos auténticos y de calidad. Comparte tu pasión por lo local.
             </p>
           </div>
@@ -148,7 +148,7 @@ function ProductorLandingContent() {
             Conviértete en Productor
           </h1>
           <p className="text-gray-500 max-w-2xl mx-auto">
-            Únete a nuestra comunidad de productores locales y reaches a miles de clientes 
+            Únete a nuestra comunidad de productores locales y reaches a miles de clientes
             que valoran productos auténticos y de calidad. Comparte tu pasión por lo local.
           </p>
         </div>

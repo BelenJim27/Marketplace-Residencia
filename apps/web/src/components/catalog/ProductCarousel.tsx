@@ -181,7 +181,7 @@ export default function ProductCarousel() {
                 {/* Imagen */}
                 <div
                   className="relative flex-shrink-0 h-80 w-80 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 cursor-pointer"
-                  onClick={() => router.push(`/Cliente/producto/${producto.id_producto}`)}
+                  onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
                 >
                   {imagenUrl ? (
                     <>
@@ -249,7 +249,7 @@ export default function ProductCarousel() {
                   <h3
                     className="font-bold text-xl line-clamp-3 cursor-pointer transition-colors duration-300 hover:opacity-70"
                     style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
-                    onClick={() => router.push(`/Cliente/producto/${producto.id_producto}`)}
+                    onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
                   >
                     {producto.nombre}
                   </h3>

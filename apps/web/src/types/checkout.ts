@@ -34,3 +34,8 @@ export interface TarjetaMock {
   cvv: string;
   nombre: string;
 }
+
+export interface StripePaymentIntentResponse {
+  clientSecret: string;
+  paymentIntentId: string;
+}

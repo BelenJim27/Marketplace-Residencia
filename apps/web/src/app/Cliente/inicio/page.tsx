@@ -1,12 +1,12 @@
 /* 'use client';
 
-import MezcalCanvas from '@/components/Cliente/Mezcalcanvas';
-import HeroSection from '@/components/Cliente/HeroSection';
-import { ScrollReveal } from '@/components/Cliente/ScrollReveal';
-import SobreElMezcal from '@/components/Cliente/Mezcal';
-import CarruselProductos from '@/components/Cliente/carruselProductos';
-import ConoceMas from '@/components/Cliente/Flechas/conoceMas';
-import Footer from "@/components/Cliente/Footer";
+import MezcalCanvas from '@/components/cliente/Mezcalcanvas';
+import HeroSection from '@/components/cliente/HeroSection';
+import { ScrollReveal } from '@/components/cliente/ScrollReveal';
+import SobreElMezcal from '@/components/cliente/Mezcal';
+import CarruselProductos from '@/components/cliente/carruselProductos';
+import ConoceMas from '@/components/cliente/Flechas/conoceMas';
+import Footer from "@/components/cliente/Footer";
 
 export default function InicioPage() {
   return (

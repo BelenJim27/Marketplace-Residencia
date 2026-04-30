@@ -4,29 +4,15 @@ import { serializeBigInts } from '../shared/serialize';
 import { CreateConfiguracionSistemaDto, CreateTasaImpuestoDto, UpdateConfiguracionSistemaDto, UpdateTasaImpuestoDto } from './dto/configuracion.dto';
 import * as bcrypt from 'bcrypt';
 
-const { Client } = require('pg');
-
 @Injectable()
 export class ConfiguracionService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listSistema() {
-    const client = this.createPgClient();
-
-    try {
-      await client.connect();
-      const result = await client.query(
-        `
-          SELECT id_config, clave, valor, tipo, descripcion, creado_en, actualizado_en
-          FROM configuracion_sistema
-          ORDER BY clave ASC
-        `,
-      );
-
-      return result.rows;
-    } finally {
-      await client.end();
-    }
+    const items = await this.prisma.configuracion_sistema.findMany({
+      orderBy: { clave: 'asc' },
+    });
+    return serializeBigInts(items);
   }
   async getSistema(id_config: number) { const item = await this.prisma.configuracion_sistema.findUnique({ where: { id_config } }); if (!item) throw new NotFoundException('Configuracion no encontrada'); return serializeBigInts(item); }
   async createSistema(dto: CreateConfiguracionSistemaDto) { return serializeBigInts(await this.prisma.configuracion_sistema.create({ data: { clave: dto.clave.trim(), valor: dto.valor ?? null, tipo: dto.tipo?.trim() ?? 'texto', descripcion: dto.descripcion ?? null } })); }
@@ -258,11 +244,4 @@ export class ConfiguracionService {
   async updateTasa(id_tasa: number, dto: UpdateTasaImpuestoDto) { return serializeBigInts(await this.prisma.tasas_impuesto.update({ where: { id_tasa }, data: { pais_iso2: dto.pais_iso2?.trim(), id_categoria: dto.id_categoria ?? undefined, tipo: dto.tipo?.trim(), nombre: dto.nombre?.trim(), tasa_porcentaje: dto.tasa_porcentaje, monto_fijo: dto.monto_fijo, moneda_monto_fijo: dto.moneda_monto_fijo, vigente_hasta: dto.vigente_hasta ? new Date(dto.vigente_hasta) : undefined, incluido_en_precio: dto.incluido_en_precio, activo: dto.activo } })); }
   async removeTasa(id_tasa: number) { await this.prisma.tasas_impuesto.delete({ where: { id_tasa } }); return { message: 'Tasa eliminada' }; }
 
-  private createPgClient() {
-    if (!process.env.DATABASE_URL) {
-      throw new Error('DATABASE_URL no está configurada');
-    }
-
-    return new Client({ connectionString: process.env.DATABASE_URL }) as any;
-  }
 }

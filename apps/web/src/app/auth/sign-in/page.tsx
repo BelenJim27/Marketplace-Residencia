@@ -18,7 +18,7 @@ function SignInContent() {
     if (!isAuthenticated) return;
 
     if (isVenderFlow) {
-      router.replace("/Productor/solicitar");
+      router.replace("/dashboard/productor/solicitar");
       return;
     }
     if (isAdmin) {
@@ -29,7 +29,7 @@ function SignInContent() {
       router.replace("/dashboard/productor");
       return;
     }
-    router.replace("/Cliente/producto");
+    router.replace("/cliente/producto");
   }, [isAuthenticated, loading, isVenderFlow, isAdmin, isProductor, router]);
 
 

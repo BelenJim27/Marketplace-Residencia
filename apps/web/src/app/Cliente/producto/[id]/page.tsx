@@ -290,7 +290,7 @@ export default function ProductoDetallePage() {
               <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
                 {loteData?.id_productor ? (
                   <Link
-                    href={`/Cliente/productor/${loteData.id_productor}`}
+                    href={`/cliente/productor/${loteData.id_productor}`}
                     className="font-medium hover:opacity-70 transition-opacity block"
                     style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}
                   >
@@ -317,7 +317,7 @@ export default function ProductoDetallePage() {
               <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                 {producto.id_tienda ? (
                   <Link
-                    href={`/Cliente/tienda/${producto.id_tienda}`}
+                    href={`/cliente/tienda/${producto.id_tienda}`}
                     className="font-medium hover:opacity-70 transition-opacity block"
                     style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}
                   >
@@ -504,7 +504,7 @@ export default function ProductoDetallePage() {
                   onClick={() => {
                     if (!producto) return;
                     if (!isAuthenticated) {
-                      router.push(`/auth/sign-in?redirect=/Cliente/producto/${producto.id_producto}`);
+                      router.push(`/auth/sign-in?redirect=/cliente/producto/${producto.id_producto}`);
                       return;
                     }
                     if (isInWishlist(producto.id_producto)) {

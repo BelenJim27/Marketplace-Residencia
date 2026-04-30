@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Package, Truck, CheckCircle, Clock, MapPin } from "lucide-react";
+import { ArrowLeft, Package, Truck, CheckCircle, Clock, MapPin, Copy } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatPrice } from "@/lib/format-number";
+import { getCookie } from "@/lib/cookies";
 
 interface DetallePedido {
   id_producto: number;
@@ -55,6 +56,9 @@ export default function DetallePedidoPage() {
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tracking, setTracking] = useState<any | null>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const id = params.id as string;
@@ -62,10 +66,39 @@ export default function DetallePedidoPage() {
 
     api.pedidos
       .getOne(id)
-      .then((data) => setPedido(data as Pedido))
+      .then((data) => {
+        setPedido(data as Pedido);
+        // Fetch tracking info if envio exists
+        if ((data as Pedido).envios?.[0]?.id_envio) {
+          fetchTracking((data as Pedido).envios![0].id_envio);
+        }
+      })
       .catch(() => setError("No se pudo cargar el pedido."))
       .finally(() => setCargando(false));
   }, [params.id]);
+
+  const fetchTracking = async (idEnvio: any) => {
+    setTrackingLoading(true);
+    try {
+      const token = getCookie("token");
+      const res = await fetch(`/envios/${idEnvio}/tracking`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).then((r) => r.json());
+      setTracking(res);
+    } catch (err) {
+      console.error("Error fetching tracking:", err);
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
+  const copiarTracking = () => {
+    if (tracking?.numero_rastreo) {
+      navigator.clipboard.writeText(tracking.numero_rastreo);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   if (cargando) {
     return (
@@ -195,32 +228,81 @@ export default function DetallePedidoPage() {
           )}
 
           {envio && (
-            <div className="rounded-lg bg-white p-5 shadow-sm dark:bg-gray-dark">
-              <div className="mb-3 flex items-center gap-2 font-semibold text-gray-900 dark:text-white">
-                <Truck size={16} className="text-green-600" />
-                Información de envío
+            <>
+              <div className="rounded-lg bg-white p-5 shadow-sm dark:bg-gray-dark">
+                <div className="mb-3 flex items-center gap-2 font-semibold text-gray-900 dark:text-white">
+                  <Truck size={16} className="text-green-600" />
+                  Información de envío
+                </div>
+                {envio.numero_rastreo && (
+                  <div className="mb-2">
+                    <p className="text-xs text-gray-500">Número de rastreo DHL</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-mono text-sm font-semibold text-gray-900 dark:text-white">{envio.numero_rastreo}</p>
+                      <button
+                        onClick={copiarTracking}
+                        className="p-1 text-gray-400 hover:text-green-600 transition"
+                        title="Copiar"
+                      >
+                        <Copy size={14} />
+                      </button>
+                      {copied && <span className="text-xs text-green-600">¡Copiado!</span>}
+                    </div>
+                  </div>
+                )}
+                {envio.costo_envio && (
+                  <div className="mb-2">
+                    <p className="text-xs text-gray-500">Costo de envío</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">${formatPrice(Number(envio.costo_envio), { showCurrency: false })} MXN</p>
+                  </div>
+                )}
+                {envio.fecha_entrega_estimada && (
+                  <div>
+                    <p className="text-xs text-gray-500">Entrega estimada</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      {new Date(envio.fecha_entrega_estimada).toLocaleDateString("es-MX", { day: "2-digit", month: "long" })}
+                    </p>
+                  </div>
+                )}
               </div>
-              {envio.numero_rastreo && (
-                <div className="mb-2">
-                  <p className="text-xs text-gray-500">Número de rastreo DHL</p>
-                  <p className="font-mono text-sm font-semibold text-gray-900 dark:text-white">{envio.numero_rastreo}</p>
+
+              {tracking && (
+                <div className="rounded-lg bg-white p-5 shadow-sm dark:bg-gray-dark">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white">
+                      <Package size={16} className="text-blue-600" />
+                      Estado de entrega
+                    </div>
+                    <button
+                      onClick={() => fetchTracking(params.id)}
+                      disabled={trackingLoading}
+                      className="text-xs text-gray-500 hover:text-blue-600 disabled:opacity-50"
+                    >
+                      {trackingLoading ? "Actualizando..." : "Actualizar"}
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {tracking.eventos && tracking.eventos.length > 0 ? (
+                      tracking.eventos.map((evento: any, idx: number) => (
+                        <div key={idx} className="flex gap-3 text-sm">
+                          <div className="flex flex-col items-center">
+                            <div className="h-2 w-2 rounded-full bg-green-600" />
+                            {idx < tracking.eventos.length - 1 && <div className="h-8 w-0.5 bg-gray-200" />}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white">{evento.descripcion}</p>
+                            <p className="text-xs text-gray-500">{new Date(evento.fecha).toLocaleDateString("es-MX")}</p>
+                            {evento.ubicacion && <p className="text-xs text-gray-600">{evento.ubicacion}</p>}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500">Sin información de seguimiento disponible.</p>
+                    )}
+                  </div>
                 </div>
               )}
-              {envio.costo_envio && (
-                <div className="mb-2">
-                  <p className="text-xs text-gray-500">Costo de envío</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">${formatPrice(Number(envio.costo_envio), { showCurrency: false })} MXN</p>
-                </div>
-              )}
-              {envio.fecha_entrega_estimada && (
-                <div>
-                  <p className="text-xs text-gray-500">Entrega estimada</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    {new Date(envio.fecha_entrega_estimada).toLocaleDateString("es-MX", { day: "2-digit", month: "long" })}
-                  </p>
-                </div>
-              )}
-            </div>
+            </>
           )}
         </div>
       </div>

@@ -40,17 +40,17 @@ function AuthCallbackContent() {
         })
         .catch((err) => console.error("Error fetching user:", err))
         .finally(() => {
-          console.log("✅ Redirigiendo a /Cliente/producto");
-          router.replace("/Cliente/producto");
+          console.log("✅ Redirigiendo a /cliente/producto");
+          router.replace("/cliente/producto");
         });
     } else if (session?.accessToken) {
       console.log("✅ Sesión encontrada en NextAuth con token");
-      router.replace("/Cliente/producto");
+      router.replace("/cliente/producto");
     } else {
       const existingToken = getCookie("token");
       if (existingToken) {
         console.log("✅ Token existente encontrado en cookies");
-        router.replace("/Cliente/producto");
+        router.replace("/cliente/producto");
       } else {
         console.log("❌ No se encontró token ni sesión, redirigiendo a sign-in");
         router.replace("/auth/sign-in");

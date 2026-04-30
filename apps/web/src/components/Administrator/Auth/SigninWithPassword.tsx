@@ -55,7 +55,7 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
       );
 
       if (isVenderFlow) {
-        router.push("/Productor/solicitar");
+        router.push("/dashboard/productor/solicitar");
         return;
       }
 
@@ -70,7 +70,7 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
         return;
       }
 
-      router.push("/Cliente/producto");
+      router.push("/cliente/producto");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión");
     } finally {

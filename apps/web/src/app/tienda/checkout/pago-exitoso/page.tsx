@@ -41,7 +41,7 @@ function PagoExitosoContent() {
             Ver mis compras
           </Link>
           <Link
-            href="/Cliente/producto"
+            href="/cliente/producto"
             className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-6 py-3 font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
           >
             <ShoppingBag size={18} />

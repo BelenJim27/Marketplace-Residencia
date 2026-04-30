@@ -1,6 +1,7 @@
-import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { CreateDetallePedidoDto, CreateFacturaDto, CreatePedidoDto, UpdateDetallePedidoDto, UpdateFacturaDto, UpdatePedidoDto } from './dto/pedidos.dto';
 import { PedidosService } from './pedidos.service';
+import { AuthGuard } from '../auth/guards/auth.guard';
 
 @Controller('pedidos')
 export class PedidosController {
@@ -25,6 +26,42 @@ export class PedidosController {
 
     return this.service.getEstadisticas(periodo || 'month', token, parsed);
   }
+
+  @UseGuards(AuthGuard)
+  @Get('productor/:id_productor')
+  getOrdersByProductor(@Param('id_productor', ParseIntPipe) id_productor: number) {
+    return this.service.getOrdersByProductor(id_productor);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('productor/:id_pedido/:id_productor')
+  getOrderDetailForProductor(
+    @Param('id_pedido') id_pedido: string,
+    @Param('id_productor', ParseIntPipe) id_productor: number,
+  ) {
+    return this.service.getOrderDetailForProductor(id_pedido, id_productor);
+  }
+
+  @UseGuards(AuthGuard)
+  @Patch('productor/:id_pedido/:id_productor/estado')
+  updateOrderStatus(
+    @Param('id_pedido') id_pedido: string,
+    @Param('id_productor', ParseIntPipe) id_productor: number,
+    @Body() { estado }: { estado: string },
+  ) {
+    return this.service.updateOrderStatusForProductor(id_pedido, id_productor, estado);
+  }
+
+  @UseGuards(AuthGuard)
+  @Patch('productor/:id_pedido/:id_productor/tracking')
+  updateTracking(
+    @Param('id_pedido') id_pedido: string,
+    @Param('id_productor', ParseIntPipe) id_productor: number,
+    @Body() { numero_rastreo }: { numero_rastreo: string },
+  ) {
+    return this.service.updateTrackingForProducer(id_pedido, id_productor, numero_rastreo);
+  }
+
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
   @Post() create(@Body() dto: CreatePedidoDto) { return this.service.create(dto); }
   @Patch(':id') update(@Param('id') id: string, @Body() dto: UpdatePedidoDto) { return this.service.update(id, dto); }

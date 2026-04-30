@@ -76,7 +76,7 @@ export function SolicitarVendedorPostLogin() {
           </p>
           <button
             type="button"
-            onClick={() => router.push("/Productor/solicitar")}
+            onClick={() => router.push("/dashboard/productor/solicitar")}
             className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800 dark:text-green-300"
           >
             Solicitar ser vendedor
@@ -107,7 +107,7 @@ export function WantToSellBanner() {
         </div>
         <button
           type="button"
-          onClick={() => router.push("/Productor/solicitar")}
+          onClick={() => router.push("/dashboard/productor/solicitar")}
           className="shrink-0 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
         >
           Solicitar

@@ -1,4 +1,4 @@
-// components/Cliente/ScrollReveal.tsx
+// components/cliente/ScrollReveal.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";

@@ -239,20 +239,20 @@ export function useCheckout() {
     else if (paso === "resumen") setPaso("pago");
   }, [paso]);
 
-  const confirmarPago = useCallback(async () => {
-    if (!user?.id_usuario || !direccionSeleccionada || !envioSeleccionado) return;
+  const prepararPago = useCallback(async () => {
+    if (!user?.id_usuario || !direccionSeleccionada || !envioSeleccionado) return null;
     const token = getCookie("token") || "";
     setCargando(true);
     setErrorMensaje(null);
 
     try {
       const costoEnvio = envioSeleccionado.precioTotal;
-      const totalConEnvio = (precioTotal + costoEnvio).toFixed(2);
+      const totalConEnvio = parseFloat((precioTotal + costoEnvio).toFixed(2));
 
       const pedido = await api.pedidos.create(token, {
         id_usuario: user.id_usuario,
         estado: "pendiente",
-        total: totalConEnvio,
+        total: totalConEnvio.toString(),
         moneda: "MXN",
         pais_destino_iso2: direccionSeleccionada.pais_iso2 ?? (direccionSeleccionada.ubicacion as any)?.pais ?? "MX",
         direccion_envio_snapshot: direccionSeleccionada,
@@ -272,13 +272,11 @@ export function useCheckout() {
         });
       }
 
-      await api.pagos.create(token, {
-        id_pedido: Number(pedidoId),
-        proveedor: "stripe_mock",
-        payment_intent_id: `mock_pi_${Date.now()}`,
-        estado: "completado",
+      // Create Stripe PaymentIntent
+      const pagoResponse = await api.pagos.stripe.createIntent(token, {
         monto: totalConEnvio,
         moneda: "MXN",
+        id_pedido: Number(pedidoId),
       });
 
       await api.envios.create(token, {
@@ -305,15 +303,25 @@ export function useCheckout() {
         },
       });
 
-      limpiarCarrito();
-      router.push(`/tienda/checkout/pago-exitoso?pedido=${pedidoId}`);
+      return {
+        pedidoId,
+        clientSecret: pagoResponse.clientSecret,
+        paymentIntentId: pagoResponse.paymentIntentId,
+      };
     } catch (err) {
-      console.error("Error en checkout:", err);
-      router.push("/tienda/checkout/pago-fallido");
+      console.error("Error preparando pago:", err);
+      setErrorMensaje(err instanceof Error ? err.message : "Error desconocido");
+      return null;
     } finally {
       setCargando(false);
     }
-  }, [user, direccionSeleccionada, envioSeleccionado, precioTotal, items, limpiarCarrito, router]);
+  }, [user, direccionSeleccionada, envioSeleccionado, precioTotal, items]);
+
+  const confirmarPago = useCallback(async () => {
+    setErrorMensaje(null);
+    const paymentData = await prepararPago();
+    return paymentData;
+  }, [prepararPago]);
 
   const totalConEnvio = precioTotal + (envioSeleccionado?.precioTotal ?? 0);
 

@@ -15,7 +15,7 @@ export default function GoogleSigninButton({ text }: { text: string }) {
       console.log("🔵 Iniciando sesión con Google...");
       
       signIn("google", {
-        callbackUrl: "/Cliente/producto",
+        callbackUrl: "/cliente/producto",
         redirect: true,
       });
     } catch (error) {

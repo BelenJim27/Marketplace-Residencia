@@ -108,7 +108,7 @@ export function SignUpForm() {
       );
 
       if (isVenderFlow || formData.wantToSell) {
-        router.push("/Productor/solicitar");
+        router.push("/dashboard/productor/solicitar");
       } else {
         router.push("/producto");
       }

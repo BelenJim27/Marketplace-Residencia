@@ -16,8 +16,8 @@ export function RootContent({ children }: PropsWithChildren) {
   const isAdminOrProductor = isAdmin || isProductor;
 
   const isAuthRoute = pathname.startsWith("/auth/");
-  const isClientOnlyRoute = pathname.startsWith("/tienda/") || pathname.startsWith("/Cliente/");
-  const isClientHome = pathname === "/Cliente/inicio";
+  const isClientOnlyRoute = pathname.startsWith("/tienda/") || pathname.startsWith("/cliente/");
+  const isClientHome = pathname === "/cliente/inicio";
 
   if (loading) {
     return (

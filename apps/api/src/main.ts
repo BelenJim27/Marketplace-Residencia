@@ -2,7 +2,7 @@ import * as dotenv from 'dotenv';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { join, resolve } from 'path';
-import { static as expressStatic } from 'express';
+import { static as expressStatic, raw } from 'express';
 
 dotenv.config({ path: resolve(process.cwd(), 'apps/api/.env'), override: true });
 dotenv.config({ path: resolve(__dirname, '../.env'), override: false });

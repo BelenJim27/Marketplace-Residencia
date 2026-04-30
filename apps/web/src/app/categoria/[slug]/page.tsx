@@ -111,7 +111,7 @@ export default function CategoriaPage() {
 
   const toggleWishlist = (producto: Producto) => {
     if (!isAuthenticated) {
-      router.push("/auth/sign-in?redirect=/Cliente/producto");
+      router.push("/auth/sign-in?redirect=/cliente/producto");
       return;
     }
     if (isInWishlist(producto.id_producto)) {
@@ -291,7 +291,7 @@ export default function CategoriaPage() {
                     <div
                       className="relative overflow-hidden bg-gray-50"
                       style={{ aspectRatio: "1 / 1" }}
-                      onClick={() => router.push(`/Cliente/producto/${producto.id_producto}`)}
+                      onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
                     >
                       {imagenUrl ? (
                         <Image
@@ -334,7 +334,7 @@ export default function CategoriaPage() {
                       <h3
                         className="font-semibold text-sm line-clamp-2 mb-2 leading-snug cursor-pointer hover:opacity-80"
                         style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
-                        onClick={() => router.push(`/Cliente/producto/${producto.id_producto}`)}
+                        onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
                       >
                         {producto.nombre}
                       </h3>

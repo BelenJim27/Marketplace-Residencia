@@ -92,7 +92,7 @@ export default function TiendaPage() {
 
   const toggleWishlist = (producto: Producto) => {
     if (!isAuthenticated) {
-      router.push("/auth/sign-in?redirect=/Cliente/producto");
+      router.push("/auth/sign-in?redirect=/cliente/producto");
       return;
     }
     if (isInWishlist(producto.id_producto)) {
@@ -188,7 +188,7 @@ export default function TiendaPage() {
           <div
             className="rounded-lg p-6 cursor-pointer hover:shadow-md transition-shadow"
             style={{ backgroundColor: "white", border: "1px solid #e8dcc8" }}
-            onClick={() => router.push(`/Cliente/productor/${productor.id_productor}`)}
+            onClick={() => router.push(`/cliente/productor/${productor.id_productor}`)}
           >
             <h3 className="text-xl font-semibold mb-2" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>
               {nombreProductor}
@@ -222,7 +222,7 @@ export default function TiendaPage() {
                   <div
                     className="relative overflow-hidden bg-gray-50"
                     style={{ aspectRatio: "1 / 1" }}
-                    onClick={() => router.push(`/Cliente/producto/${producto.id_producto}`)}
+                    onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
                   >
                     {imagenUrl ? (
                       <Image
@@ -265,7 +265,7 @@ export default function TiendaPage() {
                     <h3
                       className="font-semibold text-sm line-clamp-2 mb-2 leading-snug cursor-pointer hover:opacity-80"
                       style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
-                      onClick={() => router.push(`/Cliente/producto/${producto.id_producto}`)}
+                      onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
                     >
                       {producto.nombre}
                     </h3>

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { getCookie } from "@/lib/cookies";
+import { api } from "@/lib/api";
 
 export interface DireccionDestino {
   pais: string;
@@ -37,23 +38,13 @@ export function useDHLShipping() {
     setError(null);
     try {
       const token = getCookie("token") || "";
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/envios/cotizar`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          destino,
-          peso_kg: pesoKg,
-          alto_cm: 15,
-          ancho_cm: 15,
-          largo_cm: 20,
-        }),
+      const data = await api.envios.cotizar(token, {
+        destino,
+        peso_kg: pesoKg,
+        alto_cm: 15,
+        ancho_cm: 15,
+        largo_cm: 20,
       });
-
-      if (!res.ok) throw new Error('Cotización fallida');
-      const data = await res.json();
       setOpciones(data);
       setSeleccionado(data[0] || null);
     } catch (err) {

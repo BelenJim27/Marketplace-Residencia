@@ -98,4 +98,31 @@ export class DhlService {
     const days = Math.ceil((new Date(fecha).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     return Math.max(days, 1);
   }
+
+  async getTracking(trackingNumber: string): Promise<any[]> {
+    try {
+      const apiKey = this.config.get('DHL_API_KEY', '');
+      const apiSecret = this.config.get('DHL_API_SECRET', '');
+      const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
+
+      const response = await this.http.get(`${this.baseUrl}/shipments/${trackingNumber}/tracking`, {
+        headers: { Authorization: `Basic ${auth}` },
+        timeout: 10000,
+      }).toPromise();
+
+      if (!response) {
+        return [];
+      }
+
+      return (response.data.shipments?.[0]?.events || []).map((event: any) => ({
+        descripcion: event.description || event.status,
+        estado: event.status,
+        fecha: new Date(event.timestamp),
+        ubicacion: event.location?.address || '',
+      }));
+    } catch (error) {
+      this.logger.error(`DHL Tracking API error: ${error.message}`);
+      return [];
+    }
+  }
 }

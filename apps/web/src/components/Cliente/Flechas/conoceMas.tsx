@@ -212,7 +212,7 @@ export default function ConoceMas() {
               <button
                 className="px-8 py-3 rounded-full font-semibold transition-all hover:opacity-90 bg-[#8b4513] dark:bg-[#5c2a0a] text-[#FFF8E7] dark:text-white"
                 style={{ border: "1px solid #a0522d" }}
-                onClick={() => router.push("/Cliente/producto")}
+                onClick={() => router.push("/cliente/producto")}
               >
                 {/* Traducimos el botón */}
                 {t("Ver más")}

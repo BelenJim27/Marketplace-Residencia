@@ -86,7 +86,7 @@ export default function MisComprasPage() {
         <div className="flex flex-col items-center gap-4 rounded-lg bg-white p-10 text-center shadow-md dark:bg-gray-dark">
           <ShoppingBag className="h-14 w-14 text-gray-300" />
           <p className="text-gray-500">Aún no tienes compras.</p>
-          <Link href="/Cliente/producto" className="rounded-lg bg-green-600 px-6 py-2 text-white hover:bg-green-700">
+          <Link href="/cliente/producto" className="rounded-lg bg-green-600 px-6 py-2 text-white hover:bg-green-700">
             Explorar mezcales
           </Link>
         </div>

@@ -446,7 +446,7 @@ export function ProductosGrid() {
             >
               {/* Imagen */}
               <button
-                onClick={() => router.push(`/Cliente/producto/${producto.id_producto}`)}
+                onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
                 className="relative block aspect-square w-full overflow-hidden bg-gray-100"
               >
                 {producto.producto_imagenes?.[0]?.url || producto.imagen_principal_url ? (
@@ -475,7 +475,7 @@ export function ProductosGrid() {
               {/* Info */}
               <div className="p-4">
                 <button
-                  onClick={() => router.push(`/Cliente/producto/${producto.id_producto}`)}
+                  onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
                   className="block w-full text-left"
                 >
                   <h3 className="mb-1 text-sm font-semibold leading-snug text-gray-900 dark:text-white line-clamp-1">

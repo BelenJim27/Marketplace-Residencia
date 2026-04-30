@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 2. Definir rutas que requieren protección (teniendo en cuenta los prefijos /es o /en)
-  const isProtectedRoute = pathname.includes('/dashboard') || pathname.includes('/Productor/solicitar');
+  const isProtectedRoute = pathname.includes('/dashboard') || pathname.includes('/dashboard/productor/solicitar');
 
   if (isProtectedRoute) {
     const token = request.cookies.get("token")?.value;
@@ -22,12 +22,12 @@ export async function middleware(request: NextRequest) {
 
     try {
       const payload = await verifyJwt(token, ACCESS_SECRET);
-      
+
       // Lógica de permisos...
       let requiredPermission = pathname.includes("/dashboard/administrador") ? "panel_admin" : "panel_productor";
       const permisos = Array.isArray(payload.permisos) ? payload.permisos : [];
-      
-      if (!permisos.includes(requiredPermission) && !pathname.includes("/Productor/solicitar")) {
+
+      if (!permisos.includes(requiredPermission) && !pathname.includes("/dashboard/productor/solicitar")) {
         return redirectToSignIn(request);
       }
     } catch (error) {

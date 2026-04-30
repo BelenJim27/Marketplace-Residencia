@@ -129,12 +129,146 @@ export class PedidosService {
   async create(dto: CreatePedidoDto) { return serializeBigInts(await this.prisma.pedidos.create({ data: { id_usuario: dto.id_usuario, estado: dto.estado?.trim() ?? 'pendiente', total: dto.total, moneda: dto.moneda, tipo_cambio: dto.tipo_cambio ?? undefined, moneda_referencia: dto.moneda_referencia?.trim() ?? 'USD', pais_destino_iso2: dto.pais_destino_iso2 ?? undefined, direccion_envio_snapshot: dto.direccion_envio_snapshot as Prisma.InputJsonValue | undefined, direccion_facturacion_snapshot: dto.direccion_facturacion_snapshot as Prisma.InputJsonValue | undefined, devolucion_estado: dto.devolucion_estado ?? undefined, devolucion_motivo: dto.devolucion_motivo ?? undefined } })); }
   async update(id: string, dto: UpdatePedidoDto) { return serializeBigInts(await this.prisma.pedidos.update({ where: { id_pedido: toBigIntId(id) }, data: { id_usuario: dto.id_usuario, estado: dto.estado?.trim(), total: dto.total, moneda: dto.moneda, tipo_cambio: dto.tipo_cambio, moneda_referencia: dto.moneda_referencia?.trim(), pais_destino_iso2: dto.pais_destino_iso2, direccion_envio_snapshot: dto.direccion_envio_snapshot as Prisma.InputJsonValue | undefined, direccion_facturacion_snapshot: dto.direccion_facturacion_snapshot as Prisma.InputJsonValue | undefined, devolucion_estado: dto.devolucion_estado, devolucion_motivo: dto.devolucion_motivo } })); }
   async remove(id: string) { return serializeBigInts(await this.prisma.pedidos.update({ where: { id_pedido: toBigIntId(id) }, data: { eliminado_en: new Date() } })); }
-  async addDetalle(id: string, dto: CreateDetallePedidoDto) { return serializeBigInts(await this.prisma.detalle_pedido.create({ data: { id_pedido: toBigIntId(id), id_producto: dto.id_producto, cantidad: dto.cantidad, precio_compra: dto.precio_compra, moneda_compra: dto.moneda_compra?.trim() ?? 'MXN', impuesto: dto.impuesto ?? '0' } })); }
+  async addDetalle(id: string, dto: CreateDetallePedidoDto) {
+    const detalle = await this.prisma.detalle_pedido.create({
+      data: {
+        id_pedido: toBigIntId(id),
+        id_producto: toBigIntId(dto.id_producto),
+        cantidad: dto.cantidad,
+        precio_compra: dto.precio_compra,
+        moneda_compra: dto.moneda_compra?.trim() ?? 'MXN',
+        impuesto: dto.impuesto ?? '0',
+      },
+      include: { productos: { include: { lotes: true } } },
+    });
+
+    // Create pedido_productor entry if not exists
+    if (detalle.productos?.lotes?.id_productor) {
+      await this.prisma.pedido_productor.upsert({
+        where: {
+          id_pedido_id_productor: {
+            id_pedido: toBigIntId(id),
+            id_productor: detalle.productos.lotes.id_productor,
+          },
+        },
+        update: {},
+        create: {
+          id_pedido: toBigIntId(id),
+          id_productor: detalle.productos.lotes.id_productor,
+          estado: 'pendiente',
+        },
+      });
+    }
+
+    return serializeBigInts(detalle);
+  }
   async updateDetalle(id_detalle: string, dto: UpdateDetallePedidoDto) { return serializeBigInts(await this.prisma.detalle_pedido.update({ where: { id_detalle: toBigIntId(id_detalle) }, data: { id_producto: dto.id_producto, cantidad: dto.cantidad, precio_compra: dto.precio_compra, moneda_compra: dto.moneda_compra?.trim(), impuesto: dto.impuesto } })); }
   async removeDetalle(id_detalle: string) { await this.prisma.detalle_pedido.delete({ where: { id_detalle: toBigIntId(id_detalle) } }); return { message: 'Detalle eliminado' }; }
   async addFactura(id: string, dto: CreateFacturaDto) { return serializeBigInts(await this.prisma.facturas.create({ data: { id_pedido: toBigIntId(id), uuid_fiscal: dto.uuid_fiscal ?? null, pdf_url: dto.pdf_url ?? null, xml_url: dto.xml_url ?? null, rfc_emisor: dto.rfc_emisor ?? null, rfc_receptor: dto.rfc_receptor ?? null, uso_cfdi: dto.uso_cfdi ?? null, regimen_fiscal: dto.regimen_fiscal ?? null, subtotal: dto.subtotal ?? null, impuestos_total: dto.impuestos_total ?? null, total: dto.total ?? null, moneda: dto.moneda ?? null, estado: dto.estado?.trim() ?? 'pendiente' } })); }
   async updateFactura(id_factura: string, dto: UpdateFacturaDto) { return serializeBigInts(await this.prisma.facturas.update({ where: { id_factura: toBigIntId(id_factura) }, data: { uuid_fiscal: dto.uuid_fiscal, pdf_url: dto.pdf_url, xml_url: dto.xml_url, rfc_emisor: dto.rfc_emisor, rfc_receptor: dto.rfc_receptor, uso_cfdi: dto.uso_cfdi, regimen_fiscal: dto.regimen_fiscal, subtotal: dto.subtotal, impuestos_total: dto.impuestos_total, total: dto.total, moneda: dto.moneda, estado: dto.estado } })); }
   async removeFactura(id_factura: string) { await this.prisma.facturas.delete({ where: { id_factura: toBigIntId(id_factura) } }); return { message: 'Factura eliminada' }; }
+
+  async getOrdersByProductor(id_productor: number) {
+    const pedidosProductor = await this.prisma.pedido_productor.findMany({
+      where: { id_productor },
+      include: {
+        pedidos: {
+          include: { detalle_pedido: { include: { productos: { include: { lotes: true } } } }, usuarios: true },
+        },
+      },
+      orderBy: { creado_en: 'desc' },
+    });
+
+    return serializeBigInts(
+      pedidosProductor.map((pp) => ({
+        id_pedido: pp.id_pedido,
+        estado_productor: pp.estado,
+        estado_pedido: pp.pedidos.estado,
+        cliente: pp.pedidos.usuarios,
+        detalles: pp.pedidos.detalle_pedido.filter((d) => d.productos?.lotes?.id_productor === id_productor),
+        fecha_creacion: pp.creado_en,
+        id_envio: pp.id_envio,
+        total_parcial: pp.pedidos.detalle_pedido
+          .filter((d) => d.productos?.lotes?.id_productor === id_productor)
+          .reduce((sum, d) => sum + Number(d.precio_compra) * Number(d.cantidad), 0),
+        moneda: pp.pedidos.moneda,
+      })),
+    );
+  }
+
+  async getOrderDetailForProductor(id_pedido: string, id_productor: number) {
+    const pedidoProductor = await this.prisma.pedido_productor.findUnique({
+      where: {
+        id_pedido_id_productor: {
+          id_pedido: toBigIntId(id_pedido),
+          id_productor,
+        },
+      },
+      include: {
+        pedidos: {
+          include: { detalle_pedido: { include: { productos: { include: { lotes: true } } } }, usuarios: true, envios: true },
+        },
+      },
+    });
+
+    if (!pedidoProductor) throw new NotFoundException('Pedido no encontrado para este productor');
+
+    return serializeBigInts({
+      id_pedido: pedidoProductor.id_pedido,
+      estado_productor: pedidoProductor.estado,
+      pedido: pedidoProductor.pedidos,
+      detalles: pedidoProductor.pedidos.detalle_pedido.filter((d) => d.productos?.lotes?.id_productor === id_productor),
+      envio: pedidoProductor.pedidos.envios?.[0] ?? null,
+    });
+  }
+
+  async updateOrderStatusForProductor(id_pedido: string, id_productor: number, nuevoEstado: string) {
+    const validStates = ['confirmado', 'preparando', 'enviado', 'entregado'];
+    if (!validStates.includes(nuevoEstado)) {
+      throw new Error(`Estado inválido. Valores permitidos: ${validStates.join(', ')}`);
+    }
+
+    const updated = await this.prisma.pedido_productor.update({
+      where: {
+        id_pedido_id_productor: {
+          id_pedido: toBigIntId(id_pedido),
+          id_productor,
+        },
+      },
+      data: { estado: nuevoEstado },
+      include: { pedidos: true },
+    });
+
+    return serializeBigInts(updated);
+  }
+
+  async updateTrackingForProducer(id_pedido: string, id_productor: number, numero_rastreo: string) {
+    const pedidoProductor = await this.prisma.pedido_productor.findUnique({
+      where: {
+        id_pedido_id_productor: {
+          id_pedido: toBigIntId(id_pedido),
+          id_productor,
+        },
+      },
+      include: { pedidos: { include: { envios: true } } },
+    });
+
+    if (!pedidoProductor) throw new NotFoundException('Pedido no encontrado para este productor');
+
+    const envio = pedidoProductor.pedidos.envios?.[0];
+    if (!envio) throw new NotFoundException('No hay envío registrado para este pedido');
+
+    const updated = await this.prisma.envios.update({
+      where: { id_envio: envio.id_envio },
+      data: {
+        numero_rastreo,
+        fecha_envio: new Date(),
+        estado: 'enviado',
+      },
+    });
+
+    return serializeBigInts(updated);
+  }
 
   private async resolveProductorId(accessToken?: string, fallbackProductorId?: number) {
     if (accessToken) {

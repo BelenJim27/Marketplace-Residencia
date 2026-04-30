@@ -22,7 +22,7 @@ export default function CarritoPage() {
           <ShoppingBag className="h-16 w-16 text-gray-300" />
           <p className="text-gray-500">Tu carrito está vacío</p>
           <Link
-            href="/Cliente/producto"
+            href="/cliente/producto"
             className="mt-4 flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2 text-white transition-colors hover:bg-green-700"
           >
             Ver productos
@@ -47,7 +47,7 @@ export default function CarritoPage() {
                 className="flex gap-4 border-b border-gray-200 p-4 last:border-b-0 dark:border-gray-700"
               >
                 <Link
-                  href={`/Cliente/producto/${item.id_producto}`}
+                  href={`/cliente/producto/${item.id_producto}`}
                   className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md bg-gray-100"
                 >
                   {item.producto_imagenes?.[0] ? (
@@ -76,7 +76,7 @@ export default function CarritoPage() {
                 <div className="flex flex-1 flex-col justify-between">
                   <div>
                     <Link
-                      href={`/Cliente/producto/${item.id_producto}`}
+                      href={`/cliente/producto/${item.id_producto}`}
                       className="font-medium text-gray-900 hover:text-green-600 dark:text-white"
                     >
                       {item.nombre}
@@ -126,7 +126,7 @@ export default function CarritoPage() {
           </div>
 
           <Link
-            href="/Cliente/producto"
+            href="/cliente/producto"
             className="mt-4 flex items-center gap-2 text-sm text-green-600 hover:text-green-700"
           >
             <ArrowRight size={16} className="rotate-180" />

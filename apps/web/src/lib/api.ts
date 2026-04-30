@@ -89,7 +89,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
       }
     } else {
       const text = await response.text();
-      console.error("Non-JSON error response:", text);
+      console.warn("Non-JSON error response:", text);
     }
     throw new Error(error.message || `Error ${response.status}`);
   }
@@ -327,6 +327,10 @@ export const api = {
       fetchJson(endpoint(`/pagos/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
     delete: (token: string, id: string) =>
       fetchJson(endpoint(`/pagos/${id}`), { method: "DELETE", headers: headers(token) }),
+    stripe: {
+      createIntent: (token: string, data: any): Promise<{ clientSecret: string; paymentIntentId: string }> =>
+        fetchJson<{ clientSecret: string; paymentIntentId: string }>(endpoint("/pagos/stripe/intent"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+    },
   },
 
   metodosPago: {
@@ -351,12 +355,16 @@ export const api = {
   },
 
   carritoItems: {
+    getByUsuario: (token: string, usuarioId: string) =>
+      fetchJson(endpoint(`/carrito/${usuarioId}`), { method: "GET", headers: headers(token) }),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/carrito"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: string, data: any) =>
       fetchJson(endpoint(`/carrito/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
     delete: (token: string, id: string) =>
       fetchJson(endpoint(`/carrito/${id}`), { method: "DELETE", headers: headers(token) }),
+    deleteByUsuario: (token: string, usuarioId: string) =>
+      fetchJson(endpoint(`/carrito/usuario/${usuarioId}`), { method: "DELETE", headers: headers(token) }),
   },
 
   inventario: {

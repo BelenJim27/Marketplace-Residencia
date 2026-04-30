@@ -48,11 +48,11 @@ export function TiendaHeader() {
 
   const handleSellClick = () => {
     if (!isAuthenticated) {
-      router.push("/Productor?vender=true");
+      router.push("/dashboard/productor/unirse?vender=true");
     } else if (user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r))) {
-      router.push("/Productor/productor");
+      router.push("/dashboard/productor");
     } else {
-      router.push("/Productor/solicitar");
+      router.push("/dashboard/productor/solicitar");
     }
   };
 
@@ -64,7 +64,10 @@ export function TiendaHeader() {
     "flex flex-col items-center gap-1 px-3 py-2 transition-colors text-[var(--tienda-nav-color)] hover:opacity-70";
 
   const HomeIcon = () => (
-    <Link href="/Cliente/inicio" className={navBtnClass}>
+    <Link
+      href="/cliente/inicio"
+      className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
+    >
       <Home size={24} />
       <span className="hidden sm:inline text-xs">{t("Inicio")}</span>
     </Link>

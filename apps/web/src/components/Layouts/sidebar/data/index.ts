@@ -49,20 +49,20 @@ export const ADMIN_NAV_DATA: NavSection[] = [
     items: [
       {
         title: "Dashboard",
-        url: "/dashboard/administrador",
+        url: "/administrador/dashboard",
         icon: LayoutDashboard,
       },
       { title: "Perfil", url: "/profile", icon: UserRound },
-      { title: "Usuarios", url: "/Administrador/usuarios", icon: Users },
+      { title: "Usuarios", url: "/administrador/usuarios", icon: Users },
       {
         title: "Auditoría",
-        url: "/Administrador/auditoria",
+        url: "/administrador/auditoria",
         icon: FileBarChart,
       },
-      { title: "Roles y pemisos", url: "/Administrador/roles-permisos", icon: UserCog },
+      { title: "Roles y pemisos", url: "/administrador/roles-permisos", icon: UserCog },
       {
         title: "Productores",
-        url: "/Administrador/tienda/productores",
+        url: "/administrador/tienda/productores",
         icon: Users,
       },
       {
@@ -71,26 +71,26 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         children: [
           {
             title: "Categorías",
-            url: "/Administrador/categorias",
+            url: "/administrador/categorias",
             icon: Layers,
           },
           {
             title: "Productos",
-            url: "/Administrador/productos",
+            url: "/administrador/productos",
             icon: Users,
           },
         ],
       },
-      { title: "Pedidos", url: "/Administrador/pedidos", icon: ShoppingCart },
+      { title: "Pedidos", url: "/administrador/pedidos", icon: ShoppingCart },
       
       {
         title: "Solicitudes Productores",
-        url: "/Administrador/solicitudes-productores",
+        url: "/administrador/solicitudes-productores",
         icon: UserRound,
       },
       {
         title: "Configuración",
-        url: "/Administrador/configuracion",
+        url: "/administrador/configuracion",
         icon: Settings,
       },
     ],
@@ -126,6 +126,11 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
             icon: Package,
           },
         ],
+      },
+      {
+        title: "Pedidos",
+        url: "/dashboard/productor/pedidos",
+        icon: ShoppingCart,
       },
       {
         title: "Ventas",
