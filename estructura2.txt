@@ -1,0 +1,134 @@
+C:\Users\nanir\Documents\oaxaca\Marketplace-Residencia
+├── apps
+|  ├── api
+|  |  ├── dist
+|  |  |  ├── modules
+|  |  |  |  ├── admin
+|  |  |  |  ├── archivos
+|  |  |  |  ├── auditoria
+|  |  |  |  ├── auth
+|  |  |  |  ├── carrito
+|  |  |  |  ├── categorias
+|  |  |  |  ├── configuracion
+|  |  |  |  ├── direcciones
+|  |  |  |  ├── email
+|  |  |  |  ├── envios
+|  |  |  |  ├── estadisticas-landing
+|  |  |  |  ├── inventario
+|  |  |  |  ├── lotes
+|  |  |  |  ├── notificaciones
+|  |  |  |  ├── pagos
+|  |  |  |  ├── pedidos
+|  |  |  |  ├── productores
+|  |  |  |  ├── productos
+|  |  |  |  ├── resenas
+|  |  |  |  ├── roles
+|  |  |  |  ├── shared
+|  |  |  |  ├── tiendas
+|  |  |  |  ├── transportistas
+|  |  |  |  ├── usuarios
+|  |  |  |  └── wishlist
+|  |  |  └── prisma
+|  |  ├── scripts
+|  |  ├── src
+|  |  |  ├── modules
+|  |  |  |  ├── admin
+|  |  |  |  ├── archivos
+|  |  |  |  ├── auditoria
+|  |  |  |  ├── auth
+|  |  |  |  ├── carrito
+|  |  |  |  ├── categorias
+|  |  |  |  ├── configuracion
+|  |  |  |  ├── direcciones
+|  |  |  |  ├── email
+|  |  |  |  ├── envios
+|  |  |  |  ├── estadisticas-landing
+|  |  |  |  ├── inventario
+|  |  |  |  ├── lotes
+|  |  |  |  ├── notificaciones
+|  |  |  |  ├── pagos
+|  |  |  |  ├── pedidos
+|  |  |  |  ├── productores
+|  |  |  |  ├── productos
+|  |  |  |  ├── resenas
+|  |  |  |  ├── roles
+|  |  |  |  ├── shared
+|  |  |  |  ├── tiendas
+|  |  |  |  ├── transportistas
+|  |  |  |  ├── usuarios
+|  |  |  |  └── wishlist
+|  |  |  ├── prisma
+|  |  |  └── types
+|  |  └── uploads
+|  |     ├── archivos
+|  |     ├── productos
+|  |     └── usuarios
+|  └── web
+|     ├── public
+|     |  ├── fotos
+|     |  └── images
+|     |     ├── brand
+|     |     ├── cards
+|     |     ├── carousel
+|     |     ├── country
+|     |     ├── cover
+|     |     ├── grids
+|     |     ├── icon
+|     |     ├── illustration
+|     |     ├── login
+|     |     ├── logo
+|     |     ├── product
+|     |     ├── task
+|     |     ├── team
+|     |     ├── todo
+|     |     └── user
+|     └── src
+|        ├── app
+|        |  ├── (home)
+|        |  ├── Administrador
+|        |  ├── api
+|        |  ├── auth
+|        |  ├── categoria
+|        |  ├── Cliente
+|        |  ├── dashboard
+|        |  ├── producto
+|        |  ├── Productor
+|        |  ├── profile
+|        |  ├── tienda
+|        |  └── ui-elements
+|        ├── assets
+|        |  └── logos
+|        ├── components
+|        |  ├── Administrator
+|        |  ├── Breadcrumbs
+|        |  ├── catalog
+|        |  ├── Charts
+|        |  ├── Cliente
+|        |  ├── FormElements
+|        |  ├── Layouts
+|        |  ├── Producer
+|        |  ├── Products
+|        |  ├── shadcn
+|        |  ├── ui
+|        |  └── ui-elements
+|        ├── context
+|        ├── css
+|        ├── fonts
+|        ├── hooks
+|        ├── i18n
+|        |  └── locales
+|        ├── lib
+|        └── types
+├── docs
+└── packages
+   └── database
+      └── prisma
+         └── migrations
+            ├── 20260414030603_init
+            ├── 20260417010000_add_biografia
+            ├── 20260420000001_add_estado_productor
+            └── 20260421042621_eliminar_orden_categorias
+
+directory: 4182
+
+ignored: directory (97)

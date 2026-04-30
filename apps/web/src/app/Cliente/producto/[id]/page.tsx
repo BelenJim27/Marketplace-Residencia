@@ -11,9 +11,13 @@ import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/format-number";
 import { useDHLShipping } from "@/hooks/useDHLShipping";
+import RatingAgregado from "@/components/Cliente/RatingAgregado";
+import ResenasSeccion from "@/components/Cliente/ResenasSeccion";
+import { ProductosSimilares, TambienCompraron } from "@/components/Cliente/ProductosRelacionados";
 
 interface LoteData {
   datos_api?: Record<string, string>;
+  id_productor?: number;
   codigo_lote?: string;
   sitio?: string;
   grado_alcohol?: number;
@@ -35,6 +39,7 @@ interface LoteData {
 
 interface Producto {
   id: number;
+  id_tienda?: number;
   id_producto: bigint;
   nombre: string;
   descripcion: string;
@@ -78,7 +83,7 @@ export default function ProductoDetallePage() {
   const { agregarProducto } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
-  
+
   const [producto, setProducto] = useState<Producto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +95,6 @@ export default function ProductoDetallePage() {
   const fetchProducto = useCallback(async () => {
     const id = params.id;
     if (!id) return;
-    
     setLoading(true);
     setError(null);
     try {
@@ -103,13 +107,8 @@ export default function ProductoDetallePage() {
     }
   }, [params.id]);
 
-  useEffect(() => {
-    fetchProducto();
-  }, [fetchProducto]);
-
-  useEffect(() => {
-    cotizarTodos(0.75, null);
-  }, []);
+  useEffect(() => { fetchProducto(); }, [fetchProducto]);
+  useEffect(() => { cotizarTodos(0.75, null); }, []);
 
   const handleAgregar = () => {
     if (!producto) return;
@@ -119,7 +118,7 @@ export default function ProductoDetallePage() {
       precio_base: producto.precio_base,
       imagen_principal_url: producto.imagen_principal_url,
       producto_imagenes: producto.producto_imagenes,
-      cantidad: cantidad,
+      cantidad,
     });
     setAgregado(true);
     setTimeout(() => setAgregado(false), 2000);
@@ -137,7 +136,7 @@ export default function ProductoDetallePage() {
       precio_base: producto.precio_base,
       imagen_principal_url: producto.imagen_principal_url,
       producto_imagenes: producto.producto_imagenes,
-      cantidad: cantidad,
+      cantidad,
     });
     router.push("/tienda/checkout");
   };
@@ -152,7 +151,6 @@ export default function ProductoDetallePage() {
   const productor = loteData?.productores;
   const nombreProductor = producto?.nombre_productor || loteData?.productores?.usuarios?.nombre;
   const tiendaData = producto?.tiendas;
-
   const datosApi = loteData?.datos_api || {};
 
   const region = datosApi.region || loteData?.sitio;
@@ -162,7 +160,9 @@ export default function ProductoDetallePage() {
   const nombreComun = datosApi.nombre_comun || loteData?.nombre_comun;
   const nombreCientifico = datosApi.nombre_cientifico || loteData?.nombre_cientifico;
   const unidades = loteData?.unidades;
-  const fechaElaboracion = loteData?.fecha_elaboracion ? new Date(loteData.fecha_elaboracion).toLocaleDateString("es-MX") : null;
+  const fechaElaboracion = loteData?.fecha_elaboracion
+    ? new Date(loteData.fecha_elaboracion).toLocaleDateString("es-MX")
+    : null;
   const estadoLote = loteData?.estado_lote;
   const marcaLote = datosApi.marca || loteData?.marca;
 
@@ -189,8 +189,13 @@ export default function ProductoDetallePage() {
     );
   }
 
+  const productoId = String(producto.id_producto);
+
   return (
-    <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8" style={{ backgroundColor: "var(--bio-color-fondo, #faf8f4)", minHeight: "100vh" }}>
+    <div
+      className="mx-auto max-w-screen-xl px-4 py-8 md:px-8"
+      style={{ backgroundColor: "var(--bio-color-fondo, #faf8f4)", minHeight: "100vh" }}
+    >
       <button
         onClick={() => router.back()}
         className="mb-6 flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -201,18 +206,14 @@ export default function ProductoDetallePage() {
       </button>
 
       {/* Breadcrumb de categorías */}
-      {producto?.categorias && producto.categorias.length > 0 && (
+      {producto.categorias && producto.categorias.length > 0 && (
         <div className="mb-6 flex flex-wrap gap-2">
           {producto.categorias.map((cat) => (
             <Link
               key={cat}
               href={`/categoria/${encodeURIComponent(cat)}`}
               className="text-xs font-medium rounded-full px-3 py-1 hover:opacity-80 transition-opacity"
-              style={{
-                backgroundColor: "#f0ebe0",
-                color: "var(--bio-color-precio, #8b6914)",
-                border: "1px solid #e8dcc8"
-              }}
+              style={{ backgroundColor: "#f0ebe0", color: "var(--bio-color-precio, #8b6914)", border: "1px solid #e8dcc8" }}
             >
               {cat}
             </Link>
@@ -220,7 +221,10 @@ export default function ProductoDetallePage() {
         </div>
       )}
 
+      {/* ── Grid principal ─────────────────────────────────────────────────── */}
       <div className="grid gap-8 lg:grid-cols-2">
+
+        {/* Columna izquierda — Imágenes */}
         <div className="space-y-4">
           <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
             {todasImagenes[imagenSeleccionada] ? (
@@ -232,12 +236,10 @@ export default function ProductoDetallePage() {
                 className="object-cover"
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-gray-400">
-                Sin imagen
-              </div>
+              <div className="flex h-full items-center justify-center text-gray-400">Sin imagen</div>
             )}
           </div>
-          
+
           {todasImagenes.length > 1 && (
             <div className="flex gap-2 overflow-x-auto">
               {todasImagenes.map((img, idx) => (
@@ -245,36 +247,44 @@ export default function ProductoDetallePage() {
                   key={idx}
                   onClick={() => setImagenSeleccionada(idx)}
                   className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border-2"
-                  style={{
-                    borderColor: idx === imagenSeleccionada ? "var(--bio-color-precio, #8b6914)" : "transparent",
-                  }}
+                  style={{ borderColor: idx === imagenSeleccionada ? "var(--bio-color-precio, #8b6914)" : "transparent" }}
                 >
-                  <Image
-                    src={img}
-                    alt={`${producto.nombre} ${idx + 1}`}
-                    fill
-                    sizes="80px"
-                    className="object-cover"
-                  />
+                  <Image src={img} alt={`${producto.nombre} ${idx + 1}`} fill sizes="80px" className="object-cover" />
                 </button>
               ))}
             </div>
           )}
         </div>
 
+        {/* Columna derecha — Info */}
         <div className="space-y-6">
+
+          {/* Nombre y precio */}
           <div>
-            <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+            <h1
+              className="mb-2 text-3xl font-bold"
+              style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+            >
               {producto.nombre}
             </h1>
-            <p className="text-2xl font-bold" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}>
+            <p
+              className="text-2xl font-bold"
+              style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}
+            >
               ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
             </p>
           </div>
 
+          {/* ★ Rating agregado — justo debajo del precio */}
+          <RatingAgregado productoId={productoId} />
+
+          {/* Maestro Productor */}
           {productor && (
             <div className="rounded-lg p-4" style={{ backgroundColor: "#f0ebe0", border: "1px solid #e8dcc8" }}>
-              <h3 className="mb-2 font-semibold" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+              <h3
+                className="mb-2 font-semibold"
+                style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+              >
                 Maestro Productor
               </h3>
               <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
@@ -289,19 +299,19 @@ export default function ProductoDetallePage() {
                 ) : (
                   <p className="font-medium">{nombreProductor}</p>
                 )}
-                {productor.biografia && (
-                  <p className="text-gray-500">{productor.biografia}</p>
-                )}
-                {productor.otras_caracteristicas && (
-                  <p className="text-gray-500">{productor.otras_caracteristicas}</p>
-                )}
+                {productor.biografia && <p className="text-gray-500">{productor.biografia}</p>}
+                {productor.otras_caracteristicas && <p className="text-gray-500">{productor.otras_caracteristicas}</p>}
               </div>
             </div>
           )}
 
+          {/* Tienda */}
           {tiendaData && (
             <div className="rounded-lg p-4" style={{ backgroundColor: "#f0ebe0", border: "1px solid #e8dcc8" }}>
-              <h3 className="mb-2 font-semibold" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+              <h3
+                className="mb-2 font-semibold"
+                style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+              >
                 Tienda
               </h3>
               <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
@@ -316,188 +326,146 @@ export default function ProductoDetallePage() {
                 ) : (
                   <p className="font-medium">{tiendaData.nombre}</p>
                 )}
-                {tiendaData.descripcion && (
-                  <p className="text-gray-500">{tiendaData.descripcion}</p>
-                )}
+                {tiendaData.descripcion && <p className="text-gray-500">{tiendaData.descripcion}</p>}
                 {(tiendaData.ciudad_origen || tiendaData.estado_origen) && (
                   <p className="flex items-center gap-1">
                     <MapPin size={14} />
                     {[tiendaData.ciudad_origen, tiendaData.estado_origen].filter(Boolean).join(", ")}
                   </p>
                 )}
-                {tiendaData.nombre_contacto && (
-                  <p className="text-gray-500">Contacto: {tiendaData.nombre_contacto}</p>
-                )}
-                {tiendaData.telefono_contacto && (
-                  <p className="text-gray-500">Teléfono: {tiendaData.telefono_contacto}</p>
-                )}
+                {tiendaData.nombre_contacto && <p className="text-gray-500">Contacto: {tiendaData.nombre_contacto}</p>}
+                {tiendaData.telefono_contacto && <p className="text-gray-500">Teléfono: {tiendaData.telefono_contacto}</p>}
               </div>
             </div>
           )}
 
+          {/* Descripción */}
           <div>
-            <h3 className="mb-2 font-semibold text-gray-900 dark:text-white">
-              Descripción
-            </h3>
+            <h3 className="mb-2 font-semibold text-gray-900 dark:text-white">Descripción</h3>
             <p className="text-gray-600 dark:text-gray-300">
               {producto.descripcion || "Sin descripción disponible"}
             </p>
           </div>
 
+          {/* Atributos del lote */}
           <div className="grid grid-cols-2 gap-4">
             {producto.tipo_mezcal && (
               <div style={{ borderBottom: "1px solid #e8dcc8", paddingBottom: "1rem" }}>
                 <span className="text-sm" style={{ color: "var(--bio-color-precio, #8b6914)", textTransform: "uppercase", letterSpacing: "2px", fontSize: "10px", fontWeight: "600" }}>Tipo de Mezcal</span>
-                <p className="font-medium mt-1" style={{ color: "var(--bio-color-titulo, #5c3d1e)", fontFamily: "var(--bio-fuente-titulo, Georgia, serif)" }}>
-                  {producto.tipo_mezcal}
-                </p>
+                <p className="font-medium mt-1" style={{ color: "var(--bio-color-titulo, #5c3d1e)", fontFamily: "var(--bio-fuente-titulo, Georgia, serif)" }}>{producto.tipo_mezcal}</p>
               </div>
             )}
             {producto.maguey && (
               <div>
                 <span className="text-sm text-gray-500">Maguey</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {producto.maguey}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{producto.maguey}</p>
               </div>
             )}
             {producto.destilacion && (
               <div>
                 <span className="text-sm text-gray-500">Destilación</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {producto.destilacion}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{producto.destilacion}</p>
               </div>
             )}
             {producto.molienda && (
               <div>
                 <span className="text-sm text-gray-500">Molienda</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {producto.molienda}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{producto.molienda}</p>
               </div>
             )}
             {producto.abv && (
               <div>
                 <span className="text-sm text-gray-500">ABV</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {producto.abv}%
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{producto.abv}%</p>
               </div>
             )}
             {producto.maestro_mezcalero && (
               <div>
                 <span className="text-sm text-gray-500">Maestro Mezcalero</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {producto.maestro_mezcalero}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{producto.maestro_mezcalero}</p>
               </div>
             )}
             {region && (
               <div>
                 <span className="text-sm text-gray-500">Región</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {region}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{region}</p>
               </div>
             )}
             {codigoLote && (
               <div>
                 <span className="text-sm text-gray-500">Código Lote</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {codigoLote}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{codigoLote}</p>
               </div>
             )}
             {sitio && (
               <div>
                 <span className="text-sm text-gray-500">Sitio</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {sitio}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{sitio}</p>
               </div>
             )}
             {gradoAlcohol && (
               <div>
                 <span className="text-sm text-gray-500">Grados Alcohol</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {gradoAlcohol}%
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{gradoAlcohol}%</p>
               </div>
             )}
             {producto.marca && (
               <div>
                 <span className="text-sm text-gray-500">Marca</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {producto.marca}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{producto.marca}</p>
               </div>
             )}
             {nombreComun && (
               <div>
                 <span className="text-sm text-gray-500">Nombre Común</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {nombreComun}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{nombreComun}</p>
               </div>
             )}
             {nombreCientifico && (
               <div className="col-span-2">
                 <span className="text-sm text-gray-500">Nombre Científico</span>
-                <p className="font-medium text-gray-900 dark:text-white italic">
-                  {nombreCientifico}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white italic">{nombreCientifico}</p>
               </div>
             )}
             {unidades && (
               <div>
                 <span className="text-sm text-gray-500">Unidades</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {unidades}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{unidades}</p>
               </div>
             )}
             {fechaElaboracion && (
               <div>
                 <span className="text-sm text-gray-500">Fecha Elaboración</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {fechaElaboracion}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{fechaElaboracion}</p>
               </div>
             )}
             {estadoLote && (
               <div>
                 <span className="text-sm text-gray-500">Estado</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {estadoLote}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{estadoLote}</p>
               </div>
             )}
             {marcaLote && (
               <div>
                 <span className="text-sm text-gray-500">Marca</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {marcaLote}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{marcaLote}</p>
               </div>
             )}
           </div>
 
+          {/* Perfil de sabor */}
           {producto.perfil && (
             <div>
-              <h3 className="mb-2 font-semibold text-gray-900 dark:text-white">
-                Perfil de Sabor
-              </h3>
+              <h3 className="mb-2 font-semibold text-gray-900 dark:text-white">Perfil de Sabor</h3>
               <p className="text-gray-600 dark:text-gray-300">{producto.perfil}</p>
             </div>
           )}
 
+          {/* Cantidad + acciones */}
           <div className="space-y-4 border-t border-gray-200 pt-6 dark:border-gray-700">
             <div className="flex items-center gap-4">
               <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">
-                  Cantidad
-                </label>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Cantidad</label>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCantidad(Math.max(1, cantidad - 1))}
@@ -518,7 +486,7 @@ export default function ProductoDetallePage() {
               </div>
             </div>
 
-            {/* Sección de envío */}
+            {/* Envío */}
             <div className="rounded-lg p-4" style={{ border: "1px solid #e8dcc8", backgroundColor: "#fdf7ee" }}>
               <div className="flex items-center gap-2 mb-2">
                 <Truck size={16} style={{ color: "var(--bio-color-precio, #8b6914)" }} />
@@ -529,6 +497,7 @@ export default function ProductoDetallePage() {
               </p>
             </div>
 
+            {/* Botones */}
             <div className="flex flex-col gap-3">
               <div className="flex gap-3">
                 <button
@@ -552,13 +521,13 @@ export default function ProductoDetallePage() {
                   }}
                   className="flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors"
                   style={{
-                    backgroundColor: producto && isInWishlist(producto.id_producto) ? "#fdf7ee" : "transparent",
-                    color: producto && isInWishlist(producto.id_producto) ? "var(--bio-color-precio, #8b6914)" : "var(--bio-color-titulo, #5c3d1e)",
+                    backgroundColor: isInWishlist(producto.id_producto) ? "#fdf7ee" : "transparent",
+                    color: isInWishlist(producto.id_producto) ? "var(--bio-color-precio, #8b6914)" : "var(--bio-color-titulo, #5c3d1e)",
                     border: "1px solid #e8dcc8",
                   }}
                 >
-                  <Heart size={20} fill={producto && isInWishlist(producto.id_producto) ? "currentColor" : "none"} />
-                  {producto && isInWishlist(producto.id_producto) ? "En favoritos" : "Favoritos"}
+                  <Heart size={20} fill={isInWishlist(producto.id_producto) ? "currentColor" : "none"} />
+                  {isInWishlist(producto.id_producto) ? "En favoritos" : "Favoritos"}
                 </button>
                 <button
                   onClick={handleAgregar}
@@ -581,6 +550,17 @@ export default function ProductoDetallePage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── Reseñas ────────────────────────────────────────────────────────── */}
+      <div className="mt-16">
+        <ResenasSeccion productoId={productoId} />
+      </div>
+
+      {/* ── Productos relacionados ─────────────────────────────────────────── */}
+      <div className="mt-16 space-y-12">
+        <ProductosSimilares productoId={productoId} />
+        <TambienCompraron productoId={productoId} />
       </div>
     </div>
   );

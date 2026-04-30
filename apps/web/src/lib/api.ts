@@ -370,16 +370,74 @@ export const api = {
       fetchJson(endpoint(`/inventario/${id}`), { method: "DELETE", headers: headers(token) }),
   },
 
-  resenas: {
+ resenas: {
     getAll: () => fetchJson(endpoint("/resenas")),
     getOne: (id: number) => fetchJson(endpoint(`/resenas/${id}`)),
-    getByProducto: (productoId: string) => fetchJson(endpoint(`/productos/${productoId}`)),
+ 
+    // GET /resenas/producto/:id?calificacion=5&pagina=1&limite=10
+    getByProducto: (
+      productoId: string,
+      params?: { calificacion?: number; pagina?: number; limite?: number },
+    ) => {
+      const q = new URLSearchParams();
+      if (params?.calificacion) q.append("calificacion", String(params.calificacion));
+      if (params?.pagina) q.append("pagina", String(params.pagina));
+      if (params?.limite) q.append("limite", String(params.limite));
+      return fetchJson(
+        endpoint(`/resenas/producto/${productoId}${q.toString() ? `?${q}` : ""}`),
+      );
+    },
+ 
+    // GET /resenas/producto/:id/agregado
+    getAgregado: (productoId: string) =>
+      fetchJson(endpoint(`/resenas/producto/${productoId}/agregado`)),
+ 
+    // GET /resenas/producto/:id/similares
+    getSimilares: (productoId: string, limite = 6) =>
+      fetchJson(endpoint(`/resenas/producto/${productoId}/similares?limite=${limite}`)),
+ 
+    // GET /resenas/producto/:id/tambien-compraron
+    getTambienCompraron: (productoId: string, limite = 6) =>
+      fetchJson(endpoint(`/resenas/producto/${productoId}/tambien-compraron?limite=${limite}`)),
+ 
+    // POST /resenas
     create: (token: string, data: any) =>
-      fetchJson(endpoint("/resenas"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+      fetchJson(endpoint("/resenas"), {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify(data),
+      }),
+ 
+    // PATCH /resenas/:id
     update: (token: string, id: number, data: any) =>
-      fetchJson(endpoint(`/resenas/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
+      fetchJson(endpoint(`/resenas/${id}`), {
+        method: "PATCH",
+        headers: headers(token),
+        body: JSON.stringify(data),
+      }),
+ 
+    // PATCH /resenas/:id/moderar  (admin)
+    moderar: (token: string, id: number, accion: "aprobar" | "rechazar", motivo?: string) =>
+      fetchJson(endpoint(`/resenas/${id}/moderar`), {
+        method: "PATCH",
+        headers: headers(token),
+        body: JSON.stringify({ accion, motivo }),
+      }),
+ 
+    // PATCH /resenas/:id/responder  (vendedor)
+    responder: (token: string, id: number, respuesta_vendedor: string) =>
+      fetchJson(endpoint(`/resenas/${id}/responder`), {
+        method: "PATCH",
+        headers: headers(token),
+        body: JSON.stringify({ respuesta_vendedor }),
+      }),
+ 
+    // DELETE /resenas/:id
     delete: (token: string, id: number) =>
-      fetchJson(endpoint(`/resenas/${id}`), { method: "DELETE", headers: headers(token) }),
+      fetchJson(endpoint(`/resenas/${id}`), {
+        method: "DELETE",
+        headers: headers(token),
+      }),
   },
 
   lotes: {

@@ -1,0 +1,99 @@
+C:\Users\nanir\Documents\oaxaca\Marketplace-Residencia
+├── AGENTS.md
+├── api-dev.log
+├── apps
+|  ├── api
+|  |  ├── api-3002.err.log
+|  |  ├── api-3002.log
+|  |  ├── api-3002.out.log
+|  |  ├── api-3003.log
+|  |  ├── dist
+|  |  |  ├── app.module.d.ts
+|  |  |  ├── app.module.js
+|  |  |  ├── app.module.js.map
+|  |  |  ├── main.d.ts
+|  |  |  ├── main.js
+|  |  |  ├── main.js.map
+|  |  |  ├── modules
+|  |  |  └── prisma
+|  |  ├── nest-cli.json
+|  |  ├── package.json
+|  |  ├── scripts
+|  |  |  ├── productores.csv
+|  |  |  ├── roles.csv
+|  |  |  ├── seed-admin.js
+|  |  |  ├── seed-base.js
+|  |  |  ├── seed-dashboard-productor.js
+|  |  |  ├── seed-imports.js
+|  |  |  ├── seed-productos.js
+|  |  |  ├── seed-roles.js
+|  |  |  ├── seed-tiendas.js
+|  |  |  ├── seed-usuarios.js
+|  |  |  ├── usuarios.csv
+|  |  |  └── usuario_rol.csv
+|  |  ├── src
+|  |  |  ├── app.module.ts
+|  |  |  ├── main.ts
+|  |  |  ├── modules
+|  |  |  ├── prisma
+|  |  |  └── types
+|  |  ├── tsc-build.log
+|  |  ├── tsconfig.build.json
+|  |  ├── tsconfig.json
+|  |  └── uploads
+|  |     ├── archivos
+|  |     ├── productos
+|  |     └── usuarios
+|  └── web
+|     ├── jsvectormap.d.ts
+|     ├── middleware.ts
+|     ├── next-env.d.ts
+|     ├── next.config.mjs
+|     ├── package.json
+|     ├── postcss.config.js
+|     ├── public
+|     |  ├── fotos
+|     |  └── images
+|     ├── README.md
+|     ├── src
+|     |  ├── app
+|     |  ├── assets
+|     |  ├── components
+|     |  ├── context
+|     |  ├── css
+|     |  ├── fonts
+|     |  ├── hooks
+|     |  ├── i18n
+|     |  ├── lib
+|     |  └── types
+|     ├── tailwind.config.ts
+|     ├── tsconfig.json
+|     └── tsconfig.tsbuildinfo
+├── backup.sql
+├── CLAUDE.md
+├── docs
+|  └── autenticacion.md
+├── netlify.toml
+├── package-lock.json
+├── package.json
+├── packages
+|  └── database
+|     ├── package.json
+|     └── prisma
+|        ├── migrations
+|        ├── prisma.config.ts
+|        ├── schema.prisma
+|        └── seed.ts
+├── Procfile
+├── README.md
+├── SENDGRID_PRODUCTION_SETUP.md
+├── setup.md
+├── temp_dashboard.tsx
+├── tsconfig.json
+├── turbo.json
+├── vercel.json
+└── web-dev.log
+
+directory: 2881 file: 11553 symboliclink: 3
+
+ignored: directory (94)
