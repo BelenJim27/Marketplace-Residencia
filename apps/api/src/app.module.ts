@@ -23,6 +23,7 @@ import { ConfiguracionModule } from './modules/configuracion/configuracion.modul
 import { ArchivosModule } from './modules/archivos/archivos.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { EstadisticasLandingModule } from './modules/estadisticas-landing/estadisticas-landing.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { AdminModule } from './modules/admin/admin.module';
     ArchivosModule,
     AuditoriaModule,
     AdminModule,
+    EstadisticasLandingModule,
   ],
   controllers: [],
   providers: [],

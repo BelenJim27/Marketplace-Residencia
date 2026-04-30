@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/context/LocaleContext";
+import { useLandingStats } from "@/hooks/useLandingStats";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 
@@ -113,57 +114,47 @@ const SLIDES: Slide[] = [
   },
 ];
 
-const STATS = [
+// Solo íconos y labels — los números vienen de la API
+const STATS_CONFIG = [
   {
+    key: "totalProductores" as const,
     icon: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1A5D3B" strokeWidth="1.5">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5D3B" strokeWidth="1.5">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
         <circle cx="9" cy="7" r="4" />
         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
       </svg>
     ),
-    num: "1,248",
     label: "Productores registrados",
   },
   {
+    key: "totalRegiones" as const,
     icon: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1A5D3B" strokeWidth="1.5">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5D3B" strokeWidth="1.5">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
         <polyline points="9 22 9 12 15 12 15 22" />
       </svg>
     ),
-    num: "156",
     label: "Comunidades participantes",
   },
   {
+    key: "totalProductos" as const,
     icon: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1A5D3B" strokeWidth="1.5">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5D3B" strokeWidth="1.5">
         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
       </svg>
     ),
-    num: "8,732",
     label: "Productos trazables",
   },
   {
+    key: "ingresosFormateado" as const,
     icon: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1A5D3B" strokeWidth="1.5">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="2" y1="12" x2="22" y2="12" />
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-      </svg>
-    ),
-    num: "24",
-    label: "Países alcanzados",
-  },
-  {
-    icon: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1A5D3B" strokeWidth="1.5">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A5D3B" strokeWidth="1.5">
         <line x1="12" y1="1" x2="12" y2="23" />
         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
       </svg>
     ),
-    num: "$18.6 M",
     label: "Ingresos generados para comunidades",
   },
 ];
@@ -183,6 +174,7 @@ const SLIDE_INTERVAL = 5000;
 export default function LandingPageOaxaca() {
   const { t } = useLocale();
   const router = useRouter();
+  const { stats: landingStats, loading: statsLoading } = useLandingStats();
 
   const [prodActual, setProdActual] = useState(0);
   const [prodVisible, setProdVisible] = useState(true);
@@ -303,8 +295,8 @@ export default function LandingPageOaxaca() {
       <div
         style={{
           position: "relative",
-          height: "100vh",
-          minHeight: "620px",
+          height: "65vh",
+          minHeight: "420px",
           overflow: "hidden",
         }}
       >
@@ -324,16 +316,19 @@ export default function LandingPageOaxaca() {
             position: "relative", zIndex: 10, color: "#fff",
             height: "100%", display: "flex", flexDirection: "column",
             justifyContent: "flex-end", padding: "48px 56px",
-            maxWidth: "560px",
+            maxWidth: "600px",
           }}
         >
-          <span style={{ fontSize: "10px", letterSpacing: "0.22em", textTransform: "uppercase", color: "#C8A97A", marginBottom: "14px" }}>
+          {/* 10px → 13px */}
+          <span style={{ fontSize: "13px", letterSpacing: "0.22em", textTransform: "uppercase", color: "#C8A97A", marginBottom: "14px" }}>
             {t("Trazabilidad · Origen · Identidad")}
           </span>
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: "40px", fontWeight: 700, lineHeight: 1.2, margin: "0 0 14px" }}>
+          {/* 40px → 46px */}
+          <h1 style={{ fontFamily: "Georgia, serif", fontSize: "46px", fontWeight: 700, lineHeight: 1.2, margin: "0 0 14px" }}>
             {t("Oaxaca auténtico,")}<br />{t("trazable y justo")}
           </h1>
-          <p style={{ fontSize: "13px", lineHeight: 1.7, opacity: 0.75, maxWidth: "320px", margin: "0 0 20px" }}>
+          {/* 13px → 15px */}
+          <p style={{ fontSize: "15px", lineHeight: 1.7, opacity: 0.75, maxWidth: "360px", margin: "0 0 20px" }}>
             {t("Conectamos el origen, la tradición y el talento de nuestras comunidades con el mundo.")}
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "24px" }}>
@@ -346,7 +341,8 @@ export default function LandingPageOaxaca() {
                 key={p.label}
                 style={{
                   display: "flex", alignItems: "center", gap: "5px",
-                  fontSize: "11px", borderRadius: "999px", padding: "5px 12px",
+                  /* 11px → 13px */
+                  fontSize: "13px", borderRadius: "999px", padding: "5px 14px",
                   background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)",
                 }}
               >
@@ -358,18 +354,20 @@ export default function LandingPageOaxaca() {
             onClick={() => router.push("/Cliente/producto")}
             style={{
               display: "flex", alignItems: "center", gap: "8px",
-              fontSize: "13px", fontWeight: 600, padding: "12px 22px",
+              /* 13px → 15px */
+              fontSize: "15px", fontWeight: 600, padding: "13px 24px",
               borderRadius: "8px", background: "#C8A97A", color: "#1A241E",
               border: "none", cursor: "pointer", width: "fit-content",
             }}
           >
             {t("Explorar productos")}
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
             </svg>
           </button>
         </div>
       </div>
+
       {/* ══════════════════════════════════════════════════
     SECCIÓN 2 — SOBRE EL MEZCAL
 ══════════════════════════════════════════════════ */}
@@ -389,21 +387,24 @@ export default function LandingPageOaxaca() {
             flexDirection: "column",
             justifyContent: "center",
             padding: "40px 48px",
-            gap: "12px",
+            gap: "14px",
             borderRight: "1px solid #E5E5E1",
           }}
         >
           <div style={{ height: "2px", width: "32px", background: "#C8A97A", borderRadius: "2px" }} />
-          <p style={{ fontFamily: "Georgia, serif", fontSize: "13px", fontStyle: "italic", lineHeight: 1.75, color: "#3c1c08", margin: 0 }}>
+          {/* 13px → 16px */}
+          <p style={{ fontFamily: "Georgia, serif", fontSize: "16px", fontStyle: "italic", lineHeight: 1.75, color: "#3c1c08", margin: 0 }}>
             {t("Descubre el auténtico sabor del mezcal, un destilado artesanal nacido del corazón del agave.")}
           </p>
           {SOBRE_TEXTOS.slice(1).map((texto, i) => (
-            <p key={i} style={{ fontSize: "11px", lineHeight: 1.65, color: "#5C6B5E", margin: 0 }}>
+            // 11px → 14px
+            <p key={i} style={{ fontSize: "14px", lineHeight: 1.65, color: "#5C6B5E", margin: 0 }}>
               {t(texto)}
             </p>
           ))}
+          {/* 11px → 13px */}
           <p style={{
-            fontFamily: "Georgia, serif", fontSize: "11px", fontStyle: "italic",
+            fontFamily: "Georgia, serif", fontSize: "13px", fontStyle: "italic",
             color: "#C8A97A", paddingTop: "12px",
             borderTop: "1px solid #E5E5E1", margin: 0,
           }}>
@@ -422,26 +423,15 @@ export default function LandingPageOaxaca() {
             alignItems: "stretch",
           }}
         >
-          {/* Foto grande — 2 filas */}
-          <div style={{
-            gridColumn: "1/2", gridRow: "1/3",
-            borderRadius: "10px", overflow: "hidden",
-          }}>
-            <img
-              src="/fotos/22.jpeg" alt=""
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            />
+          <div style={{ gridColumn: "1/2", gridRow: "1/3", borderRadius: "10px", overflow: "hidden" }}>
+            <img src="/fotos/22.jpeg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
-
-          {/* Fila 1 */}
           <div style={{ gridColumn: "2/3", gridRow: "1/2", borderRadius: "10px", overflow: "hidden", aspectRatio: "4/3" }}>
             <img src="/fotos/24.jpeg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
           <div style={{ gridColumn: "3/4", gridRow: "1/2", borderRadius: "10px", overflow: "hidden", aspectRatio: "4/3" }}>
             <img src="/fotos/16.jpg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
-
-          {/* Fila 2 */}
           <div style={{ gridColumn: "2/3", gridRow: "2/3", borderRadius: "10px", overflow: "hidden", aspectRatio: "4/3" }}>
             <img src="/fotos/20.jpeg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
@@ -450,6 +440,7 @@ export default function LandingPageOaxaca() {
           </div>
         </div>
       </div>
+
       {/* ══════════════════════════════════════════════════
     SECCIÓN 3 — CARRUSEL PRODUCTOS
 ══════════════════════════════════════════════════ */}
@@ -457,96 +448,92 @@ export default function LandingPageOaxaca() {
         style={{
           background: "#F9F8F4",
           borderTop: "1px solid #E5E5E1",
-          padding: "56px 80px",
-          display: "flex",
-          alignItems: "center",
-          gap: "56px",
+          padding: "56px 40px 48px",
           position: "relative",
-          minHeight: "280px",
+          overflow: "hidden",
         }}
         onMouseEnter={() => setSectionHover(true)}
         onMouseLeave={() => setSectionHover(false)}
       >
-        {/* Flechas izq/der */}
-        {(["left", "right"] as const).map((dir) => (
-          <button
-            key={dir}
-            onClick={() => handleProdGo(dir === "left" ? prodActual - 1 : prodActual + 1)}
-            style={{
-              position: "absolute", top: "50%", transform: "translateY(-50%)",
-              [dir]: "24px", zIndex: 20,
-              width: "34px", height: "34px", borderRadius: "50%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(26,93,59,0.1)", border: "1px solid #1A5D3B",
-              color: "#1A5D3B", cursor: "pointer",
-              opacity: sectionHover ? 1 : 0, transition: "opacity 0.2s",
-            }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              {dir === "left" ? <polyline points="15 18 9 12 15 6" /> : <polyline points="9 6 15 12 9 18" />}
-            </svg>
-          </button>
-        ))}
-
-        {/* Imagen botella */}
-        <div
-          style={{
-            position: "relative", display: "flex", alignItems: "center",
-            justifyContent: "center", flexShrink: 0, width: "200px",
-          }}
-          onMouseEnter={() => setImageHover(true)}
-          onMouseLeave={() => setImageHover(false)}
-        >
-          <div style={{
-            position: "absolute", width: "160px", height: "160px",
-            borderRadius: "50%", background: "rgba(26,93,59,0.07)",
-          }} />
-          {producto.anotaciones.map((a, i) => (
-            <p
-              key={i}
-              className={`absolute text-[9px] leading-snug italic max-w-[80px] ${a.posicion}`}
-              style={{
-                fontFamily: "Georgia, serif", color: "#5c2a0a",
-                opacity: imageHover && prodVisible ? 1 : 0,
-                transition: `opacity 0.35s ease ${i * 0.08}s`,
-              }}
-            >
-              {t(a.texto)}
-            </p>
-          ))}
-          <div
-            style={{
-              position: "relative", zIndex: 10,
-              width: "140px", height: "140px", borderRadius: "50%", overflow: "hidden",
-              boxShadow: "0 8px 32px rgba(139,69,19,0.2)",
-              opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s",
-            }}
-          >
-            <img src={producto.imagen} alt={t(producto.nombre)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          </div>
-        </div>
-
-        {/* Info producto */}
-        <div
-          style={{
-            display: "flex", flexDirection: "column", gap: "12px", flex: 1,
-            opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s",
-          }}
-        >
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: "32px", fontWeight: 700, color: "#1A241E", margin: 0 }}>
+        {/* Nombre + subtítulo centrados arriba */}
+        <div style={{ textAlign: "center", marginBottom: "40px", opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s" }}>
+          <h2 style={{ fontFamily: "Georgia, serif", fontSize: "38px", fontWeight: 700, color: "#1A241E", margin: "0 0 10px" }}>
             {t(producto.nombre)}
           </h2>
-          <p
-            style={{
-              fontSize: "13px", fontStyle: "italic", lineHeight: 1.6,
-              fontFamily: "Georgia, serif", color: "#5C6B5E",
-              borderLeft: "2px solid #C8A97A", paddingLeft: "14px", margin: 0,
-            }}
-          >
+          <p style={{
+            fontSize: "15px", fontStyle: "italic", lineHeight: 1.6,
+            fontFamily: "Georgia, serif", color: "#5C6B5E",
+            maxWidth: "500px", margin: "0 auto",
+          }}>
             &ldquo;{t(producto.subtitulo)}&rdquo;
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#1A5D3B", margin: 0 }}>
+        </div>
+
+        {/* Layout de 3 columnas: anotaciones izq | botella | notas der */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "32px", alignItems: "center", maxWidth: "1000px", margin: "0 auto" }}>
+
+          {/* ── Columna izquierda: 3 anotaciones con flechas → botella ── */}
+          <div style={{
+            display: "flex", flexDirection: "column", gap: "28px",
+            alignItems: "flex-end",
+            opacity: prodVisible ? 1 : 0, transition: "opacity 0.35s",
+          }}>
+            {producto.anotaciones.map((a, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", maxWidth: "260px" }}>
+                {/* Texto */}
+                <p style={{
+                  fontSize: "13px", fontFamily: "Georgia, serif", fontStyle: "italic",
+                  color: "#5c2a0a", lineHeight: 1.5, margin: 0, textAlign: "right",
+                  opacity: prodVisible ? 1 : 0,
+                  transition: `opacity 0.4s ease ${i * 0.1}s`,
+                }}>
+                  {t(a.texto)}
+                </p>
+                {/* Flecha → */}
+                <svg width="48" height="20" viewBox="0 0 48 20" fill="none" style={{ flexShrink: 0 }}>
+                  <path d="M2 10 Q24 2 46 10" stroke="#C8A97A" strokeWidth="1.5" fill="none" strokeDasharray="3 2" />
+                  <polyline points="40,6 46,10 40,14" fill="none" stroke="#C8A97A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Columna central: botella grande ── */}
+          <div
+            style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+            onMouseEnter={() => setImageHover(true)}
+            onMouseLeave={() => setImageHover(false)}
+          >
+            {/* Círculo decorativo de fondo */}
+            <div style={{
+              position: "absolute", width: "290px", height: "290px",
+              borderRadius: "50%", background: "rgba(26,93,59,0.06)",
+              border: "1px solid rgba(200,169,122,0.2)",
+            }} />
+            {/* Botella */}
+            <div style={{
+              position: "relative", zIndex: 10,
+              width: "260px", height: "260px", borderRadius: "50%", overflow: "hidden",
+              boxShadow: "0 12px 48px rgba(139,69,19,0.25)",
+              opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s",
+            }}>
+              <img
+                src={producto.imagen}
+                alt={t(producto.nombre)}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            </div>
+
+
+          </div>
+
+          {/* ── Columna derecha: notas de cata con flechas ← botella ── */}
+          <div style={{
+            display: "flex", flexDirection: "column", gap: "20px",
+            alignItems: "flex-start",
+            opacity: prodVisible ? 1 : 0, transition: "opacity 0.35s",
+          }}>
+            <p style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#1A5D3B", margin: 0 }}>
               {t("Notas de cata")}
             </p>
             {(
@@ -555,13 +542,28 @@ export default function LandingPageOaxaca() {
                 ["Nariz", producto.notas.nariz],
                 ["Boca", producto.notas.boca],
               ] as [string, string][]
-            ).map(([key, val]) => (
-              <p key={key} style={{ fontSize: "13px", paddingBottom: "6px", borderBottom: "1px solid #E5E5E1", color: "#1A241E", margin: 0 }}>
-                <span style={{ fontWeight: 700, color: "#C8A97A" }}>{t(key)}: </span>{t(val)}
-              </p>
+            ).map(([key, val], i) => (
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                {/* Flecha ← */}
+                <svg width="48" height="20" viewBox="0 0 48 20" fill="none" style={{ flexShrink: 0 }}>
+                  <path d="M46 10 Q24 2 2 10" stroke="#C8A97A" strokeWidth="1.5" fill="none" strokeDasharray="3 2" />
+                  <polyline points="8,6 2,10 8,14" fill="none" stroke="#C8A97A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {/* Texto */}
+                <p style={{
+                  fontSize: "14px", color: "#1A241E", margin: 0, lineHeight: 1.4,
+                  opacity: prodVisible ? 1 : 0,
+                  transition: `opacity 0.4s ease ${i * 0.1}s`,
+                }}>
+                  <span style={{ fontWeight: 700, color: "#C8A97A" }}>{t(key)}: </span>{t(val)}
+                </p>
+              </div>
             ))}
           </div>
-          {/* Dots + progress */}
+        </div>
+
+        {/* Dots + barra de progreso centrados abajo */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", marginTop: "40px" }}>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             {PRODUCTOS.map((_, i) => (
               <button
@@ -575,13 +577,34 @@ export default function LandingPageOaxaca() {
                 }}
               />
             ))}
-
           </div>
-          <div style={{ height: "2px", borderRadius: "999px", overflow: "hidden", background: "rgba(26,93,59,0.12)", maxWidth: "300px" }}>
+          <div style={{ height: "2px", borderRadius: "999px", overflow: "hidden", background: "rgba(26,93,59,0.12)", width: "200px" }}>
             <div ref={prodProgressRef} style={{ height: "100%", background: "#1A5D3B", width: "0%" }} />
           </div>
         </div>
+
+        {/* Flechas navegación izq/der */}
+        {(["left", "right"] as const).map((dir) => (
+          <button
+            key={dir}
+            onClick={() => handleProdGo(dir === "left" ? prodActual - 1 : prodActual + 1)}
+            style={{
+              position: "absolute", top: "50%", transform: "translateY(-50%)",
+              [dir]: "16px", zIndex: 20,
+              width: "36px", height: "36px", borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(26,93,59,0.1)", border: "1px solid #1A5D3B",
+              color: "#1A5D3B", cursor: "pointer",
+              opacity: sectionHover ? 1 : 0, transition: "opacity 0.2s",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              {dir === "left" ? <polyline points="15 18 9 12 15 6" /> : <polyline points="9 6 15 12 9 18" />}
+            </svg>
+          </button>
+        ))}
       </div>
+
       {/* ══════════════════════════════════════════════════
           BLOQUE 2 — CONOCE MÁS DE NUESTROS PRODUCTOS
       ══════════════════════════════════════════════════ */}
@@ -590,22 +613,23 @@ export default function LandingPageOaxaca() {
           background: "#fff",
           borderTop: "1px solid #E5E5E1",
           marginTop: "10px",
-          padding: "40px 28px",
+          padding: "48px 28px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
         }}
       >
-        <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#1A5D3B", marginBottom: "24px" }}>
+        {/* 10px → 13px */}
+        <p style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#1A5D3B", marginBottom: "28px" }}>
           {t("Conoce más de nuestros productos")}
         </p>
 
-        <div style={{ display: "flex", gap: "24px", alignItems: "center", justifyContent: "center", width: "100%", maxWidth: "700px" }}>
+        <div style={{ display: "flex", gap: "36px", alignItems: "center", justifyContent: "center", width: "100%", maxWidth: "960px" }}>
           {/* Imagen principal con controles */}
           <div
             style={{
-              position: "relative", borderRadius: "14px", overflow: "hidden", flexShrink: 0,
-              width: "160px", height: "160px", boxShadow: "0 4px 20px rgba(200,100,20,0.2)",
+              position: "relative", borderRadius: "16px", overflow: "hidden", flexShrink: 0,
+              width: "260px", height: "260px", boxShadow: "0 4px 24px rgba(200,100,20,0.25)",
             }}
           >
             <img
@@ -617,49 +641,49 @@ export default function LandingPageOaxaca() {
               onClick={() => handleSlideGo(slideActual - 1)}
               style={{
                 position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)",
-                width: "24px", height: "24px", borderRadius: "50%", border: "none", cursor: "pointer",
+                width: "26px", height: "26px", borderRadius: "50%", border: "none", cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 background: "rgba(26,36,30,0.6)", color: "#fff",
               }}
             >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="15 18 9 12 15 6" /></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="15 18 9 12 15 6" /></svg>
             </button>
             <button
               onClick={() => handleSlideGo(slideActual + 1)}
               style={{
                 position: "absolute", right: "6px", top: "50%", transform: "translateY(-50%)",
-                width: "24px", height: "24px", borderRadius: "50%", border: "none", cursor: "pointer",
+                width: "26px", height: "26px", borderRadius: "50%", border: "none", cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 background: "rgba(26,36,30,0.6)", color: "#fff",
               }}
             >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="9 6 15 12 9 18" /></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="9 6 15 12 9 18" /></svg>
             </button>
             <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "3px", background: "rgba(200,169,122,0.2)" }}>
               <div ref={slideProgressRef} style={{ height: "100%", background: "#C8A97A", width: "0%" }} />
             </div>
           </div>
 
-          {/* Círculos centrados */}
-          <div style={{ display: "flex", gap: "20px", justifyContent: "center", flex: 1 }}>
+          {/* Círculos */}
+          <div style={{ display: "flex", gap: "28px", justifyContent: "center", flex: 1 }}>
             {slide.circulos.map((item, i) => (
               <div
                 key={`${slideActual}-${i}`}
                 style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: "6px",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: "10px",
                   opacity: slideVisible ? 1 : 0, transition: `opacity 0.35s ease ${i * 0.07}s`,
                 }}
               >
                 <div
                   style={{
-                    width: "72px", height: "72px", borderRadius: "50%", overflow: "hidden",
-                    border: "2px solid rgba(200,169,122,0.5)", boxShadow: "0 2px 12px rgba(200,100,20,0.2)",
+                    width: "130px", height: "130px", borderRadius: "50%", overflow: "hidden",
+                    border: "2px solid rgba(200,169,122,0.5)", boxShadow: "0 2px 16px rgba(200,100,20,0.2)",
                   }}
                 >
                   <img src={item.imagen} alt={item.etiqueta ?? `Imagen ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
                 {item.etiqueta && (
-                  <p style={{ fontSize: "10px", fontStyle: "italic", textAlign: "center", fontFamily: "Georgia, serif", color: "#5C6B5E", maxWidth: "70px", margin: 0 }}>
+                  <p style={{ fontSize: "13px", fontStyle: "italic", textAlign: "center", fontFamily: "Georgia, serif", color: "#5C6B5E", maxWidth: "100px", margin: 0 }}>
                     {t(item.etiqueta)}
                   </p>
                 )}
@@ -669,7 +693,7 @@ export default function LandingPageOaxaca() {
         </div>
 
         {/* Dots + botón */}
-        <div style={{ display: "flex", alignItems: "center", gap: "24px", marginTop: "20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "24px", marginTop: "24px" }}>
           <div style={{ display: "flex", gap: "6px" }}>
             {SLIDES.map((_, i) => (
               <button
@@ -687,7 +711,8 @@ export default function LandingPageOaxaca() {
           <button
             onClick={() => router.push("/Cliente/producto")}
             style={{
-              fontSize: "11px", fontWeight: 600, padding: "8px 20px", borderRadius: "999px",
+              /* 11px → 14px */
+              fontSize: "14px", fontWeight: 600, padding: "9px 22px", borderRadius: "999px",
               background: "#1A5D3B", color: "#fff", border: "none", cursor: "pointer",
             }}
           >
@@ -705,28 +730,34 @@ export default function LandingPageOaxaca() {
           background: "#F9F8F4",
           borderTop: "1px solid #E5E5E1",
           marginTop: "10px",
-          padding: "40px 28px",
+          padding: "48px 28px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: "28px" }}>
-          <p style={{ fontSize: "18px", fontWeight: 700, color: "#1A241E", fontFamily: "Georgia, serif", margin: 0, marginBottom: "8px" }}>
+        <div style={{ textAlign: "center", marginBottom: "32px" }}>
+          {/* 18px → 22px */}
+          <p style={{ fontSize: "22px", fontWeight: 700, color: "#1A241E", fontFamily: "Georgia, serif", margin: 0, marginBottom: "10px" }}>
             {t("Impacto que construimos juntos")}
           </p>
-          <p style={{ fontSize: "12px", color: "#5C6B5E", fontStyle: "italic", fontFamily: "Georgia, serif", margin: 0 }}>
+          {/* 12px → 15px */}
+          <p style={{ fontSize: "15px", color: "#5C6B5E", fontStyle: "italic", fontFamily: "Georgia, serif", margin: 0 }}>
             {t("Cada compra transforma vidas y preserva nuestra herencia cultural.")}
           </p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px", width: "100%", maxWidth: "900px" }}>
-          {STATS.map((stat, i) => (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px", width: "100%", maxWidth: "860px" }}>
+          {STATS_CONFIG.map((stat, i) => {
+            const valor = landingStats
+              ? String(landingStats[stat.key] ?? "—")
+              : "…";
+            return (
             <div
               key={i}
               style={{
                 display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
-                gap: "10px", padding: "20px 14px",
+                gap: "12px", padding: "22px 16px",
                 borderRadius: "14px",
                 background: "#fff",
                 border: "1px solid #E5E5E1",
@@ -745,51 +776,59 @@ export default function LandingPageOaxaca() {
                 {stat.icon}
               </div>
               <div>
-                <p style={{ fontSize: "22px", fontWeight: 700, color: "#1A241E", fontFamily: "Georgia, serif", margin: 0, lineHeight: 1.1 }}>
-                  {stat.num}
+                <p style={{ fontSize: "26px", fontWeight: 700, color: "#1A241E", fontFamily: "Georgia, serif", margin: 0, lineHeight: 1.1 }}>
+                  {statsLoading ? "…" : valor}
                 </p>
-                <p style={{ fontSize: "11px", lineHeight: 1.4, color: "#5C6B5E", margin: 0, marginTop: "4px" }}>
+                <p style={{ fontSize: "13px", lineHeight: 1.4, color: "#5C6B5E", margin: 0, marginTop: "5px" }}>
                   {t(stat.label)}
                 </p>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* ══════════════════════════════════════════════════
           BLOQUE 4 — FOOTER
       ══════════════════════════════════════════════════ */}
-      <div style={{ padding: "32px 28px 24px", background: "#1A241E", marginTop: "10px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px", maxWidth: "900px", margin: "0 auto" }}>
+      <div style={{ padding: "36px 28px 26px", background: "#1A241E", marginTop: "10px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "28px", maxWidth: "960px", margin: "0 auto" }}>
           <div>
-            <p style={{ fontSize: "14px", fontWeight: 700, fontStyle: "italic", fontFamily: "Georgia, serif", color: "#e8c060", marginBottom: "8px" }}>
+            {/* 14px → 17px */}
+            <p style={{ fontSize: "17px", fontWeight: 700, fontStyle: "italic", fontFamily: "Georgia, serif", color: "#e8c060", marginBottom: "10px" }}>
               {t("Guardianas del Mezcal")}
             </p>
-            <p style={{ fontSize: "11px", lineHeight: 1.65, opacity: 0.6, color: "#D1D5D2", margin: 0 }}>
+            {/* 11px → 13px */}
+            <p style={{ fontSize: "13px", lineHeight: 1.65, opacity: 0.6, color: "#D1D5D2", margin: 0 }}>
               {t("Honrando la tierra, el fuego y las manos que transforman el agave.")}
             </p>
           </div>
           <div>
-            <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#C8A97A", marginBottom: "8px" }}>
+            {/* 10px → 12px */}
+            <p style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#C8A97A", marginBottom: "10px" }}>
               {t("Explorar")}
             </p>
             {["Maestras mezcaleras", "Historia", "Nuestro proceso"].map((item) => (
-              <a key={item} href="#" style={{ display: "block", fontSize: "11px", opacity: 0.6, color: "#D1D5D2", textDecoration: "none", marginBottom: "4px" }}>
+              // 11px → 13px
+              <a key={item} href="#" style={{ display: "block", fontSize: "13px", opacity: 0.6, color: "#D1D5D2", textDecoration: "none", marginBottom: "6px" }}>
                 {t(item)}
               </a>
             ))}
           </div>
           <div>
-            <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#C8A97A", marginBottom: "8px" }}>
+            {/* 10px → 12px */}
+            <p style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#C8A97A", marginBottom: "10px" }}>
               {t("Contacto")}
             </p>
             {["guardianasdemezcal@gmail.com", "9512578906", "Santa Maria Zaquilán, Oaxaca"].map((item) => (
-              <p key={item} style={{ fontSize: "11px", opacity: 0.6, color: "#D1D5D2", margin: 0, marginBottom: "4px" }}>{t(item)}</p>
+              // 11px → 13px
+              <p key={item} style={{ fontSize: "13px", opacity: 0.6, color: "#D1D5D2", margin: 0, marginBottom: "6px" }}>{t(item)}</p>
             ))}
           </div>
         </div>
-        <p style={{ fontSize: "10px", textAlign: "center", opacity: 0.4, marginTop: "20px", paddingTop: "16px", borderTop: "1px solid rgba(200,169,122,0.1)", color: "#D1D5D2", margin: "20px 0 0" }}>
+        {/* 10px → 12px */}
+        <p style={{ fontSize: "12px", textAlign: "center", opacity: 0.4, marginTop: "20px", paddingTop: "16px", borderTop: "1px solid rgba(200,169,122,0.1)", color: "#D1D5D2", margin: "20px 0 0" }}>
           2026 © {t("Guardianas de mezcal. Todos los derechos reservados.")}
         </p>
       </div>

@@ -1,5 +1,5 @@
 // src/app/Cliente/page.tsx
-import SegundaOpcion from "@/components/Cliente/SegundaOpcion";
+/*import SegundaOpcion from "@/components/Cliente/SegundaOpcion";
 
 export default function Page() {
   return (
@@ -7,4 +7,4 @@ export default function Page() {
       <SegundaOpcion />
     </main>
   );
-}
+}*/
