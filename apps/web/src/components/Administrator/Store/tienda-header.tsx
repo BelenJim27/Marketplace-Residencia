@@ -11,13 +11,13 @@ import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useRouter } from "next/navigation";
 import LanguageSwitcher from "@/components/Layouts/LanguageSwitcher";
-import { useLocale } from "@/context/LocaleContext"; // Importamos el hook
+import { useLocale } from "@/context/LocaleContext";
 
 export function TiendaHeader() {
   const { user, isAuthenticated, isAdmin, isProductor } = useAuth();
   const { cantidadTotal } = useCarrito();
   const { cantidadTotal: wishlistCount } = useWishlist();
-  const { t } = useLocale(); // Extraemos la función de traducción 't'
+  const { t } = useLocale();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const router = useRouter();
 
@@ -136,9 +136,10 @@ export function TiendaHeader() {
               <span className="hidden sm:inline text-xs">{t("Vender")}</span>
             </button>
 
+            {/* Perfil a la izquierda de modo oscuro e idioma */}
+            <UserInfo />
             <ThemeToggleSwitch />
             <LanguageSwitcher />
-            <UserInfo />
           </>
         ) : isAuthenticated ? (
           <>
@@ -176,9 +177,10 @@ export function TiendaHeader() {
               <span className="hidden sm:inline text-xs">{t("Vender")}</span>
             </button>
 
+            {/* Perfil a la izquierda de modo oscuro e idioma */}
+            <UserInfo />
             <ThemeToggleSwitch />
             <LanguageSwitcher />
-            <UserInfo />
           </>
         ) : (
           <>
@@ -200,8 +202,7 @@ export function TiendaHeader() {
               <span className="hidden sm:inline text-xs">{t("Vender")}</span>
             </button>
 
-            <ThemeToggleSwitch />
-            <LanguageSwitcher />
+            {/* Perfil a la izquierda de modo oscuro e idioma */}
             <div className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -236,6 +237,8 @@ export function TiendaHeader() {
                 </div>
               )}
             </div>
+            <ThemeToggleSwitch />
+            <LanguageSwitcher />
           </>
         )}
       </nav>

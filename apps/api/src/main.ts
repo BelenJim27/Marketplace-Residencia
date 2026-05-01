@@ -18,15 +18,15 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
   app.use('/uploads', expressStatic(join(process.cwd(), 'uploads')));
-  
-  const rawOrigins = process.env.FRONTEND_URL || 'http://localhost:3000';
-  const corsOrigin = rawOrigins.includes(',')
-    ? rawOrigins.split(',').map((o) => o.trim())
-    : rawOrigins;
+
   app.enableCors({
-  origin: ['https://marketplace-mezcal.vercel.app'],
-  credentials: true,
-});
+    origin: [
+      'http://localhost:3000',
+      'https://marketplace-mezcal.vercel.app',
+    ],
+    credentials: true,
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
