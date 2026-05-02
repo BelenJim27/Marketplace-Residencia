@@ -137,3 +137,23 @@
   --tienda-dropdown-bg: #0f172a;
   --tienda-dropdown-border: #166534;
 }
+/* ── Landing Page Oaxaca ── */
+:root {
+  --land-bg-primary: #F9F8F4;
+  --land-bg-white: #ffffff;
+  --land-border: #E5E5E1;
+  --land-text-dark: #1A241E;
+  --land-text-mid: #5C6B5E;
+  --land-stat-bg: #ffffff;
+  --land-stat-border: #E5E5E1;
+}
+
+.dark {
+  --land-bg-primary: #0a0f0c;
+  --land-bg-white: #111916;
+  --land-border: rgba(255,255,255,0.08);
+  --land-text-dark: #e8f0ea;
+  --land-text-mid: #9ab09e;
+  --land-stat-bg: #131f16;
+  --land-stat-border: rgba(255,255,255,0.08);
+}
