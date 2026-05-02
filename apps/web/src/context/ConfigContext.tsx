@@ -16,6 +16,26 @@ const defaultPrimary = "#2d7a3e";
 const defaultSecondary = "#8b5cf6";
 const defaultAccent = "#10b981";
 
+// Tokens biocultural en modo CLARO
+const BIO_LIGHT = {
+  "--bio-color-fondo":   "#faf8f4",
+  "--bio-color-tarjeta": "#f0ebe0",
+  "--bio-color-titulo":  "#5c3d1e",
+  "--bio-color-precio":  "#8b6914",
+  "--bio-color-boton":   "#5c3d1e",
+  "--bio-color-boton2":  "#8b6914",
+};
+
+// Tokens biocultural en modo OSCURO
+const BIO_DARK = {
+  "--bio-color-fondo":   "#0f172a",
+  "--bio-color-tarjeta": "#1e293b",
+  "--bio-color-titulo":  "#e2c98a",
+  "--bio-color-precio":  "#f0b429",
+  "--bio-color-boton":   "#92400e",
+  "--bio-color-boton2":  "#b45309",
+};
+
 interface ConfigContextType {
   config: Record<string, string>;
   loading: boolean;
@@ -28,10 +48,13 @@ const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
 function applyColors(map: Record<string, string>) {
   if (typeof document === "undefined") return;
+
   const primary = map.color_primario || defaultPrimary;
   const secondary = map.color_secundario || defaultSecondary;
   const accent = map.color_acento || defaultAccent;
   const root = document.documentElement;
+
+  // Colores base de la app
   root.style.setProperty("--color-primary", primary);
   root.style.setProperty("--color-secondary", secondary);
   root.style.setProperty("--color-accent", accent);
@@ -39,19 +62,32 @@ function applyColors(map: Record<string, string>) {
   root.style.setProperty("--color-secondary-rgb", hexToRgb(secondary));
   root.style.setProperty("--color-accent-rgb", hexToRgb(accent));
 
-  // Biocultural design tokens
-  const bioKeys: Array<[string, string, string]> = [
-    ['bio_color_fondo', '--bio-color-fondo', '#faf8f4'],
-    ['bio_color_tarjeta', '--bio-color-tarjeta', '#f0ebe0'],
-    ['bio_color_titulo', '--bio-color-titulo', '#5c3d1e'],
-    ['bio_color_precio', '--bio-color-precio', '#8b6914'],
-    ['bio_color_boton', '--bio-color-boton', '#5c3d1e'],
-    ['bio_color_boton2', '--bio-color-boton2', '#8b6914'],
-    ['bio_fuente_titulo', '--bio-fuente-titulo', 'Georgia, serif'],
-  ];
+  // Fuente (no cambia con el tema)
+  root.style.setProperty(
+    "--bio-fuente-titulo",
+    map["bio_fuente_titulo"] ?? "Georgia, serif"
+  );
 
-  bioKeys.forEach(([key, cssVar, fallback]) => {
-    root.style.setProperty(cssVar, map[key] ?? fallback);
+  // Detectar modo oscuro activo
+  const isDark = root.classList.contains("dark");
+  const bioTokens = isDark ? BIO_DARK : BIO_LIGHT;
+
+  // Aplicar tokens según el tema, permitiendo override desde la config
+  const bioKeyMap: Record<string, string> = {
+    bio_color_fondo:   "--bio-color-fondo",
+    bio_color_tarjeta: "--bio-color-tarjeta",
+    bio_color_titulo:  "--bio-color-titulo",
+    bio_color_precio:  "--bio-color-precio",
+    bio_color_boton:   "--bio-color-boton",
+    bio_color_boton2:  "--bio-color-boton2",
+  };
+
+  Object.entries(bioTokens).forEach(([cssVar, defaultVal]) => {
+    // Solo usar el valor de la config si NO estamos en modo oscuro
+    // (en oscuro siempre usamos los tokens oscuros para que se vea bien)
+    const configKey = Object.keys(bioKeyMap).find((k) => bioKeyMap[k] === cssVar);
+    const val = !isDark && configKey && map[configKey] ? map[configKey] : defaultVal;
+    root.style.setProperty(cssVar, val);
   });
 }
 
@@ -60,7 +96,6 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchConfig = async () => {
-    // 1. Carga caché inmediatamente para no bloquear la UI
     try {
       const cached = localStorage.getItem(STORAGE_KEY);
       if (cached) {
@@ -72,7 +107,6 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       // ignorar errores de localStorage
     }
 
-    // 2. Intenta cargar desde la API
     try {
       const data = (await api.configuracion.getSistema()) as { clave: string; valor: string }[];
       if (!Array.isArray(data)) throw new Error("Respuesta inválida");
@@ -91,8 +125,6 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         // ignorar errores de cuota
       }
     } catch {
-      // Si falla la API, ya tenemos el caché aplicado arriba
-      // Aplicar defaults si no había caché
       applyColors({
         color_primario: defaultPrimary,
         color_secundario: defaultSecondary,
@@ -122,6 +154,29 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchConfig();
   }, []);
+
+  // Re-aplicar colores cada vez que cambia el tema (dark/light)
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "class"
+        ) {
+          applyColors(config);
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, [config]);
 
   const get = (key: string, fallback = ""): string => config[key] || fallback;
 

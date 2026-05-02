@@ -119,3 +119,21 @@
     font-display: swap;
     font-style: italic;
 }
+/* Tienda Header - variables modo oscuro */
+:root {
+  --tienda-header-bg: rgba(45, 122, 62, 0.08);
+  --tienda-header-border: rgba(45, 122, 62, 0.25);
+  --tienda-header-bg-scrolled: rgba(255, 255, 255, 0.97);
+  --tienda-nav-color: #15803d;
+  --tienda-dropdown-bg: #ffffff;
+  --tienda-dropdown-border: #bbf7d0;
+}
+
+.dark {
+  --tienda-header-bg: rgba(2, 13, 26, 0.95);
+  --tienda-header-border: rgba(45, 122, 62, 0.3);
+  --tienda-header-bg-scrolled: rgba(2, 13, 26, 0.98);
+  --tienda-nav-color: #4ade80;
+  --tienda-dropdown-bg: #0f172a;
+  --tienda-dropdown-border: #166534;
+}

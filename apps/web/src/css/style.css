@@ -478,3 +478,26 @@ input[type="search"]::-webkit-search-cancel-button {
 .custom-gradient-1 {
   background-image: linear-gradient(145deg, #eef 0%, #fff8fc 100%);
 }
+/* ── Tienda – variables bio modo claro/oscuro ── */
+:root {
+  --bio-color-fondo: #faf8f4;
+  --bio-color-titulo: #5c3d1e;
+  --bio-color-precio: #8b6914;
+  --bio-color-boton: #5c3d1e;
+  --bio-color-boton-hover: #3d2510;
+}
+
+.dark {
+  --bio-color-fondo: #0f172a;
+  --bio-color-titulo: #e2c98a;
+  --bio-color-precio: #f0b429;
+  --bio-color-boton: #92400e;
+  --bio-color-boton-hover: #78350f;
+}
+:root {
+  --bio-color-tarjeta: #f0ebe0;
+}
+
+.dark {
+  --bio-color-tarjeta: #1e293b;
+}

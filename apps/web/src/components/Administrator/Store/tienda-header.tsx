@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShoppingCart, Package, User, UserPlus, Heart, Store, Home, ShoppingBag } from "lucide-react";
 import { UserInfo } from "@/components/Layouts/header/user-info";
 import { ThemeToggleSwitch } from "@/components/Layouts/header/theme-toggle";
@@ -19,7 +19,14 @@ export function TiendaHeader() {
   const { cantidadTotal: wishlistCount } = useWishlist();
   const { t } = useLocale();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const isClient = isAuthenticated && !isAdmin && !isProductor;
 
@@ -53,11 +60,11 @@ export function TiendaHeader() {
     router.push("/producto");
   };
 
+  const navBtnClass =
+    "flex flex-col items-center gap-1 px-3 py-2 transition-colors text-[var(--tienda-nav-color)] hover:opacity-70";
+
   const HomeIcon = () => (
-    <Link
-      href="/Cliente/inicio"
-      className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
-    >
+    <Link href="/Cliente/inicio" className={navBtnClass}>
       <Home size={24} />
       <span className="hidden sm:inline text-xs">{t("Inicio")}</span>
     </Link>
@@ -66,18 +73,22 @@ export function TiendaHeader() {
   return (
     <header
       style={{
-        borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)",
-        backgroundColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.08)",
+        borderColor: "var(--tienda-header-border)",
+        backgroundColor: scrolled
+          ? "var(--tienda-header-bg-scrolled)"
+          : "var(--tienda-header-bg)",
       }}
-      className="relative top-0 z-30 flex items-center justify-between border-b border-green-200 bg-green-100 px-4 py-4 shadow-sm md:px-8"
+      className={`sticky top-0 z-30 flex items-center justify-between border-b px-4 md:px-8 transition-all duration-300 ${
+        scrolled ? "py-2 shadow-md" : "py-4 shadow-sm"
+      }`}
     >
       <Link href="/producto" className="flex items-center gap-3">
         <Image
           src="/images/logo/tierra_agaves.png"
-          width={100}
-          height={35}
+          width={scrolled ? 70 : 100}
+          height={scrolled ? 25 : 35}
           alt="Tierra Agaves"
-          className="object-contain"
+          className="object-contain transition-all duration-300"
         />
       </Link>
 
@@ -86,26 +97,17 @@ export function TiendaHeader() {
           <>
             <HomeIcon />
 
-            <button
-              onClick={handleProductsClick}
-              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
-            >
+            <button onClick={handleProductsClick} className={navBtnClass}>
               <ShoppingBag size={24} />
               <span className="hidden sm:inline text-xs">Productos</span>
             </button>
 
-            <button
-              onClick={handleMyPurchasesClick}
-              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
-            >
+            <button onClick={handleMyPurchasesClick} className={navBtnClass}>
               <Package size={24} />
               <span className="hidden sm:inline text-xs">{t("Mis compras")}</span>
             </button>
 
-            <Link
-              href="/tienda/deseos"
-              className="relative flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
-            >
+            <Link href="/tienda/deseos" className={`relative ${navBtnClass}`}>
               <Heart size={24} />
               <span className="hidden sm:inline text-xs">{t("Favoritos")}</span>
               {wishlistCount > 0 && (
@@ -115,10 +117,7 @@ export function TiendaHeader() {
               )}
             </Link>
 
-            <button
-              onClick={handleCartClick}
-              className="relative flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
-            >
+            <button onClick={handleCartClick} className={`relative ${navBtnClass}`}>
               <ShoppingCart size={24} />
               <span className="hidden sm:inline text-xs">{t("Carrito")}</span>
               {cantidadTotal > 0 && (
@@ -128,15 +127,11 @@ export function TiendaHeader() {
               )}
             </button>
 
-            <button
-              onClick={handleSellClick}
-              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
-            >
+            <button onClick={handleSellClick} className={navBtnClass}>
               <Store size={24} />
               <span className="hidden sm:inline text-xs">{t("Vender")}</span>
             </button>
 
-            {/* Perfil a la izquierda de modo oscuro e idioma */}
             <UserInfo />
             <ThemeToggleSwitch />
             <LanguageSwitcher />
@@ -145,39 +140,26 @@ export function TiendaHeader() {
           <>
             <HomeIcon />
 
-            <button
-              onClick={handleProductsClick}
-              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
-            >
+            <button onClick={handleProductsClick} className={navBtnClass}>
               <ShoppingBag size={24} />
               <span className="hidden sm:inline text-xs">Productos</span>
             </button>
 
-            <button
-              onClick={handleMyPurchasesClick}
-              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
-            >
+            <button onClick={handleMyPurchasesClick} className={navBtnClass}>
               <Package size={24} />
               <span className="hidden sm:inline text-xs">{t("Mis compras")}</span>
             </button>
 
-            <button
-              onClick={handleCartClick}
-              className="relative flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
-            >
+            <button onClick={handleCartClick} className={`relative ${navBtnClass}`}>
               <ShoppingCart size={24} />
               <span className="hidden sm:inline text-xs">{t("Carrito")}</span>
             </button>
 
-            <button
-              onClick={handleSellClick}
-              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
-            >
+            <button onClick={handleSellClick} className={navBtnClass}>
               <Store size={24} />
               <span className="hidden sm:inline text-xs">{t("Vender")}</span>
             </button>
 
-            {/* Perfil a la izquierda de modo oscuro e idioma */}
             <UserInfo />
             <ThemeToggleSwitch />
             <LanguageSwitcher />
@@ -186,37 +168,37 @@ export function TiendaHeader() {
           <>
             <HomeIcon />
 
-            <button
-              onClick={handleProductsClick}
-              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
-            >
+            <button onClick={handleProductsClick} className={navBtnClass}>
               <ShoppingBag size={24} />
               <span className="hidden sm:inline text-xs">Productos</span>
             </button>
 
-            <button
-              onClick={handleSellClick}
-              className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
-            >
+            <button onClick={handleSellClick} className={navBtnClass}>
               <Store size={24} />
               <span className="hidden sm:inline text-xs">{t("Vender")}</span>
             </button>
 
-            {/* Perfil a la izquierda de modo oscuro e idioma */}
             <div className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex flex-col items-center gap-1 px-3 py-2 text-green-700 transition-colors hover:text-green-600"
+                className={navBtnClass}
               >
                 <User size={24} />
                 <span className="hidden sm:inline text-xs">{t("Perfil")}</span>
               </button>
 
               {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-48 rounded-lg border border-green-200 bg-white shadow-lg">
+                <div
+                  style={{
+                    backgroundColor: "var(--tienda-dropdown-bg)",
+                    borderColor: "var(--tienda-dropdown-border)",
+                  }}
+                  className="absolute right-0 mt-2 w-48 rounded-lg border shadow-lg"
+                >
                   <Link
                     href="/auth/sign-in"
-                    className="block px-4 py-2 text-green-700 transition-colors hover:bg-green-50 rounded-t-lg"
+                    style={{ color: "var(--tienda-nav-color)" }}
+                    className="block px-4 py-2 transition-colors hover:opacity-70 rounded-t-lg"
                     onClick={() => setShowProfileMenu(false)}
                   >
                     <div className="flex items-center gap-2">
@@ -226,7 +208,11 @@ export function TiendaHeader() {
                   </Link>
                   <Link
                     href="/auth/sign-up"
-                    className="block px-4 py-2 text-green-700 transition-colors hover:bg-green-50 rounded-b-lg border-t border-green-200"
+                    style={{
+                      color: "var(--tienda-nav-color)",
+                      borderColor: "var(--tienda-dropdown-border)",
+                    }}
+                    className="block px-4 py-2 transition-colors hover:opacity-70 rounded-b-lg border-t"
                     onClick={() => setShowProfileMenu(false)}
                   >
                     <div className="flex items-center gap-2">
