@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { ComisionesService } from '../comisiones/comisiones.service';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 import { CreateDetallePedidoDto, CreateFacturaDto, CreatePedidoDto, UpdateDetallePedidoDto, UpdateFacturaDto, UpdatePedidoDto } from './dto/pedidos.dto';
 
@@ -12,6 +13,7 @@ export class PedidosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
+    private readonly comisionesService: ComisionesService,
   ) { }
   async findAll() { return serializeBigInts(await this.prisma.pedidos.findMany({ include: { detalle_pedido: true, facturas: true, usuarios: true, monedas: true } })); }
   async findOne(id: string) { const item = await this.prisma.pedidos.findUnique({ where: { id_pedido: toBigIntId(id) }, include: { detalle_pedido: true, facturas: true, usuarios: true, monedas: true } }); if (!item || item.eliminado_en) throw new NotFoundException('Pedido no encontrado'); return serializeBigInts(item); }
@@ -130,10 +132,29 @@ export class PedidosService {
   async update(id: string, dto: UpdatePedidoDto) { return serializeBigInts(await this.prisma.pedidos.update({ where: { id_pedido: toBigIntId(id) }, data: { id_usuario: dto.id_usuario, estado: dto.estado?.trim(), total: dto.total, moneda: dto.moneda, tipo_cambio: dto.tipo_cambio, moneda_referencia: dto.moneda_referencia?.trim(), pais_destino_iso2: dto.pais_destino_iso2, direccion_envio_snapshot: dto.direccion_envio_snapshot as Prisma.InputJsonValue | undefined, direccion_facturacion_snapshot: dto.direccion_facturacion_snapshot as Prisma.InputJsonValue | undefined, devolucion_estado: dto.devolucion_estado, devolucion_motivo: dto.devolucion_motivo } })); }
   async remove(id: string) { return serializeBigInts(await this.prisma.pedidos.update({ where: { id_pedido: toBigIntId(id) }, data: { eliminado_en: new Date() } })); }
   async addDetalle(id: string, dto: CreateDetallePedidoDto) {
+    const id_pedido = toBigIntId(id);
+    const id_producto = toBigIntId(dto.id_producto);
+
+    // Resolver tienda y productor del producto. Preferimos tiendas.id_productor
+    // (vínculo legal del marketplace); cae a lotes.id_productor si la tienda no lo tiene.
+    const producto = await this.prisma.productos.findUnique({
+      where: { id_producto },
+      include: {
+        tiendas: { select: { id_tienda: true, id_productor: true, pais_operacion: true } },
+        lotes: { select: { id_productor: true } },
+      },
+    });
+    if (!producto) throw new NotFoundException('Producto no encontrado');
+
+    const id_tienda = producto.tiendas?.id_tienda ?? null;
+    const id_productor = producto.tiendas?.id_productor ?? producto.lotes?.id_productor ?? null;
+
     const detalle = await this.prisma.detalle_pedido.create({
       data: {
-        id_pedido: toBigIntId(id),
-        id_producto: toBigIntId(dto.id_producto),
+        id_pedido,
+        id_producto,
+        id_productor,
+        id_tienda,
         cantidad: dto.cantidad,
         precio_compra: dto.precio_compra,
         moneda_compra: dto.moneda_compra?.trim() ?? 'MXN',
@@ -142,31 +163,133 @@ export class PedidosService {
       include: { productos: { include: { lotes: true } } },
     });
 
-    // Create pedido_productor entry if not exists
-    if (detalle.productos?.lotes?.id_productor) {
-      await this.prisma.pedido_productor.upsert({
-        where: {
-          id_pedido_id_productor: {
-            id_pedido: toBigIntId(id),
-            id_productor: detalle.productos.lotes.id_productor,
-          },
-        },
-        update: {},
-        create: {
-          id_pedido: toBigIntId(id),
-          id_productor: detalle.productos.lotes.id_productor,
-          estado: 'pendiente',
-        },
+    if (id_productor) {
+      await this.upsertPedidoProductorConComision({
+        id_pedido,
+        id_productor,
+        pais_operacion: producto.tiendas?.pais_operacion ?? null,
+        moneda_pedido: detalle.moneda_compra,
       });
     }
 
     return serializeBigInts(detalle);
+  }
+
+  /**
+   * Crea/actualiza el pedido_productor agregando los detalles de ese productor:
+   * recalcula subtotal_bruto, resuelve la comisión vigente y persiste todos los
+   * campos de marketplace (subtotal_bruto, comision_marketplace, monto_neto_productor,
+   * moneda, id_comision_aplicada).
+   */
+  private async upsertPedidoProductorConComision(args: {
+    id_pedido: bigint;
+    id_productor: number;
+    pais_operacion: string | null;
+    moneda_pedido: string;
+  }) {
+    const detalles = await this.prisma.detalle_pedido.findMany({
+      where: { id_pedido: args.id_pedido, id_productor: args.id_productor },
+    });
+    if (detalles.length === 0) return;
+
+    const subtotal_bruto = detalles.reduce(
+      (sum, d) => sum + Number(d.precio_compra) * Number(d.cantidad),
+      0,
+    );
+
+    let id_comision_aplicada: number | null = null;
+    let comision_marketplace = 0;
+    try {
+      const comision = await this.comisionesService.resolver({
+        id_productor: args.id_productor,
+        pais_iso2: args.pais_operacion ?? undefined,
+      });
+      id_comision_aplicada = comision.id_comision;
+      comision_marketplace = this.comisionesService.calcularMonto(subtotal_bruto, comision);
+    } catch {
+      // Sin regla aplicable: dejamos comisión en 0 y sin id_comision_aplicada.
+      // El admin debe configurar al menos la regla global; este caso no debería ocurrir
+      // si el seed inicial corrió. No bloqueamos la creación del pedido.
+    }
+
+    const monto_neto_productor = Number((subtotal_bruto - comision_marketplace).toFixed(2));
+    const moneda = args.moneda_pedido.toUpperCase();
+
+    await this.prisma.pedido_productor.upsert({
+      where: {
+        id_pedido_id_productor: { id_pedido: args.id_pedido, id_productor: args.id_productor },
+      },
+      update: {
+        subtotal_bruto: subtotal_bruto.toFixed(2),
+        comision_marketplace: comision_marketplace.toFixed(2),
+        monto_neto_productor: monto_neto_productor.toFixed(2),
+        moneda,
+        id_comision_aplicada,
+        actualizado_en: new Date(),
+      },
+      create: {
+        id_pedido: args.id_pedido,
+        id_productor: args.id_productor,
+        estado: 'pendiente',
+        subtotal_bruto: subtotal_bruto.toFixed(2),
+        comision_marketplace: comision_marketplace.toFixed(2),
+        monto_neto_productor: monto_neto_productor.toFixed(2),
+        moneda,
+        id_comision_aplicada,
+      },
+    });
   }
   async updateDetalle(id_detalle: string, dto: UpdateDetallePedidoDto) { return serializeBigInts(await this.prisma.detalle_pedido.update({ where: { id_detalle: toBigIntId(id_detalle) }, data: { id_producto: dto.id_producto, cantidad: dto.cantidad, precio_compra: dto.precio_compra, moneda_compra: dto.moneda_compra?.trim(), impuesto: dto.impuesto } })); }
   async removeDetalle(id_detalle: string) { await this.prisma.detalle_pedido.delete({ where: { id_detalle: toBigIntId(id_detalle) } }); return { message: 'Detalle eliminado' }; }
   async addFactura(id: string, dto: CreateFacturaDto) { return serializeBigInts(await this.prisma.facturas.create({ data: { id_pedido: toBigIntId(id), uuid_fiscal: dto.uuid_fiscal ?? null, pdf_url: dto.pdf_url ?? null, xml_url: dto.xml_url ?? null, rfc_emisor: dto.rfc_emisor ?? null, rfc_receptor: dto.rfc_receptor ?? null, uso_cfdi: dto.uso_cfdi ?? null, regimen_fiscal: dto.regimen_fiscal ?? null, subtotal: dto.subtotal ?? null, impuestos_total: dto.impuestos_total ?? null, total: dto.total ?? null, moneda: dto.moneda ?? null, estado: dto.estado?.trim() ?? 'pendiente' } })); }
   async updateFactura(id_factura: string, dto: UpdateFacturaDto) { return serializeBigInts(await this.prisma.facturas.update({ where: { id_factura: toBigIntId(id_factura) }, data: { uuid_fiscal: dto.uuid_fiscal, pdf_url: dto.pdf_url, xml_url: dto.xml_url, rfc_emisor: dto.rfc_emisor, rfc_receptor: dto.rfc_receptor, uso_cfdi: dto.uso_cfdi, regimen_fiscal: dto.regimen_fiscal, subtotal: dto.subtotal, impuestos_total: dto.impuestos_total, total: dto.total, moneda: dto.moneda, estado: dto.estado } })); }
   async removeFactura(id_factura: string) { await this.prisma.facturas.delete({ where: { id_factura: toBigIntId(id_factura) } }); return { message: 'Factura eliminada' }; }
+
+  async getMisPedidosProductor(accessToken: string) {
+    const id_productor = await this.resolveProductorId(accessToken);
+    if (!id_productor) return [];
+
+    const relationWhere: Prisma.detalle_pedidoWhereInput = {
+      productos: {
+        OR: [
+          { tiendas: { id_productor, eliminado_en: null } },
+          { lotes: { id_productor, eliminado_en: null } },
+        ],
+      },
+    };
+
+    const pedidos = await this.prisma.pedidos.findMany({
+      where: {
+        eliminado_en: null,
+        detalle_pedido: { some: relationWhere },
+      },
+      include: {
+        detalle_pedido: {
+          where: relationWhere,
+          include: { productos: { include: { lotes: true } } },
+        },
+        usuarios: true,
+      },
+      orderBy: { fecha_creacion: 'desc' },
+    });
+
+    return serializeBigInts(
+      pedidos.map((p) => ({
+        id_pedido: p.id_pedido,
+        estado_productor: p.estado,
+        estado_pedido: p.estado,
+        cliente: { nombre: p.usuarios.nombre, email: p.usuarios.email },
+        detalles: p.detalle_pedido,
+        fecha_creacion: p.fecha_creacion,
+        id_envio: null,
+        total_parcial: p.detalle_pedido.reduce(
+          (sum, d) => sum + Number(d.precio_compra) * Number(d.cantidad),
+          0,
+        ),
+        moneda: p.moneda,
+      })),
+    );
+  }
 
   async getOrdersByProductor(id_productor: number) {
     const pedidosProductor = await this.prisma.pedido_productor.findMany({
@@ -219,6 +342,14 @@ export class PedidosService {
       pedido: pedidoProductor.pedidos,
       detalles: pedidoProductor.pedidos.detalle_pedido.filter((d) => d.productos?.lotes?.id_productor === id_productor),
       envio: pedidoProductor.pedidos.envios?.[0] ?? null,
+      desglose: {
+        subtotal_bruto: pedidoProductor.subtotal_bruto,
+        comision_marketplace: pedidoProductor.comision_marketplace,
+        monto_neto_productor: pedidoProductor.monto_neto_productor,
+        moneda: pedidoProductor.moneda,
+        id_comision_aplicada: pedidoProductor.id_comision_aplicada,
+        id_payout: pedidoProductor.id_payout,
+      },
     });
   }
 

@@ -63,10 +63,12 @@ model categorias {
   imagen_url           String?                @db.VarChar(500)
   activo               Boolean                @default(true)
   creado_en            DateTime               @default(now()) @db.Timestamptz(6)
-  categorias           categorias?            @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
-  other_categorias     categorias[]           @relation("categoriasTocategorias")
-  categorias_productos categorias_productos[]
-  tasas_impuesto       tasas_impuesto[]
+  categorias              categorias?              @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
+  other_categorias        categorias[]             @relation("categoriasTocategorias")
+  categorias_productos    categorias_productos[]
+  tasas_impuesto          tasas_impuesto[]
+  comisiones              comisiones[]
+  categorias_traducciones categorias_traducciones[]
 
   @@index([id_padre], map: "idx_cat_padre")
 }
@@ -85,12 +87,19 @@ model detalle_pedido {
   id_detalle    BigInt    @id @default(autoincrement())
   id_pedido     BigInt
   id_producto   BigInt
+  id_productor  Int?
+  id_tienda     Int?
   cantidad      Int
   precio_compra Decimal   @db.Decimal(12, 2)
   moneda_compra String    @default("MXN") @db.Char(3)
   impuesto      Decimal   @default(0) @db.Decimal(12, 2)
-  pedidos       pedidos   @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade, onUpdate: NoAction)
-  productos     productos @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
+  pedidos       pedidos      @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade, onUpdate: NoAction)
+  productos     productos    @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
+  productores   productores? @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  tiendas       tiendas?     @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
+
+  @@index([id_productor], map: "idx_detalle_productor")
+  @@index([id_tienda], map: "idx_detalle_tienda")
 }
 
 model direcciones {
@@ -122,6 +131,7 @@ model direcciones {
   eliminado_en        DateTime? @db.Timestamptz(6)
   usuarios            usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
   pedidos             pedidos[] @relation("DireccionEnvioPedido")
+  paises              paises?   @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([ubicacion], map: "idx_direcciones_ubicacion", type: Gin)
   @@index([id_usuario, es_predeterminada], map: "idx_direcciones_predeterminada")
@@ -323,14 +333,19 @@ model ListaDeseosItem {
 }
 
 model monedas {
-  codigo         String           @id @db.Char(3)
-  nombre         String           @db.VarChar(100)
-  simbolo        String?          @db.VarChar(10)
-  activo         Boolean          @default(true)
-  pagos          pagos[]
-  pedidos        pedidos[]
-  productos      productos[]
-  tasas_impuesto tasas_impuesto[]
+  codigo           String           @id @db.Char(3)
+  nombre           String           @db.VarChar(100)
+  simbolo          String?          @db.VarChar(10)
+  activo           Boolean          @default(true)
+  pagos            pagos[]
+  pedidos          pedidos[]
+  productos        productos[]
+  tasas_impuesto   tasas_impuesto[]
+  paises           paises[]
+  payouts          payouts[]
+  pedido_productor pedido_productor[]
+  tasas_origen     tasas_cambio[]   @relation("TasaOrigen")
+  tasas_destino    tasas_cambio[]   @relation("TasaDestino")
 }
 
 model movimientos_inventario {
@@ -444,6 +459,7 @@ model pedidos {
   usuarios                       usuarios                 @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
   monedas                        monedas                  @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
   direccion_envio                direcciones?             @relation("DireccionEnvioPedido", fields: [id_direccion_envio], references: [id_direccion], onUpdate: NoAction)
+  paises                         paises?                  @relation(fields: [pais_destino_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([estado], map: "idx_pedidos_estado")
   @@index([id_usuario], map: "idx_pedidos_usuario")
@@ -492,6 +508,9 @@ model productores {
   revisor               usuarios? @relation("RevisorProductor", fields: [revisado_por], references: [id_usuario], onUpdate: NoAction)
   tiendas               tiendas[]
   pedido_productor      pedido_productor[]
+  comisiones            comisiones[]
+  payouts               payouts[]
+  detalle_pedido        detalle_pedido[]
 }
 
 model productos {
@@ -527,6 +546,7 @@ model productos {
   tiendas                                      tiendas                @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
   monedas                                      monedas                @relation(fields: [moneda_base], references: [codigo], onUpdate: NoAction)
   resenas                                      resenas[]
+  productos_traducciones                       productos_traducciones[]
 
   @@index([metadata], map: "idx_productos_metadata", type: Gin)
   @@index([status], map: "idx_productos_status")
@@ -556,6 +576,7 @@ model regiones {
   creado_en   DateTime      @default(now()) @db.Timestamptz(6)
   lotes       lotes[]
   productores productores[]
+  paises      paises        @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
 }
 
 model resenas {
@@ -627,6 +648,7 @@ model tasas_impuesto {
   creado_en          DateTime    @default(now()) @db.Timestamptz(6)
   categorias         categorias? @relation(fields: [id_categoria], references: [id_categoria], onUpdate: NoAction)
   monedas            monedas?    @relation(fields: [moneda_monto_fijo], references: [codigo], onDelete: Restrict, onUpdate: NoAction)
+  paises             paises      @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([id_categoria], map: "idx_tasas_categoria")
 }
@@ -644,11 +666,14 @@ model tiendas {
   ciudad_origen      String?     @db.VarChar(100)
   estado_origen      String?     @db.VarChar(100)
   codigo_postal_orig String?     @db.VarChar(20)
-  fecha_creacion     DateTime    @default(dbgenerated("CURRENT_DATE")) @db.Date
-  actualizado_en     DateTime    @default(now()) @db.Timestamptz(6)
-  eliminado_en       DateTime?   @db.Timestamptz(6)
-  productos          productos[]
-  productores        productores @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  fecha_creacion       DateTime    @default(dbgenerated("CURRENT_DATE")) @db.Date
+  actualizado_en       DateTime    @default(now()) @db.Timestamptz(6)
+  eliminado_en         DateTime?   @db.Timestamptz(6)
+  productos            productos[]
+  productores          productores @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  detalle_pedido       detalle_pedido[]
+  tiendas_traducciones tiendas_traducciones[]
+  paises               paises      @relation(fields: [pais_operacion], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([id_productor], map: "idx_tiendas_productor")
 }
@@ -692,6 +717,8 @@ model usuarios {
   password_hash                                 String?                  @db.VarChar(255)
   idioma_preferido                              String                   @default("es") @db.VarChar(10)
   moneda_preferida                              String                   @default("MXN") @db.Char(3)
+  timezone                                      String?                  @db.VarChar(64)
+  pais_iso2                                     String?                  @db.Char(2)
   version_token                                 Int                      @default(1)
   fecha_registro                                DateTime                 @default(now()) @db.Timestamptz(6)
   eliminado_en                                  DateTime?                @db.Timestamptz(6)
@@ -714,6 +741,7 @@ model usuarios {
   refresh_tokens                                refresh_tokens[]
   resenas                                       resenas[]
   usuario_rol                                   usuario_rol[]
+  paises                                        paises?                  @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
 }
 
 model categorias_productos {
@@ -728,17 +756,159 @@ model categorias_productos {
 }
 
 model pedido_productor {
-  id_pedido      BigInt
-  id_productor   Int
-  estado         String    @default("pendiente") @db.VarChar(30)
-  id_envio       BigInt?
-  creado_en      DateTime  @default(now()) @db.Timestamptz(6)
-  actualizado_en DateTime  @default(now()) @db.Timestamptz(6)
-  pedidos        pedidos     @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade, onUpdate: NoAction)
-  productores    productores @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
-  envios         envios?     @relation(fields: [id_envio], references: [id_envio], onUpdate: NoAction)
+  id_pedido            BigInt
+  id_productor         Int
+  estado               String    @default("pendiente") @db.VarChar(30)
+  id_envio             BigInt?
+  creado_en            DateTime  @default(now()) @db.Timestamptz(6)
+  actualizado_en       DateTime  @default(now()) @db.Timestamptz(6)
+  subtotal_bruto       Decimal?  @db.Decimal(14, 2)
+  comision_marketplace Decimal   @default(0) @db.Decimal(14, 2)
+  monto_neto_productor Decimal?  @db.Decimal(14, 2)
+  moneda               String?   @db.Char(3)
+  id_comision_aplicada Int?
+  id_payout            BigInt?
+  pedidos              pedidos     @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade, onUpdate: NoAction)
+  productores          productores @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  envios               envios?     @relation(fields: [id_envio], references: [id_envio], onUpdate: NoAction)
+  monedas              monedas?    @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
+  comision_aplicada    comisiones? @relation(fields: [id_comision_aplicada], references: [id_comision], onUpdate: NoAction)
+  payout               payouts?    @relation(fields: [id_payout], references: [id_payout], onUpdate: NoAction)
 
   @@id([id_pedido, id_productor])
   @@index([id_pedido], map: "idx_pedido_prod_pedido")
   @@index([id_productor], map: "idx_pedido_prod_productor")
+  @@index([id_payout], map: "idx_pedido_prod_payout")
+}
+
+model paises {
+  iso2             String   @id @db.Char(2)
+  iso3             String   @unique @db.Char(3)
+  nombre           String   @db.VarChar(120)
+  nombre_local     String?  @db.VarChar(120)
+  moneda_default   String   @db.Char(3)
+  idioma_default   String   @default("es") @db.VarChar(10)
+  prefijo_telefono String?  @db.VarChar(8)
+  activo_venta     Boolean  @default(false)
+  activo_envio     Boolean  @default(false)
+  creado_en        DateTime @default(now()) @db.Timestamptz(6)
+  monedas          monedas  @relation(fields: [moneda_default], references: [codigo], onUpdate: NoAction)
+  idiomas          idiomas  @relation(fields: [idioma_default], references: [codigo], onUpdate: NoAction)
+  comisiones       comisiones[]
+  direcciones      direcciones[]
+  pedidos          pedidos[]
+  regiones         regiones[]
+  tasas_impuesto   tasas_impuesto[]
+  tiendas          tiendas[]
+  usuarios         usuarios[]
+
+  @@index([activo_venta], map: "idx_paises_activo_venta")
+}
+
+model idiomas {
+  codigo                  String   @id @db.VarChar(10)
+  nombre                  String   @db.VarChar(80)
+  nombre_local            String?  @db.VarChar(80)
+  activo                  Boolean  @default(true)
+  rtl                     Boolean  @default(false)
+  paises                  paises[]
+  productos_traducciones  productos_traducciones[]
+  categorias_traducciones categorias_traducciones[]
+  tiendas_traducciones    tiendas_traducciones[]
+}
+
+model tasas_cambio {
+  moneda_origen  String    @db.Char(3)
+  moneda_destino String    @db.Char(3)
+  vigente_desde  DateTime  @db.Timestamptz(6)
+  tasa           Decimal   @db.Decimal(18, 8)
+  fuente         String    @default("manual") @db.VarChar(50)
+  vigente_hasta  DateTime? @db.Timestamptz(6)
+  creado_en      DateTime  @default(now()) @db.Timestamptz(6)
+  origen         monedas   @relation("TasaOrigen", fields: [moneda_origen], references: [codigo], onUpdate: NoAction)
+  destino        monedas   @relation("TasaDestino", fields: [moneda_destino], references: [codigo], onUpdate: NoAction)
+
+  @@id([moneda_origen, moneda_destino, vigente_desde])
+  @@index([moneda_origen, moneda_destino, vigente_hasta], map: "idx_tasas_cambio_lookup")
+}
+
+model comisiones {
+  id_comision       Int       @id @default(autoincrement())
+  alcance           String    @db.VarChar(20)
+  pais_iso2         String?   @db.Char(2)
+  id_categoria      Int?
+  id_productor      Int?
+  porcentaje        Decimal   @db.Decimal(6, 4)
+  monto_fijo        Decimal?  @db.Decimal(12, 2)
+  moneda_monto_fijo String?   @db.Char(3)
+  prioridad         Int       @default(100)
+  vigente_desde     DateTime  @default(now()) @db.Timestamptz(6)
+  vigente_hasta     DateTime? @db.Timestamptz(6)
+  activo            Boolean   @default(true)
+  creado_en         DateTime  @default(now()) @db.Timestamptz(6)
+  paises            paises?      @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
+  categorias        categorias?  @relation(fields: [id_categoria], references: [id_categoria], onUpdate: NoAction)
+  productores       productores? @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  pedido_productor  pedido_productor[]
+
+  @@index([alcance, activo, prioridad], map: "idx_comisiones_resolucion")
+  @@index([id_productor], map: "idx_comisiones_productor")
+}
+
+model payouts {
+  id_payout          BigInt    @id @default(autoincrement())
+  id_productor       Int
+  moneda             String    @db.Char(3)
+  monto_bruto        Decimal   @db.Decimal(14, 2)
+  monto_comision     Decimal   @db.Decimal(14, 2)
+  monto_neto         Decimal   @db.Decimal(14, 2)
+  estado             String    @default("pendiente") @db.VarChar(20)
+  proveedor          String?   @db.VarChar(50)
+  referencia_externa String?   @db.VarChar(150)
+  periodo_desde      DateTime  @db.Date
+  periodo_hasta      DateTime  @db.Date
+  notas              String?
+  creado_en          DateTime  @default(now()) @db.Timestamptz(6)
+  procesado_en       DateTime? @db.Timestamptz(6)
+  productores        productores @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  monedas            monedas     @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
+  pedido_productor   pedido_productor[]
+
+  @@index([id_productor, estado], map: "idx_payouts_productor_estado")
+}
+
+model productos_traducciones {
+  id_producto    BigInt
+  idioma         String    @db.VarChar(10)
+  nombre         String    @db.VarChar(200)
+  descripcion    String?
+  metadata       Json      @default("{}")
+  actualizado_en DateTime  @default(now()) @db.Timestamptz(6)
+  productos      productos @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
+  idiomas        idiomas   @relation(fields: [idioma], references: [codigo], onUpdate: NoAction)
+
+  @@id([id_producto, idioma])
+  @@index([idioma], map: "idx_prod_trad_idioma")
+}
+
+model categorias_traducciones {
+  id_categoria Int
+  idioma       String     @db.VarChar(10)
+  nombre       String     @db.VarChar(150)
+  descripcion  String?
+  categorias   categorias @relation(fields: [id_categoria], references: [id_categoria], onDelete: Cascade, onUpdate: NoAction)
+  idiomas      idiomas    @relation(fields: [idioma], references: [codigo], onUpdate: NoAction)
+
+  @@id([id_categoria, idioma])
+}
+
+model tiendas_traducciones {
+  id_tienda   Int
+  idioma      String  @db.VarChar(10)
+  nombre      String  @db.VarChar(150)
+  descripcion String?
+  tiendas     tiendas @relation(fields: [id_tienda], references: [id_tienda], onDelete: Cascade, onUpdate: NoAction)
+  idiomas     idiomas @relation(fields: [idioma], references: [codigo], onUpdate: NoAction)
+
+  @@id([id_tienda, idioma])
 }

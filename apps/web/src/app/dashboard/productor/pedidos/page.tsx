@@ -33,11 +33,8 @@ export default function PedidosProductor() {
     const fetchPedidos = async () => {
       try {
         const token = getCookie("token") || "";
-        const res = await api.pedidos.getOrdersByProductor?.(token, user.id_productor) ||
-          (await fetch(`/pedidos/productor/${user.id_productor}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }).then((r) => r.json()));
-        setPedidos(res || []);
+        const res = await api.pedidos.getMisPedidos(token);
+        setPedidos(Array.isArray(res) ? res : []);
       } catch (err) {
         console.error("Error loading orders:", err);
       } finally {

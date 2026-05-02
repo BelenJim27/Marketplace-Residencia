@@ -290,6 +290,8 @@ export const api = {
       fetchJson(endpoint(`/pedidos/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
     delete: (token: string, id: string) =>
       fetchJson(endpoint(`/pedidos/${id}`), { method: "DELETE", headers: headers(token) }),
+    getMisPedidos: (token: string) =>
+      fetchJson(endpoint(`/pedidos/mis-pedidos`), { headers: headers(token) }),
   },
 
   envios: {
@@ -633,4 +635,197 @@ export const api = {
     getTopProductores: (token?: string) =>
       fetchJson(endpoint("/admin/productores/top"), { headers: headers(token) }),
   },
+
+  paises: {
+    list: (q?: { activo_venta?: boolean; activo_envio?: boolean }) => {
+      const params = new URLSearchParams();
+      if (typeof q?.activo_venta === "boolean") params.append("activo_venta", String(q.activo_venta));
+      if (typeof q?.activo_envio === "boolean") params.append("activo_envio", String(q.activo_envio));
+      const qs = params.toString();
+      return fetchJson<Pais[]>(endpoint(`/paises${qs ? `?${qs}` : ""}`));
+    },
+    get: (iso2: string) => fetchJson<Pais>(endpoint(`/paises/${iso2}`)),
+    create: (token: string, data: PaisInput) =>
+      fetchJson<Pais>(endpoint("/paises"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+    update: (token: string, iso2: string, data: Partial<PaisInput>) =>
+      fetchJson<Pais>(endpoint(`/paises/${iso2}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
+    remove: (token: string, iso2: string) =>
+      fetchJson(endpoint(`/paises/${iso2}`), { method: "DELETE", headers: headers(token) }),
+  },
+
+  idiomas: {
+    list: (soloActivos = false) =>
+      fetchJson<Idioma[]>(endpoint(`/idiomas${soloActivos ? "?soloActivos=true" : ""}`)),
+    get: (codigo: string) => fetchJson<Idioma>(endpoint(`/idiomas/${codigo}`)),
+  },
+
+  tasasCambio: {
+    list: (origen?: string, destino?: string) => {
+      const params = new URLSearchParams();
+      if (origen) params.append("origen", origen);
+      if (destino) params.append("destino", destino);
+      const qs = params.toString();
+      return fetchJson<TasaCambio[]>(endpoint(`/tasas-cambio${qs ? `?${qs}` : ""}`));
+    },
+    vigente: (origen: string, destino: string, fecha?: string) => {
+      const params = new URLSearchParams({ origen, destino });
+      if (fecha) params.append("fecha", fecha);
+      return fetchJson<TasaCambio>(endpoint(`/tasas-cambio/vigente?${params.toString()}`));
+    },
+    convertir: (origen: string, destino: string, monto: string | number, fecha?: string) => {
+      const params = new URLSearchParams({ origen, destino, monto: String(monto) });
+      if (fecha) params.append("fecha", fecha);
+      return fetchJson<{ monto_origen: number; monto_destino: number; moneda_origen: string; moneda_destino: string; tasa: string; vigente_desde: string }>(
+        endpoint(`/tasas-cambio/convertir?${params.toString()}`),
+      );
+    },
+    create: (token: string, data: { moneda_origen: string; moneda_destino: string; tasa: string; fuente?: string; vigente_desde?: string }) =>
+      fetchJson<TasaCambio>(endpoint("/tasas-cambio"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+  },
+
+  comisiones: {
+    list: (token: string) => fetchJson<Comision[]>(endpoint("/comisiones"), { headers: headers(token) }),
+    get: (token: string, id: number) => fetchJson<Comision>(endpoint(`/comisiones/${id}`), { headers: headers(token) }),
+    resolver: (token: string, q: { id_productor?: number; id_categoria?: number; pais_iso2?: string }) => {
+      const params = new URLSearchParams();
+      if (q.id_productor != null) params.append("id_productor", String(q.id_productor));
+      if (q.id_categoria != null) params.append("id_categoria", String(q.id_categoria));
+      if (q.pais_iso2) params.append("pais_iso2", q.pais_iso2);
+      return fetchJson<{ id_comision: number; porcentaje: number; monto_fijo: number | null; alcance: string }>(
+        endpoint(`/comisiones/resolver?${params.toString()}`),
+        { headers: headers(token) },
+      );
+    },
+    create: (token: string, data: ComisionInput) =>
+      fetchJson<Comision>(endpoint("/comisiones"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+    update: (token: string, id: number, data: Partial<ComisionInput>) =>
+      fetchJson<Comision>(endpoint(`/comisiones/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
+    remove: (token: string, id: number) =>
+      fetchJson(endpoint(`/comisiones/${id}`), { method: "DELETE", headers: headers(token) }),
+  },
+
+  payouts: {
+    list: (token: string, q?: { id_productor?: number; estado?: string }) => {
+      const params = new URLSearchParams();
+      if (q?.id_productor != null) params.append("id_productor", String(q.id_productor));
+      if (q?.estado) params.append("estado", q.estado);
+      const qs = params.toString();
+      return fetchJson<Payout[]>(endpoint(`/payouts${qs ? `?${qs}` : ""}`), { headers: headers(token) });
+    },
+    get: (token: string, id: string) =>
+      fetchJson<PayoutDetalle>(endpoint(`/payouts/${id}`), { headers: headers(token) }),
+    misPayouts: (token: string, id_productor: number) =>
+      fetchJson<Payout[]>(endpoint(`/payouts/mis-payouts/${id_productor}`), { headers: headers(token) }),
+    generar: (token: string, data: { desde: string; hasta: string; proveedor?: string; estados_validos?: string[] }) =>
+      fetchJson<{ creados: number; payouts: { id_payout: string; id_productor: number; moneda: string; cuenta: number }[] }>(
+        endpoint("/payouts/generar"),
+        { method: "POST", headers: headers(token), body: JSON.stringify(data) },
+      ),
+    actualizarEstado: (token: string, id: string, data: { estado: string; referencia_externa?: string; notas?: string }) =>
+      fetchJson<Payout>(endpoint(`/payouts/${id}/estado`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
+  },
 };
+
+// === Tipos i18n + marketplace ===
+
+export interface Pais {
+  iso2: string;
+  iso3: string;
+  nombre: string;
+  nombre_local: string | null;
+  moneda_default: string;
+  idioma_default: string;
+  prefijo_telefono: string | null;
+  activo_venta: boolean;
+  activo_envio: boolean;
+  creado_en: string;
+}
+
+export interface PaisInput {
+  iso2: string;
+  iso3: string;
+  nombre: string;
+  nombre_local?: string;
+  moneda_default: string;
+  idioma_default?: string;
+  prefijo_telefono?: string;
+  activo_venta?: boolean;
+  activo_envio?: boolean;
+}
+
+export interface Idioma {
+  codigo: string;
+  nombre: string;
+  nombre_local: string | null;
+  activo: boolean;
+  rtl: boolean;
+}
+
+export interface TasaCambio {
+  moneda_origen: string;
+  moneda_destino: string;
+  vigente_desde: string;
+  vigente_hasta: string | null;
+  tasa: string;
+  fuente: string;
+  creado_en: string;
+}
+
+export interface Comision {
+  id_comision: number;
+  alcance: "global" | "pais" | "categoria" | "productor";
+  pais_iso2: string | null;
+  id_categoria: number | null;
+  id_productor: number | null;
+  porcentaje: string;
+  monto_fijo: string | null;
+  moneda_monto_fijo: string | null;
+  prioridad: number;
+  vigente_desde: string;
+  vigente_hasta: string | null;
+  activo: boolean;
+  creado_en: string;
+}
+
+export interface ComisionInput {
+  alcance: "global" | "pais" | "categoria" | "productor";
+  pais_iso2?: string;
+  id_categoria?: number;
+  id_productor?: number;
+  porcentaje: string;
+  monto_fijo?: string;
+  moneda_monto_fijo?: string;
+  prioridad?: number;
+  activo?: boolean;
+}
+
+export interface Payout {
+  id_payout: string;
+  id_productor: number;
+  moneda: string;
+  monto_bruto: string;
+  monto_comision: string;
+  monto_neto: string;
+  estado: "pendiente" | "en_proceso" | "pagado" | "fallido" | "cancelado";
+  proveedor: string | null;
+  referencia_externa: string | null;
+  periodo_desde: string;
+  periodo_hasta: string;
+  notas: string | null;
+  creado_en: string;
+  procesado_en: string | null;
+  productores?: { id_productor: number; razon_social: string | null };
+}
+
+export interface PayoutDetalle extends Payout {
+  pedido_productor: Array<{
+    id_pedido: string;
+    id_productor: number;
+    estado: string;
+    subtotal_bruto: string | null;
+    comision_marketplace: string;
+    monto_neto_productor: string | null;
+    moneda: string | null;
+    pedidos: { id_pedido: string; total: string; fecha_creacion: string };
+  }>;
+}

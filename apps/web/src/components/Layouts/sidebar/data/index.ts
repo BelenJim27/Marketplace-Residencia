@@ -22,6 +22,7 @@ import {
   Users,
   Shield,
   ShieldCheck,
+  TrendingUp,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -82,7 +83,18 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         ],
       },
       { title: "Pedidos", url: "/administrador/pedidos", icon: ShoppingCart },
-      
+
+      {
+        title: "Comisiones",
+        url: "/administrador/comisiones",
+        icon: BadgeDollarSign,
+      },
+      {
+        title: "Payouts",
+        url: "/administrador/payouts",
+        icon: BadgeDollarSign,
+      },
+
       {
         title: "Solicitudes Productores",
         url: "/administrador/solicitudes-productores",
@@ -136,6 +148,11 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
         title: "Ventas",
         url: "/dashboard/productor/ventas",
         icon: BadgeDollarSign,
+      },
+      {
+        title: "Mis Ingresos",
+        url: "/dashboard/productor/ingresos",
+        icon: TrendingUp,
       },
       {
         title: "Archivos",

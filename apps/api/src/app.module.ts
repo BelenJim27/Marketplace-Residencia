@@ -24,6 +24,12 @@ import { ArchivosModule } from './modules/archivos/archivos.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { EstadisticasLandingModule } from './modules/estadisticas-landing/estadisticas-landing.module';
+import { PaisesModule } from './modules/paises/paises.module';
+import { IdiomasModule } from './modules/idiomas/idiomas.module';
+import { TasasCambioModule } from './modules/tasas-cambio/tasas-cambio.module';
+import { ComisionesModule } from './modules/comisiones/comisiones.module';
+import { PayoutsModule } from './modules/payouts/payouts.module';
+import { I18nModule } from './modules/i18n/i18n.module';
 
 @Module({
   imports: [
@@ -52,6 +58,12 @@ import { EstadisticasLandingModule } from './modules/estadisticas-landing/estadi
     AuditoriaModule,
     AdminModule,
     EstadisticasLandingModule,
+    PaisesModule,
+    IdiomasModule,
+    TasasCambioModule,
+    ComisionesModule,
+    PayoutsModule,
+    I18nModule,
   ],
   controllers: [],
   providers: [],

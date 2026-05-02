@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
+import { usePaises } from "@/hooks/usePaises";
 import { AlertCircle, CheckCircle2, Loader2, MapPin, Trash2, Edit2, Plus } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
@@ -46,6 +47,7 @@ export default function DireccionesPage() {
   const [enviando, setEnviando] = useState(false);
   const [eliminando, setEliminando] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const { paises, loading: paisesLoading } = usePaises("envio");
 
   const [formData, setFormData] = useState<Direccion>({
     nombre_destinatario: "",
@@ -425,17 +427,16 @@ export default function DireccionesPage() {
                   <select
                     value={formData.pais_iso2 || "MX"}
                     onChange={(e) => setFormData({ ...formData, pais_iso2: e.target.value })}
-                    className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                    disabled={paisesLoading}
+                    className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white disabled:opacity-60"
                   >
-                    <option value="MX">México</option>
-                    <option value="US">Estados Unidos</option>
-                    <option value="CA">Canadá</option>
-                    <option value="ES">España</option>
-                    <option value="GB">Reino Unido</option>
-                    <option value="FR">Francia</option>
-                    <option value="DE">Alemania</option>
-                    <option value="JP">Japón</option>
-                    <option value="AU">Australia</option>
+                    {paisesLoading && <option value="MX">Cargando...</option>}
+                    {!paisesLoading && paises.length === 0 && <option value="MX">México</option>}
+                    {paises.map((p) => (
+                      <option key={p.iso2} value={p.iso2}>
+                        {p.nombre_local || p.nombre}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

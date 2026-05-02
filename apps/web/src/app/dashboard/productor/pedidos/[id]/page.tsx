@@ -19,6 +19,14 @@ interface OrderDetail {
   };
   detalles: any[];
   envio: { numero_rastreo?: string; estado?: string } | null;
+  desglose?: {
+    subtotal_bruto: string | null;
+    comision_marketplace: string;
+    monto_neto_productor: string | null;
+    moneda: string | null;
+    id_comision_aplicada: number | null;
+    id_payout: string | null;
+  };
 }
 
 export default function DetalleOrdenProductor() {
@@ -202,6 +210,50 @@ export default function DetalleOrdenProductor() {
             </table>
           </div>
         </div>
+
+        {/* Desglose para mi tienda */}
+        {orden.desglose && (
+          <div className="bg-white p-6 rounded-lg border border-gray-300 mb-6">
+            <h2 className="text-lg font-bold mb-4">Desglose para mi tienda</h2>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span>Subtotal bruto</span>
+                <span className="font-medium">
+                  {orden.desglose.subtotal_bruto
+                    ? `${Number(orden.desglose.subtotal_bruto).toFixed(2)} ${orden.desglose.moneda ?? ""}`
+                    : "—"}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 pb-2 text-red-600">
+                <span>
+                  Comisión marketplace
+                  {orden.desglose.subtotal_bruto && Number(orden.desglose.subtotal_bruto) > 0 && (
+                    <span className="ml-1 text-xs text-gray-500">
+                      ({((Number(orden.desglose.comision_marketplace) / Number(orden.desglose.subtotal_bruto)) * 100).toFixed(2)}%)
+                    </span>
+                  )}
+                </span>
+                <span>− {Number(orden.desglose.comision_marketplace).toFixed(2)} {orden.desglose.moneda ?? ""}</span>
+              </div>
+              <div className="flex justify-between text-base font-semibold text-green-700">
+                <span>Neto a recibir</span>
+                <span>
+                  {orden.desglose.monto_neto_productor
+                    ? `${Number(orden.desglose.monto_neto_productor).toFixed(2)} ${orden.desglose.moneda ?? ""}`
+                    : "—"}
+                </span>
+              </div>
+              <div className="flex justify-between pt-2 text-xs text-gray-600">
+                <span>Estado del pago</span>
+                <span>
+                  {orden.desglose.id_payout
+                    ? `Incluido en payout #${orden.desglose.id_payout}`
+                    : "Pendiente de payout"}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Rastreo */}
         <div className="bg-white p-6 rounded-lg border border-gray-300 mb-6">

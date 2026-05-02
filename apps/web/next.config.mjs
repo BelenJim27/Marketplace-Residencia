@@ -42,6 +42,11 @@ const nextConfig = {
       { source: '/admin/:path*', destination: `${apiUrl}/admin/:path*` },
       { source: '/configuracion/:path*', destination: `${apiUrl}/configuracion/:path*` },
       { source: '/auditoria/:path*', destination: `${apiUrl}/auditoria/:path*` },
+      { source: '/paises/:path*', destination: `${apiUrl}/paises/:path*` },
+      { source: '/idiomas/:path*', destination: `${apiUrl}/idiomas/:path*` },
+      { source: '/tasas-cambio/:path*', destination: `${apiUrl}/tasas-cambio/:path*` },
+      { source: '/comisiones/:path*', destination: `${apiUrl}/comisiones/:path*` },
+      { source: '/payouts/:path*', destination: `${apiUrl}/payouts/:path*` },
     ];
   },
 };

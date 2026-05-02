@@ -9,6 +9,7 @@ import { useCheckout, CheckoutStep } from "@/hooks/useCheckout";
 import { useCarrito } from "@/context/CarritoContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/format-number";
+import { usePaises } from "@/hooks/usePaises";
 
 const PASOS: { key: CheckoutStep; label: string; icon: React.ReactNode }[] = [
   { key: "direccion", label: "Dirección", icon: <Truck size={16} /> },
@@ -28,6 +29,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { isAuthenticated, loading: authLoading, user } = useAuth();
   const { items } = useCarrito();
+  const { paises, loading: paisesLoading } = usePaises("envio");
 
   const {
     paso,
@@ -204,17 +206,16 @@ export default function CheckoutPage() {
                           pais_iso2: e.target.value,
                           es_internacional: e.target.value !== "MX",
                         }))}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        disabled={paisesLoading}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white disabled:opacity-60"
                       >
-                        <option value="MX">México</option>
-                        <option value="US">Estados Unidos</option>
-                        <option value="CA">Canadá</option>
-                        <option value="ES">España</option>
-                        <option value="GB">Reino Unido</option>
-                        <option value="FR">Francia</option>
-                        <option value="DE">Alemania</option>
-                        <option value="JP">Japón</option>
-                        <option value="AU">Australia</option>
+                        {paisesLoading && <option value="MX">Cargando...</option>}
+                        {!paisesLoading && paises.length === 0 && <option value="MX">México</option>}
+                        {paises.map((p) => (
+                          <option key={p.iso2} value={p.iso2}>
+                            {p.nombre_local || p.nombre}
+                          </option>
+                        ))}
                       </select>
                     </div>
 

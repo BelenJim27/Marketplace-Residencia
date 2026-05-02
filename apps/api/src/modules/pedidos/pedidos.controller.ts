@@ -16,6 +16,14 @@ export class PedidosController {
     return this.service.getMisVentas(token);
   }
 
+  @UseGuards(AuthGuard)
+  @Get('mis-pedidos')
+  getMisPedidos(@Headers('authorization') authorization: string) {
+    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
+    if (!token) throw new BadRequestException('Token requerido');
+    return this.service.getMisPedidosProductor(token);
+  }
+
   @Get('estadisticas') getEstadisticas(@Headers('authorization') authorization?: string, @Query('id_productor') idProductor?: string, @Query('periodo') periodo?: string) {
     const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined;
     const parsed = idProductor ? Number(idProductor) : undefined;
