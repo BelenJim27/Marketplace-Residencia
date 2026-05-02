@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import Image from "next/image";
-import { ShoppingCart, Heart, Sparkles } from "lucide-react";
+import { ShoppingCart, Heart, Sparkles, User, Store } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { formatPrice } from "@/lib/format-number";
@@ -19,10 +19,20 @@ interface Producto {
   producto_imagenes?: { url: string }[];
   categorias?: string[];
   nombre_productor?: string | null;
+  nombre_tienda?: string | null; // campo plano que manda el backend
   lotes?: {
     datos_api?: Record<string, string>;
     productores?: { biografia?: string };
   };
+  tiendas?: {
+    nombre?: string;
+    productores?: {
+      usuarios?: {
+        nombre?: string;
+        apellido_paterno?: string;
+      };
+    };
+  } | null;
 }
 
 export default function ProductCarousel() {
@@ -48,7 +58,7 @@ export default function ProductCarousel() {
         setLoading(true);
         const data = await api.productos.getAll({});
         const filtrados = (data as Producto[]).filter(
-          p => p.categorias && p.categorias.length > 0 && p.nombre_productor
+          (p) => p.categorias && p.categorias.length > 0 && p.nombre_productor
         );
         setProductos(filtrados.slice(0, 6));
       } catch (err) {
@@ -71,10 +81,6 @@ export default function ProductCarousel() {
     }
   }, []);
 
-  const autoplay = useCallback(() => {
-    setActiveIndex((prev) => (prev + 1) % productos.length);
-  }, [productos.length]);
-
   useEffect(() => {
     if (!loading && productos.length > 0 && !isPaused && mounted) {
       goToSlide(activeIndex);
@@ -88,19 +94,37 @@ export default function ProductCarousel() {
     }
   }, [loading, productos.length, isPaused, activeIndex, goToSlide, mounted]);
 
-  const toggleWishlist = useCallback((producto: Producto) => {
-    if (isInWishlist(producto.id_producto)) {
-      eliminarWishlist(producto.id_producto);
-    } else {
-      agregarWishlist(producto);
-    }
-  }, [isInWishlist, agregarWishlist, eliminarWishlist]);
+  const toggleWishlist = useCallback(
+    (producto: Producto) => {
+      if (isInWishlist(producto.id_producto)) {
+        eliminarWishlist(producto.id_producto);
+      } else {
+        agregarWishlist(producto);
+      }
+    },
+    [isInWishlist, agregarWishlist, eliminarWishlist]
+  );
 
-  const handleAgregarAlCarrito = useCallback((producto: Producto) => {
-    agregarProducto(producto as any);
-    setAgregadoId(producto.id_producto);
-    setTimeout(() => setAgregadoId(null), 2000);
-  }, [agregarProducto]);
+  const handleAgregarAlCarrito = useCallback(
+    (producto: Producto) => {
+      agregarProducto(producto as any);
+      setAgregadoId(producto.id_producto);
+      setTimeout(() => setAgregadoId(null), 2000);
+    },
+    [agregarProducto]
+  );
+
+  // Helpers — igual que en el catálogo
+  const getNombreProductor = (producto: Producto): string | null => {
+    if (producto.nombre_productor) return producto.nombre_productor;
+    const u = producto.tiendas?.productores?.usuarios;
+    if (u?.nombre) return [u.nombre, u.apellido_paterno].filter(Boolean).join(" ");
+    return null;
+  };
+
+  const getNombreTienda = (producto: Producto): string | null => {
+    return producto.nombre_tienda ?? producto.tiendas?.nombre ?? null;
+  };
 
   if (loading) {
     return (
@@ -110,13 +134,15 @@ export default function ProductCarousel() {
     );
   }
 
-  if (productos.length === 0) {
-    return null;
-  }
+  if (productos.length === 0) return null;
 
   return (
-    <div className="w-full py-8" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)}>
-      {/* Header */}
+    <div
+      className="w-full py-8"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      {/* ─── Header ─── */}
       <div className="mb-8 flex items-center justify-between px-2">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -126,10 +152,22 @@ export default function ProductCarousel() {
             </div>
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+            <h2
+              className="text-2xl font-bold tracking-tight"
+              style={{
+                fontFamily: "var(--bio-fuente-titulo, Georgia, serif)",
+                color: "var(--bio-color-titulo, #5c3d1e)",
+              }}
+            >
               Destacados
             </h2>
-            <p className="text-xs opacity-60" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+            <p
+              className="text-xs opacity-60"
+              style={{
+                fontFamily: "var(--bio-fuente-titulo, Georgia, serif)",
+                color: "var(--bio-color-titulo, #5c3d1e)",
+              }}
+            >
               Nuestras mejores selecciones
             </p>
           </div>
@@ -145,12 +183,11 @@ export default function ProductCarousel() {
                 setActiveIndex(idx);
               }}
               className={`transition-all duration-300 ${
-                idx === activeIndex
-                  ? "h-2 w-8 rounded-full"
-                  : "h-2 w-2 rounded-full hover:w-4"
+                idx === activeIndex ? "h-2 w-8 rounded-full" : "h-2 w-2 rounded-full hover:w-4"
               }`}
               style={{
-                backgroundColor: idx === activeIndex ? "var(--bio-color-boton, #5c3d1e)" : "rgba(92, 61, 30, 0.2)",
+                backgroundColor:
+                  idx === activeIndex ? "var(--bio-color-boton, #5c3d1e)" : "rgba(92, 61, 30, 0.2)",
               }}
               aria-label={`Ir a producto ${idx + 1}`}
             />
@@ -158,7 +195,7 @@ export default function ProductCarousel() {
         </div>
       </div>
 
-      {/* Carrusel */}
+      {/* ─── Carrusel ─── */}
       <div className="relative">
         <div
           ref={scrollRef}
@@ -169,6 +206,8 @@ export default function ProductCarousel() {
             const imagenUrl = producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
             const tipoMezcal = producto.lotes?.datos_api?.tipo_mezcal ?? "";
             const isActive = index === activeIndex;
+            const nombreProductor = getNombreProductor(producto);
+            const nombreTienda = getNombreTienda(producto);
 
             return (
               <div
@@ -178,10 +217,11 @@ export default function ProductCarousel() {
                 }`}
                 style={{ width: "600px", minHeight: "320px" }}
               >
-                {/* Imagen */}
+                {/* ─── Imagen ─── */}
                 <div
                   className="relative flex-shrink-0 h-80 w-80 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 cursor-pointer"
                   onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
+
                 >
                   {imagenUrl ? (
                     <>
@@ -200,7 +240,7 @@ export default function ProductCarousel() {
                     </div>
                   )}
 
-                  {/* Badge */}
+                  {/* Badge tipo mezcal */}
                   {tipoMezcal && (
                     <div className="absolute top-4 left-4 animate-in fade-in slide-in-from-top-2 duration-500">
                       <div className="relative">
@@ -219,7 +259,7 @@ export default function ProductCarousel() {
                     </div>
                   )}
 
-                  {/* Wishlist Button */}
+                  {/* Wishlist */}
                   <button
                     className="absolute top-4 right-4 h-10 w-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
                     style={{
@@ -243,36 +283,87 @@ export default function ProductCarousel() {
                   </button>
                 </div>
 
-                {/* Info Container */}
-                <div className="flex flex-col gap-4 flex-1">
+                {/* ─── Info ─── */}
+                <div className="flex flex-col gap-3 flex-1">
+
+                  {/* PRODUCTOR Y TIENDA */}
+                  {(nombreProductor || nombreTienda) && (
+                    <div className="flex flex-col gap-1">
+                      {nombreProductor && (
+                        <div className="flex items-center gap-1.5">
+                          <User
+                            className="h-3.5 w-3.5 shrink-0"
+                            style={{ color: "var(--bio-color-precio, #8b6914)", opacity: 0.75 }}
+                          />
+                          <span
+                            className="text-xs font-medium truncate"
+                            style={{ color: "var(--bio-color-precio, #8b6914)", opacity: 0.9 }}
+                          >
+                            {nombreProductor}
+                          </span>
+                        </div>
+                      )}
+                      {nombreTienda && (
+                        <div className="flex items-center gap-1.5">
+                          <Store
+                            className="h-3.5 w-3.5 shrink-0"
+                            style={{ color: "var(--bio-color-titulo, #5c3d1e)", opacity: 0.55 }}
+                          />
+                          <span
+                            className="text-xs truncate"
+                            style={{ color: "var(--bio-color-titulo, #5c3d1e)", opacity: 0.65 }}
+                          >
+                            {nombreTienda}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Nombre */}
                   <h3
                     className="font-bold text-xl line-clamp-3 cursor-pointer transition-colors duration-300 hover:opacity-70"
+
                     style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
                     onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
+
                   >
                     {producto.nombre}
                   </h3>
 
                   {/* Descripción */}
                   {producto.descripcion && (
-                    <p className="text-sm opacity-70 line-clamp-2" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+                    <p
+                      className="text-sm opacity-70 line-clamp-2"
+                      style={{
+                        fontFamily: "var(--bio-fuente-titulo, Georgia, serif)",
+                        color: "var(--bio-color-titulo, #5c3d1e)",
+                      }}
+                    >
                       {producto.descripcion}
                     </p>
                   )}
 
                   {/* Precio */}
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     <span
                       className="font-bold text-2xl block transition-all duration-300"
-                      style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}
+                      style={{
+                        fontFamily: "var(--bio-fuente-titulo, Georgia, serif)",
+                        color: "var(--bio-color-precio, #8b6914)",
+                      }}
                     >
                       ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
                     </span>
-                    <p className="text-xs opacity-50" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)" }}>MXN</p>
+                    <p
+                      className="text-xs opacity-50"
+                      style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)" }}
+                    >
+                      MXN
+                    </p>
                   </div>
 
-                  {/* Button */}
+                  {/* Botón */}
                   <button
                     className={`flex items-center justify-center gap-2 rounded-xl py-3 px-6 text-sm font-semibold text-white transition-all duration-300 w-fit ${
                       agregadoId === producto.id_producto
@@ -305,70 +396,29 @@ export default function ProductCarousel() {
         </div>
       </div>
 
-      {/* CSS for custom animations */}
       <style>{`
         @keyframes shimmer {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(100%);
-          }
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
         }
-
-        .animate-shimmer {
-          animation: shimmer 2s infinite;
-        }
-
-        .animate-in {
-          animation: slideInFade 0.6s ease-out forwards;
-        }
-
-        .fade-in {
-          animation: fadeIn 0.6s ease-out forwards;
-        }
-
-        .slide-in-from-top-2 {
-          animation: slideInFromTop 0.6s ease-out forwards;
-        }
-
+        .animate-shimmer { animation: shimmer 2s infinite; }
+        .animate-in { animation: slideInFade 0.6s ease-out forwards; }
+        .fade-in { animation: fadeIn 0.6s ease-out forwards; }
+        .slide-in-from-top-2 { animation: slideInFromTop 0.6s ease-out forwards; }
         @keyframes slideInFade {
-          from {
-            opacity: 0;
-            transform: translateY(-8px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
-
         @keyframes slideInFromTop {
-          from {
-            transform: translateY(-12px);
-          }
-          to {
-            transform: translateY(0);
-          }
+          from { transform: translateY(-12px); }
+          to { transform: translateY(0); }
         }
-
-        /* Delay utilities */
-        .delay-100 {
-          animation-delay: 100ms;
-        }
-
-        .delay-200 {
-          animation-delay: 200ms;
-        }
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
       `}</style>
     </div>
   );
