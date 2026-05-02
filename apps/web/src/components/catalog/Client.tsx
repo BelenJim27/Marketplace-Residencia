@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import Image from "next/image";
-import { ShoppingCart, Search, X, Heart, SlidersHorizontal, ChevronDown } from "lucide-react";
+import { ShoppingCart, Search, X, Heart, SlidersHorizontal, ChevronDown, Store, User } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
@@ -21,10 +21,20 @@ interface Producto {
   producto_imagenes?: { url: string }[];
   categorias?: string[];
   nombre_productor?: string | null;
+  nombre_tienda?: string | null; // campo plano que ya manda el backend
   lotes?: {
     datos_api?: Record<string, string>;
     productores?: { biografia?: string };
   };
+  tiendas?: {
+    nombre?: string;
+    productores?: {
+      usuarios?: {
+        nombre?: string;
+        apellido_paterno?: string;
+      };
+    };
+  } | null;
 }
 
 interface Filtros {
@@ -65,7 +75,6 @@ const ETIQUETAS_FILTRO: Record<keyof Filtros, string> = {
   maestro_mezcalero: "Maestro",
 };
 
-// Sección colapsable del sidebar
 function FilterSection({
   title,
   children,
@@ -101,7 +110,6 @@ function FilterSection({
   );
 }
 
-// Chip de filtro reutilizable
 function FilterChip({
   label,
   active,
@@ -196,7 +204,16 @@ export default function ProductCatalogClient() {
       molienda: filtrosPendientes.molienda,
       maestro_mezcalero: filtrosPendientes.maestro_mezcalero,
     });
-  }, [debouncedBusqueda, filtrosPendientes.tipo_mezcal, filtrosPendientes.maguey, filtrosPendientes.precio_min, filtrosPendientes.precio_max, filtrosPendientes.destilacion, filtrosPendientes.molienda, filtrosPendientes.maestro_mezcalero]);
+  }, [
+    debouncedBusqueda,
+    filtrosPendientes.tipo_mezcal,
+    filtrosPendientes.maguey,
+    filtrosPendientes.precio_min,
+    filtrosPendientes.precio_max,
+    filtrosPendientes.destilacion,
+    filtrosPendientes.molienda,
+    filtrosPendientes.maestro_mezcalero,
+  ]);
 
   const handleBusquedaChange = (valor: string) =>
     setFiltrosPendientes((prev) => ({ ...prev, busqueda: valor }));
@@ -261,11 +278,21 @@ export default function ProductCatalogClient() {
     handleFiltroChange("precio_max", precioMaxLocal);
   };
 
+  // Usa el campo plano que ya manda el backend, con fallback a la relación anidada
+  const getNombreProductor = (producto: Producto): string | null => {
+    if (producto.nombre_productor) return producto.nombre_productor;
+    const u = producto.tiendas?.productores?.usuarios;
+    if (u?.nombre) return [u.nombre, u.apellido_paterno].filter(Boolean).join(" ");
+    return null;
+  };
+
+  const getNombreTienda = (producto: Producto): string | null => {
+    return producto.nombre_tienda ?? producto.tiendas?.nombre ?? null;
+  };
+
   // ─── SIDEBAR CONTENT ───────────────────────────────────────────────
   const SidebarContent = () => (
     <div className="space-y-0">
-
-      {/* Header del sidebar */}
       <div className="pb-4 mb-1">
         <div className="flex items-center justify-between">
           <h2
@@ -285,7 +312,6 @@ export default function ProductCatalogClient() {
           )}
         </div>
 
-        {/* Barra de búsqueda */}
         <div className="relative mt-3">
           <Search
             className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
@@ -314,7 +340,6 @@ export default function ProductCatalogClient() {
         </div>
       </div>
 
-      {/* MAGUEY */}
       <FilterSection title="Maguey">
         <div className="flex flex-wrap gap-1.5">
           {TIPOS_MAGUEY.map((m) => (
@@ -328,7 +353,6 @@ export default function ProductCatalogClient() {
         </div>
       </FilterSection>
 
-      {/* DESTILACIÓN */}
       <FilterSection title="Destilación">
         <div className="flex flex-wrap gap-1.5">
           {TIPOS_DESTILACION.map((d) => (
@@ -342,7 +366,6 @@ export default function ProductCatalogClient() {
         </div>
       </FilterSection>
 
-      {/* MOLIENDA */}
       <FilterSection title="Molienda">
         <div className="flex flex-wrap gap-1.5">
           {TIPOS_MOLIENDA.map((m) => (
@@ -356,7 +379,6 @@ export default function ProductCatalogClient() {
         </div>
       </FilterSection>
 
-      {/* RANGO DE PRECIO */}
       <FilterSection title="Rango de Precio (MXN)">
         <div className="space-y-2">
           <div className="flex gap-2">
@@ -413,7 +435,6 @@ export default function ProductCatalogClient() {
         </div>
       </FilterSection>
 
-      {/* MAESTRO MEZCALERO */}
       <FilterSection title="Maestro Mezcalero" defaultOpen={false}>
         <input
           type="text"
@@ -449,6 +470,7 @@ export default function ProductCatalogClient() {
 
       {/* ─── MAIN CONTENT ─── */}
       <div className="flex-1 min-w-0">
+
         {/* Mobile filter button */}
         <div className="lg:hidden mb-4 flex gap-2">
           <button
@@ -582,6 +604,8 @@ export default function ProductCatalogClient() {
               const imagenUrl = producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
               const tipoMezcal = producto.lotes?.datos_api?.tipo_mezcal ?? "";
               const subtitulo = producto.lotes?.datos_api?.maguey ?? "";
+              const nombreProductor = getNombreProductor(producto);
+              const nombreTienda = getNombreTienda(producto);
 
               return (
                 <div
@@ -592,6 +616,7 @@ export default function ProductCatalogClient() {
                     backgroundColor: "var(--bio-color-fondo, #faf8f4)",
                   }}
                 >
+                  {/* ─── IMAGEN ─── */}
                   <div
                     className="relative overflow-hidden bg-gray-50 dark:bg-slate-800"
                     style={{ aspectRatio: "1 / 1" }}
@@ -606,7 +631,9 @@ export default function ProductCatalogClient() {
                         className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-gray-400 text-sm">Sin imagen</div>
+                      <div className="flex h-full items-center justify-center text-gray-400 text-sm">
+                        Sin imagen
+                      </div>
                     )}
 
                     {tipoMezcal && (
@@ -633,16 +660,57 @@ export default function ProductCatalogClient() {
                         toggleWishlist(producto);
                       }}
                     >
-                      <Heart className="h-3.5 w-3.5" fill={isInWishlist(producto.id_producto) ? "currentColor" : "none"} />
+                      <Heart
+                        className="h-3.5 w-3.5"
+                        fill={isInWishlist(producto.id_producto) ? "currentColor" : "none"}
+                      />
                     </button>
                   </div>
 
+                  {/* ─── INFO ─── */}
                   <div className="p-4">
+                    {/* Maguey / subtítulo */}
                     {subtitulo && (
                       <p className="text-xs uppercase tracking-wide mb-0.5" style={{ color: "#b07850" }}>
                         {subtitulo}
                       </p>
                     )}
+
+                    {/* ─── PRODUCTOR Y TIENDA ─── */}
+                    {(nombreProductor || nombreTienda) && (
+                      <div className="flex flex-col gap-0.5 mb-2">
+                        {nombreProductor && (
+                          <div className="flex items-center gap-1">
+                            <User
+                              className="h-3 w-3 shrink-0"
+                              style={{ color: "var(--bio-color-precio, #8b6914)", opacity: 0.7 }}
+                            />
+                            <span
+                              className="text-xs truncate"
+                              style={{ color: "var(--bio-color-precio, #8b6914)", opacity: 0.85 }}
+                            >
+                              {nombreProductor}
+                            </span>
+                          </div>
+                        )}
+                        {nombreTienda && (
+                          <div className="flex items-center gap-1">
+                            <Store
+                              className="h-3 w-3 shrink-0"
+                              style={{ color: "var(--bio-color-titulo, #5c3d1e)", opacity: 0.55 }}
+                            />
+                            <span
+                              className="text-xs truncate"
+                              style={{ color: "var(--bio-color-titulo, #5c3d1e)", opacity: 0.65 }}
+                            >
+                              {nombreTienda}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Nombre del producto */}
                     <h3
                       className="font-semibold text-sm line-clamp-2 mb-2 leading-snug cursor-pointer hover:opacity-80"
                       style={{
@@ -653,6 +721,8 @@ export default function ProductCatalogClient() {
                     >
                       {producto.nombre}
                     </h3>
+
+                    {/* Precio */}
                     <div className="flex items-center justify-between mt-2">
                       <span
                         className="font-bold text-base"
@@ -664,6 +734,8 @@ export default function ProductCatalogClient() {
                         ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })} MXN
                       </span>
                     </div>
+
+                    {/* Botón agregar al carrito */}
                     <button
                       className="w-full mt-3 flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-medium text-white transition-all hover:opacity-90 active:scale-95"
                       style={{
@@ -701,7 +773,10 @@ export default function ProductCatalogClient() {
       {/* ─── MOBILE FILTER DRAWER ─── */}
       {showMobileFilters && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setShowMobileFilters(false)} />
+          <div
+            className="fixed inset-0 z-40 bg-black/40"
+            onClick={() => setShowMobileFilters(false)}
+          />
           <div
             className="fixed inset-y-0 left-0 z-50 w-80 overflow-y-auto shadow-xl"
             style={{ backgroundColor: "var(--bio-color-fondo, #faf8f4)" }}
@@ -712,7 +787,10 @@ export default function ProductCatalogClient() {
             >
               <span
                 className="font-semibold"
-                style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+                style={{
+                  fontFamily: "var(--bio-fuente-titulo, Georgia, serif)",
+                  color: "var(--bio-color-titulo, #5c3d1e)",
+                }}
               >
                 Filtros
               </span>
