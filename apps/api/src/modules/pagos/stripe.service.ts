@@ -2,6 +2,44 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 const Stripe = require('stripe');
 
+export interface StripeShippingAddress {
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;        // 2-letter for US (e.g. "CA")
+  postal_code: string;
+  country: string;      // ISO-2 (e.g. "US", "MX")
+}
+
+export interface CreatePaymentIntentInput {
+  subtotal: number;                 // pre-tax, in major units (e.g. 49.99)
+  shippingAmount?: number;          // shipping cost in major units, taxed if applicable
+  currency: string;                 // ISO 4217 (case-insensitive)
+  shippingAddress: StripeShippingAddress;
+  recipientName?: string;
+  customerId?: string;              // Stripe customer id (optional)
+  metadata?: Record<string, any>;
+  automaticTax?: boolean;           // default true
+  /**
+   * Stripe Connect Direct Charge: when set, the platform charges on behalf of the
+   * connected account, takes `applicationFeeAmount` (in major units) as marketplace
+   * fee, and routes the rest to the productor's account automatically.
+   */
+  connectedAccountId?: string;
+  applicationFeeAmount?: number;    // marketplace fee in major units
+}
+
+export interface CreatePaymentIntentResult {
+  clientSecret: string;
+  paymentIntentId: string;
+  subtotal: number;                 // major units
+  taxAmount: number;
+  shippingAmount: number;
+  totalAmount: number;
+  currency: string;
+  taxCalculationId?: string;        // Stripe Tax calculation id, used to record the tax transaction on success
+}
+
 @Injectable()
 export class StripeService {
   private stripe: any;
@@ -14,17 +52,118 @@ export class StripeService {
     this.stripe = new Stripe(secretKey);
   }
 
-  async createPaymentIntent(amount: number, moneda: string, metadata: Record<string, any>) {
+  async createPaymentIntent(input: CreatePaymentIntentInput): Promise<CreatePaymentIntentResult> {
+    const {
+      subtotal,
+      shippingAmount = 0,
+      currency,
+      shippingAddress,
+      recipientName,
+      customerId,
+      metadata = {},
+      automaticTax = true,
+    } = input;
+
+    if (!subtotal || subtotal <= 0) {
+      throw new BadRequestException('subtotal debe ser mayor a 0');
+    }
+    if (!shippingAddress?.country || !shippingAddress.line1) {
+      throw new BadRequestException('shippingAddress incompleto: line1 y country son obligatorios');
+    }
+
+    const cur = currency.toLowerCase();
+    const subtotalCents = Math.round(subtotal * 100);
+    const shippingCents = Math.round(shippingAmount * 100);
+
+    const stripeAddress = {
+      line1: shippingAddress.line1,
+      line2: shippingAddress.line2,
+      city: shippingAddress.city,
+      state: shippingAddress.state,
+      postal_code: shippingAddress.postal_code,
+      country: shippingAddress.country.toUpperCase(),
+    };
+
+    let taxCents = 0;
+    let totalCents = subtotalCents + shippingCents;
+    let taxCalculationId: string | undefined;
+
+    if (automaticTax) {
+      try {
+        const calc = await this.stripe.tax.calculations.create({
+          currency: cur,
+          line_items: [
+            {
+              amount: subtotalCents,
+              reference: metadata?.id_pedido ? `pedido-${metadata.id_pedido}` : 'pedido',
+              tax_behavior: 'exclusive',
+            },
+          ],
+          shipping_cost: shippingCents > 0
+            ? { amount: shippingCents, tax_behavior: 'exclusive' }
+            : undefined,
+          customer_details: {
+            address: stripeAddress,
+            address_source: 'shipping',
+          },
+        });
+        taxCalculationId = calc.id;
+        taxCents = calc.tax_amount_exclusive ?? 0;
+        totalCents = calc.amount_total;
+      } catch (error: any) {
+        // Stripe Tax not configured / calculation failed — fall back to a no-tax PI.
+        // The order will record tax_amount = 0 and the operator can reconcile manually.
+        // Logged so ops can spot persistent failures.
+        // eslint-disable-next-line no-console
+        console.warn('[stripe] tax.calculations.create failed, continuing without tax:', error?.message);
+      }
+    }
+
+    const connectedAccountId = input.connectedAccountId;
+    const applicationFeeCents = input.applicationFeeAmount != null
+      ? Math.round(input.applicationFeeAmount * 100)
+      : undefined;
+
     try {
       const intent = await this.stripe.paymentIntents.create({
-        amount: Math.round(amount * 100),
-        currency: moneda.toLowerCase(),
-        payment_method_types: ['card'],
-        metadata,
+        amount: totalCents,
+        currency: cur,
+        customer: customerId,
+        shipping: {
+          name: recipientName ?? 'Customer',
+          address: stripeAddress,
+        },
+        automatic_payment_methods: { enabled: true },
+        ...(connectedAccountId
+          ? {
+              on_behalf_of: connectedAccountId,
+              transfer_data: { destination: connectedAccountId },
+              ...(applicationFeeCents != null && applicationFeeCents > 0
+                ? { application_fee_amount: applicationFeeCents }
+                : {}),
+            }
+          : {}),
+        metadata: {
+          ...metadata,
+          ...(taxCalculationId ? { tax_calculation: taxCalculationId } : {}),
+          subtotal_cents: String(subtotalCents),
+          shipping_cents: String(shippingCents),
+          tax_cents: String(taxCents),
+          ...(applicationFeeCents != null
+            ? { application_fee_cents: String(applicationFeeCents) }
+            : {}),
+        },
       });
+
       return {
         clientSecret: intent.client_secret,
         paymentIntentId: intent.id,
+        subtotal: subtotalCents / 100,
+        taxAmount: taxCents / 100,
+        shippingAmount: shippingCents / 100,
+        totalAmount: totalCents / 100,
+        currency: cur,
+        taxCalculationId,
       };
     } catch (error: any) {
       throw new BadRequestException(`Stripe error: ${error.message}`);
@@ -41,5 +180,12 @@ export class StripeService {
 
   async retrievePaymentIntent(paymentIntentId: string) {
     return this.stripe.paymentIntents.retrieve(paymentIntentId);
+  }
+
+  async createTaxTransactionFromCalculation(calculationId: string, reference: string) {
+    return this.stripe.tax.transactions.createFromCalculation({
+      calculation: calculationId,
+      reference,
+    });
   }
 }

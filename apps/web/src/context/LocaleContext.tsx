@@ -3,14 +3,18 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { LOCALE_CONFIG, translateText, getExchangeRates, formatPrice } from "@/lib/i18n";
 
+export type Currency = "MXN" | "USD";
+
 interface LocaleContextType {
   locale: string;
   setLocale: (locale: string) => void;
   t: (text: string) => string;
   translateAsync: (text: string) => Promise<string>;
   convertPrice: (mxn: number) => string;
-  currency: string;
+  currency: Currency;
+  setCurrency: (currency: Currency) => void;
   loadingRates: boolean;
+  rates: Record<string, number>;
 }
 
 const LocaleContext = createContext<LocaleContextType | null>(null);
@@ -20,8 +24,33 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const [rates, setRates] = useState<Record<string, number>>({ MXN: 1 });
   const [loadingRates, setLoadingRates] = useState(false);
+  const [currency, setCurrencyState] = useState<Currency>("MXN");
 
   const config = LOCALE_CONFIG[locale] ?? LOCALE_CONFIG["es"];
+
+  // Determinar moneda por geolocalización usando header Vercel o Accept-Language
+  useEffect(() => {
+    const detectarMoneda = async () => {
+      const saved = localStorage.getItem("currency") as Currency;
+      if (saved === "MXN" || saved === "USD") {
+        setCurrencyState(saved);
+        return;
+      }
+
+      let paisISO = "";
+      try {
+        const res = await fetch("/api/geolocate", { method: "HEAD" });
+        paisISO = (res.headers.get("x-vercel-ip-country") || "").toUpperCase();
+      } catch {}
+
+      // Por defecto MXN, solo cambiar a USD para países anglosajones
+      const paisesUSD = ["US", "CA", "GB"];
+      const predeterminada: Currency = paisesUSD.includes(paisISO) ? "USD" : "MXN";
+      setCurrencyState(predeterminada);
+    };
+
+    detectarMoneda();
+  }, []);
 
   // Cargar tasas al cambiar idioma
   useEffect(() => {
@@ -59,9 +88,14 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   // convertPrice — convierte desde MXN
   const convertPrice = useCallback((mxn: number): string => {
-    const rate = rates[config.currency] ?? 1;
-    return formatPrice(mxn * rate, config.currency, config.numberLocale);
-  }, [rates, config]);
+    const rate = rates[currency] ?? 1;
+    return formatPrice(mxn * rate, currency, config.numberLocale);
+  }, [rates, currency, config]);
+
+  const setCurrency = (newCurrency: Currency) => {
+    setCurrencyState(newCurrency);
+    localStorage.setItem("currency", newCurrency);
+  };
 
   const setLocale = (newLocale: string) => {
     setTranslations({}); // limpiar caché al cambiar idioma
@@ -76,8 +110,10 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       t,
       translateAsync,
       convertPrice,
-      currency: config.currency,
+      currency,
+      setCurrency,
       loadingRates,
+      rates,
     }}>
       {children}
     </LocaleContext.Provider>

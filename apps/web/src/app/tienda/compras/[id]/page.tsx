@@ -80,10 +80,8 @@ export default function DetallePedidoPage() {
   const fetchTracking = async (idEnvio: any) => {
     setTrackingLoading(true);
     try {
-      const token = getCookie("token");
-      const res = await fetch(`/envios/${idEnvio}/tracking`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      }).then((r) => r.json());
+      const token = getCookie("token") || "";
+      const res = await api.envios.getTracking(String(idEnvio), token);
       setTracking(res);
     } catch (err) {
       console.error("Error fetching tracking:", err);
@@ -236,7 +234,7 @@ export default function DetallePedidoPage() {
                 </div>
                 {envio.numero_rastreo && (
                   <div className="mb-2">
-                    <p className="text-xs text-gray-500">Número de rastreo DHL</p>
+                    <p className="text-xs text-gray-500">Número de rastreo</p>
                     <div className="flex items-center gap-2">
                       <p className="font-mono text-sm font-semibold text-gray-900 dark:text-white">{envio.numero_rastreo}</p>
                       <button

@@ -300,7 +300,9 @@ const productoInclude = {
     include: {
       categorias: {
         select: {
+          id_categoria: true,
           nombre: true,
+          requiere_edad_minima: true,
         },
       },
     },
@@ -385,6 +387,35 @@ function getCategorias(item: ProductoWithRelations): string[] {
     .filter((n: string | undefined): n is string => !!n);
 }
 
+// Rich categoria objects (id, nombre, requiere_edad_minima) — used by AgeGate on the web.
+function getCategoriasFull(item: ProductoWithRelations): Array<{
+  id_categoria: number;
+  nombre: string;
+  requiere_edad_minima: number | null;
+}> {
+  const cats = item.categorias_productos;
+  if (!cats || cats.length === 0) return [];
+  return cats
+    .map((cp: any) => cp.categorias)
+    .filter((c: any) => c && typeof c.id_categoria === 'number')
+    .map((c: any) => ({
+      id_categoria: c.id_categoria,
+      nombre: c.nombre,
+      requiere_edad_minima: c.requiere_edad_minima ?? null,
+    }));
+}
+
+// Most restrictive age across producto override + all categorias. null = no gate.
+function computeEdadMinima(item: ProductoWithRelations): number | null {
+  if (typeof item.requiere_edad_minima === 'number' && item.requiere_edad_minima > 0) {
+    return item.requiere_edad_minima;
+  }
+  const ages: number[] = (item.categorias_productos ?? [])
+    .map((cp: any) => cp.categorias?.requiere_edad_minima)
+    .filter((v: any) => typeof v === 'number' && v > 0);
+  return ages.length ? Math.max(...ages) : null;
+}
+
 function mapProductoResponse<
   T extends ProductoWithRelations | Array<ProductoWithRelations>,
 >(data: T): T {
@@ -402,6 +433,8 @@ function mapProductoResponse<
       // FIX: categorias = full array, categoria = first item (backwards compat)
       categorias: getCategorias(item),
       categoria: getCategorias(item)[0] ?? null,
+      categorias_full: getCategoriasFull(item),
+      edad_minima: computeEdadMinima(item),
     })) as unknown as T;
   }
 
@@ -418,6 +451,8 @@ function mapProductoResponse<
     // FIX: categorias = full array, categoria = first item (backwards compat)
     categorias: getCategorias(data),
     categoria: getCategorias(data)[0] ?? null,
+    categorias_full: getCategoriasFull(data),
+    edad_minima: computeEdadMinima(data),
   } as T;
 }
 

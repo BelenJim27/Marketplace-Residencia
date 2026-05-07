@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DIRECT_URL")
 }
 
 model archivos {
@@ -62,6 +62,7 @@ model categorias {
   tipo                 String                 @default("general") @db.VarChar(50)
   imagen_url           String?                @db.VarChar(500)
   activo               Boolean                @default(true)
+  requiere_edad_minima Int?
   creado_en            DateTime               @default(now()) @db.Timestamptz(6)
   categorias              categorias?              @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
   other_categorias        categorias[]             @relation("categoriasTocategorias")
@@ -69,6 +70,7 @@ model categorias {
   tasas_impuesto          tasas_impuesto[]
   comisiones              comisiones[]
   categorias_traducciones categorias_traducciones[]
+  restricciones_envio     restricciones_envio_categoria[]
 
   @@index([id_padre], map: "idx_cat_padre")
 }
@@ -213,6 +215,7 @@ model envios {
   costo_envio            Decimal?         @db.Decimal(14, 2)
   moneda_costo           String           @default("MXN") @db.Char(3)
   estado                 String           @default("preparando") @db.VarChar(30)
+  requires_adult_signature Boolean        @default(false)
   fecha_envio            DateTime?        @db.Timestamptz(6)
   fecha_entrega_estimada DateTime?        @db.Timestamptz(6)
   fecha_entrega          DateTime?        @db.Timestamptz(6)
@@ -436,6 +439,9 @@ model pedidos {
   id_direccion_envio             BigInt?
   estado                         String                   @default("pendiente") @db.VarChar(30)
   total                          Decimal                  @db.Decimal(14, 2)
+  tax_amount                     Decimal                  @default(0) @db.Decimal(14, 2)
+  shipping_amount                Decimal                  @default(0) @db.Decimal(14, 2)
+  discount_amount                Decimal                  @default(0) @db.Decimal(14, 2)
   moneda                         String                   @db.Char(3)
   tipo_cambio                    Decimal?                 @db.Decimal(10, 4)
   moneda_referencia              String                   @default("USD") @db.Char(3)
@@ -502,6 +508,8 @@ model productores {
   datos_bancarios       String?
   razon_social          String?   @db.VarChar(200)
   rfc                   String?   @db.VarChar(13)
+  stripe_account_id     String?   @unique @db.VarChar(150)
+  stripe_onboarding_completed Boolean @default(false)
   lotes                 lotes[]
   regiones              regiones? @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
   usuarios              usuarios  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
@@ -528,6 +536,9 @@ model productos {
   ancho_cm                                     Decimal?               @db.Decimal(8, 2)
   largo_cm                                     Decimal?               @db.Decimal(8, 2)
   status                                       String                 @default("activo") @db.VarChar(20)
+  requiere_edad_minima                         Int?
+  requiere_firma_adulto                        Boolean                @default(false)
+  alergenos                                    String[]
   creado_por                                   String?                @db.Uuid
   actualizado_por                              String?                @db.Uuid
   creado_en                                    DateTime               @default(now()) @db.Timestamptz(6)
@@ -712,6 +723,7 @@ model usuarios {
   foto_url                                      String?                  @db.VarChar(500)
   apellido_paterno                              String?                  @db.VarChar(100)
   apellido_materno                              String?                  @db.VarChar(100)
+  fecha_nacimiento                              DateTime?                @db.Date
   email                                         String                   @unique @db.VarChar(255)
   telefono                                      String?                  @db.VarChar(30)
   password_hash                                 String?                  @db.VarChar(255)
@@ -801,6 +813,7 @@ model paises {
   tasas_impuesto   tasas_impuesto[]
   tiendas          tiendas[]
   usuarios         usuarios[]
+  restricciones_envio restricciones_envio_categoria[]
 
   @@index([activo_venta], map: "idx_paises_activo_venta")
 }
@@ -911,4 +924,22 @@ model tiendas_traducciones {
   idiomas     idiomas @relation(fields: [idioma], references: [codigo], onUpdate: NoAction)
 
   @@id([id_tienda, idioma])
+}
+
+model restricciones_envio_categoria {
+  id_restriccion Int        @id @default(autoincrement())
+  pais_iso2      String     @db.Char(2)
+  estado_codigo  String     @db.VarChar(10)
+  id_categoria   Int
+  permitido      Boolean    @default(true)
+  notas          String?
+  vigente_desde  DateTime   @default(now()) @db.Timestamptz(6)
+  vigente_hasta  DateTime?  @db.Timestamptz(6)
+  creado_en      DateTime   @default(now()) @db.Timestamptz(6)
+  paises         paises     @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
+  categorias     categorias @relation(fields: [id_categoria], references: [id_categoria], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([pais_iso2, estado_codigo, id_categoria])
+  @@index([pais_iso2, estado_codigo], map: "idx_restr_envio_pais_estado")
+  @@index([id_categoria], map: "idx_restr_envio_categoria")
 }

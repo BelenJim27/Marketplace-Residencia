@@ -3,19 +3,11 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CotizarEnvioDto } from './dto/envios.dto';
-
-export interface DhlRateOption {
-  productCode: string;
-  productName: string;
-  tipo: 'nacional' | 'internacional';
-  precioTotal: number;
-  moneda: string;
-  fechaEntregaEstimada: string;
-  diasHabilesEstimados: number;
-}
+import { ICarrierService, ShippingQuote, TrackingEvent } from './interfaces/carrier.interface';
 
 @Injectable()
-export class DhlService {
+export class DhlService implements ICarrierService {
+  readonly carrierCode = 'dhl';
   private readonly logger = new Logger('DhlService');
   private baseUrl: string;
   private accountNumber: string;
@@ -38,9 +30,14 @@ export class DhlService {
     this.shipperCity = this.config.get('DHL_SHIPPER_CITY', 'Oaxaca de Juárez');
   }
 
-  async cotizarEnvio(dto: CotizarEnvioDto): Promise<DhlRateOption[]> {
+  async cotizarEnvio(dto: CotizarEnvioDto, adultSignature = false): Promise<ShippingQuote[]> {
+    const apiKey = this.config.get('DHL_API_KEY', '');
+    const apiSecret = this.config.get('DHL_API_SECRET', '');
+    if (!apiKey || !apiSecret || !this.accountNumber) {
+      throw new Error('DHL_NOT_CONFIGURED');
+    }
     try {
-      const params = {
+      const params: Record<string, any> = {
         accountNumber: this.accountNumber,
         originCountryCode: this.shipperCountryCode,
         originCityName: this.shipperCity,
@@ -54,9 +51,11 @@ export class DhlService {
         height: dto.alto_cm || 15,
         plannedShippingDateAndTime: this.getNextBusinessDay(),
       };
+      if (adultSignature) {
+        // DHL Express adult signature (21+) value-added service code
+        params.specialServices = 'SA';
+      }
 
-      const apiKey = this.config.get('DHL_API_KEY', '');
-      const apiSecret = this.config.get('DHL_API_SECRET', '');
       const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
 
       const response = await this.http.get(`${this.baseUrl}/rates`, {
@@ -69,16 +68,21 @@ export class DhlService {
         return [];
       }
       return this.mapDhlResponse(response.data, dto.destino.pais);
-    } catch (error) {
-      this.logger.error(`DHL API error: ${error.message}`);
-      return [];
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(`DHL API error: ${err.message}`, (error as any)?.response?.data);
+      const apiMsg = (error as any)?.response?.data?.detail
+        || (error as any)?.response?.data?.title
+        || err.message;
+      throw new Error(apiMsg);
     }
   }
 
-  private mapDhlResponse(data: any, destinationCountry: string): DhlRateOption[] {
+  private mapDhlResponse(data: any, destinationCountry: string): ShippingQuote[] {
     return (data.products || []).map((product: any) => ({
       productCode: product.productCode,
       productName: product.productName,
+      carrier: this.carrierCode,
       tipo: destinationCountry === 'MX' ? 'nacional' : 'internacional',
       precioTotal: product.totalPrice?.[0]?.price || 0,
       moneda: destinationCountry === 'MX' ? 'MXN' : 'USD',
@@ -99,7 +103,7 @@ export class DhlService {
     return Math.max(days, 1);
   }
 
-  async getTracking(trackingNumber: string): Promise<any[]> {
+  async getTracking(trackingNumber: string): Promise<TrackingEvent[]> {
     try {
       const apiKey = this.config.get('DHL_API_KEY', '');
       const apiSecret = this.config.get('DHL_API_SECRET', '');

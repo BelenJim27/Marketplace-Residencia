@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { CreateDetallePedidoDto, CreateFacturaDto, CreatePedidoDto, UpdateDetallePedidoDto, UpdateFacturaDto, UpdatePedidoDto } from './dto/pedidos.dto';
+import { CreateDetallePedidoDto, CreateFacturaDto, CreatePedidoDto, UpdateDetallePedidoDto, UpdateFacturaDto, UpdatePedidoDto, ValidarEnvioDto } from './dto/pedidos.dto';
 import { PedidosService } from './pedidos.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 
@@ -68,6 +68,11 @@ export class PedidosController {
     @Body() { numero_rastreo }: { numero_rastreo: string },
   ) {
     return this.service.updateTrackingForProducer(id_pedido, id_productor, numero_rastreo);
+  }
+
+  @Post('validar-envio')
+  validarEnvio(@Body() dto: ValidarEnvioDto) {
+    return this.service.validarEnvio(dto);
   }
 
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }

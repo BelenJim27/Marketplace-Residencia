@@ -1,5 +1,14 @@
 "use client";
+import Link from "next/link";
 import { useLocale } from "@/context/LocaleContext";
+
+const LEGAL_LINKS: { label: string; href: string }[] = [
+  { label: "Aviso de Privacidad", href: "/privacy" },
+  { label: "Términos y Condiciones", href: "/terms" },
+  { label: "Política de Envío", href: "/shipping-policy" },
+  { label: "Política de Devoluciones", href: "/returns-policy" },
+  { label: "Aviso sobre Alcohol", href: "/alcohol-disclaimer" },
+];
 
 export default function Footer() {
   const { t } = useLocale();
@@ -12,7 +21,7 @@ export default function Footer() {
         borderTop: "1px solid rgba(200, 169, 122, 0.2)",
       }}
     >
-      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
 
         <div className="space-y-3">
           <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "18px" }}>
@@ -29,8 +38,8 @@ export default function Footer() {
           </h3>
           <ul className="space-y-2">
             {[
-              "Maestras mezcaleras", 
-              "Historia", 
+              "Maestras mezcaleras",
+              "Historia",
               "Nuestro proceso"
             ].map((item) => (
               <li key={item}>
@@ -48,6 +57,25 @@ export default function Footer() {
 
         <div className="space-y-3">
           <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "18px" }}>
+            {t("Legal")}
+          </h3>
+          <ul className="space-y-2">
+            {LEGAL_LINKS.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "14px", textDecoration: "none" }}
+                  className="hover:opacity-75 transition-opacity"
+                >
+                  {t(item.label)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="space-y-3">
+          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "18px" }}>
             {t("Contacto")}
           </h3>
           <ul className="space-y-2">
@@ -57,7 +85,6 @@ export default function Footer() {
               "Santa Maria Zaquiltán, Oaxaca, México",
             ].map((item) => (
               <li key={item} style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "14px" }}>
-
                 {t(item)}
               </li>
             ))}
@@ -72,9 +99,6 @@ export default function Footer() {
         <p style={{ color: "#8a6a3a", fontSize: "12px", fontFamily: "Georgia, serif" }}>
           2026 {t("Guardianas de mezcal. Todos los derechos reservados.")}
         </p>
-        <a href="#" style={{ color: "#8a6a3a", fontSize: "12px", fontFamily: "Georgia, serif" }}>
-          {t("Términos y condiciones")}
-        </a>
       </div>
     </footer>
   );

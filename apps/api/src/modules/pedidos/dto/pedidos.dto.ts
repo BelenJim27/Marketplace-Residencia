@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsDateString, IsInt, IsObject, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsInt, IsObject, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
 
 export class CreatePedidoDto {
   @IsString() id_usuario!: string;
@@ -41,3 +41,14 @@ export class CreateFacturaDto {
   @IsOptional() @IsString() @MaxLength(20) estado?: string;
 }
 export class UpdateFacturaDto extends PartialType(CreateFacturaDto) {}
+
+export class ItemValidarDto {
+  @IsInt() @Type(() => Number) id_producto!: number;
+  @IsInt() @Type(() => Number) cantidad!: number;
+}
+
+export class ValidarEnvioDto {
+  @IsString() @MaxLength(2) pais_iso2!: string;
+  @IsOptional() @IsString() @MaxLength(10) estado_codigo?: string;
+  @IsArray() @ValidateNested({ each: true }) @Type(() => ItemValidarDto) items!: ItemValidarDto[];
+}

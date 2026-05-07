@@ -49,16 +49,6 @@ const TRANSPORTISTAS = [
       { codigo_servicio: 'INTERNATIONAL', nombre: 'FedEx Internacional', tiempo_estimado: '7-10 días' },
     ],
   },
-  {
-    codigo: 'DHL',
-    nombre: 'DHL Express',
-    paises_operacion: ['MX', 'US', 'CA'],
-    activo: true,
-    servicios: [
-      { codigo_servicio: 'EXPRESS', nombre: 'DHL Express', tiempo_estimado: '2-4 días' },
-      { codigo_servicio: 'ECONOMY', nombre: 'DHL Economy', tiempo_estimado: '5-8 días' },
-    ],
-  },
 ];
 
 const CONFIGURACION = [

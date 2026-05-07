@@ -1,11 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, AlertCircle, DollarSign, TrendingUp, Receipt } from "lucide-react";
+import { Loader2, AlertCircle, DollarSign, TrendingUp, Receipt, CreditCard, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { api, type Payout } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+
+type ConnectStatus = {
+  connected: boolean;
+  account_id: string | null;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  details_submitted: boolean;
+  onboarding_completed: boolean;
+};
 
 const ESTADO_BADGE: Record<string, string> = {
   pendiente: "bg-yellow-100 text-yellow-800",
@@ -43,6 +52,10 @@ export default function IngresosProductorPage() {
   const [rango, setRango] = useState<RangoPeriodo>("mes_actual");
   const [custom, setCustom] = useState({ desde: "", hasta: "" });
 
+  const [connect, setConnect] = useState<ConnectStatus | null>(null);
+  const [connectLoading, setConnectLoading] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!isProductor || !user?.id_productor) {
       setLoading(false);
@@ -55,7 +68,28 @@ export default function IngresosProductorPage() {
       .then((res) => setPayouts(res))
       .catch((err) => setError(err instanceof Error ? err.message : "Error cargando payouts"))
       .finally(() => setLoading(false));
+
+    api.pagos.connect
+      .status(token)
+      .then((res) => setConnect(res))
+      .catch(() => {
+        // Stripe Connect is best-effort: if the call fails (Stripe down, key missing) the
+        // banner stays hidden rather than blocking the existing payouts dashboard.
+      });
   }, [isProductor, user?.id_productor]);
+
+  const conectarStripe = async () => {
+    setConnectLoading(true);
+    setConnectError(null);
+    try {
+      const token = getCookie("token") ?? "";
+      const res = await api.pagos.connect.onboard(token);
+      window.location.href = res.url;
+    } catch (err) {
+      setConnectError(err instanceof Error ? err.message : "No se pudo iniciar la conexión con Stripe");
+      setConnectLoading(false);
+    }
+  };
 
   const filtrados = useMemo(() => {
     const { desde, hasta } = getRangoFechas(rango, custom);
@@ -97,6 +131,50 @@ export default function IngresosProductorPage() {
           <div className="mb-4 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
             <AlertCircle size={16} />
             {error}
+          </div>
+        )}
+
+        {/* Stripe Connect — onboarding / status */}
+        {connect && (
+          <div className="mb-4">
+            {!connect.onboarding_completed ? (
+              <div className="flex flex-col gap-3 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-100">
+                <div className="flex items-start gap-3">
+                  <CreditCard size={20} className="mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">
+                      {connect.connected
+                        ? "Termina la verificación de tu cuenta de pago"
+                        : "Conecta tu cuenta de pago para recibir tus ventas"}
+                    </p>
+                    <p className="mt-0.5 text-blue-800 dark:text-blue-200">
+                      {connect.connected
+                        ? "Stripe necesita más información para habilitar cobros y depósitos. Continúa donde lo dejaste."
+                        : "Crearemos una cuenta Stripe Express a tu nombre. Stripe verifica tu identidad y deposita directo a tu banco."}
+                    </p>
+                    {connectError && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">{connectError}</p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={conectarStripe}
+                  disabled={connectLoading}
+                  className="flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {connectLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                  {connect.connected ? "Continuar verificación" : "Conectar cuenta de pago"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-100">
+                <CheckCircle2 size={16} />
+                <span>
+                  Cuenta de pago conectada · Cobros: {connect.charges_enabled ? "habilitados" : "pendientes"} · Depósitos:{" "}
+                  {connect.payouts_enabled ? "habilitados" : "pendientes"}
+                </span>
+              </div>
+            )}
           </div>
         )}
 

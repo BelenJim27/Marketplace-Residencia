@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsDateString,
   IsEmail,
   IsInt,
   IsOptional,
@@ -65,6 +66,12 @@ export class CreateUsuarioDto {
   @IsString()
   @MaxLength(3)
   moneda_preferida?: string;
+
+  // ISO date (yyyy-MM-dd). Capturada solo cuando se intenta comprar un producto
+  // con edad mínima requerida (alcohol/tabaco/etc.). No se exige en register().
+  @IsOptional()
+  @IsDateString()
+  fecha_nacimiento?: string;
 }
 
 export class UpdateUsuarioDto extends PartialType(CreateUsuarioDto) {}
