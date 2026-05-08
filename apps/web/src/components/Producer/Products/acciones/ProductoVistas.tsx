@@ -161,6 +161,43 @@ export function ProductoSeleccion({
   );
 }
 
+// ─── Banner precio pendiente ──────────────────────────────────────────────────
+
+export function ProductoPrecioPendienteBanner({
+  products,
+  onEditarPrecio,
+}: {
+  products: ProductItem[];
+  onEditarPrecio?: () => void;
+}) {
+  const sinPrecio = products.filter((p) => Number(p.precio_base) === 0).length;
+
+  if (sinPrecio === 0) return null;
+
+  return (
+    <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-600/40 dark:bg-amber-900/20 dark:text-amber-300">
+      <span className="shrink-0 text-base">⚠</span>
+      <span>
+        <strong>
+          {sinPrecio} producto{sinPrecio > 1 ? "s" : ""}
+        </strong>{" "}
+        sin precio configurado — {sinPrecio > 1 ? "fueron creados" : "fue creado"} desde
+        la API de trazabilidad y {sinPrecio > 1 ? "requieren" : "requiere"} precio para
+        poder venderse.
+      </span>
+      {onEditarPrecio && (
+        <button
+          type="button"
+          onClick={onEditarPrecio}
+          className="ml-auto shrink-0 rounded-md border border-amber-300 px-3 py-1 text-xs font-medium transition hover:bg-amber-100 dark:border-amber-600 dark:hover:bg-amber-900/40"
+        >
+          Ver productos
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Tabla ────────────────────────────────────────────────────────────────────
 
 type TablaProps = {
@@ -211,48 +248,102 @@ export function ProductoTabla({
             </tr>
           </thead>
           <tbody>
-            {products.map((product) => (
-              <tr key={product.id_producto} className="border-t border-stroke text-sm dark:border-dark-3">
-                {selectionEnabled && (
-                  <td className="px-4 py-4 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(product.id_producto)}
-                      onChange={(e) => onToggleSelect(product.id_producto, e.target.checked)}
-                      className="h-4 w-4 rounded border-stroke text-primary focus:ring-primary"
-                    />
+            {products.map((product) => {
+              const sinPrecio = Number(product.precio_base) === 0;
+
+              return (
+                <tr
+                  key={product.id_producto}
+                  className="border-t border-stroke text-sm dark:border-dark-3"
+                >
+                  {selectionEnabled && (
+                    <td className="px-4 py-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(product.id_producto)}
+                        onChange={(e) => onToggleSelect(product.id_producto, e.target.checked)}
+                        className="h-4 w-4 rounded border-stroke text-primary focus:ring-primary"
+                      />
+                    </td>
+                  )}
+
+                  {/* ── Nombre + badge precio pendiente ── */}
+                  <td className="px-5 py-4 font-medium text-dark dark:text-white">
+                    <div className="flex items-center gap-3">
+                      <ProductoThumbnail src={product.imagen_url} alt={product.nombre} />
+                      <div className="flex flex-col gap-1">
+                        <span>{product.nombre}</span>
+                        {sinPrecio && (
+                          <span className="inline-flex w-fit items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-600/50 dark:bg-amber-900/20 dark:text-amber-300">
+                            ⚠ Precio pendiente
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </td>
-                )}
-                <td className="px-5 py-4 font-medium text-dark dark:text-white">
-                  <div className="flex items-center gap-3">
-                    <ProductoThumbnail src={product.imagen_url} alt={product.nombre} />
-                    <span>{product.nombre}</span>
-                  </div>
-                </td>
-                <td className="px-5 py-4">{Number(product.precio_base || 0).toFixed(2)}</td>
-                <td className="px-5 py-4">{product.moneda_base || "MXN"}</td>
-                <td className="px-5 py-4">
-                  <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
-                    {product.status || "activo"}
-                  </span>
-                </td>
-                <td className="px-5 py-4">
-                  <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
-                    {product.stock ?? 0}
-                  </span>
-                </td>
-                <td className="px-5 py-4">
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => onView(product)} className="rounded-lg p-2 text-gray-500 hover:bg-green-50 hover:text-green-600"><Eye size={16} /></button>
-                    <button onClick={() => onEdit(product)} className="rounded-lg p-2 text-gray-500 hover:bg-blue-50 hover:text-blue-600"><Pencil size={16} /></button>
-                    <button onClick={() => onDelete(product)} className="rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"><Trash2 size={16} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+
+                  {/* ── Precio — resaltado en ámbar si es 0 ── */}
+                  <td className="px-5 py-4">
+                    {sinPrecio ? (
+                      <span className="font-semibold text-amber-500 dark:text-amber-400">
+                        $0.00 ⚠
+                      </span>
+                    ) : (
+                      <span>{Number(product.precio_base || 0).toFixed(2)}</span>
+                    )}
+                  </td>
+
+                  <td className="px-5 py-4">{product.moneda_base || "MXN"}</td>
+
+                  <td className="px-5 py-4">
+                    <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+                      {product.status || "activo"}
+                    </span>
+                  </td>
+
+                  <td className="px-5 py-4">
+                    <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+                      {product.stock ?? 0}
+                    </span>
+                  </td>
+
+                  <td className="px-5 py-4">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => onView(product)}
+                        className="rounded-lg p-2 text-gray-500 hover:bg-green-50 hover:text-green-600"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => onEdit(product)}
+                        className={`rounded-lg p-2 transition ${
+                          sinPrecio
+                            ? "bg-amber-50 text-amber-600 hover:bg-amber-100"
+                            : "text-gray-500 hover:bg-blue-50 hover:text-blue-600"
+                        }`}
+                        title={sinPrecio ? "Editar — precio pendiente" : "Editar"}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={() => onDelete(product)}
+                        className="rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+
             {products.length === 0 && (
               <tr>
-                <td colSpan={selectionEnabled ? 7 : 6} className="px-5 py-10 text-center text-gray-500">
+                <td
+                  colSpan={selectionEnabled ? 7 : 6}
+                  className="px-5 py-10 text-center text-gray-500"
+                >
                   No hay productos para mostrar
                 </td>
               </tr>

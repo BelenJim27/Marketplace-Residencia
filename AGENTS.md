@@ -140,7 +140,7 @@ export class CreateUsuarioDto {
 
 - Constructor injection
 - Typed return responses
-- Handle `Prisma.PrismaClientKnownRequestError` for unique constraints (code P2002)
+- Handle `PrismaClientKnownRequestError` for unique constraints (code P2002)
 - Use transactions for multi-table ops
 
 ```typescript
@@ -148,7 +148,7 @@ async create(dto: CreateUsuarioDto): Promise<Usuario> {
   try {
     return await this.prisma.usuario.create({ data: dto });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
       throw new ConflictException('Email ya existe');
     }
     throw error;

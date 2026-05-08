@@ -9,9 +9,11 @@ export class PaisesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(query: ListPaisesQueryDto = {}) {
+    // ✅ Prisma genera el tipo como Parameters<typeof prisma.paises.findMany>[0]['where']
+    // que es equivalente pero siempre coincide con el schema real
     const where: Prisma.paisesWhereInput = {};
-    if (typeof query.activo_venta === 'boolean') where.activo_venta = query.activo_venta;
-    if (typeof query.activo_envio === 'boolean') where.activo_envio = query.activo_envio;
+    if (typeof query.activo_venta === 'boolean') where!.activo_venta = query.activo_venta;
+    if (typeof query.activo_envio === 'boolean') where!.activo_envio = query.activo_envio;
     return serializeBigInts(
       await this.prisma.paises.findMany({ where, orderBy: { nombre: 'asc' } }),
     );
@@ -44,6 +46,7 @@ export class PaisesService {
         }),
       );
     } catch (error) {
+      // ✅ Mismo patrón que los otros servicios
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('País ya existe');
       }

@@ -6,6 +6,7 @@ import {
   RefreshCw, AlertCircle, Check, X,
 } from "lucide-react";
 import LotesAcciones from "./LotesAcciones";
+import { ModalStock } from "./ModalStock";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
@@ -72,6 +73,8 @@ export default function LotesView() {
   const [modalVer, setModalVer] = useState(false);
   const [modalEditar, setModalEditar] = useState(false);
   const [modalEliminar, setModalEliminar] = useState(false);
+  const [modalStock, setModalStock] = useState(false);
+  const [loteStock, setLoteStock] = useState(null);
   const [loteSeleccionado, setLoteSeleccionado] = useState(null);
 
   const [lotes, setLotes] = useState([]);
@@ -121,6 +124,13 @@ export default function LotesView() {
           year: l.fecha_produccion 
             ? String(new Date(l.fecha_produccion).getFullYear()) 
             : "-",
+          productoVinculado: l.productos?.[0]
+            ? {
+                id_producto: l.productos[0].id_producto,
+                precio_base: l.productos[0].precio_base,
+                stock: l.productos[0].inventario?.[0]?.stock ?? 0,
+              }
+            : null,
           originalData: l,
         }));
       setLotes(mappedLotes);
@@ -168,6 +178,8 @@ export default function LotesView() {
   };
 
   const abrirEliminar = (lote) => { setLoteSeleccionado(lote); setModalEliminar(true); };
+
+  const abrirStock = (lote) => { setLoteStock(lote); setModalStock(true); };
 
   const cerrarModales = () => {
     setIsModalOpen(false);
@@ -238,6 +250,27 @@ export default function LotesView() {
     } finally {
       setSincronizando(false);
     }
+  }
+
+  async function guardarStock({ idLote, cantidad, tipo, motivo }) {
+    const token = getCookie("token");
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/lotes/${idLote}/stock`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ cantidad, tipo, motivo }),
+      },
+    );
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data?.message ?? "Error al ajustar stock.");
+    }
+    showToast("Stock actualizado correctamente.");
+    await fetchLotes();
   }
 
   if (loading && lotes.length === 0) {
@@ -338,7 +371,13 @@ export default function LotesView() {
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      <LotesAcciones lote={item} onVer={abrirVer} onEditar={abrirEditar} onEliminar={abrirEliminar} />
+                      <LotesAcciones
+                        lote={item}
+                        onVer={abrirVer}
+                        onEditar={abrirEditar}
+                        onEliminar={abrirEliminar}
+                        onGestionarStock={abrirStock}
+                      />
                     </td>
                   </tr>
                 ))
@@ -371,6 +410,14 @@ export default function LotesView() {
             onClose={cerrarModales} 
             onConfirm={confirmarEliminar} 
             loading={enviando}
+          />
+        )}
+
+        {modalStock && loteStock && (
+          <ModalStock
+            lote={loteStock}
+            onClose={() => { setModalStock(false); setLoteStock(null); }}
+            onGuardar={guardarStock}
           />
         )}
       </div>

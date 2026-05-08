@@ -292,6 +292,8 @@ export const api = {
       fetchJson(endpoint(`/pedidos/${id}`), { method: "DELETE", headers: headers(token) }),
     getMisPedidos: (token: string) =>
       fetchJson(endpoint(`/pedidos/mis-pedidos`), { headers: headers(token) }),
+    getMisPedidosByProductor: (token: string, id_productor: number) =>
+      fetchJson(endpoint(`/pedidos/productor/${id_productor}`), { headers: headers(token) }),
   },
 
   envios: {

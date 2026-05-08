@@ -50,7 +50,7 @@ export class DireccionesService {
         pais_iso2: dto.pais_iso2 ?? null,
         referencia: dto.referencia ?? null,
         tipo: dto.tipo ?? null,
-        ubicacion: (dto.ubicacion ?? {}) as Prisma.InputJsonValue,
+        ubicacion: (dto.ubicacion ?? {}) as any,
       },
     });
     console.log("[DireccionesService.create] Guardado en BD:", JSON.stringify(resultado, null, 2));
@@ -101,7 +101,7 @@ export class DireccionesService {
           pais_iso2: dto.pais_iso2,
           referencia: dto.referencia,
           tipo: dto.tipo,
-          ubicacion: dto.ubicacion as Prisma.InputJsonValue | undefined,
+          ubicacion: dto.ubicacion as any | undefined,
         },
       }),
     );
