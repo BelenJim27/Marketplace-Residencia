@@ -10,9 +10,9 @@ import {
   resetImagenProductoState,
   appendImagenProducto,
 } from "@/components/Producer/Products/ImagenProducto";
-import type { StoreItem, CategoriaItem, ProductItem, ProducerDetail, FormState, ModalMode } from "@/types/producer";
+import type { StoreItem, CategoriaItem, LoteItem, ProductItem, ProducerDetail, FormState, ModalMode } from "@/types/producer";
 
-export type { StoreItem, CategoriaItem, ProductItem, ProducerDetail, FormState, ModalMode } from "@/types/producer";
+export type { StoreItem, CategoriaItem, LoteItem, ProductItem, ProducerDetail, FormState, ModalMode } from "@/types/producer";
 
 export const EMPTY_FORM: FormState = {
   nombre: "",
@@ -26,6 +26,8 @@ export const EMPTY_FORM: FormState = {
   alto_cm: "",
   ancho_cm: "",
   largo_cm: "",
+  id_lote: "",
+  stock_inicial: "",
 };
 
 // ─── Hook principal ───────────────────────────────────────────────────────────
@@ -41,6 +43,7 @@ export function useProductos() {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [categorias, setCategorias] = useState<CategoriaItem[]>([]);
+  const [lotes, setLotes] = useState<LoteItem[]>([]);
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
@@ -68,15 +71,17 @@ export function useProductos() {
       setLoading(true);
       setError(null);
     try {
-      const [producerData, productsData, storesData, categoriasData] = await Promise.all([
+      const [producerData, productsData, storesData, categoriasData, lotesData] = await Promise.all([
         api.productores.getOne(user.id_productor),
         api.productos.getMine(token, user.id_productor),
         api.tiendas.getByProductor(user.id_productor, token),
         api.categorias.getAll(),
+        api.lotes.getByProductor(user.id_productor),
       ]);
       setProducer(producerData as ProducerDetail);
       setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);
       setCategorias(Array.isArray(categoriasData) ? (categoriasData as CategoriaItem[]) : []);
+      setLotes(Array.isArray(lotesData) ? (lotesData as LoteItem[]) : []);
       setProducts(
         (productsData as ProductItem[]).map((p) => ({
           ...p,
@@ -187,6 +192,8 @@ export function useProductos() {
       alto_cm: String(product.alto_cm ?? ""),
       ancho_cm: String(product.ancho_cm ?? ""),
       largo_cm: String(product.largo_cm ?? ""),
+      id_lote: String(product.id_lote ?? ""),
+      stock_inicial: String(product.stock ?? ""),
     });
     setMode("edit");
     setModalOpen(true);
@@ -207,6 +214,8 @@ export function useProductos() {
       alto_cm: String(product.alto_cm ?? ""),
       ancho_cm: String(product.ancho_cm ?? ""),
       largo_cm: String(product.largo_cm ?? ""),
+      id_lote: String(product.id_lote ?? ""),
+      stock_inicial: String(product.stock ?? ""),
     });
     setMode("view");
     setModalOpen(true);
@@ -233,6 +242,7 @@ export function useProductos() {
       payload.append("creado_por", user.id_usuario);
       payload.append("actualizado_por", user.id_usuario);
       if (form.id_categoria) payload.append("id_categoria", form.id_categoria);
+      if (form.id_lote) payload.append("id_lote", form.id_lote);
       if (form.peso_kg) payload.append("peso_kg", form.peso_kg);
       if (form.alto_cm) payload.append("alto_cm", form.alto_cm);
       if (form.ancho_cm) payload.append("ancho_cm", form.ancho_cm);
@@ -241,8 +251,19 @@ export function useProductos() {
 
       if (mode === "edit" && selected) {
         await api.productos.update(token, String(selected.id_producto), payload);
+        if (form.stock_inicial) {
+          const inv = await api.inventario.getByProducto(selected.id_producto);
+          if (inv?.id_inventario) {
+            await api.inventario.update(token, String(inv.id_inventario), { stock: Number(form.stock_inicial) });
+          } else {
+            await api.inventario.create(token, { id_producto: Number(selected.id_producto), stock: Number(form.stock_inicial) });
+          }
+        }
       } else {
-        await api.productos.create(token, payload);
+        const created = await api.productos.create(token, payload);
+        if (form.stock_inicial && created?.id_producto) {
+          await api.inventario.create(token, { id_producto: Number(created.id_producto), stock: Number(form.stock_inicial) });
+        }
       }
       closeModal();
       await loadData();
@@ -277,7 +298,7 @@ export function useProductos() {
   };
 
   return {
-    loading, saving, error, producer, products, stores, categorias,
+    loading, saving, error, producer, products, stores, categorias, lotes,
     query, setQuery,
     statusFilter, setStatusFilter,
     storeFilter, setStoreFilter,

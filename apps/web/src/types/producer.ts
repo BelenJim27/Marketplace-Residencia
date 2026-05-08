@@ -10,6 +10,14 @@ export type CategoriaItem = {
   nombre: string;
 };
 
+export type LoteItem = {
+  id_lote: number;
+  codigo_lote: string;
+  nombre_comun?: string | null;
+  estado_lote?: string | null;
+  unidades?: number | null;
+};
+
 export type ProductItem = {
   id_producto: number;
   id_tienda: number;
@@ -26,6 +34,7 @@ export type ProductItem = {
   ancho_cm?: number | null;
   largo_cm?: number | null;
   id_categoria?: number | null;
+  id_lote?: number | null;
 };
 
 export type ProducerDetail = {
@@ -45,6 +54,8 @@ export type FormState = {
   alto_cm: string;
   ancho_cm: string;
   largo_cm: string;
+  id_lote: string;
+  stock_inicial: string;
 };
 
 export type ModalMode = "create" | "edit" | "view";

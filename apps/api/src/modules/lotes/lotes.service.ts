@@ -367,7 +367,7 @@ export class LotesService {
       throw new BadRequestException(`No se pudo conectar a la API externa: ${error}`);
     }
 
-    const resultados = { creados: 0, actualizados: 0, ignorados: 0 };
+    const resultados = { creados: 0, actualizados: 0, ignorados: 0, eliminados: 0 };
 
     for (const loteApi of lotesApi) {
       const marcaApi = loteApi.marca?.trim() ?? null;
@@ -442,6 +442,28 @@ export class LotesService {
         resultados.creados++;
       }
     }
+
+    // Soft-delete de lotes que ya no existen en la API externa.
+    // Scope acotado: solo productores con tienda activa (mismo universo que el sync).
+    const codigosEnApi = new Set(
+      lotesApi.map((l: any) => l.folio ?? l.uuid).filter(Boolean),
+    );
+
+    const tiendasActivas = await this.prisma.tiendas.findMany({
+      where: { eliminado_en: null, status: 'activa' },
+      select: { id_productor: true },
+    });
+    const idsProductores = tiendasActivas.map((t) => t.id_productor);
+
+    const { count: eliminados } = await this.prisma.lotes.updateMany({
+      where: {
+        eliminado_en: null,
+        id_productor: { in: idsProductores },
+        codigo_lote: { notIn: [...codigosEnApi] },
+      },
+      data: { eliminado_en: new Date() },
+    });
+    resultados['eliminados'] = eliminados;
 
     this.logger.log(`Sincronización completa: ${JSON.stringify(resultados)}`);
     return resultados;

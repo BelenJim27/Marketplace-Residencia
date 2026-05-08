@@ -448,6 +448,7 @@ export const api = {
   inventario: {
     getAll: () => fetchJson(endpoint("/inventario")),
     getOne: (id: string) => fetchJson(endpoint(`/inventario/${id}`)),
+    getByProducto: (id_producto: string | number) => fetchJson(endpoint(`/inventario/producto/${id_producto}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/inventario"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: string, data: any) =>

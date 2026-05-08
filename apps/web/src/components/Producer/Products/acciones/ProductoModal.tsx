@@ -6,6 +6,7 @@ import type {
   ModalMode,
   StoreItem,
   CategoriaItem,
+  LoteItem,
   ProductItem,
 } from "@/hooks/useProductos";
 import type { ImagenProductoState } from "@/components/Producer/Products/ImagenProducto";
@@ -106,6 +107,7 @@ type ProductoModalProps = {
   selected: ProductItem | null;
   stores: StoreItem[];
   categorias: CategoriaItem[];
+  lotes: LoteItem[];
   saving: boolean;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onClose: () => void;
@@ -122,6 +124,7 @@ export function ProductoModal({
   selected,
   stores,
   categorias,
+  lotes,
   saving,
   onSubmit,
   onClose,
@@ -135,6 +138,15 @@ export function ProductoModal({
 
   const set = (key: keyof FormState) => (value: string) =>
     setForm((c) => ({ ...c, [key]: value }));
+
+  const handleLoteChange = (value: string) => {
+    const lote = lotes.find((l) => String(l.id_lote) === value);
+    setForm((c) => ({
+      ...c,
+      id_lote: value,
+      stock_inicial: lote?.unidades != null ? String(lote.unidades) : c.stock_inicial,
+    }));
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -225,6 +237,29 @@ export function ProductoModal({
               value: String(c.id_categoria),
             }))}
           />
+
+          {/* Lote y Stock inicial */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <SelectField
+              label="Lote"
+              value={form.id_lote}
+              onChange={handleLoteChange}
+              disabled={mode === "view"}
+              placeholder="Sin lote asignado"
+              options={lotes.map((l) => ({
+                label: `${l.codigo_lote}${l.nombre_comun ? ` - ${l.nombre_comun}` : ""}`,
+                value: String(l.id_lote),
+              }))}
+            />
+            <Field
+              label="Stock inicial"
+              value={form.stock_inicial}
+              onChange={set("stock_inicial")}
+              disabled={mode === "view"}
+              inputMode="numeric"
+              placeholder="0"
+            />
+          </div>
 
           {/* Dimensiones y peso */}
           <div>

@@ -357,13 +357,15 @@ export class ProductoresService {
         where: { nombre: "productor" },
       });
       if (rolProductor) {
-        await this.prisma.usuario_rol.updateMany({
-          where: {
-            id_usuario: usuario.id_usuario,
-            roles: { nombre: "cliente" },
-          },
-          data: { estado: "inactivo" },
+        const rolCliente = await this.prisma.roles.findUnique({
+          where: { nombre: "cliente" },
         });
+        if (rolCliente) {
+          await this.prisma.usuario_rol.updateMany({
+            where: { id_usuario: usuario.id_usuario, id_rol: rolCliente.id_rol },
+            data: { estado: "inactivo" },
+          });
+        }
         await this.prisma.usuario_rol.upsert({
           where: {
             id_usuario_id_rol: {

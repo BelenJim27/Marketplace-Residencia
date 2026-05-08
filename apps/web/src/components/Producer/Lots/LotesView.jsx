@@ -101,10 +101,12 @@ export default function LotesView() {
     setTimeout(() => setToast({ msg: "", type: "success" }), 4000);
   };
 
-  const fetchLotes = useCallback(async () => {
+  const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
+
+  const fetchLotes = useCallback(async (silent = false) => {
     if (!user?.id_productor) return;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await api.lotes.getByProductor(Number(user.id_productor));
       const mappedLotes = data
         .filter((l) => !l.eliminado_en)
@@ -116,13 +118,13 @@ export default function LotesView() {
           grado_alcohol: l.grado_alcohol ? `${l.grado_alcohol}°` : "-",
           especie_cientifica: l.nombre_cientifico || "-",
           sitio: l.sitio || "-",
-          cantidad: l.unidades 
-            ? `${l.unidades} uds` 
+          cantidad: l.unidades
+            ? `${l.unidades} uds`
             : l.volumen_total ? `${l.volumen_total} L` : "-",
           fecha: l.fecha_produccion ? l.fecha_produccion.split("T")[0] : "-",
           estado: l.estado_lote || "disponible",
-          year: l.fecha_produccion 
-            ? String(new Date(l.fecha_produccion).getFullYear()) 
+          year: l.fecha_produccion
+            ? String(new Date(l.fecha_produccion).getFullYear())
             : "-",
           productoVinculado: l.productos?.[0]
             ? {
@@ -134,14 +136,22 @@ export default function LotesView() {
           originalData: l,
         }));
       setLotes(mappedLotes);
+      setUltimaActualizacion(new Date());
     } catch (error) {
-      showToast("No fue posible cargar los lotes.", "error");
+      if (!silent) showToast("No fue posible cargar los lotes.", "error");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [user?.id_productor]);
 
-  useEffect(() => { fetchLotes(); }, [fetchLotes]);
+  const modalAbierto = isModalOpen || modalVer || modalEditar || modalEliminar;
+
+  useEffect(() => {
+    fetchLotes();
+    if (modalAbierto) return;
+    const id = setInterval(() => fetchLotes(true), 30_000);
+    return () => clearInterval(id);
+  }, [fetchLotes, modalAbierto]);
 
   const yearsDisponibles = useMemo(() => 
     Array.from(new Set(lotes.map((l) => l.year).filter((y) => y !== "-")))
@@ -291,8 +301,13 @@ export default function LotesView() {
             <h1 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Mis Lotes</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Gestión de producción y existencias</p>
           </div>
-          <div className="flex gap-3">
-            <button 
+          <div className="flex flex-wrap items-center gap-3">
+            {ultimaActualizacion && (
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                Actualizado {ultimaActualizacion.toLocaleTimeString()}
+              </span>
+            )}
+            <button
               onClick={sincronizarLotes} disabled={sincronizando}
               className="flex items-center gap-2 rounded-lg border border-green-500 px-4 py-2 text-sm text-green-600 hover:bg-green-50 disabled:opacity-50"
             >
