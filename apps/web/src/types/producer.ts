@@ -26,6 +26,11 @@ export type ProductItem = {
   ancho_cm?: number | null;
   largo_cm?: number | null;
   id_categoria?: number | null;
+  unidad_medida?: string | null;
+  botellas_350ml?: number | null;
+  botellas_750ml?: number | null;
+  // ─── Relación con lote ───────────────────────────────────────────────────
+  id_lote?: number | null;
 };
 
 export type ProducerDetail = {
@@ -45,6 +50,12 @@ export type FormState = {
   alto_cm: string;
   ancho_cm: string;
   largo_cm: string;
+  unidad_medida: string;
+  botellas_350ml: string;
+  botellas_750ml: string;
+  stock: string;
+  // ─── Relación con lote ───────────────────────────────────────────────────
+  id_lote?: string;
 };
 
 export type ModalMode = "create" | "edit" | "view";

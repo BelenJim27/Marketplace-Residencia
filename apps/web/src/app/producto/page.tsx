@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function ProductoPublicoPage() {
-  redirect("/cliente/producto");
+  redirect("/Cliente/producto");
 }

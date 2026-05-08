@@ -26,6 +26,11 @@ export const EMPTY_FORM: FormState = {
   alto_cm: "",
   ancho_cm: "",
   largo_cm: "",
+  // ─── NUEVO ───────────────────────────────────────────────────────────────
+  unidad_medida: "pz",
+  botellas_350ml: "",
+  botellas_750ml: "",
+  stock: "",
 };
 
 // ─── Hook principal ───────────────────────────────────────────────────────────
@@ -47,6 +52,8 @@ export function useProductos() {
   const [storeFilter, setStoreFilter] = useState("todos");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  // ─── NUEVO ───────────────────────────────────────────────────────────────
+  const [unidadFilter, setUnidadFilter] = useState("todos");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<ModalMode>("create");
@@ -65,8 +72,8 @@ export function useProductos() {
       setLoading(false);
       return;
     }
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
     try {
       const [producerData, productsData, storesData, categoriasData] = await Promise.all([
         api.productores.getOne(user.id_productor),
@@ -82,6 +89,10 @@ export function useProductos() {
           ...p,
           imagen_url: p.imagen_url ?? p.imagen_principal_url ?? null,
           stock: p.stock ?? 0,
+          // ─── NUEVO ─────────────────────────────────────────────────────
+          unidad_medida: p.unidad_medida ?? null,
+          botellas_350ml: p.botellas_350ml ?? null,
+          botellas_750ml: p.botellas_750ml ?? null,
         })),
       );
     } catch (err) {
@@ -114,10 +125,12 @@ export function useProductos() {
         (statusFilter === "todos" || status === statusFilter) &&
         (storeFilter === "todos" || String(p.id_tienda) === storeFilter) &&
         (min === null || Number.isNaN(min) || price >= min) &&
-        (max === null || Number.isNaN(max) || price <= max)
+        (max === null || Number.isNaN(max) || price <= max) &&
+        // ─── NUEVO ───────────────────────────────────────────────────────
+        (unidadFilter === "todos" || p.unidad_medida === unidadFilter)
       );
     });
-  }, [products, query, storeMap, statusFilter, storeFilter, minPrice, maxPrice]);
+  }, [products, query, storeMap, statusFilter, storeFilter, minPrice, maxPrice, unidadFilter]);
 
   const activeProductsCount = useMemo(
     () => products.filter((p) => String(p.status ?? "activo").toLowerCase() === "activo").length,
@@ -143,6 +156,7 @@ export function useProductos() {
     setStoreFilter("todos");
     setMinPrice("");
     setMaxPrice("");
+    setUnidadFilter("todos"); // ─── NUEVO
   };
 
   const toggleSelectionMode = (enabled: boolean) => {
@@ -187,6 +201,11 @@ export function useProductos() {
       alto_cm: String(product.alto_cm ?? ""),
       ancho_cm: String(product.ancho_cm ?? ""),
       largo_cm: String(product.largo_cm ?? ""),
+      // ─── NUEVO ─────────────────────────────────────────────────────────
+      unidad_medida: product.unidad_medida ?? "pz",
+      botellas_350ml: String(product.botellas_350ml ?? ""),
+      botellas_750ml: String(product.botellas_750ml ?? ""),
+      stock: String(product.stock ?? ""),
     });
     setMode("edit");
     setModalOpen(true);
@@ -207,6 +226,11 @@ export function useProductos() {
       alto_cm: String(product.alto_cm ?? ""),
       ancho_cm: String(product.ancho_cm ?? ""),
       largo_cm: String(product.largo_cm ?? ""),
+      // ─── NUEVO ─────────────────────────────────────────────────────────
+      unidad_medida: product.unidad_medida ?? "pz",
+      botellas_350ml: String(product.botellas_350ml ?? ""),
+      botellas_750ml: String(product.botellas_750ml ?? ""),
+      stock: String(product.stock ?? ""),
     });
     setMode("view");
     setModalOpen(true);
@@ -237,6 +261,21 @@ export function useProductos() {
       if (form.alto_cm) payload.append("alto_cm", form.alto_cm);
       if (form.ancho_cm) payload.append("ancho_cm", form.ancho_cm);
       if (form.largo_cm) payload.append("largo_cm", form.largo_cm);
+
+      // ─── NUEVO: unidad de medida y stock ─────────────────────────────
+      payload.append("unidad_medida", form.unidad_medida);
+
+      if (["ml", "L"].includes(form.unidad_medida)) {
+        payload.append("botellas_350ml", String(Number(form.botellas_350ml) || 0));
+        payload.append("botellas_750ml", String(Number(form.botellas_750ml) || 0));
+        // Stock total = suma de ambas presentaciones
+        const stockTotal = (Number(form.botellas_350ml) || 0) + (Number(form.botellas_750ml) || 0);
+        payload.append("stock", String(stockTotal));
+      } else {
+        payload.append("stock", String(Number(form.stock) || 0));
+      }
+      // ─────────────────────────────────────────────────────────────────
+
       appendImagenProducto(payload, imagen);
 
       if (mode === "edit" && selected) {
@@ -283,6 +322,8 @@ export function useProductos() {
     storeFilter, setStoreFilter,
     minPrice, setMinPrice,
     maxPrice, setMaxPrice,
+    // ─── NUEVO ───────────────────────────────────────────────────────────
+    unidadFilter, setUnidadFilter,
     clearFilters,
     visibleProducts, activeProductsCount, inactiveProductsCount,
     storeMap, visibleProductIds, allVisibleSelected,

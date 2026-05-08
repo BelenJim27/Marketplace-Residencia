@@ -136,16 +136,28 @@ export function ProductoModal({
   const set = (key: keyof FormState) => (value: string) =>
     setForm((c) => ({ ...c, [key]: value }));
 
+  // Determina si el producto está vinculado a un lote
+  const tieneLoTeVinculado = !!selected?.id_lote;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark">
+
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-dark dark:text-white">{title}</h2>
+          <div>
+            <h2 className="text-xl font-bold text-dark dark:text-white">{title}</h2>
+            {tieneLoTeVinculado && (
+              <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+                🔗 Vinculado a un lote — el stock se gestiona desde Mis Lotes
+              </p>
+            )}
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
+
           {/* Nombre y Precio */}
           <div className="grid gap-4 md:grid-cols-2">
             <Field
@@ -225,6 +237,43 @@ export function ProductoModal({
               value: String(c.id_categoria),
             }))}
           />
+
+          {/* Stock por presentación — solo si tiene lote vinculado */}
+          {tieneLoTeVinculado && (
+            <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-green-700 dark:text-green-400">
+                  Stock por presentación
+                </p>
+                <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-600 dark:bg-green-800 dark:text-green-300">
+                  Gestionado desde Lotes
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Botellas 350 ml</p>
+                  <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:bg-amber-900/10 dark:border-amber-800">
+                    <span className="text-lg font-bold text-amber-700 dark:text-amber-400">
+                      {form.botellas_350ml ?? 0}
+                    </span>
+                    <span className="text-xs text-amber-500 opacity-70">Solo lectura</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Botellas 750 ml</p>
+                  <div className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 dark:bg-purple-900/10 dark:border-purple-800">
+                    <span className="text-lg font-bold text-purple-700 dark:text-purple-400">
+                      {form.botellas_750ml ?? 0}
+                    </span>
+                    <span className="text-xs text-purple-500 opacity-70">Solo lectura</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[11px] text-green-600 dark:text-green-500">
+                Para modificar el stock ve a <strong>Mis Lotes</strong> y edita el lote correspondiente.
+              </p>
+            </div>
+          )}
 
           {/* Dimensiones y peso */}
           <div>

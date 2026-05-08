@@ -36,7 +36,8 @@
     "i18next": "^26.0.8",
     "jsvectormap": "^1.7.0",
     "pg": "^8.20.0",
-    "react-i18next": "^17.0.6"
+    "react-i18next": "^17.0.6",
+    "stripe": "^22.1.0"
   },
   "overrides": {
     "rxjs": "^7.8.1"

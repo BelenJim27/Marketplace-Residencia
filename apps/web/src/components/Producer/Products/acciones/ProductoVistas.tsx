@@ -82,9 +82,10 @@ export function ProductoFiltros({
       </div>
 
       <div className="mb-6 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 xl:grid-cols-5">
+
           <label className="block">
-            <span className={lbl}>Filtro por Estatus</span>
+            <span className={lbl}>Estatus</span>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={input}>
               <option value="todos">Todos</option>
               <option value="activo">Activo</option>
@@ -94,7 +95,7 @@ export function ProductoFiltros({
           </label>
 
           <label className="block">
-            <span className={lbl}>Filtro por Tienda</span>
+            <span className={lbl}>Tienda</span>
             <select value={storeFilter} onChange={(e) => setStoreFilter(e.target.value)} className={input}>
               <option value="todos">Todas</option>
               {stores.map((s) => (
@@ -113,11 +114,12 @@ export function ProductoFiltros({
             <input type="text" inputMode="numeric" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Precio máx" className={input} />
           </label>
 
-          <div className="flex items-end xl:col-span-1">
+          <div className="flex items-end">
             <button type="button" onClick={onClear} className="w-full rounded-lg border border-stroke px-4 py-3 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-dark-3 dark:text-white dark:hover:bg-white/5">
               Limpiar filtros
             </button>
           </div>
+
         </div>
       </div>
     </>
@@ -189,7 +191,7 @@ export function ProductoTabla({
   return (
     <div className="overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left">
+        <table className="w-full min-w-[800px] text-left">
           <thead className="bg-gray-2 dark:bg-dark-2">
             <tr className="text-sm text-gray-500">
               {selectionEnabled && (
@@ -202,12 +204,11 @@ export function ProductoTabla({
                   />
                 </th>
               )}
-              <th className="w-[36%] px-5 py-4">Nombre</th>
-              <th className="w-[13%] px-5 py-4">Precio base</th>
+              <th className="w-[40%] px-5 py-4">Nombre</th>
+              <th className="w-[15%] px-5 py-4">Precio base</th>
               <th className="w-[10%] px-5 py-4">Moneda</th>
-              <th className="w-[13%] px-5 py-4">Status</th>
-              <th className="w-[10%] px-5 py-4">Stock</th>
-              <th className="w-[16%] px-5 py-4 text-right">Acciones</th>
+              <th className="w-[15%] px-5 py-4">Status</th>
+              <th className="w-[20%] px-5 py-4 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -223,24 +224,31 @@ export function ProductoTabla({
                     />
                   </td>
                 )}
+
+                {/* Nombre + badge si tiene lote vinculado */}
                 <td className="px-5 py-4 font-medium text-dark dark:text-white">
                   <div className="flex items-center gap-3">
                     <ProductoThumbnail src={product.imagen_url} alt={product.nombre} />
-                    <span>{product.nombre}</span>
+                    <div className="flex items-center gap-2">
+                      <span>{product.nombre}</span>
+                      {product.id_lote && (
+                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-[9px] font-bold text-green-600 dark:bg-green-900/20 dark:text-green-400">
+                          LOTE
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </td>
+
                 <td className="px-5 py-4">{Number(product.precio_base || 0).toFixed(2)}</td>
                 <td className="px-5 py-4">{product.moneda_base || "MXN"}</td>
+
                 <td className="px-5 py-4">
                   <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
                     {product.status || "activo"}
                   </span>
                 </td>
-                <td className="px-5 py-4">
-                  <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
-                    {product.stock ?? 0}
-                  </span>
-                </td>
+
                 <td className="px-5 py-4">
                   <div className="flex justify-end gap-2">
                     <button onClick={() => onView(product)} className="rounded-lg p-2 text-gray-500 hover:bg-green-50 hover:text-green-600"><Eye size={16} /></button>
@@ -252,7 +260,7 @@ export function ProductoTabla({
             ))}
             {products.length === 0 && (
               <tr>
-                <td colSpan={selectionEnabled ? 7 : 6} className="px-5 py-10 text-center text-gray-500">
+                <td colSpan={selectionEnabled ? 6 : 5} className="px-5 py-10 text-center text-gray-500">
                   No hay productos para mostrar
                 </td>
               </tr>

@@ -216,6 +216,7 @@ model envios {
   fecha_envio            DateTime?        @db.Timestamptz(6)
   fecha_entrega_estimada DateTime?        @db.Timestamptz(6)
   fecha_entrega          DateTime?        @db.Timestamptz(6)
+  requires_adult_signature Boolean?       @default(false) 
   envio_guias            envio_guias[]
   pedido_productor       pedido_productor[]
   pedidos                pedidos          @relation(fields: [id_pedido], references: [id_pedido], onUpdate: NoAction)
@@ -268,6 +269,8 @@ model inventario {
   stock                  Int                      @default(0)
   stock_minimo           Int                      @default(0)
   actualizado_en         DateTime                 @default(now()) @db.Timestamptz(6)
+  stock_350ml    Int  @default(0)
+  stock_750ml    Int  @default(0)
   productos              productos                @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
   movimientos_inventario movimientos_inventario[]
 
@@ -309,6 +312,10 @@ model lotes {
   nombre_cientifico String?          @db.VarChar(150)
   url_foto_especie  String?          @db.VarChar(255)
   fecha_elaboracion DateTime?        @db.Date
+  botellas_350ml    Int?  @default(0)
+  botellas_750ml    Int?  @default(0)
+  precio_350ml      Decimal?  @db.Decimal(12, 2)
+  precio_750ml      Decimal?  @db.Decimal(12, 2)
   lote_atributos    lote_atributos[]
   productores       productores      @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
   regiones          regiones?        @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
@@ -449,6 +456,9 @@ model pedidos {
   devolucion_motivo              String?
   devolucion_solicitada_en       DateTime?                @db.Timestamptz(6)
   devolucion_resuelta_en         DateTime?                @db.Timestamptz(6)
+  discount_amount                Decimal?                 @db.Decimal(14, 2)  
+  shipping_amount                Decimal?                 @db.Decimal(14, 2)  
+  tax_amount                     Decimal?                 @db.Decimal(14, 2) 
   detalle_pedido                 detalle_pedido[]
   envio_cotizaciones             envio_cotizaciones[]
   envios                         envios[]
@@ -502,6 +512,13 @@ model productores {
   datos_bancarios       String?
   razon_social          String?   @db.VarChar(200)
   rfc                   String?   @db.VarChar(13)
+  stripe_account_id     String?  @db.VarChar(255)   
+  stripe_onboarding_completed Boolean? @default(false) 
+  unidad_medida     String?  @db.VarChar(20)
+  botellas_350ml    Int?     @default(0)
+  botellas_750ml    Int?     @default(0)
+  precio_350ml      Decimal? @db.Decimal(12, 2)
+  precio_750ml      Decimal? @db.Decimal(12, 2)
   lotes                 lotes[]
   regiones              regiones? @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
   usuarios              usuarios  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
@@ -534,6 +551,7 @@ model productos {
   actualizado_en                               DateTime               @default(now()) @db.Timestamptz(6)
   eliminado_en                                 DateTime?              @db.Timestamptz(6)
   imagen_principal_url                         String?                @db.VarChar(500)
+  requiere_firma_adulto                        Boolean? 
   carrito_item                                 carrito_item[]
   categorias_productos                         categorias_productos[]
   detalle_pedido                               detalle_pedido[]
