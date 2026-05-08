@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsNumber, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { IsBoolean, IsDateString, IsInt, IsNumber, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
 
 export class CreateEnvioDto {
   @IsInt() @Type(() => Number) id_pedido!: number;
@@ -20,6 +20,9 @@ export class CreateEnvioDto {
   @IsOptional() @IsDateString() fecha_envio?: string;
   @IsOptional() @IsDateString() fecha_entrega_estimada?: string;
   @IsOptional() @IsDateString() fecha_entrega?: string;
+  @IsOptional() @IsString() transportista_codigo?: string;
+  @IsOptional() @IsString() codigo_servicio?: string;       // 'FEDEX_GROUND', 'FEDEX_INTERNATIONAL_PRIORITY', etc.
+
 }
 export class UpdateEnvioDto extends PartialType(CreateEnvioDto) {}
 
@@ -37,4 +40,5 @@ export class CotizarEnvioDto {
   @IsOptional() @IsNumber() @Type(() => Number) ancho_cm?: number;
   @IsOptional() @IsNumber() @Type(() => Number) largo_cm?: number;
   @IsOptional() @IsInt() @Type(() => Number) id_pedido?: number;
+  @IsOptional() @IsBoolean() @Type(() => Boolean) adult_signature?: boolean;
 }

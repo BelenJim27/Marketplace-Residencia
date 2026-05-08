@@ -4,7 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { ComisionesService } from '../comisiones/comisiones.service';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
-import { CreateDetallePedidoDto, CreateFacturaDto, CreatePedidoDto, UpdateDetallePedidoDto, UpdateFacturaDto, UpdatePedidoDto } from './dto/pedidos.dto';
+import { CreateDetallePedidoDto, CreateFacturaDto, CreatePedidoDto, UpdateDetallePedidoDto, UpdateFacturaDto, UpdatePedidoDto, ValidarEnvioDto } from './dto/pedidos.dto';
 
 type Periodo = 'week' | 'month' | 'year';
 
@@ -399,6 +399,51 @@ export class PedidosService {
     });
 
     return serializeBigInts(updated);
+  }
+
+  async validarEnvio(dto: ValidarEnvioDto) {
+    if (dto.pais_iso2 !== 'US' || !dto.estado_codigo) {
+      return { valido: true, items_bloqueados: [] };
+    }
+
+    const items_bloqueados: Array<{ id_producto: number; nombre: string; razon: string }> = [];
+
+    for (const item of dto.items) {
+      const producto = await this.prisma.productos.findFirst({
+        where: { id_producto: BigInt(item.id_producto), eliminado_en: null },
+        select: {
+          nombre: true,
+          categorias_productos: { select: { id_categoria: true } },
+        },
+      });
+      if (!producto) continue;
+
+      let bloqueado = false;
+      for (const { id_categoria } of producto.categorias_productos) {
+        const restriccion = await this.prisma.restricciones_envio_categoria.findUnique({
+          where: {
+            pais_iso2_estado_codigo_id_categoria: {
+              pais_iso2: 'US',
+              estado_codigo: dto.estado_codigo,
+              id_categoria,
+            },
+          },
+          select: { permitido: true, notas: true },
+        });
+
+        if (restriccion && !restriccion.permitido) {
+          items_bloqueados.push({
+            id_producto: item.id_producto,
+            nombre: producto.nombre,
+            razon: restriccion.notas ?? `Envío no permitido a ${dto.estado_codigo}`,
+          });
+          bloqueado = true;
+          break;
+        }
+      }
+    }
+
+    return { valido: items_bloqueados.length === 0, items_bloqueados };
   }
 
   private async resolveProductorId(accessToken?: string, fallbackProductorId?: number) {

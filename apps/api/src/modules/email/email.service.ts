@@ -109,7 +109,25 @@ export class EmailService {
     email: string,
     orderNumber: string,
     totalAmount: number,
+    options?: { incluyeAlcohol?: boolean },
   ): Promise<void> {
+    const incluyeAlcohol = !!options?.incluyeAlcohol;
+
+    // Surgeon General Warning — required (27 CFR 16.21) for any order containing alcohol.
+    // Inserted only when at least one item belongs to a regulated category, so non-alcohol
+    // orders aren't burdened with the warning.
+    const alcoholBlock = incluyeAlcohol
+      ? `
+            <div style="margin: 20px 0; padding: 15px; border: 2px solid #b45309; background: #fffbeb; border-radius: 6px; color: #78350f; font-size: 12px; line-height: 1.5;">
+              <strong style="display:block; text-transform:uppercase; margin-bottom:6px;">Government Warning</strong>
+              <strong>(1)</strong> According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects.
+              <br />
+              <strong>(2)</strong> Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.
+              <br /><br />
+              <a href="${process.env.FRONTEND_URL}/alcohol-disclaimer" style="color:#78350f; text-decoration:underline;">Más información</a>
+            </div>`
+      : '';
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -135,6 +153,7 @@ export class EmailService {
             </div>
             <p>Recibirás actualizaciones sobre el estado de tu envío pronto.</p>
             <a href="${process.env.FRONTEND_URL}/pedidos" class="button">Ver mis órdenes</a>
+            ${alcoholBlock}
             <div class="footer">
               <p>© ${new Date().getFullYear()} Marketplace</p>
             </div>

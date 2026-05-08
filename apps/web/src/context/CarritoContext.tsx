@@ -12,7 +12,8 @@ import {
 } from "react";
 import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
-import type { CarritoItem, CarritoContextType } from "@/types/carrito";
+import type { AgregarProductoResult, CarritoItem, CarritoContextType } from "@/types/carrito";
+import { getEdadMinima, isAgeVerified } from "@/lib/edad";
 
 function getToken(): string {
   return getCookie("token") || "";
@@ -157,7 +158,15 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     }, 1000);
   }, [currentUserId, items, syncing]);
 
-  const agregarProducto = useCallback((producto: { [key: string]: any }) => {
+  const agregarProducto = useCallback((producto: { [key: string]: any }): AgregarProductoResult => {
+    // Trigger 2 — block age-restricted products unless cookie is set.
+    // Trigger 3 (server) is the authoritative check, but blocking here avoids polluting
+    // the carrito with items the buyer cannot legally check out with.
+    const edadRequerida = getEdadMinima(producto as any);
+    if (edadRequerida && !isAgeVerified(edadRequerida)) {
+      return { ok: false, reason: "age_required", edadRequerida };
+    }
+
     setItems((prev) => {
       const existente = prev.find((item) => item.id_producto === producto.id_producto);
       if (existente) {
@@ -170,6 +179,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
       return [...prev, { ...producto, cantidad: 1 }];
     });
     syncToBackend();
+    return { ok: true };
   }, [syncToBackend]);
 
   const eliminarProducto = useCallback((id_producto: number | bigint) => {
