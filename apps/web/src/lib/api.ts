@@ -298,7 +298,8 @@ export const api = {
       fetchJson(endpoint("/pedidos/mis-ventas"), { headers: headers(token) }),
     getAnalytics: (token: string, periodo: string) =>
       fetchJson(endpoint(`/pedidos/estadisticas?periodo=${periodo}`), { headers: headers(token) }),
-    getByUsuario: (usuarioId: string) => fetchJson(endpoint(`/pedidos?usuario=${usuarioId}`)),
+    getMisCompras: (token: string) =>
+      fetchJson(endpoint('/pedidos/mis-compras'), { headers: headers(token) }),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/pedidos"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     addDetalle: (token: string, pedidoId: string, data: any) =>
@@ -309,16 +310,15 @@ export const api = {
       fetchJson(endpoint(`/pedidos/${id}`), { method: "DELETE", headers: headers(token) }),
     getMisPedidos: (token: string) =>
       fetchJson(endpoint(`/pedidos/mis-pedidos`), { headers: headers(token) }),
-<<<<<<< HEAD
+
     getMisPedidosByProductor: (token: string, id_productor: number) =>
       fetchJson(endpoint(`/pedidos/productor/${id_productor}`), { headers: headers(token) }),
-=======
+
     validarEnvio: (data: { pais_iso2: string; estado_codigo?: string; items: { id_producto: number; cantidad: number }[] }) =>
       fetchJson<{ valido: boolean; items_bloqueados: { id_producto: number; nombre: string; razon: string }[] }>(
         endpoint("/pedidos/validar-envio"),
         { method: "POST", headers: headers(), body: JSON.stringify(data) },
       ),
->>>>>>> 485c70fc2ab40a0243ebd85977be54c432c6264e
   },
 
   envios: {
@@ -336,6 +336,8 @@ export const api = {
       fetchJson(endpoint("/envios/cotizar"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     guardarCotizacion: (token: string, data: any) =>
       fetchJson(endpoint("/envios/cotizaciones"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+    crearGuia: (token: string, id: string) =>
+      fetchJson(endpoint(`/envios/${id}/crear-guia`), { method: "POST", headers: headers(token) }),
   },
 
   transportistas: {

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
 import { CreateEnvioDto, UpdateEnvioDto } from "./dto/envios.dto";
@@ -146,6 +146,7 @@ export class EnviosService {
           payload_response: payload.response ?? null,
           precio_total: payload.precioTotal,
           tiempo_entrega_estimado: payload.fechaEntregaEstimada,
+          moneda: payload.response?.moneda ?? null,
           valida_hasta: addHours(new Date(), 4),
         },
       }),
@@ -204,6 +205,45 @@ export class EnviosService {
         ubicacion: e.ubicacion,
       })),
     });
+  }
+
+  async crearGuia(id_envio: string) {
+    const envio = await this.prisma.envios.findUnique({
+      where: { id_envio: toBigIntId(id_envio) },
+      include: {
+        pedidos: true,
+        servicios_envio: true,
+        transportistas: true,
+        envio_guias: { where: { eliminado_en: null } },
+      },
+    });
+
+    if (!envio) throw new NotFoundException('Envío no encontrado');
+    if (envio.envio_guias.length > 0) throw new ConflictException('GUIA_YA_EXISTE');
+    if (!envio.pedidos?.direccion_envio_snapshot) throw new UnprocessableEntityException('SIN_DIRECCION');
+
+    const result = await this.fedexService.createShipment(envio);
+
+    return serializeBigInts(
+      await this.prisma.$transaction(async (tx) => {
+        const guia = await tx.envio_guias.create({
+          data: {
+            id_envio: toBigIntId(id_envio),
+            id_transportista: envio.id_transportista ?? null,
+            numero_guia: result.trackingNumber,
+            url_etiqueta: result.labelUrl ?? null,
+            formato_etiqueta: result.labelFormat,
+            estado_paqueteria: 'creada',
+            payload_response: result as any,
+          },
+        });
+        await tx.envios.update({
+          where: { id_envio: toBigIntId(id_envio) },
+          data: { numero_rastreo: result.trackingNumber },
+        });
+        return guia;
+      }),
+    );
   }
 
   async registrarEvento(

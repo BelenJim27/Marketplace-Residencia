@@ -18,7 +18,7 @@ interface OrderDetail {
     direccion_envio_snapshot: any;
   };
   detalles: any[];
-  envio: { numero_rastreo?: string; estado?: string } | null;
+  envio: { id_envio?: number; numero_rastreo?: string; estado?: string } | null;
   desglose?: {
     subtotal_bruto: string | null;
     comision_marketplace: string;
@@ -35,6 +35,7 @@ export default function DetalleOrdenProductor() {
   const [orden, setOrden] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generandoGuia, setGenerandoGuia] = useState(false);
   const [nuevoEstado, setNuevoEstado] = useState("");
   const [numeroRastreo, setNumeroRastreo] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +90,24 @@ export default function DetalleOrdenProductor() {
       setError("Error al actualizar el estado");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleGenerarGuia = async () => {
+    if (!orden?.envio?.id_envio) return;
+    setGenerandoGuia(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const token = getCookie("token") || "";
+      const guia = await api.envios.crearGuia(token, String(orden.envio.id_envio));
+      setSuccess(`Guía generada: ${guia.numero_guia}`);
+      setNumeroRastreo(guia.numero_guia);
+    } catch (err: any) {
+      const msg = err?.details?.message || err?.message || "Error al generar la guía";
+      setError(msg);
+    } finally {
+      setGenerandoGuia(false);
     }
   };
 
@@ -276,6 +295,15 @@ export default function DetalleOrdenProductor() {
             >
               {saving ? "Guardando..." : "Guardar Tracking"}
             </button>
+            {orden.envio?.id_envio && !orden.envio?.numero_rastreo && (
+              <button
+                onClick={handleGenerarGuia}
+                disabled={generandoGuia || saving}
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400"
+              >
+                {generandoGuia ? "Generando guía..." : "Generar Guía FedEx"}
+              </button>
+            )}
             {orden.envio?.numero_rastreo && (
               <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
                 <div className="text-sm text-gray-600">Rastreo registrado:</div>

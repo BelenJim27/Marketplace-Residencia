@@ -5,6 +5,14 @@ import { firstValueFrom } from 'rxjs';
 import { CotizarEnvioDto } from './dto/envios.dto';
 import { ICarrierService, ShippingQuote, TrackingEvent } from './interfaces/carrier.interface';
 
+export interface FedexShipmentResult {
+  trackingNumber: string;
+  labelUrl?: string;
+  labelFormat: string;
+  cost?: number;
+  currency?: string;
+}
+
 @Injectable()
 export class FedexService implements ICarrierService {
   readonly carrierCode = 'fedex';
@@ -16,6 +24,11 @@ export class FedexService implements ICarrierService {
   private shipperCountryCode: string;
   private shipperPostalCode: string;
   private shipperCity: string;
+  private shipperName: string;
+  private shipperPhone: string;
+  private shipperCompany: string;
+  private shipperStreet: string;
+  private shipperStateCode: string;
 
   private cachedToken: string | null = null;
   private tokenExpiresAt = 0;
@@ -46,6 +59,11 @@ export class FedexService implements ICarrierService {
     this.shipperCountryCode = this.config.get('FEDEX_SHIPPER_COUNTRY_CODE', 'MX');
     this.shipperPostalCode = this.config.get('FEDEX_SHIPPER_POSTAL_CODE', '68000');
     this.shipperCity = this.config.get('FEDEX_SHIPPER_CITY', 'Oaxaca de Juárez');
+    this.shipperName = this.config.get('FEDEX_SHIPPER_NAME', 'Productor Mezcal');
+    this.shipperPhone = this.config.get('FEDEX_SHIPPER_PHONE', '9511234567');
+    this.shipperCompany = this.config.get('FEDEX_SHIPPER_COMPANY', '');
+    this.shipperStreet = this.config.get('FEDEX_SHIPPER_STREET', 'Calle Principal 1');
+    this.shipperStateCode = this.config.get('FEDEX_SHIPPER_STATE_CODE', 'OA');
   }
 
   private async getAccessToken(): Promise<string> {
@@ -280,6 +298,152 @@ export class FedexService implements ICarrierService {
     } catch (error: any) {
       this.logger.error(`Error de tracking: ${error.message}`);
       return [];
+    }
+  }
+
+  async createShipment(envio: any): Promise<FedexShipmentResult> {
+    if (!this.clientId || !this.clientSecret || !this.accountNumber) {
+      throw new HttpException('FEDEX_NOT_CONFIGURED', HttpStatus.BAD_REQUEST);
+    }
+
+    const token = await this.getAccessToken();
+    const snap = envio.pedidos?.direccion_envio_snapshot ?? {};
+    const serviceType: string = envio.servicios_envio?.codigo_servicio ?? 'FEDEX_GROUND';
+    const destCountry: string = snap.pais_iso2 ?? snap.pais ?? 'MX';
+
+    const stateRaw: string = snap.estado ?? snap.state ?? '';
+    const stateKey = stateRaw.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const recipientState = (this.MX_STATE_CODES[stateKey] ?? stateRaw.substring(0, 2).toUpperCase()) || undefined;
+
+    const streetLines = [
+      snap.linea_1 ?? snap.calle ?? 'Sin direccion',
+      snap.linea_2 ?? snap.colonia,
+    ].filter((s) => typeof s === 'string' && s.trim().length > 0);
+    if (streetLines.length === 0) streetLines.push('Sin direccion');
+
+    // FedEx acepta exactamente 10 dígitos para MX; limpiamos el teléfono
+    const cleanPhone = (raw: string | undefined) =>
+      (raw ?? '').replace(/\D/g, '').slice(-10).padStart(10, '0');
+
+    const body: any = {
+      labelResponseOptions: 'URL_ONLY',
+      accountNumber: { value: this.accountNumber },
+      requestedShipment: {
+        shipper: {
+          contact: {
+            personName: this.shipperName || 'Remitente',
+            phoneNumber: cleanPhone(this.shipperPhone),
+            ...(this.shipperCompany && { companyName: this.shipperCompany }),
+          },
+          address: {
+            streetLines: [this.shipperStreet || 'Sin direccion'],
+            city: this.shipperCity || 'Oaxaca de Juarez',
+            stateOrProvinceCode: this.shipperStateCode || 'OA',
+            postalCode: this.shipperPostalCode || '68000',
+            countryCode: this.shipperCountryCode || 'MX',
+          },
+        },
+        recipients: [{
+          contact: {
+            personName: snap.nombre_destinatario ?? snap.nombre ?? 'Destinatario',
+            phoneNumber: cleanPhone(snap.telefono ?? snap.phone),
+          },
+          address: {
+            streetLines,
+            city: snap.ciudad ?? snap.city ?? '',
+            ...(recipientState && { stateOrProvinceCode: recipientState }),
+            postalCode: snap.codigo_postal ?? snap.postal_code ?? '',
+            countryCode: destCountry,
+            residential: true,
+          },
+        }],
+        serviceType,
+        packagingType: 'YOUR_PACKAGING',
+        labelSpecification: {
+          labelFormatType: 'COMMON2D',
+          imageType: 'PDF',
+          labelStockType: 'PAPER_85X11_TOP_HALF_LABEL',
+        },
+        shippingChargesPayment: {
+          paymentType: 'SENDER',
+          payor: { responsibleParty: { accountNumber: { value: this.accountNumber } } },
+        },
+        totalWeight: { units: 'KG', value: Number(envio.peso_kg || 1) },
+        requestedPackageLineItems: [{
+          weight: { units: 'KG', value: Number(envio.peso_kg || 1) },
+          dimensions: {
+            length: Math.round(Number(envio.largo_cm) || 20),
+            width: Math.round(Number(envio.ancho_cm) || 15),
+            height: Math.round(Number(envio.alto_cm) || 15),
+            units: 'CM',
+          },
+        }],
+      },
+    };
+
+    if (envio.requires_adult_signature) {
+      body.requestedShipment.specialServicesRequested = {
+        specialServiceTypes: ['ADULT_SIGNATURE_REQUIRED'],
+      };
+    }
+
+    if (destCountry !== 'MX') {
+      const declaredValue = Number(envio.valor_declarado_aduana || 10);
+      const declaredCurrency = envio.moneda_aduana ?? 'USD';
+      body.requestedShipment.customsClearanceDetail = {
+        dutiesPayment: {
+          paymentType: 'SENDER',
+          payor: { responsibleParty: { accountNumber: { value: this.accountNumber } } },
+        },
+        documentShipment: false,
+        commodities: [{
+          description: 'Export Goods',
+          countryOfManufacture: 'MX',
+          quantity: 1,
+          quantityUnits: 'PCS',
+          unitPrice: { amount: declaredValue, currency: declaredCurrency },
+          customsValue: { amount: declaredValue, currency: declaredCurrency },
+          weight: { units: 'KG', value: Number(envio.peso_kg || 1) },
+          ...(envio.codigo_hs && { harmonizedCode: envio.codigo_hs }),
+        }],
+      };
+    }
+
+    try {
+      this.logger.debug('FedEx Ship request body:', JSON.stringify(body, null, 2));
+      const response = await firstValueFrom(
+        this.http.post(`${this.baseUrl}/ship/v1/shipments`, body, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-locale': 'es_MX',
+          },
+        }),
+      );
+
+      const output = response.data?.output;
+      const pieceResponse = output?.transactionShipments?.[0]?.pieceResponses?.[0];
+      const trackingNumber: string =
+        pieceResponse?.trackingNumber ??
+        output?.transactionShipments?.[0]?.masterTrackingNumber ??
+        '';
+      const labelUrl: string | undefined = pieceResponse?.packageDocuments?.[0]?.url;
+
+      this.logger.debug('FedEx Ship response output:', JSON.stringify(output?.transactionShipments?.[0]));
+      if (!trackingNumber) {
+        throw new HttpException(
+          'FedEx no devolvió número de guía. Revisa los logs del API para ver el response completo.',
+          HttpStatus.BAD_GATEWAY,
+        );
+      }
+      return { trackingNumber, labelUrl, labelFormat: 'PDF' };
+    } catch (error: any) {
+      if (error instanceof HttpException) throw error;
+      const status = error.response?.status;
+      const fedexErrors = error.response?.data?.errors;
+      this.logger.error(`FedEx Ship API error [${status}]:`, fedexErrors || error.message);
+      const apiMsg = fedexErrors?.[0]?.message || error.message;
+      throw new HttpException(`FedEx dice: ${apiMsg}`, HttpStatus.BAD_REQUEST);
     }
   }
 

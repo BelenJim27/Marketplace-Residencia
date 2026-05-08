@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/Layouts/sidebar";
 import { SidebarProvider } from "@/context/SidebarContext";
 import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
 import { useAuth } from "@/context/AuthContext";
+import Footer from "@/components/Cliente/Footer";
 
 export function RootContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
@@ -43,22 +44,24 @@ export function RootContent({ children }: PropsWithChildren) {
 
   if (isClientHome) {
     return (
-      <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+      <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        <main>
+        <main className="flex-1">
           {children}
         </main>
+        <Footer />
       </div>
     );
   }
 
   if (isClientOnlyRoute) {
     return (
-      <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+      <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+        <main className="flex-1 mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
+        <Footer />
       </div>
     );
   }
@@ -67,11 +70,12 @@ export function RootContent({ children }: PropsWithChildren) {
 
   if (isTiendaRoute) {
     return (
-      <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+      <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+        <main className="flex-1 mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
+        <Footer />
       </div>
     );
   }
@@ -94,21 +98,23 @@ export function RootContent({ children }: PropsWithChildren) {
     }
 
     return (
-      <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+      <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+        <main className="flex-1 mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+    <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
       <TiendaHeader />
-      <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+      <main className="flex-1 mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
         {children}
       </main>
+      <Footer />
     </div>
   );
 }

@@ -148,6 +148,9 @@ export class PedidosService {
 
     const id_tienda = producto.tiendas?.id_tienda ?? null;
     const id_productor = producto.tiendas?.id_productor ?? producto.lotes?.id_productor ?? null;
+    if (!id_productor) {
+      throw new NotFoundException(`El producto ${dto.id_producto} no tiene productor asignado. Asegúrate de que el producto pertenece a una tienda o lote con productor.`);
+    }
 
     const detalle = await this.prisma.detalle_pedido.create({
       data: {
@@ -208,8 +211,9 @@ export class PedidosService {
       comision_marketplace = this.comisionesService.calcularMonto(subtotal_bruto, comision);
     } catch {
       // Sin regla aplicable: dejamos comisión en 0 y sin id_comision_aplicada.
-      // El admin debe configurar al menos la regla global; este caso no debería ocurrir
-      // si el seed inicial corrió. No bloqueamos la creación del pedido.
+      // Esto no debería ocurrir si el seed de comisiones corrió (regla global).
+      // Se registra para que el admin lo corrija, pero no bloqueamos el pedido.
+      console.warn(`[pedidos] Sin regla de comisión para productor ${args.id_productor} / país ${args.pais_operacion}. Comisión aplicada: 0.`);
     }
 
     const monto_neto_productor = Number((subtotal_bruto - comision_marketplace).toFixed(2));
@@ -244,6 +248,16 @@ export class PedidosService {
   async addFactura(id: string, dto: CreateFacturaDto) { return serializeBigInts(await this.prisma.facturas.create({ data: { id_pedido: toBigIntId(id), uuid_fiscal: dto.uuid_fiscal ?? null, pdf_url: dto.pdf_url ?? null, xml_url: dto.xml_url ?? null, rfc_emisor: dto.rfc_emisor ?? null, rfc_receptor: dto.rfc_receptor ?? null, uso_cfdi: dto.uso_cfdi ?? null, regimen_fiscal: dto.regimen_fiscal ?? null, subtotal: dto.subtotal ?? null, impuestos_total: dto.impuestos_total ?? null, total: dto.total ?? null, moneda: dto.moneda ?? null, estado: dto.estado?.trim() ?? 'pendiente' } })); }
   async updateFactura(id_factura: string, dto: UpdateFacturaDto) { return serializeBigInts(await this.prisma.facturas.update({ where: { id_factura: toBigIntId(id_factura) }, data: { uuid_fiscal: dto.uuid_fiscal, pdf_url: dto.pdf_url, xml_url: dto.xml_url, rfc_emisor: dto.rfc_emisor, rfc_receptor: dto.rfc_receptor, uso_cfdi: dto.uso_cfdi, regimen_fiscal: dto.regimen_fiscal, subtotal: dto.subtotal, impuestos_total: dto.impuestos_total, total: dto.total, moneda: dto.moneda, estado: dto.estado } })); }
   async removeFactura(id_factura: string) { await this.prisma.facturas.delete({ where: { id_factura: toBigIntId(id_factura) } }); return { message: 'Factura eliminada' }; }
+
+  async getMisCompras(accessToken: string) {
+    const user = await this.authService.getMe(accessToken);
+    const pedidos = await this.prisma.pedidos.findMany({
+      where: { id_usuario: user.id_usuario, eliminado_en: null },
+      include: { detalle_pedido: true, facturas: true, envios: true },
+      orderBy: { fecha_creacion: 'desc' },
+    });
+    return serializeBigInts(pedidos);
+  }
 
   async getMisPedidosProductor(accessToken: string) {
     const id_productor = await this.resolveProductorId(accessToken);

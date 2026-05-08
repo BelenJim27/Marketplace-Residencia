@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Package, ChevronRight, ShoppingBag } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { getCookie } from "@/lib/cookies";
 import { formatPrice } from "@/lib/format-number";
 
 interface Pedido {
@@ -37,8 +38,9 @@ export default function MisComprasPage() {
       return;
     }
 
+    const token = getCookie("token") || "";
     api.pedidos
-      .getByUsuario(user.id_usuario)
+      .getMisCompras(token)
       .then((data) => {
         const lista = Array.isArray(data) ? data : [];
         // Ordenar por más reciente
