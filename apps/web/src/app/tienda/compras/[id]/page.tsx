@@ -16,6 +16,7 @@ interface DetallePedido {
 }
 
 interface Envio {
+  id_envio?: number | string;
   numero_rastreo?: string;
   estado?: string;
   costo_envio?: string;

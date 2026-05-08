@@ -25,7 +25,7 @@ export default function RatingAgregado({ productoId }: Props) {
 
   return (
     <div
-      className="rounded-lg p-4 flex gap-6 items-center"
+      className="rounded-lg p-4 flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start"
       style={{ backgroundColor: "#f0ebe0", border: "1px solid #e8dcc8" }}
     >
       {/* Promedio grande */}
@@ -49,7 +49,7 @@ export default function RatingAgregado({ productoId }: Props) {
       </div>
 
       {/* Barras por estrella */}
-      <div className="flex-1 space-y-1">
+      <div className="w-full flex-1 space-y-1.5">
         {[5, 4, 3, 2, 1].map((estrella) => {
           const entry = datos.distribucion.find((d) => d.estrellas === estrella);
           const cantidad = entry?.cantidad ?? 0;
@@ -64,7 +64,7 @@ export default function RatingAgregado({ productoId }: Props) {
                   style={{ width: `${pct}%`, backgroundColor: "var(--bio-color-precio, #8b6914)" }}
                 />
               </div>
-              <span className="w-4 text-gray-400 shrink-0">{cantidad}</span>
+              <span className="w-4 text-right text-gray-400 shrink-0">{cantidad}</span>
             </div>
           );
         })}

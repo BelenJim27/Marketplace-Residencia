@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Star, ChevronDown } from "lucide-react";
+import { Star } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { getCookie } from "@/lib/cookies";
@@ -45,7 +45,7 @@ function StarInput({ value, onChange }: { value: number; onChange: (n: number) =
           onClick={() => onChange(n)}
           onMouseEnter={() => setHover(n)}
           onMouseLeave={() => setHover(0)}
-          className="transition-transform hover:scale-110"
+          className="transition-transform hover:scale-110 p-1"
         >
           <Star
             size={28}
@@ -124,7 +124,7 @@ function ResenaForm({
 
   return (
     <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: "#f0ebe0", border: "1px solid #e8dcc8" }}>
-      <h4 className="font-semibold" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+      <h4 className="font-semibold text-base" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
         Escribe tu reseña
       </h4>
 
@@ -144,7 +144,7 @@ function ResenaForm({
       <button
         onClick={handleSubmit}
         disabled={enviando}
-        className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         style={{ backgroundColor: "var(--bio-color-titulo, #5c3d1e)" }}
       >
         {enviando ? "Enviando..." : "Publicar reseña"}
@@ -165,27 +165,29 @@ function ResenaCard({ resena }: { resena: Resena }) {
 
   return (
     <div className="py-4 border-b border-gray-100 last:border-0">
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-start gap-2 mb-1">
         {/* Avatar inicial */}
         <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 mt-0.5"
           style={{ backgroundColor: "var(--bio-color-titulo, #5c3d1e)" }}
         >
           {resena.usuarios.nombre.charAt(0).toUpperCase()}
         </div>
-        <div>
-          <p className="text-sm font-medium" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>
-            {nombreCompleto}
-          </p>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <p className="text-sm font-medium truncate" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>
+              {nombreCompleto}
+            </p>
+            {resena.compra_verificada && (
+              <span className="text-xs text-green-600 font-medium whitespace-nowrap">✓ Compra verificada</span>
+            )}
+          </div>
           <p className="text-xs text-gray-400">{fecha}</p>
         </div>
-        {resena.compra_verificada && (
-          <span className="ml-auto text-xs text-green-600 font-medium">✓ Compra verificada</span>
-        )}
       </div>
 
       {/* Estrellas */}
-      <div className="flex gap-0.5 mb-2">
+      <div className="flex gap-0.5 mb-2 ml-10">
         {[1, 2, 3, 4, 5].map((n) => (
           <Star
             key={n}
@@ -196,12 +198,12 @@ function ResenaCard({ resena }: { resena: Resena }) {
       </div>
 
       {resena.comentario && (
-        <p className="text-sm text-gray-600">{resena.comentario}</p>
+        <p className="text-sm text-gray-600 ml-10 leading-relaxed">{resena.comentario}</p>
       )}
 
       {/* Respuesta del vendedor */}
       {resena.respuesta_vendedor && (
-        <div className="mt-3 ml-4 pl-3 border-l-2 border-amber-200">
+        <div className="mt-3 ml-10 pl-3 border-l-2 border-amber-200">
           <p className="text-xs font-semibold mb-0.5" style={{ color: "var(--bio-color-precio, #8b6914)" }}>
             Respuesta del productor
           </p>
@@ -257,13 +259,13 @@ export default function ResenasSeccion({ productoId }: Props) {
         onCreada={() => { setPagina(1); setRecargar((r) => r + 1); }}
       />
 
-      {/* Filtro por estrella */}
-      <div className="flex flex-wrap gap-2">
+      {/* Filtro por estrella — scroll horizontal en móvil */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
         {[undefined, 5, 4, 3, 2, 1].map((n) => (
           <button
             key={n ?? "todas"}
             onClick={() => handleFiltro(n)}
-            className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
+            className="px-3 py-1 rounded-full text-xs font-medium border transition-colors shrink-0"
             style={{
               backgroundColor: filtro === n ? "var(--bio-color-titulo, #5c3d1e)" : "transparent",
               color: filtro === n ? "#fff" : "var(--bio-color-titulo, #5c3d1e)",
@@ -294,7 +296,7 @@ export default function ResenasSeccion({ productoId }: Props) {
           <button
             disabled={pagina === 1}
             onClick={() => setPagina((p) => p - 1)}
-            className="px-3 py-1 rounded text-sm disabled:opacity-40"
+            className="px-3 py-1.5 rounded text-sm disabled:opacity-40 touch-manipulation"
             style={{ color: "var(--bio-color-precio, #8b6914)" }}
           >
             ← Anterior
@@ -305,7 +307,7 @@ export default function ResenasSeccion({ productoId }: Props) {
           <button
             disabled={pagina === datos.meta.totalPaginas}
             onClick={() => setPagina((p) => p + 1)}
-            className="px-3 py-1 rounded text-sm disabled:opacity-40"
+            className="px-3 py-1.5 rounded text-sm disabled:opacity-40 touch-manipulation"
             style={{ color: "var(--bio-color-precio, #8b6914)" }}
           >
             Siguiente →

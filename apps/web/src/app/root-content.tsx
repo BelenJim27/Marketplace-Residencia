@@ -8,6 +8,10 @@ import { SidebarProvider } from "@/context/SidebarContext";
 import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
 import { useAuth } from "@/context/AuthContext";
 
+// ─── Importa tu componente de footer ─────────────────────────────────────────
+// Ajusta la ruta según donde tengas tu footer
+import { FooterTienda } from "@/components/Cliente/footer-tienda";
+
 export function RootContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const { user, loading, isAdmin, isProductor, isAuthenticated } = useAuth();
@@ -30,6 +34,7 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
+  // Rutas de auth — sin footer
   if (isAuthRoute) {
     return (
       <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
@@ -41,6 +46,8 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
+  // Página de inicio del cliente — el footer ya viene dentro del LandingPage,
+  // así que NO lo agregamos aquí para no duplicarlo
   if (isClientHome) {
     return (
       <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
@@ -52,30 +59,35 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
+  // Rutas de cliente (/tienda/ y /cliente/) — CON footer
   if (isClientOnlyRoute) {
     return (
-      <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+      <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+        <main className="mx-auto w-full flex-1 max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
+        <FooterTienda />
       </div>
     );
   }
 
   const isTiendaRoute = pathname === "/" || pathname === "/producto" || pathname.startsWith("/producto/");
 
+  // Rutas de tienda — CON footer
   if (isTiendaRoute) {
     return (
-      <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+      <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+        <main className="mx-auto w-full flex-1 max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
+        <FooterTienda />
       </div>
     );
   }
 
+  // Admin / productor — sin footer
   if (isLoggedIn) {
     if (isAdminOrProductor) {
       return (
@@ -93,22 +105,26 @@ export function RootContent({ children }: PropsWithChildren) {
       );
     }
 
+    // Cliente logueado — CON footer
     return (
-      <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+      <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+        <main className="mx-auto w-full flex-1 max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
+        <FooterTienda />
       </div>
     );
   }
 
+  // Fallback — CON footer
   return (
-    <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+    <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
       <TiendaHeader />
-      <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+      <main className="mx-auto w-full flex-1 max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
         {children}
       </main>
+      <FooterTienda />
     </div>
   );
 }

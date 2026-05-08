@@ -330,7 +330,7 @@ export default function SolicitarPage() {
       <div className="mt-6 rounded-xl bg-white p-6 shadow-1 dark:bg-gray-dark sm:p-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-dark dark:text-white">
-            Solicitar ser Productor
+            
           </h1>
           <p className="mt-1 text-gray-500">
             Completa el formulario para convertirte en productor en nuestra plataforma.
