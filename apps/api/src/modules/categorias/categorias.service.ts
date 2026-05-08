@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
 import { CreateCategoriaDto, UpdateCategoriaDto } from './dto/categorias.dto';
 
+
 @Injectable()
 export class CategoriasService {
   constructor(private readonly prisma: PrismaService) {}
@@ -46,6 +47,7 @@ export class CategoriasService {
         }),
       );
     } catch (error) {
+      // ✅ Prisma.PrismaClientKnownRequestError en lugar del nombre suelto
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
         throw new ConflictException('Slug ya existe');
       throw error;

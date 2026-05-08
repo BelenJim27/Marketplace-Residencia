@@ -10,10 +10,13 @@ import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/format-number";
-import { useDHLShipping } from "@/hooks/useDHLShipping";
+import { useShipping } from "@/hooks/useShipping";
 import RatingAgregado from "@/components/Cliente/RatingAgregado";
 import ResenasSeccion from "@/components/Cliente/ResenasSeccion";
 import { ProductosSimilares, TambienCompraron } from "@/components/Cliente/ProductosRelacionados";
+import AgeGate from "@/components/AgeGate";
+import CategoryDisclaimer from "@/components/CategoryDisclaimer";
+import { getEdadMinima } from "@/lib/edad";
 
 interface LoteData {
   datos_api?: Record<string, string>;
@@ -65,6 +68,9 @@ interface Producto {
   lotes?: LoteData;
   nombre_productor?: string;
   categorias?: string[];
+  categorias_full?: Array<{ id_categoria: number; nombre: string; requiere_edad_minima: number | null }>;
+  edad_minima?: number | null;
+  requiere_edad_minima?: number | null;
   nombre_tienda?: string;
   tiendas?: {
     nombre?: string;
@@ -90,7 +96,8 @@ export default function ProductoDetallePage() {
   const [imagenSeleccionada, setImagenSeleccionada] = useState(0);
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
-  const { cotizarTodos } = useDHLShipping();
+  const [forceAgeGate, setForceAgeGate] = useState(false);
+  const { cotizarTodos } = useShipping();
 
   const fetchProducto = useCallback(async () => {
     const id = params.id;
@@ -112,14 +119,19 @@ export default function ProductoDetallePage() {
 
   const handleAgregar = () => {
     if (!producto) return;
-    agregarProducto({
+    const res = agregarProducto({
       id_producto: producto.id_producto,
       nombre: producto.nombre,
       precio_base: producto.precio_base,
       imagen_principal_url: producto.imagen_principal_url,
       producto_imagenes: producto.producto_imagenes,
+      edad_minima: producto.edad_minima ?? producto.requiere_edad_minima ?? null,
       cantidad,
     });
+    if (!res.ok && res.reason === "age_required") {
+      setForceAgeGate(true);
+      return;
+    }
     setAgregado(true);
     setTimeout(() => setAgregado(false), 2000);
   };
@@ -130,14 +142,19 @@ export default function ProductoDetallePage() {
       router.push("/auth/sign-in?redirect=/tienda/checkout");
       return;
     }
-    agregarProducto({
+    const res = agregarProducto({
       id_producto: producto.id_producto,
       nombre: producto.nombre,
       precio_base: producto.precio_base,
       imagen_principal_url: producto.imagen_principal_url,
       producto_imagenes: producto.producto_imagenes,
+      edad_minima: producto.edad_minima ?? producto.requiere_edad_minima ?? null,
       cantidad,
     });
+    if (!res.ok && res.reason === "age_required") {
+      setForceAgeGate(true);
+      return;
+    }
     router.push("/tienda/checkout");
   };
 
@@ -190,12 +207,22 @@ export default function ProductoDetallePage() {
   }
 
   const productoId = String(producto.id_producto);
+  const edadMinimaProducto = getEdadMinima(producto);
 
   return (
     <div
       className="mx-auto max-w-screen-xl px-4 py-8 md:px-8"
       style={{ backgroundColor: "var(--bio-color-fondo, #faf8f4)", minHeight: "100vh" }}
     >
+      <AgeGate
+        edadMinima={edadMinimaProducto}
+        forceOpen={forceAgeGate}
+        onVerified={() => setForceAgeGate(false)}
+        onDeny={() => {
+          setForceAgeGate(false);
+          if (!forceAgeGate) router.push("/");
+        }}
+      />
       <button
         onClick={() => router.back()}
         className="mb-6 flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -277,6 +304,12 @@ export default function ProductoDetallePage() {
 
           {/* ★ Rating agregado — justo debajo del precio */}
           <RatingAgregado productoId={productoId} />
+
+          {/* Disclaimer regulatorio (alcohol/tabaco/etc.) — solo si la categoría lo requiere. */}
+          <CategoryDisclaimer
+            categorias={producto.categorias_full ?? []}
+            gradoAlcohol={producto.grado_alcohol ?? producto.lotes?.grado_alcohol ?? null}
+          />
 
           {/* Maestro Productor */}
           {productor && (

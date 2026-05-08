@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DIRECT_URL")
 }
 
 model archivos {
@@ -54,21 +54,23 @@ model carrito_item {
 }
 
 model categorias {
-  id_categoria         Int                    @id @default(autoincrement())
-  id_padre             Int?
-  nombre               String                 @db.VarChar(150)
-  slug                 String                 @unique @db.VarChar(150)
-  descripcion          String?
-  tipo                 String                 @default("general") @db.VarChar(50)
-  imagen_url           String?                @db.VarChar(500)
-  activo               Boolean                @default(true)
-  creado_en            DateTime               @default(now()) @db.Timestamptz(6)
-  categorias              categorias?              @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
-  other_categorias        categorias[]             @relation("categoriasTocategorias")
-  categorias_productos    categorias_productos[]
-  tasas_impuesto          tasas_impuesto[]
-  comisiones              comisiones[]
-  categorias_traducciones categorias_traducciones[]
+  id_categoria                  Int                             @id @default(autoincrement())
+  id_padre                      Int?
+  nombre                        String                          @db.VarChar(150)
+  slug                          String                          @unique @db.VarChar(150)
+  descripcion                   String?
+  tipo                          String                          @default("general") @db.VarChar(50)
+  imagen_url                    String?                         @db.VarChar(500)
+  activo                        Boolean                         @default(true)
+  requiere_edad_minima          Int?
+  creado_en                     DateTime                        @default(now()) @db.Timestamptz(6)
+  categorias                    categorias?                     @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
+  other_categorias              categorias[]                    @relation("categoriasTocategorias")
+  categorias_productos          categorias_productos[]
+  tasas_impuesto                tasas_impuesto[]
+  comisiones                    comisiones[]
+  categorias_traducciones       categorias_traducciones[]
+  restricciones_envio_categoria restricciones_envio_categoria[]
 
   @@index([id_padre], map: "idx_cat_padre")
 }
@@ -84,15 +86,15 @@ model configuracion_sistema {
 }
 
 model detalle_pedido {
-  id_detalle    BigInt    @id @default(autoincrement())
+  id_detalle    BigInt       @id @default(autoincrement())
   id_pedido     BigInt
   id_producto   BigInt
+  cantidad      Int
+  precio_compra Decimal      @db.Decimal(12, 2)
+  moneda_compra String       @default("MXN") @db.Char(3)
+  impuesto      Decimal      @default(0) @db.Decimal(12, 2)
   id_productor  Int?
   id_tienda     Int?
-  cantidad      Int
-  precio_compra Decimal   @db.Decimal(12, 2)
-  moneda_compra String    @default("MXN") @db.Char(3)
-  impuesto      Decimal   @default(0) @db.Decimal(12, 2)
   pedidos       pedidos      @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade, onUpdate: NoAction)
   productos     productos    @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
   productores   productores? @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
@@ -105,33 +107,27 @@ model detalle_pedido {
 model direcciones {
   id_direccion        BigInt    @id @default(autoincrement())
   id_usuario          String    @db.Uuid
-  nombre_destinatario String?   @db.VarChar(150)
-  telefono            String?   @db.VarChar(30)
-  nombre_etiqueta     String?   @db.VarChar(60)
-  es_predeterminada   Boolean   @default(false)
-  es_internacional    Boolean   @default(false)
-  
-  // Campos para direcciones nacionales (México)
-  calle               String?   @db.VarChar(200)
-  numero              String?   @db.VarChar(20)
-  colonia             String?   @db.VarChar(150)
-  
-  // Campos para direcciones internacionales
+  ubicacion           Json      @default("{}")
   linea_1             String?   @db.VarChar(200)
   linea_2             String?   @db.VarChar(200)
-  
-  // Campos comunes
-  ciudad              String?   @db.VarChar(100)
-  estado              String?   @db.VarChar(100)
-  codigo_postal       String?   @db.VarChar(20)
-  pais_iso2           String?   @db.Char(2)
   referencia          String?
   tipo                String?   @db.VarChar(20)
-  ubicacion           Json      @default("{}")
+  es_internacional    Boolean   @default(false)
   eliminado_en        DateTime? @db.Timestamptz(6)
+  ciudad              String?   @db.VarChar(100)
+  codigo_postal       String?   @db.VarChar(20)
+  es_predeterminada   Boolean   @default(false)
+  estado              String?   @db.VarChar(100)
+  nombre_destinatario String?   @db.VarChar(150)
+  nombre_etiqueta     String?   @db.VarChar(60)
+  pais_iso2           String?   @db.Char(2)
+  telefono            String?   @db.VarChar(30)
+  calle               String?   @db.VarChar(200)
+  colonia             String?   @db.VarChar(150)
+  numero              String?   @db.VarChar(20)
   usuarios            usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
-  pedidos             pedidos[] @relation("DireccionEnvioPedido")
   paises              paises?   @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
+  pedidos             pedidos[] @relation("DireccionEnvioPedido")
 
   @@index([ubicacion], map: "idx_direcciones_ubicacion", type: Gin)
   @@index([id_usuario, es_predeterminada], map: "idx_direcciones_predeterminada")
@@ -198,30 +194,30 @@ model envio_guias {
 }
 
 model envios {
-  id_envio               BigInt           @id @default(autoincrement())
-  id_pedido              BigInt
-  id_transportista       Int?
-  id_servicio            Int?
-  numero_rastreo         String?          @db.VarChar(200)
-  valor_declarado_aduana Decimal?         @db.Decimal(14, 2)
-  moneda_aduana          String           @default("MXN") @db.Char(3)
-  codigo_hs              String?          @db.VarChar(20)
-  peso_kg                Decimal?         @db.Decimal(8, 3)
-  alto_cm                Decimal?         @db.Decimal(8, 2)
-  ancho_cm               Decimal?         @db.Decimal(8, 2)
-  largo_cm               Decimal?         @db.Decimal(8, 2)
-  costo_envio            Decimal?         @db.Decimal(14, 2)
-  moneda_costo           String           @default("MXN") @db.Char(3)
-  estado                 String           @default("preparando") @db.VarChar(30)
-  fecha_envio            DateTime?        @db.Timestamptz(6)
-  fecha_entrega_estimada DateTime?        @db.Timestamptz(6)
-  fecha_entrega          DateTime?        @db.Timestamptz(6)
-  requires_adult_signature Boolean?       @default(false) 
-  envio_guias            envio_guias[]
-  pedido_productor       pedido_productor[]
-  pedidos                pedidos          @relation(fields: [id_pedido], references: [id_pedido], onUpdate: NoAction)
-  servicios_envio        servicios_envio? @relation(fields: [id_servicio], references: [id_servicio], onUpdate: NoAction)
-  transportistas         transportistas?  @relation(fields: [id_transportista], references: [id_transportista], onUpdate: NoAction)
+  id_envio                 BigInt             @id @default(autoincrement())
+  id_pedido                BigInt
+  id_transportista         Int?
+  id_servicio              Int?
+  numero_rastreo           String?            @db.VarChar(200)
+  valor_declarado_aduana   Decimal?           @db.Decimal(14, 2)
+  moneda_aduana            String             @default("MXN") @db.Char(3)
+  codigo_hs                String?            @db.VarChar(20)
+  peso_kg                  Decimal?           @db.Decimal(8, 3)
+  alto_cm                  Decimal?           @db.Decimal(8, 2)
+  ancho_cm                 Decimal?           @db.Decimal(8, 2)
+  largo_cm                 Decimal?           @db.Decimal(8, 2)
+  costo_envio              Decimal?           @db.Decimal(14, 2)
+  moneda_costo             String             @default("MXN") @db.Char(3)
+  estado                   String             @default("preparando") @db.VarChar(30)
+  requires_adult_signature Boolean            @default(false)
+  fecha_envio              DateTime?          @db.Timestamptz(6)
+  fecha_entrega_estimada   DateTime?          @db.Timestamptz(6)
+  fecha_entrega            DateTime?          @db.Timestamptz(6)
+  envio_guias              envio_guias[]
+  pedido_productor         pedido_productor[]
+  pedidos                  pedidos            @relation(fields: [id_pedido], references: [id_pedido], onUpdate: NoAction)
+  servicios_envio          servicios_envio?   @relation(fields: [id_servicio], references: [id_servicio], onUpdate: NoAction)
+  transportistas           transportistas?    @relation(fields: [id_transportista], references: [id_transportista], onUpdate: NoAction)
 
   @@index([estado], map: "idx_envios_estado")
   @@index([id_pedido], map: "idx_envios_pedido")
@@ -269,8 +265,6 @@ model inventario {
   stock                  Int                      @default(0)
   stock_minimo           Int                      @default(0)
   actualizado_en         DateTime                 @default(now()) @db.Timestamptz(6)
-  stock_350ml    Int  @default(0)
-  stock_750ml    Int  @default(0)
   productos              productos                @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
   movimientos_inventario movimientos_inventario[]
 
@@ -312,10 +306,8 @@ model lotes {
   nombre_cientifico String?          @db.VarChar(150)
   url_foto_especie  String?          @db.VarChar(255)
   fecha_elaboracion DateTime?        @db.Date
-  botellas_350ml    Int?  @default(0)
-  botellas_750ml    Int?  @default(0)
-  precio_350ml      Decimal?  @db.Decimal(12, 2)
-  precio_750ml      Decimal?  @db.Decimal(12, 2)
+  botellas_350ml    Int?             @default(0)
+  botellas_750ml    Int?             @default(0)
   lote_atributos    lote_atributos[]
   productores       productores      @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
   regiones          regiones?        @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
@@ -340,19 +332,19 @@ model ListaDeseosItem {
 }
 
 model monedas {
-  codigo           String           @id @db.Char(3)
-  nombre           String           @db.VarChar(100)
-  simbolo          String?          @db.VarChar(10)
-  activo           Boolean          @default(true)
+  codigo           String             @id @db.Char(3)
+  nombre           String             @db.VarChar(100)
+  simbolo          String?            @db.VarChar(10)
+  activo           Boolean            @default(true)
   pagos            pagos[]
-  pedidos          pedidos[]
-  productos        productos[]
-  tasas_impuesto   tasas_impuesto[]
   paises           paises[]
   payouts          payouts[]
   pedido_productor pedido_productor[]
-  tasas_origen     tasas_cambio[]   @relation("TasaOrigen")
-  tasas_destino    tasas_cambio[]   @relation("TasaDestino")
+  pedidos          pedidos[]
+  productos        productos[]
+  tasas_destino    tasas_cambio[]     @relation("TasaDestino")
+  tasas_origen     tasas_cambio[]     @relation("TasaOrigen")
+  tasas_impuesto   tasas_impuesto[]
 }
 
 model movimientos_inventario {
@@ -440,9 +432,11 @@ model password_reset_tokens {
 model pedidos {
   id_pedido                      BigInt                   @id @default(autoincrement())
   id_usuario                     String                   @db.Uuid
-  id_direccion_envio             BigInt?
   estado                         String                   @default("pendiente") @db.VarChar(30)
   total                          Decimal                  @db.Decimal(14, 2)
+  tax_amount                     Decimal                  @default(0) @db.Decimal(14, 2)
+  shipping_amount                Decimal                  @default(0) @db.Decimal(14, 2)
+  discount_amount                Decimal                  @default(0) @db.Decimal(14, 2)
   moneda                         String                   @db.Char(3)
   tipo_cambio                    Decimal?                 @db.Decimal(10, 4)
   moneda_referencia              String                   @default("USD") @db.Char(3)
@@ -456,9 +450,7 @@ model pedidos {
   devolucion_motivo              String?
   devolucion_solicitada_en       DateTime?                @db.Timestamptz(6)
   devolucion_resuelta_en         DateTime?                @db.Timestamptz(6)
-  discount_amount                Decimal?                 @db.Decimal(14, 2)  
-  shipping_amount                Decimal?                 @db.Decimal(14, 2)  
-  tax_amount                     Decimal?                 @db.Decimal(14, 2) 
+  id_direccion_envio             BigInt?
   detalle_pedido                 detalle_pedido[]
   envio_cotizaciones             envio_cotizaciones[]
   envios                         envios[]
@@ -466,9 +458,9 @@ model pedidos {
   movimientos_inventario         movimientos_inventario[]
   pagos                          pagos[]
   pedido_productor               pedido_productor[]
+  direccion_envio                direcciones?             @relation("DireccionEnvioPedido", fields: [id_direccion_envio], references: [id_direccion], onUpdate: NoAction)
   usuarios                       usuarios                 @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
   monedas                        monedas                  @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
-  direccion_envio                direcciones?             @relation("DireccionEnvioPedido", fields: [id_direccion_envio], references: [id_direccion], onUpdate: NoAction)
   paises                         paises?                  @relation(fields: [pais_destino_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([estado], map: "idx_pedidos_estado")
@@ -496,75 +488,75 @@ model producto_imagenes {
 }
 
 model productores {
-  id_productor          Int       @id @default(autoincrement())
-  id_usuario            String    @unique @db.Uuid
-  id_region             Int?
-  biografia             String?
-  creado_en             DateTime  @default(now()) @db.Timestamptz(6)
-  actualizado_en        DateTime  @default(now()) @db.Timestamptz(6)
-  eliminado_en          DateTime? @db.Timestamptz(6)
-  otras_caracteristicas String?   @db.VarChar(255)
-  estado                String    @default("pendiente") @db.VarChar(20)
-  motivo_rechazo        String?
-  revisado_en           DateTime? @db.Timestamptz(6)
-  revisado_por          String?   @db.Uuid
-  solicitado_en         DateTime  @default(now()) @db.Timestamptz(6)
-  datos_bancarios       String?
-  razon_social          String?   @db.VarChar(200)
-  rfc                   String?   @db.VarChar(13)
-  stripe_account_id     String?  @db.VarChar(255)   
-  stripe_onboarding_completed Boolean? @default(false) 
-  unidad_medida     String?  @db.VarChar(20)
-  botellas_350ml    Int?     @default(0)
-  botellas_750ml    Int?     @default(0)
-  precio_350ml      Decimal? @db.Decimal(12, 2)
-  precio_750ml      Decimal? @db.Decimal(12, 2)
-  lotes                 lotes[]
-  regiones              regiones? @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
-  usuarios              usuarios  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
-  revisor               usuarios? @relation("RevisorProductor", fields: [revisado_por], references: [id_usuario], onUpdate: NoAction)
-  tiendas               tiendas[]
-  pedido_productor      pedido_productor[]
-  comisiones            comisiones[]
-  payouts               payouts[]
-  detalle_pedido        detalle_pedido[]
+  id_productor                Int                @id @default(autoincrement())
+  id_usuario                  String             @unique @db.Uuid
+  id_region                   Int?
+  biografia                   String?
+  creado_en                   DateTime           @default(now()) @db.Timestamptz(6)
+  actualizado_en              DateTime           @default(now()) @db.Timestamptz(6)
+  eliminado_en                DateTime?          @db.Timestamptz(6)
+  otras_caracteristicas       String?            @db.VarChar(255)
+  estado                      String             @default("pendiente") @db.VarChar(20)
+  motivo_rechazo              String?
+  revisado_en                 DateTime?          @db.Timestamptz(6)
+  revisado_por                String?            @db.Uuid
+  solicitado_en               DateTime           @default(now()) @db.Timestamptz(6)
+  datos_bancarios             String?
+  razon_social                String?            @db.VarChar(200)
+  rfc                         String?            @db.VarChar(13)
+  stripe_account_id           String?            @unique @db.VarChar(150)
+  stripe_onboarding_completed Boolean            @default(false)
+  comisiones                  comisiones[]
+  detalle_pedido              detalle_pedido[]
+  lotes                       lotes[]
+  payouts                     payouts[]
+  pedido_productor            pedido_productor[]
+  regiones                    regiones?          @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
+  usuarios                    usuarios           @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
+  revisor                     usuarios?          @relation("RevisorProductor", fields: [revisado_por], references: [id_usuario], onUpdate: NoAction)
+  tiendas                     tiendas[]
 }
 
 model productos {
-  id_producto                                  BigInt                 @id @default(autoincrement())
+  id_producto                                  BigInt                   @id @default(autoincrement())
   id_tienda                                    Int
   id_lote                                      Int?
-  nombre                                       String                 @db.VarChar(200)
+  nombre                                       String                   @db.VarChar(200)
   descripcion                                  String?
-  traducciones                                 Json                   @default("{}")
-  precio_base                                  Decimal                @db.Decimal(12, 2)
-  moneda_base                                  String                 @default("MXN") @db.Char(3)
-  metadata                                     Json                   @default("{}")
-  peso_kg                                      Decimal?               @db.Decimal(8, 3)
-  alto_cm                                      Decimal?               @db.Decimal(8, 2)
-  ancho_cm                                     Decimal?               @db.Decimal(8, 2)
-  largo_cm                                     Decimal?               @db.Decimal(8, 2)
-  status                                       String                 @default("activo") @db.VarChar(20)
-  creado_por                                   String?                @db.Uuid
-  actualizado_por                              String?                @db.Uuid
-  creado_en                                    DateTime               @default(now()) @db.Timestamptz(6)
-  actualizado_en                               DateTime               @default(now()) @db.Timestamptz(6)
-  eliminado_en                                 DateTime?              @db.Timestamptz(6)
-  imagen_principal_url                         String?                @db.VarChar(500)
-  requiere_firma_adulto                        Boolean? 
+  traducciones                                 Json                     @default("{}")
+  precio_base                                  Decimal                  @db.Decimal(12, 2)
+  moneda_base                                  String                   @default("MXN") @db.Char(3)
+  metadata                                     Json                     @default("{}")
+  peso_kg                                      Decimal?                 @db.Decimal(8, 3)
+  alto_cm                                      Decimal?                 @db.Decimal(8, 2)
+  ancho_cm                                     Decimal?                 @db.Decimal(8, 2)
+  largo_cm                                     Decimal?                 @db.Decimal(8, 2)
+  status                                       String                   @default("activo") @db.VarChar(20)
+  requiere_firma_adulto                        Boolean                  @default(false)
+  requiere_edad_minima                         Int?
+  alergenos                                    String[]
+  unidad_medida                                String?                  @db.VarChar(50)
+  botellas_350ml                               Int?                     @default(0)
+  botellas_750ml                               Int?                     @default(0)
+  creado_por                                   String?                  @db.Uuid
+  actualizado_por                              String?                  @db.Uuid
+  creado_en                                    DateTime                 @default(now()) @db.Timestamptz(6)
+  actualizado_en                               DateTime                 @default(now()) @db.Timestamptz(6)
+  eliminado_en                                 DateTime?                @db.Timestamptz(6)
+  imagen_principal_url                         String?                  @db.VarChar(500)
   carrito_item                                 carrito_item[]
   categorias_productos                         categorias_productos[]
   detalle_pedido                               detalle_pedido[]
   inventario                                   inventario[]
   lista_deseos_item                            ListaDeseosItem[]
   producto_imagenes                            producto_imagenes[]
-  usuarios_productos_actualizado_porTousuarios usuarios?              @relation("productos_actualizado_porTousuarios", fields: [actualizado_por], references: [id_usuario], onUpdate: NoAction)
-  usuarios_productos_creado_porTousuarios      usuarios?              @relation("productos_creado_porTousuarios", fields: [creado_por], references: [id_usuario], onUpdate: NoAction)
-  lotes                                        lotes?                 @relation(fields: [id_lote], references: [id_lote], onUpdate: NoAction)
-  tiendas                                      tiendas                @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
-  monedas                                      monedas                @relation(fields: [moneda_base], references: [codigo], onUpdate: NoAction)
-  resenas                                      resenas[]
+  usuarios_productos_actualizado_porTousuarios usuarios?                @relation("productos_actualizado_porTousuarios", fields: [actualizado_por], references: [id_usuario], onUpdate: NoAction)
+  usuarios_productos_creado_porTousuarios      usuarios?                @relation("productos_creado_porTousuarios", fields: [creado_por], references: [id_usuario], onUpdate: NoAction)
+  lotes                                        lotes?                   @relation(fields: [id_lote], references: [id_lote], onUpdate: NoAction)
+  tiendas                                      tiendas                  @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
+  monedas                                      monedas                  @relation(fields: [moneda_base], references: [codigo], onUpdate: NoAction)
   productos_traducciones                       productos_traducciones[]
+  resenas                                      resenas[]
 
   @@index([metadata], map: "idx_productos_metadata", type: Gin)
   @@index([status], map: "idx_productos_status")
@@ -594,7 +586,7 @@ model regiones {
   creado_en   DateTime      @default(now()) @db.Timestamptz(6)
   lotes       lotes[]
   productores productores[]
-  paises      paises        @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
+  paises      paises        @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
 }
 
 model resenas {
@@ -666,32 +658,32 @@ model tasas_impuesto {
   creado_en          DateTime    @default(now()) @db.Timestamptz(6)
   categorias         categorias? @relation(fields: [id_categoria], references: [id_categoria], onUpdate: NoAction)
   monedas            monedas?    @relation(fields: [moneda_monto_fijo], references: [codigo], onDelete: Restrict, onUpdate: NoAction)
-  paises             paises      @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
+  paises             paises      @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
 
   @@index([id_categoria], map: "idx_tasas_categoria")
 }
 
 model tiendas {
-  id_tienda          Int         @id @default(autoincrement())
-  id_productor       Int
-  nombre             String      @db.VarChar(150)
-  descripcion        String?
-  pais_operacion     String      @default("MX") @db.Char(2)
-  status             String      @default("activa") @db.VarChar(20)
-  nombre_contacto    String?     @db.VarChar(150)
-  telefono_contacto  String?     @db.VarChar(30)
-  direccion_origen   String?     @db.VarChar(200)
-  ciudad_origen      String?     @db.VarChar(100)
-  estado_origen      String?     @db.VarChar(100)
-  codigo_postal_orig String?     @db.VarChar(20)
-  fecha_creacion       DateTime    @default(dbgenerated("CURRENT_DATE")) @db.Date
-  actualizado_en       DateTime    @default(now()) @db.Timestamptz(6)
-  eliminado_en         DateTime?   @db.Timestamptz(6)
-  productos            productos[]
-  productores          productores @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  id_tienda            Int                    @id @default(autoincrement())
+  id_productor         Int
+  nombre               String                 @db.VarChar(150)
+  descripcion          String?
+  pais_operacion       String                 @default("MX") @db.Char(2)
+  status               String                 @default("activa") @db.VarChar(20)
+  fecha_creacion       DateTime               @default(dbgenerated("CURRENT_DATE")) @db.Date
+  actualizado_en       DateTime               @default(now()) @db.Timestamptz(6)
+  eliminado_en         DateTime?              @db.Timestamptz(6)
+  ciudad_origen        String?                @db.VarChar(100)
+  codigo_postal_orig   String?                @db.VarChar(20)
+  direccion_origen     String?                @db.VarChar(200)
+  estado_origen        String?                @db.VarChar(100)
+  nombre_contacto      String?                @db.VarChar(150)
+  telefono_contacto    String?                @db.VarChar(30)
   detalle_pedido       detalle_pedido[]
+  productos            productos[]
+  productores          productores            @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  paises               paises                 @relation(fields: [pais_operacion], references: [iso2], onUpdate: NoAction)
   tiendas_traducciones tiendas_traducciones[]
-  paises               paises      @relation(fields: [pais_operacion], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([id_productor], map: "idx_tiendas_productor")
 }
@@ -730,17 +722,18 @@ model usuarios {
   foto_url                                      String?                  @db.VarChar(500)
   apellido_paterno                              String?                  @db.VarChar(100)
   apellido_materno                              String?                  @db.VarChar(100)
+  fecha_nacimiento                              DateTime?                @db.Date
   email                                         String                   @unique @db.VarChar(255)
   telefono                                      String?                  @db.VarChar(30)
   password_hash                                 String?                  @db.VarChar(255)
   idioma_preferido                              String                   @default("es") @db.VarChar(10)
   moneda_preferida                              String                   @default("MXN") @db.Char(3)
-  timezone                                      String?                  @db.VarChar(64)
-  pais_iso2                                     String?                  @db.Char(2)
   version_token                                 Int                      @default(1)
   fecha_registro                                DateTime                 @default(now()) @db.Timestamptz(6)
   eliminado_en                                  DateTime?                @db.Timestamptz(6)
   nombre_usuario                                String?                  @unique @db.VarChar(50)
+  pais_iso2                                     String?                  @db.Char(2)
+  timezone                                      String?                  @db.VarChar(64)
   archivos                                      archivos[]
   auditoria                                     auditoria[]
   carrito_item                                  carrito_item[]
@@ -776,22 +769,22 @@ model categorias_productos {
 model pedido_productor {
   id_pedido            BigInt
   id_productor         Int
-  estado               String    @default("pendiente") @db.VarChar(30)
+  estado               String      @default("pendiente") @db.VarChar(30)
   id_envio             BigInt?
-  creado_en            DateTime  @default(now()) @db.Timestamptz(6)
-  actualizado_en       DateTime  @default(now()) @db.Timestamptz(6)
-  subtotal_bruto       Decimal?  @db.Decimal(14, 2)
-  comision_marketplace Decimal   @default(0) @db.Decimal(14, 2)
-  monto_neto_productor Decimal?  @db.Decimal(14, 2)
-  moneda               String?   @db.Char(3)
+  creado_en            DateTime    @default(now()) @db.Timestamptz(6)
+  actualizado_en       DateTime    @default(now()) @db.Timestamptz(6)
+  subtotal_bruto       Decimal?    @db.Decimal(14, 2)
+  comision_marketplace Decimal     @default(0) @db.Decimal(14, 2)
+  monto_neto_productor Decimal?    @db.Decimal(14, 2)
+  moneda               String?     @db.Char(3)
   id_comision_aplicada Int?
   id_payout            BigInt?
+  comision_aplicada    comisiones? @relation(fields: [id_comision_aplicada], references: [id_comision], onUpdate: NoAction)
+  envios               envios?     @relation(fields: [id_envio], references: [id_envio], onUpdate: NoAction)
+  payout               payouts?    @relation(fields: [id_payout], references: [id_payout], onUpdate: NoAction)
   pedidos              pedidos     @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade, onUpdate: NoAction)
   productores          productores @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
-  envios               envios?     @relation(fields: [id_envio], references: [id_envio], onUpdate: NoAction)
   monedas              monedas?    @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
-  comision_aplicada    comisiones? @relation(fields: [id_comision_aplicada], references: [id_comision], onUpdate: NoAction)
-  payout               payouts?    @relation(fields: [id_payout], references: [id_payout], onUpdate: NoAction)
 
   @@id([id_pedido, id_productor])
   @@index([id_pedido], map: "idx_pedido_prod_pedido")
@@ -810,28 +803,29 @@ model paises {
   activo_venta     Boolean  @default(false)
   activo_envio     Boolean  @default(false)
   creado_en        DateTime @default(now()) @db.Timestamptz(6)
-  monedas          monedas  @relation(fields: [moneda_default], references: [codigo], onUpdate: NoAction)
-  idiomas          idiomas  @relation(fields: [idioma_default], references: [codigo], onUpdate: NoAction)
   comisiones       comisiones[]
   direcciones      direcciones[]
+  idiomas          idiomas  @relation(fields: [idioma_default], references: [codigo], onUpdate: NoAction)
+  monedas          monedas  @relation(fields: [moneda_default], references: [codigo], onUpdate: NoAction)
   pedidos          pedidos[]
   regiones         regiones[]
   tasas_impuesto   tasas_impuesto[]
   tiendas          tiendas[]
   usuarios         usuarios[]
+  restricciones_envio_categoria restricciones_envio_categoria[]
 
   @@index([activo_venta], map: "idx_paises_activo_venta")
 }
 
 model idiomas {
-  codigo                  String   @id @db.VarChar(10)
-  nombre                  String   @db.VarChar(80)
-  nombre_local            String?  @db.VarChar(80)
-  activo                  Boolean  @default(true)
-  rtl                     Boolean  @default(false)
+  codigo                  String                    @id @db.VarChar(10)
+  nombre                  String                    @db.VarChar(80)
+  nombre_local            String?                   @db.VarChar(80)
+  activo                  Boolean                   @default(true)
+  rtl                     Boolean                   @default(false)
+  categorias_traducciones categorias_traducciones[]
   paises                  paises[]
   productos_traducciones  productos_traducciones[]
-  categorias_traducciones categorias_traducciones[]
   tiendas_traducciones    tiendas_traducciones[]
 }
 
@@ -843,30 +837,30 @@ model tasas_cambio {
   fuente         String    @default("manual") @db.VarChar(50)
   vigente_hasta  DateTime? @db.Timestamptz(6)
   creado_en      DateTime  @default(now()) @db.Timestamptz(6)
-  origen         monedas   @relation("TasaOrigen", fields: [moneda_origen], references: [codigo], onUpdate: NoAction)
   destino        monedas   @relation("TasaDestino", fields: [moneda_destino], references: [codigo], onUpdate: NoAction)
+  origen         monedas   @relation("TasaOrigen", fields: [moneda_origen], references: [codigo], onUpdate: NoAction)
 
   @@id([moneda_origen, moneda_destino, vigente_desde])
   @@index([moneda_origen, moneda_destino, vigente_hasta], map: "idx_tasas_cambio_lookup")
 }
 
 model comisiones {
-  id_comision       Int       @id @default(autoincrement())
-  alcance           String    @db.VarChar(20)
-  pais_iso2         String?   @db.Char(2)
+  id_comision       Int                @id @default(autoincrement())
+  alcance           String             @db.VarChar(20)
+  pais_iso2         String?            @db.Char(2)
   id_categoria      Int?
   id_productor      Int?
-  porcentaje        Decimal   @db.Decimal(6, 4)
-  monto_fijo        Decimal?  @db.Decimal(12, 2)
-  moneda_monto_fijo String?   @db.Char(3)
-  prioridad         Int       @default(100)
-  vigente_desde     DateTime  @default(now()) @db.Timestamptz(6)
-  vigente_hasta     DateTime? @db.Timestamptz(6)
-  activo            Boolean   @default(true)
-  creado_en         DateTime  @default(now()) @db.Timestamptz(6)
-  paises            paises?      @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
-  categorias        categorias?  @relation(fields: [id_categoria], references: [id_categoria], onUpdate: NoAction)
-  productores       productores? @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  porcentaje        Decimal            @db.Decimal(6, 4)
+  monto_fijo        Decimal?           @db.Decimal(12, 2)
+  moneda_monto_fijo String?            @db.Char(3)
+  prioridad         Int                @default(100)
+  vigente_desde     DateTime           @default(now()) @db.Timestamptz(6)
+  vigente_hasta     DateTime?          @db.Timestamptz(6)
+  activo            Boolean            @default(true)
+  creado_en         DateTime           @default(now()) @db.Timestamptz(6)
+  categorias        categorias?        @relation(fields: [id_categoria], references: [id_categoria], onUpdate: NoAction)
+  productores       productores?       @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  paises            paises?            @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
   pedido_productor  pedido_productor[]
 
   @@index([alcance, activo, prioridad], map: "idx_comisiones_resolucion")
@@ -874,22 +868,22 @@ model comisiones {
 }
 
 model payouts {
-  id_payout          BigInt    @id @default(autoincrement())
+  id_payout          BigInt             @id @default(autoincrement())
   id_productor       Int
-  moneda             String    @db.Char(3)
-  monto_bruto        Decimal   @db.Decimal(14, 2)
-  monto_comision     Decimal   @db.Decimal(14, 2)
-  monto_neto         Decimal   @db.Decimal(14, 2)
-  estado             String    @default("pendiente") @db.VarChar(20)
-  proveedor          String?   @db.VarChar(50)
-  referencia_externa String?   @db.VarChar(150)
-  periodo_desde      DateTime  @db.Date
-  periodo_hasta      DateTime  @db.Date
+  moneda             String             @db.Char(3)
+  monto_bruto        Decimal            @db.Decimal(14, 2)
+  monto_comision     Decimal            @db.Decimal(14, 2)
+  monto_neto         Decimal            @db.Decimal(14, 2)
+  estado             String             @default("pendiente") @db.VarChar(20)
+  proveedor          String?            @db.VarChar(50)
+  referencia_externa String?            @db.VarChar(150)
+  periodo_desde      DateTime           @db.Date
+  periodo_hasta      DateTime           @db.Date
   notas              String?
-  creado_en          DateTime  @default(now()) @db.Timestamptz(6)
-  procesado_en       DateTime? @db.Timestamptz(6)
-  productores        productores @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
-  monedas            monedas     @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
+  creado_en          DateTime           @default(now()) @db.Timestamptz(6)
+  procesado_en       DateTime?          @db.Timestamptz(6)
+  productores        productores        @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
+  monedas            monedas            @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
   pedido_productor   pedido_productor[]
 
   @@index([id_productor, estado], map: "idx_payouts_productor_estado")
@@ -929,4 +923,22 @@ model tiendas_traducciones {
   idiomas     idiomas @relation(fields: [idioma], references: [codigo], onUpdate: NoAction)
 
   @@id([id_tienda, idioma])
+}
+
+model restricciones_envio_categoria {
+  id_restriccion Int        @id @default(autoincrement())
+  pais_iso2      String     @db.Char(2)
+  estado_codigo  String     @db.VarChar(10)
+  id_categoria   Int
+  permitido      Boolean    @default(true)
+  notas          String?
+  vigente_desde  DateTime   @default(now()) @db.Timestamptz(6)
+  vigente_hasta  DateTime?  @db.Timestamptz(6)
+  creado_en      DateTime   @default(now()) @db.Timestamptz(6)
+  paises         paises     @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
+  categorias     categorias @relation(fields: [id_categoria], references: [id_categoria], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([pais_iso2, estado_codigo, id_categoria])
+  @@index([pais_iso2, estado_codigo], map: "idx_restr_envio_pais_estado")
+  @@index([id_categoria], map: "idx_restr_envio_categoria")
 }

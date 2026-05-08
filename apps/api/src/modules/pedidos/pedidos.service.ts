@@ -4,7 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { ComisionesService } from '../comisiones/comisiones.service';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
-import { CreateDetallePedidoDto, CreateFacturaDto, CreatePedidoDto, UpdateDetallePedidoDto, UpdateFacturaDto, UpdatePedidoDto } from './dto/pedidos.dto';
+import { CreateDetallePedidoDto, CreateFacturaDto, CreatePedidoDto, UpdateDetallePedidoDto, UpdateFacturaDto, UpdatePedidoDto, ValidarEnvioDto } from './dto/pedidos.dto';
 
 type Periodo = 'week' | 'month' | 'year';
 
@@ -128,8 +128,8 @@ export class PedidosService {
       rawRows,
     };
   }
-  async create(dto: CreatePedidoDto) { return serializeBigInts(await this.prisma.pedidos.create({ data: { id_usuario: dto.id_usuario, estado: dto.estado?.trim() ?? 'pendiente', total: dto.total, moneda: dto.moneda, tipo_cambio: dto.tipo_cambio ?? undefined, moneda_referencia: dto.moneda_referencia?.trim() ?? 'USD', pais_destino_iso2: dto.pais_destino_iso2 ?? undefined, direccion_envio_snapshot: dto.direccion_envio_snapshot as Prisma.InputJsonValue | undefined, direccion_facturacion_snapshot: dto.direccion_facturacion_snapshot as Prisma.InputJsonValue | undefined, devolucion_estado: dto.devolucion_estado ?? undefined, devolucion_motivo: dto.devolucion_motivo ?? undefined } })); }
-  async update(id: string, dto: UpdatePedidoDto) { return serializeBigInts(await this.prisma.pedidos.update({ where: { id_pedido: toBigIntId(id) }, data: { id_usuario: dto.id_usuario, estado: dto.estado?.trim(), total: dto.total, moneda: dto.moneda, tipo_cambio: dto.tipo_cambio, moneda_referencia: dto.moneda_referencia?.trim(), pais_destino_iso2: dto.pais_destino_iso2, direccion_envio_snapshot: dto.direccion_envio_snapshot as Prisma.InputJsonValue | undefined, direccion_facturacion_snapshot: dto.direccion_facturacion_snapshot as Prisma.InputJsonValue | undefined, devolucion_estado: dto.devolucion_estado, devolucion_motivo: dto.devolucion_motivo } })); }
+  async create(dto: CreatePedidoDto) { return serializeBigInts(await this.prisma.pedidos.create({ data: { id_usuario: dto.id_usuario, estado: dto.estado?.trim() ?? 'pendiente', total: dto.total, moneda: dto.moneda, tipo_cambio: dto.tipo_cambio ?? undefined, moneda_referencia: dto.moneda_referencia?.trim() ?? 'USD', pais_destino_iso2: dto.pais_destino_iso2 ?? undefined, direccion_envio_snapshot: dto.direccion_envio_snapshot as any | undefined, direccion_facturacion_snapshot: dto.direccion_facturacion_snapshot as any | undefined, devolucion_estado: dto.devolucion_estado ?? undefined, devolucion_motivo: dto.devolucion_motivo ?? undefined } })); }
+  async update(id: string, dto: UpdatePedidoDto) { return serializeBigInts(await this.prisma.pedidos.update({ where: { id_pedido: toBigIntId(id) }, data: { id_usuario: dto.id_usuario, estado: dto.estado?.trim(), total: dto.total, moneda: dto.moneda, tipo_cambio: dto.tipo_cambio, moneda_referencia: dto.moneda_referencia?.trim(), pais_destino_iso2: dto.pais_destino_iso2, direccion_envio_snapshot: dto.direccion_envio_snapshot as any | undefined, direccion_facturacion_snapshot: dto.direccion_facturacion_snapshot as any | undefined, devolucion_estado: dto.devolucion_estado, devolucion_motivo: dto.devolucion_motivo } })); }
   async remove(id: string) { return serializeBigInts(await this.prisma.pedidos.update({ where: { id_pedido: toBigIntId(id) }, data: { eliminado_en: new Date() } })); }
   async addDetalle(id: string, dto: CreateDetallePedidoDto) {
     const id_pedido = toBigIntId(id);
@@ -399,6 +399,51 @@ export class PedidosService {
     });
 
     return serializeBigInts(updated);
+  }
+
+  async validarEnvio(dto: ValidarEnvioDto) {
+    if (dto.pais_iso2 !== 'US' || !dto.estado_codigo) {
+      return { valido: true, items_bloqueados: [] };
+    }
+
+    const items_bloqueados: Array<{ id_producto: number; nombre: string; razon: string }> = [];
+
+    for (const item of dto.items) {
+      const producto = await this.prisma.productos.findFirst({
+        where: { id_producto: BigInt(item.id_producto), eliminado_en: null },
+        select: {
+          nombre: true,
+          categorias_productos: { select: { id_categoria: true } },
+        },
+      });
+      if (!producto) continue;
+
+      let bloqueado = false;
+      for (const { id_categoria } of producto.categorias_productos) {
+        const restriccion = await this.prisma.restricciones_envio_categoria.findUnique({
+          where: {
+            pais_iso2_estado_codigo_id_categoria: {
+              pais_iso2: 'US',
+              estado_codigo: dto.estado_codigo,
+              id_categoria,
+            },
+          },
+          select: { permitido: true, notas: true },
+        });
+
+        if (restriccion && !restriccion.permitido) {
+          items_bloqueados.push({
+            id_producto: item.id_producto,
+            nombre: producto.nombre,
+            razon: restriccion.notas ?? `Envío no permitido a ${dto.estado_codigo}`,
+          });
+          bloqueado = true;
+          break;
+        }
+      }
+    }
+
+    return { valido: items_bloqueados.length === 0, items_bloqueados };
   }
 
   private async resolveProductorId(accessToken?: string, fallbackProductorId?: number) {

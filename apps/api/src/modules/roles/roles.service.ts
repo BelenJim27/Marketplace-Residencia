@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import {
   AssignPermisoDto,
   CreatePermisoDto,
@@ -12,7 +13,7 @@ import {
 
 @Injectable()
 export class RolesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async findAll() {
     return serializeBigInts(await this.prisma.roles.findMany({ where: { eliminado_en: null }, include: { rol_permiso: { include: { permisos: true } } } }));
@@ -28,8 +29,9 @@ export class RolesService {
     try {
       return serializeBigInts(await this.prisma.roles.create({ data: { nombre: dto.nombre.trim(), estado: dto.estado?.trim() ?? 'activo' } }));
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') throw new ConflictException('Rol ya existe');
-      throw error;
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002')
+
+        throw error;
     }
   }
 
@@ -89,8 +91,15 @@ export class RolesService {
   }
 
   async getPermisosByRole(id_rol: number) {
-    const role = await this.prisma.roles.findUnique({ where: { id_rol }, include: { rol_permiso: { include: { permisos: true } } } });
+    const role = await this.prisma.roles.findUnique({
+      where: { id_rol },
+      include: { rol_permiso: { include: { permisos: true } } }
+    });
     if (!role || role.eliminado_en) throw new NotFoundException('Rol no encontrado');
-    return serializeBigInts(role.rol_permiso.map(rp => rp.permisos));
+    return serializeBigInts(
+      role.rol_permiso
+        .map((rp: { permisos: { nombre: string } }) => rp.permisos?.nombre)
+    );
   }
 }
+

@@ -11,6 +11,7 @@ import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useRouter } from "next/navigation";
 import LanguageSwitcher from "@/components/Layouts/LanguageSwitcher";
+import CurrencySwitcher from "@/components/Layouts/CurrencySwitcher";
 import { useLocale } from "@/context/LocaleContext";
 
 export function TiendaHeader() {
@@ -137,6 +138,7 @@ export function TiendaHeader() {
 
             <UserInfo />
             <ThemeToggleSwitch />
+            <CurrencySwitcher />
             <LanguageSwitcher />
           </>
         ) : isAuthenticated ? (
@@ -165,6 +167,7 @@ export function TiendaHeader() {
 
             <UserInfo />
             <ThemeToggleSwitch />
+            <CurrencySwitcher />
             <LanguageSwitcher />
           </>
         ) : (
@@ -227,6 +230,7 @@ export function TiendaHeader() {
               )}
             </div>
             <ThemeToggleSwitch />
+            <CurrencySwitcher />
             <LanguageSwitcher />
           </>
         )}

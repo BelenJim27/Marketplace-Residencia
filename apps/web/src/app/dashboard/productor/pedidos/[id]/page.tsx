@@ -260,12 +260,12 @@ export default function DetalleOrdenProductor() {
           <h2 className="text-lg font-bold mb-4">Información de Envío</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Número de Rastreo DHL</label>
+              <label className="block text-sm font-medium mb-2">Número de Rastreo FedEx</label>
               <input
                 type="text"
                 value={numeroRastreo}
                 onChange={(e) => setNumeroRastreo(e.target.value)}
-                placeholder="Ingresa el número de guía DHL"
+                placeholder="Ingresa el número de guía FedEx"
                 className="w-full px-3 py-2 border border-gray-300 rounded"
               />
             </div>

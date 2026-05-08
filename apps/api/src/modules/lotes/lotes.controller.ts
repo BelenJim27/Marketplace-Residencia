@@ -50,6 +50,32 @@ export class LotesController {
     return this.service.remove(id);
   }
 
+  @Post(':id/stock')
+  ajustarStock(
+    @Param('id', ParseIntPipe) id: number,
+    @Body()
+    body: {
+      cantidad: number;
+      tipo: 'entrada' | 'salida' | 'ajuste';
+      motivo?: string;
+      id_usuario?: string;
+    },
+  ) {
+    return this.service.ajustarStock(
+      id,
+      body.cantidad,
+      body.tipo,
+      body.motivo ?? '',
+      body.id_usuario,
+    );
+  }
+
+  // Forzar re-sincronización de un lote específico con su producto
+  @Post(':id/sincronizar-producto')
+  sincronizarProducto(@Param('id', ParseIntPipe) id: number) {
+    return this.service.sincronizarProductoUnico(id);
+  }
+
   @Post(':id/atributos')
   addAtributo(
     @Param('id', ParseIntPipe) id: number,

@@ -1,13 +1,21 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { useEffect, Suspense } from "react";
 import Link from "next/link";
 import { CheckCircle, ShoppingBag, Package } from "lucide-react";
-import { Suspense } from "react";
+import { useCarrito } from "@/context/CarritoContext";
 
 function PagoExitosoContent() {
   const searchParams = useSearchParams();
   const pedidoId = searchParams.get("pedido");
+  const { limpiarCarrito } = useCarrito();
+
+  useEffect(() => {
+    limpiarCarrito();
+  // Solo se ejecuta al montar — limpiarCarrito es estable
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <main className="mx-auto max-w-screen-sm px-4 py-16 text-center">

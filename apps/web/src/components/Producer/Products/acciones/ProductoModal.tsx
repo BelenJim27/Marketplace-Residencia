@@ -6,6 +6,7 @@ import type {
   ModalMode,
   StoreItem,
   CategoriaItem,
+  LoteItem,
   ProductItem,
 } from "@/hooks/useProductos";
 import type { ImagenProductoState } from "@/components/Producer/Products/ImagenProducto";
@@ -106,6 +107,7 @@ type ProductoModalProps = {
   selected: ProductItem | null;
   stores: StoreItem[];
   categorias: CategoriaItem[];
+  lotes: LoteItem[];
   saving: boolean;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onClose: () => void;
@@ -122,6 +124,7 @@ export function ProductoModal({
   selected,
   stores,
   categorias,
+  lotes,
   saving,
   onSubmit,
   onClose,
@@ -133,11 +136,21 @@ export function ProductoModal({
         ? "Editar producto"
         : "Detalle de producto";
 
+  // Corrección 1: Definir la variable que faltaba
+  const tieneLoTeVinculado = !!form.id_lote;
+
   const set = (key: keyof FormState) => (value: string) =>
     setForm((c) => ({ ...c, [key]: value }));
 
-  // Determina si el producto está vinculado a un lote
-  const tieneLoTeVinculado = !!selected?.id_lote;
+  const handleLoteChange = (value: string) => {
+    const lote = lotes.find((l) => String(l.id_lote) === value);
+    setForm((c) => ({
+      ...c,
+      id_lote: value,
+      // Nota: Asegúrate de que stock_inicial esté definido en la interfaz FormState
+      stock_inicial: lote?.unidades != null ? String(lote.unidades) : (c as any).stock_inicial,
+    }));
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -238,42 +251,30 @@ export function ProductoModal({
             }))}
           />
 
-          {/* Stock por presentación — solo si tiene lote vinculado */}
-          {tieneLoTeVinculado && (
-            <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-green-700 dark:text-green-400">
-                  Stock por presentación
-                </p>
-                <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-600 dark:bg-green-800 dark:text-green-300">
-                  Gestionado desde Lotes
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Botellas 350 ml</p>
-                  <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:bg-amber-900/10 dark:border-amber-800">
-                    <span className="text-lg font-bold text-amber-700 dark:text-amber-400">
-                      {form.botellas_350ml ?? 0}
-                    </span>
-                    <span className="text-xs text-amber-500 opacity-70">Solo lectura</span>
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Botellas 750 ml</p>
-                  <div className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 dark:bg-purple-900/10 dark:border-purple-800">
-                    <span className="text-lg font-bold text-purple-700 dark:text-purple-400">
-                      {form.botellas_750ml ?? 0}
-                    </span>
-                    <span className="text-xs text-purple-500 opacity-70">Solo lectura</span>
-                  </div>
-                </div>
-              </div>
-              <p className="text-[11px] text-green-600 dark:text-green-500">
-                Para modificar el stock ve a <strong>Mis Lotes</strong> y edita el lote correspondiente.
-              </p>
-            </div>
-          )}
+          {/* Lote y Stock inicial */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <SelectField
+              label="Lote"
+              // Corrección 2: Asegurar que el value no sea undefined
+              value={form.id_lote ?? ""}
+              onChange={handleLoteChange}
+              disabled={mode === "view"}
+              placeholder="Sin lote asignado"
+              options={lotes.map((l) => ({
+                label: `${l.codigo_lote}${l.nombre_comun ? ` - ${l.nombre_comun}` : ""}`,
+                value: String(l.id_lote),
+              }))}
+            />
+            <Field
+              label="Stock inicial"
+              // Corrección 3: Asegurar acceso a stock_inicial
+              value={(form as any).stock_inicial ?? ""}
+              onChange={set("stock_inicial" as keyof FormState)}
+              disabled={mode === "view"}
+              inputMode="numeric"
+              placeholder="0"
+            />
+          </div>
 
           {/* Dimensiones y peso */}
           <div>

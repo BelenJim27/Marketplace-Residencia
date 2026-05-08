@@ -26,9 +26,83 @@ export class LotesService {
     return serializeBigInts(
       await this.prisma.lotes.findMany({
         where: { id_productor, eliminado_en: null },
-        include: { lote_atributos: true, productores: true, regiones: true },
+        include: {
+          lote_atributos: true,
+          productores: true,
+          regiones: true,
+          productos: {
+            where: { eliminado_en: null },
+            select: {
+              id_producto: true,
+              precio_base: true,
+              status: true,
+              inventario: {
+                select: { id_inventario: true, stock: true },
+              },
+            },
+          },
+        },
       }),
     );
+  }
+
+  async ajustarStock(
+    id_lote: number,
+    cantidad: number,
+    tipo: 'entrada' | 'salida' | 'ajuste',
+    motivo: string,
+    id_usuario?: string,
+  ) {
+    const producto = await this.prisma.productos.findFirst({
+      where: { id_lote, eliminado_en: null },
+      include: { inventario: true },
+    });
+
+    if (!producto) {
+      throw new NotFoundException(
+        'Este lote no tiene producto vinculado. Sincroniza primero.',
+      );
+    }
+
+    let inv = producto.inventario[0];
+
+    if (!inv) {
+      inv = await this.prisma.inventario.create({
+        data: { id_producto: producto.id_producto, stock: 0 },
+      });
+    }
+
+    const stockNuevo =
+      tipo === 'entrada'
+        ? inv.stock + cantidad
+        : tipo === 'salida'
+        ? inv.stock - cantidad
+        : cantidad;
+
+    if (stockNuevo < 0) {
+      throw new BadRequestException(
+        `Stock insuficiente. Stock actual: ${inv.stock}`,
+      );
+    }
+
+    const [inventarioActualizado] = await this.prisma.$transaction([
+      this.prisma.inventario.update({
+        where: { id_inventario: inv.id_inventario },
+        data: { stock: stockNuevo, actualizado_en: new Date() },
+      }),
+      this.prisma.movimientos_inventario.create({
+        data: {
+          id_inventario: inv.id_inventario,
+          id_usuario: id_usuario ?? null,
+          tipo,
+          cantidad,
+          stock_resultante: stockNuevo,
+          motivo: motivo || null,
+        },
+      }),
+    ]);
+
+    return serializeBigInts(inventarioActualizado);
   }
 
   async findOne(id_lote: number) {
@@ -55,7 +129,7 @@ export class LotesService {
           grado_alcohol: dto.grado_alcohol ?? null,
           nombre_comun: dto.nombre_comun?.trim() ?? null,
           nombre_cientifico: dto.nombre_cientifico?.trim() ?? null,
-          datos_api: (dto.datos_api ?? {}) as Prisma.InputJsonValue,
+          datos_api: (dto.datos_api ?? {}) as any,
         },
       }),
     );
@@ -77,7 +151,7 @@ export class LotesService {
           grado_alcohol: dto.grado_alcohol,
           nombre_comun: dto.nombre_comun?.trim(),
           nombre_cientifico: dto.nombre_cientifico?.trim(),
-          datos_api: dto.datos_api as Prisma.InputJsonValue | undefined,
+          datos_api: dto.datos_api as any,
         },
       }),
     );
@@ -92,7 +166,107 @@ export class LotesService {
     );
   }
 
-  // ─── INTEGRACIÓN CON API EXTERNA ─────────────────────────────────────────
+  // ─── HELPER PRIVADO: crear/actualizar producto desde datos de API ─────────────
+
+  private async upsertProductoDesdeApi(
+    id_lote: number,
+    id_productor: number,
+    loteApi: any,
+  ): Promise<void> {
+    // 1. Buscar tienda activa del productor
+    const tienda = await this.prisma.tiendas.findFirst({
+      where: { id_productor, eliminado_en: null, status: 'activa' },
+      select: { id_tienda: true },
+    });
+
+    if (!tienda) {
+      this.logger.warn(`Productor ${id_productor} sin tienda activa, no se crea producto para lote ${id_lote}.`);
+      return;
+    }
+
+    const especie = loteApi.especies?.[0];
+
+    // Nombre: "Espadín - MarcaX" o solo folio si no hay nada
+    const nombreProducto = [
+      especie?.nombre_comun,
+      loteApi.marca,
+    ].filter(Boolean).join(' - ') || loteApi.folio || 'Mezcal sin nombre';
+
+    const metadata = {
+      grado_alcohol:     loteApi.grado_alcohol       ?? null,
+      sitio:             loteApi.sitio?.nombre        ?? null,
+      nombre_cientifico: especie?.nombre_cientifico   ?? null,
+      folio:             loteApi.folio                ?? null,
+      origen:            'api_trazabilidad',
+    };
+
+    // 2. ¿Ya existe un producto vinculado a este lote?
+    const productoExistente = await this.prisma.productos.findFirst({
+      where: { id_lote, eliminado_en: null },
+      include: {
+        inventario: { select: { id_inventario: true } },
+      },
+    });
+
+    if (productoExistente) {
+      // ── Actualizar producto existente ─────────────────────────────────────
+      await this.prisma.productos.update({
+        where: { id_producto: productoExistente.id_producto },
+        data: {
+          nombre:         nombreProducto,
+          metadata:       metadata as any,
+          status:         loteApi.estado ?? 'activo',
+          actualizado_en: new Date(),
+        },
+      });
+
+      // Actualizar stock si viene unidades
+      if (loteApi.unidades != null) {
+        if (productoExistente.inventario.length > 0) {
+          // Ya tiene inventario → actualizar el primer registro
+          await this.prisma.inventario.update({
+            where: { id_inventario: productoExistente.inventario[0].id_inventario },
+            data:  { stock: loteApi.unidades, actualizado_en: new Date() },
+          });
+        } else {
+          // Sin inventario → crear
+          await this.prisma.inventario.create({
+            data: {
+              id_producto: productoExistente.id_producto,
+              stock:       loteApi.unidades,
+            },
+          });
+        }
+      }
+    } else {
+      // ── Crear producto nuevo ──────────────────────────────────────────────
+      const nuevoProducto = await this.prisma.productos.create({
+        data: {
+          id_tienda:            tienda.id_tienda,
+          id_lote,
+          nombre:               nombreProducto,
+          descripcion:          `Mezcal registrado en trazabilidad. Folio: ${loteApi.folio ?? '-'}`,
+          precio_base:          0,   // El productor lo ajusta manualmente en el panel
+          moneda_base:          'MXN',
+          status:               loteApi.estado ?? 'activo',
+          metadata:             metadata as any,
+          imagen_principal_url: null,
+        },
+      });
+
+      // Crear inventario inicial si hay unidades
+      if (loteApi.unidades != null) {
+        await this.prisma.inventario.create({
+          data: {
+            id_producto: nuevoProducto.id_producto,
+            stock:       loteApi.unidades,
+          },
+        });
+      }
+    }
+  }
+
+  // ─── INTEGRACIÓN CON API EXTERNA ─────────────────────────────────────────────
 
   async sincronizarDesdeApi(uuid_externo: string, id_productor: number, id_region?: number) {
     let apiData: any;
@@ -131,47 +305,53 @@ export class LotesService {
     });
 
     if (existente) {
-      return serializeBigInts(
-        await this.prisma.lotes.update({
-          where: { id_lote: existente.id_lote },
-          data: {
-            id_productor: productorIdFinal,
-            marca: apiData.marca ?? null,
-            grado_alcohol: apiData.grado_alcohol ?? null,
-            unidades: apiData.unidades ?? null,
-            fecha_elaboracion: apiData.fecha_elaboracion ? new Date(apiData.fecha_elaboracion) : null,
-            nombre_comun: especie?.nombre_comun ?? null,
-            nombre_cientifico: especie?.nombre_cientifico ?? null,
-            estado_lote: apiData.estado ?? 'disponible',
-            sitio: apiData.sitio?.nombre ?? null,
-            datos_api: apiData as Prisma.InputJsonValue,
-            actualizado_en: new Date(),
-          },
-        }),
-      );
+      const loteActualizado = await this.prisma.lotes.update({
+        where: { id_lote: existente.id_lote },
+        data: {
+          id_productor:     productorIdFinal,
+          marca:            apiData.marca            ?? null,
+          grado_alcohol:    apiData.grado_alcohol    ?? null,
+          unidades:         apiData.unidades         ?? null,
+          fecha_elaboracion: apiData.fecha_elaboracion ? new Date(apiData.fecha_elaboracion) : null,
+          nombre_comun:     especie?.nombre_comun    ?? null,
+          nombre_cientifico: especie?.nombre_cientifico ?? null,
+          estado_lote:      apiData.estado           ?? 'disponible',
+          sitio:            apiData.sitio?.nombre    ?? null,
+          datos_api: apiData as any,
+          actualizado_en:   new Date(),
+        },
+      });
+
+      // Sincronizar también el producto vinculado
+      await this.upsertProductoDesdeApi(existente.id_lote, productorIdFinal, apiData);
+
+      return serializeBigInts(loteActualizado);
     }
 
-    return serializeBigInts(
-      await this.prisma.lotes.create({
-        data: {
-          id_productor: productorIdFinal,
-          id_region: id_region ?? null,
-          codigo_lote,
-          marca: apiData.marca ?? null,
-          grado_alcohol: apiData.grado_alcohol ?? null,
-          unidades: apiData.unidades ?? null,
-          fecha_elaboracion: apiData.fecha_elaboracion ? new Date(apiData.fecha_elaboracion) : null,
-          nombre_comun: especie?.nombre_comun ?? null,
-          nombre_cientifico: especie?.nombre_cientifico ?? null,
-          estado_lote: apiData.estado ?? 'disponible',
-          sitio: apiData.sitio?.nombre ?? null,
-          datos_api: apiData as Prisma.InputJsonValue,
-        },
-      }),
-    );
+    const loteCreado = await this.prisma.lotes.create({
+      data: {
+        id_productor:     productorIdFinal,
+        id_region:        id_region ?? null,
+        codigo_lote,
+        marca:            apiData.marca            ?? null,
+        grado_alcohol:    apiData.grado_alcohol    ?? null,
+        unidades:         apiData.unidades         ?? null,
+        fecha_elaboracion: apiData.fecha_elaboracion ? new Date(apiData.fecha_elaboracion) : null,
+        nombre_comun:     especie?.nombre_comun    ?? null,
+        nombre_cientifico: especie?.nombre_cientifico ?? null,
+        estado_lote:      apiData.estado           ?? 'disponible',
+        sitio:            apiData.sitio?.nombre    ?? null,
+        datos_api: apiData as any,
+      },
+    });
+
+    // Sincronizar también el producto vinculado
+    await this.upsertProductoDesdeApi(loteCreado.id_lote, productorIdFinal, apiData);
+
+    return serializeBigInts(loteCreado);
   }
 
-  // ─── SINCRONIZAR TODOS (botón + cron cada hora) ───────────────────────────
+  // ─── SINCRONIZAR TODOS (botón + cron cada hora) ───────────────────────────────
 
   @Cron(CronExpression.EVERY_HOUR)
   async sincronizarTodos() {
@@ -187,11 +367,17 @@ export class LotesService {
       throw new BadRequestException(`No se pudo conectar a la API externa: ${error}`);
     }
 
-    const resultados = { creados: 0, actualizados: 0, ignorados: 0 };
+    const resultados = { creados: 0, actualizados: 0, ignorados: 0, eliminados: 0 };
 
     for (const loteApi of lotesApi) {
       const marcaApi = loteApi.marca?.trim() ?? null;
-      if (!marcaApi) { resultados.ignorados++; continue; }
+
+      // Lotes sin marca solo se sincronizan vía sincronizarDesdeApi (individual),
+      // donde el productor provee su id_productor manualmente.
+      if (!marcaApi) {
+        resultados.ignorados++;
+        continue;
+      }
 
       const tienda = await this.prisma.tiendas.findFirst({
         where: {
@@ -202,7 +388,10 @@ export class LotesService {
         select: { id_productor: true },
       });
 
-      if (!tienda) { resultados.ignorados++; continue; }
+      if (!tienda) {
+        resultados.ignorados++;
+        continue;
+      }
 
       const especie = loteApi.especies?.[0];
       const codigo_lote = loteApi.folio ?? loteApi.uuid;
@@ -215,43 +404,72 @@ export class LotesService {
         await this.prisma.lotes.update({
           where: { id_lote: existente.id_lote },
           data: {
-            id_productor: tienda.id_productor,
-            marca: loteApi.marca ?? null,
-            grado_alcohol: loteApi.grado_alcohol ?? null,
-            unidades: loteApi.unidades ?? null,
-            nombre_comun: especie?.nombre_comun ?? null,
+            id_productor:     tienda.id_productor,
+            marca:            loteApi.marca            ?? null,
+            grado_alcohol:    loteApi.grado_alcohol    ?? null,
+            unidades:         loteApi.unidades         ?? null,
+            nombre_comun:     especie?.nombre_comun    ?? null,
             nombre_cientifico: especie?.nombre_cientifico ?? null,
-            estado_lote: loteApi.estado ?? 'disponible',
-            sitio: loteApi.sitio?.nombre ?? null,
-            datos_api: loteApi,
-            actualizado_en: new Date(),
+            estado_lote:      loteApi.estado           ?? 'disponible',
+            sitio:            loteApi.sitio?.nombre    ?? null,
+            datos_api:        loteApi,
+            actualizado_en:   new Date(),
           },
         });
+
+        // Sincronizar también el producto vinculado
+        await this.upsertProductoDesdeApi(existente.id_lote, tienda.id_productor, loteApi);
         resultados.actualizados++;
+
       } else {
-        await this.prisma.lotes.create({
+        const loteCreado = await this.prisma.lotes.create({
           data: {
-            id_productor: tienda.id_productor,
+            id_productor:     tienda.id_productor,
             codigo_lote,
-            marca: loteApi.marca ?? null,
-            grado_alcohol: loteApi.grado_alcohol ?? null,
-            unidades: loteApi.unidades ?? null,
-            nombre_comun: especie?.nombre_comun ?? null,
+            marca:            loteApi.marca            ?? null,
+            grado_alcohol:    loteApi.grado_alcohol    ?? null,
+            unidades:         loteApi.unidades         ?? null,
+            nombre_comun:     especie?.nombre_comun    ?? null,
             nombre_cientifico: especie?.nombre_cientifico ?? null,
-            estado_lote: loteApi.estado ?? 'disponible',
-            sitio: loteApi.sitio?.nombre ?? null,
-            datos_api: loteApi,
+            estado_lote:      loteApi.estado           ?? 'disponible',
+            sitio:            loteApi.sitio?.nombre    ?? null,
+            datos_api:        loteApi,
           },
         });
+
+        // Sincronizar también el producto vinculado
+        await this.upsertProductoDesdeApi(loteCreado.id_lote, tienda.id_productor, loteApi);
         resultados.creados++;
       }
     }
+
+    // Soft-delete de lotes que ya no existen en la API externa.
+    // Scope acotado: solo productores con tienda activa (mismo universo que el sync).
+    const codigosEnApi = new Set(
+      lotesApi.map((l: any) => l.folio ?? l.uuid).filter(Boolean),
+    );
+
+    const tiendasActivas = await this.prisma.tiendas.findMany({
+      where: { eliminado_en: null, status: 'activa' },
+      select: { id_productor: true },
+    });
+    const idsProductores = tiendasActivas.map((t) => t.id_productor);
+
+    const { count: eliminados } = await this.prisma.lotes.updateMany({
+      where: {
+        eliminado_en: null,
+        id_productor: { in: idsProductores },
+        codigo_lote: { notIn: [...codigosEnApi] },
+      },
+      data: { eliminado_en: new Date() },
+    });
+    resultados['eliminados'] = eliminados;
 
     this.logger.log(`Sincronización completa: ${JSON.stringify(resultados)}`);
     return resultados;
   }
 
-  // ─── ATRIBUTOS ────────────────────────────────────────────────────────────
+  // ─── ATRIBUTOS ────────────────────────────────────────────────────────────────
 
   async addAtributo(dto: CreateLoteAtributoDto) {
     return serializeBigInts(
@@ -287,5 +505,25 @@ export class LotesService {
       where: { id_atributo: BigInt(id_atributo) },
     });
     return { message: 'Atributo eliminado' };
+  }
+
+  // ─── SINCRONIZAR PRODUCTO DE UN LOTE ESPECÍFICO ──────────────────────────────
+
+  async sincronizarProductoUnico(id_lote: number) {
+    const lote = await this.prisma.lotes.findUnique({
+      where: { id_lote },
+      select: { id_lote: true, id_productor: true, datos_api: true },
+    });
+
+    if (!lote) {
+      throw new NotFoundException('Lote no encontrado');
+    }
+
+    if (!lote.datos_api) {
+      throw new BadRequestException('Este lote no tiene datos de API para sincronizar');
+    }
+
+    await this.upsertProductoDesdeApi(lote.id_lote, lote.id_productor, lote.datos_api);
+    return { message: 'Producto sincronizado exitosamente' };
   }
 }

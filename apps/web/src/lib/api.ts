@@ -7,6 +7,23 @@ const API_BASE = typeof window === "undefined"
   ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "")
   : "";
 
+/**
+ * Error con la respuesta del backend preservada (status + payload). Permite que los
+ * llamadores hagan `if (err instanceof ApiError && err.code === 'AGE_DOB_REQUIRED')`.
+ */
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  details: any;
+  constructor(status: number, payload: any) {
+    super(payload?.message ?? `Error ${status}`);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = payload?.code;
+    this.details = payload;
+  }
+}
+
 const headers = (token?: string, isFormData = false) => ({
   ...(isFormData ? {} : { "Content-Type": "application/json" }),
   ...(token && { Authorization: `Bearer ${token}` }),
@@ -79,8 +96,8 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const contentType = response.headers.get("content-type");
-    let error = { message: `Error ${response.status}` };
-    
+    let error: any = { message: `Error ${response.status}` };
+
     if (contentType && contentType.includes("application/json")) {
       try {
         error = await response.json();
@@ -91,7 +108,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
       const text = await response.text();
       console.warn("Non-JSON error response:", text);
     }
-    throw new Error(error.message || `Error ${response.status}`);
+    throw new ApiError(response.status, error);
   }
   
   const text = await response.text();
@@ -292,11 +309,23 @@ export const api = {
       fetchJson(endpoint(`/pedidos/${id}`), { method: "DELETE", headers: headers(token) }),
     getMisPedidos: (token: string) =>
       fetchJson(endpoint(`/pedidos/mis-pedidos`), { headers: headers(token) }),
+<<<<<<< HEAD
+    getMisPedidosByProductor: (token: string, id_productor: number) =>
+      fetchJson(endpoint(`/pedidos/productor/${id_productor}`), { headers: headers(token) }),
+=======
+    validarEnvio: (data: { pais_iso2: string; estado_codigo?: string; items: { id_producto: number; cantidad: number }[] }) =>
+      fetchJson<{ valido: boolean; items_bloqueados: { id_producto: number; nombre: string; razon: string }[] }>(
+        endpoint("/pedidos/validar-envio"),
+        { method: "POST", headers: headers(), body: JSON.stringify(data) },
+      ),
+>>>>>>> 485c70fc2ab40a0243ebd85977be54c432c6264e
   },
 
   envios: {
     getAll: () => fetchJson(endpoint("/envios")),
     getOne: (id: string) => fetchJson(endpoint(`/envios/${id}`)),
+    getTracking: (id: string, token?: string) =>
+      fetchJson(endpoint(`/envios/${id}/tracking`), token ? { headers: headers(token) } : undefined),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/envios"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: string, data: any) =>
@@ -330,8 +359,55 @@ export const api = {
     delete: (token: string, id: string) =>
       fetchJson(endpoint(`/pagos/${id}`), { method: "DELETE", headers: headers(token) }),
     stripe: {
-      createIntent: (token: string, data: any): Promise<{ clientSecret: string; paymentIntentId: string }> =>
-        fetchJson<{ clientSecret: string; paymentIntentId: string }>(endpoint("/pagos/stripe/intent"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+      createIntent: (
+        token: string,
+        data: {
+          id_pedido: string | number;
+          subtotal: number;
+          shipping_amount?: number;
+          moneda: string;
+          shipping_address: {
+            line1: string;
+            line2?: string;
+            city: string;
+            state: string;
+            postal_code: string;
+            country: string;
+          };
+          recipient_name?: string;
+          customer_id?: string;
+          automatic_tax?: boolean;
+        },
+      ): Promise<{
+        clientSecret: string;
+        paymentIntentId: string;
+        subtotal: number;
+        taxAmount: number;
+        shippingAmount: number;
+        totalAmount: number;
+        taxCalculationId?: string;
+      }> =>
+        fetchJson(endpoint("/pagos/stripe/intent"), {
+          method: "POST",
+          headers: headers(token),
+          body: JSON.stringify(data),
+        }),
+    },
+    connect: {
+      onboard: (token: string): Promise<{ url: string; expires_at: number; account_id: string }> =>
+        fetchJson(endpoint("/pagos/connect/onboard"), { method: "POST", headers: headers(token) }),
+      refresh: (token: string): Promise<{ url: string; expires_at: number; account_id: string }> =>
+        fetchJson(endpoint("/pagos/connect/refresh"), { method: "POST", headers: headers(token) }),
+      status: (
+        token: string,
+      ): Promise<{
+        connected: boolean;
+        account_id: string | null;
+        charges_enabled: boolean;
+        payouts_enabled: boolean;
+        details_submitted: boolean;
+        onboarding_completed: boolean;
+      }> => fetchJson(endpoint("/pagos/connect/status"), { headers: headers(token) }),
     },
   },
 
@@ -372,6 +448,7 @@ export const api = {
   inventario: {
     getAll: () => fetchJson(endpoint("/inventario")),
     getOne: (id: string) => fetchJson(endpoint(`/inventario/${id}`)),
+    getByProducto: (id_producto: string | number) => fetchJson(endpoint(`/inventario/producto/${id_producto}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/inventario"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: string, data: any) =>

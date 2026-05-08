@@ -1,450 +1,227 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
-import { PrismaService } from "../../prisma/prisma.service";
-import { serializeBigInts, toBigIntId } from "../shared/serialize";
-import { CreateProductoDto, UpdateProductoDto } from "./dto/productos.dto";
-
-export interface FiltrosProducto {
-  busqueda?: string;
-  tipoMezcal?: string;
-  maguey?: string;
-  precioMin?: string;
-  precioMax?: string;
-  destilacion?: string;
-  molienda?: string;
-  maestroMezcalero?: string;
-}
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+import { serializeBigInts } from '../shared/serialize';
+import { CreateProductoDto, UpdateProductoDto } from './dto/productos.dto';
 
 @Injectable()
 export class ProductosService {
   constructor(private readonly prisma: PrismaService) {}
-
   async findAll(
-    accessToken?: string,
-    id_productor?: number,
-    filtros?: FiltrosProducto,
+    token?: string,
+    idProductor?: number,
+    filtros?: {
+      busqueda?: string;
+      tipoMezcal?: string;
+      maguey?: string;
+      precioMin?: string;
+      precioMax?: string;
+      destilacion?: string;
+      molienda?: string;
+      maestroMezcalero?: string;
+    },
   ) {
-    const where: Prisma.productosWhereInput = { eliminado_en: null };
-
-    if (filtros) {
-      if (filtros.busqueda) {
-        where.OR = [
-          { nombre: { contains: filtros.busqueda, mode: "insensitive" } },
-          { descripcion: { contains: filtros.busqueda, mode: "insensitive" } },
-        ];
-      }
-      if (
-        filtros.tipoMezcal ||
-        filtros.maguey ||
-        filtros.destilacion ||
-        filtros.molienda ||
-        filtros.maestroMezcalero
-      ) {
-        where.id_lote = { not: null };
-      }
-      if (filtros.precioMin || filtros.precioMax) {
-        where.precio_base = {};
-        if (filtros.precioMin)
-          where.precio_base.gte = new Prisma.Decimal(filtros.precioMin);
-        if (filtros.precioMax)
-          where.precio_base.lte = new Prisma.Decimal(filtros.precioMax);
-      }
-    }
-
-    const applyFiltersToProductos = (productos: any[]) => {
-      if (!filtros) return productos;
-
-      return productos.filter((p) => {
-        const datosApi = p.lotes?.datos_api as Record<string, any> | undefined;
-
-        if (filtros.tipoMezcal && datosApi?.tipo_mezcal !== filtros.tipoMezcal)
-          return false;
-        if (filtros.maguey && datosApi?.maguey !== filtros.maguey) return false;
-        if (filtros.destilacion && datosApi?.destilacion !== filtros.destilacion)
-          return false;
-        if (filtros.molienda && datosApi?.molienda !== filtros.molienda)
-          return false;
-        if (filtros.maestroMezcalero) {
-          const maestro =
-            datosApi?.maestro_mezcalero || datosApi?.maestro || "";
-          if (
-            !maestro
-              .toLowerCase()
-              .includes(filtros.maestroMezcalero.toLowerCase())
-          )
-            return false;
-        }
-
-        return true;
-      });
+    const where: Prisma.productosWhereInput = {
+      eliminado_en: null,
     };
 
-    if (accessToken) {
-      const id_usuario = getUserIdFromAccessToken(accessToken);
-      const productor = await this.prisma.productores.findFirst({
-        where: { id_usuario, eliminado_en: null },
+    if (idProductor) {
+      where.tiendas = { id_productor: idProductor };
+    }
 
-        select: { id_productor: true },
-      });
+    if (filtros?.busqueda) {
+      where.OR = [
+        { nombre: { contains: filtros.busqueda, mode: 'insensitive' } },
+        { descripcion: { contains: filtros.busqueda, mode: 'insensitive' } },
+      ];
+    }
 
-      if (!productor?.id_productor) {
-        return [];
+    if (filtros?.precioMin || filtros?.precioMax) {
+      where.precio_base = {};
+      if (filtros.precioMin) {
+        (where.precio_base as any).gte = new Prisma.Decimal(filtros.precioMin);
       }
-
-      const stores = await this.prisma.tiendas.findMany({
-        where: { id_productor: productor.id_productor, eliminado_en: null },
-        select: { id_tienda: true },
-      });
-
-      const ids = stores.map((store) => store.id_tienda);
-      const productos = ids.length
-        ? await this.prisma.productos.findMany({
-            where: { ...where, id_tienda: { in: ids } },
-            include: productoInclude,
-          })
-        : [];
-
-      return serializeBigInts(
-        await mapProductoResponse(applyFiltersToProductos(productos)),
-      );
+      if (filtros.precioMax) {
+        (where.precio_base as any).lte = new Prisma.Decimal(filtros.precioMax);
+      }
     }
 
-    if (id_productor) {
-      const stores = await this.prisma.tiendas.findMany({
-        where: { id_productor, eliminado_en: null },
-        select: { id_tienda: true },
-      });
-      const ids = stores.map((store) => store.id_tienda);
-      const productosRaw = await this.prisma.productos.findMany({
-        where: { ...where, id_tienda: { in: ids } },
-        include: productoInclude,
-      });
-      return serializeBigInts(
-        await mapProductoResponse(applyFiltersToProductos(productosRaw)),
-      );
-    }
-
-    const productosRaw = await this.prisma.productos.findMany({
+    const items = await this.prisma.productos.findMany({
       where,
-      include: productoInclude,
+      include: {
+        tiendas: true,
+        categorias_productos: { include: { categorias: true } },
+        producto_imagenes: true,
+      },
+      orderBy: { creado_en: 'desc' },
     });
-    return serializeBigInts(
-      await mapProductoResponse(applyFiltersToProductos(productosRaw)),
-    );
+
+    return serializeBigInts(items);
   }
 
   async findOne(id: string) {
     const item = await this.prisma.productos.findUnique({
-      where: { id_producto: toBigIntId(id) },
-      include: productoInclude,
+      where: { id_producto: BigInt(id) },
+      include: {
+        tiendas: true,
+        categorias_productos: { include: { categorias: true } },
+        producto_imagenes: true,
+        resenas: true,
+      },
     });
-    if (!item || item.eliminado_en)
-      throw new NotFoundException("Producto no encontrado");
-    return serializeBigInts(mapProductoResponse(item));
+
+    if (!item || item.eliminado_en) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    return serializeBigInts(item);
   }
 
   async create(dto: CreateProductoDto) {
-    const created = await this.prisma.productos.create({
-      data: {
-        id_tienda: dto.id_tienda,
-        id_lote: dto.id_lote ?? null,
-        nombre: dto.nombre.trim(),
-        descripcion: dto.descripcion ?? null,
-        traducciones: (dto.traducciones ?? {}) as Prisma.InputJsonValue,
-        precio_base: dto.precio_base,
-        moneda_base: dto.moneda_base?.trim() ?? "MXN",
-        metadata: (dto.metadata ?? {}) as Prisma.InputJsonValue,
-        peso_kg: dto.peso_kg ?? null,
-        alto_cm: dto.alto_cm ?? null,
-        ancho_cm: dto.ancho_cm ?? null,
-        largo_cm: dto.largo_cm ?? null,
-        status: dto.status?.trim() ?? "activo",
-        creado_por: dto.creado_por ?? null,
-        actualizado_por: dto.actualizado_por ?? null,
-        imagen_principal_url:
-          dto.imagen_principal_url ?? dto.imagen_url ?? null,
-        producto_imagenes: dto.imagenes?.length
-          ? {
-              create: dto.imagenes.map((item, index) => ({
-                url: item.url.trim(),
-                orden: item.orden ?? index,
-                es_principal: item.es_principal ?? index === 0,
-                alt_text: item.alt_text ?? null,
-              })),
-            }
-          : undefined,
-        categorias_productos: dto.categorias?.length
-          ? {
-              create: dto.categorias.map((id_cat) => ({
-                id_categoria: id_cat,
-              })),
-            }
-          : undefined,
+    const data: Prisma.productosCreateInput = {
+      nombre: dto.nombre,
+      descripcion: dto.descripcion || null,
+      traducciones: (dto.traducciones || {}) as any,
+      precio_base: new Prisma.Decimal(dto.precio_base),
+      metadata: (dto.metadata || {}) as any,
+      status: dto.status || 'activo',
+      imagen_principal_url: dto.imagen_principal_url || null,
+      tiendas: { connect: { id_tienda: dto.id_tienda } },
+    };
+
+    if (dto.id_lote) {
+      data.lotes = { connect: { id_lote: dto.id_lote } };
+    }
+
+    if (dto.peso_kg) {
+      data.peso_kg = new Prisma.Decimal(dto.peso_kg);
+    }
+
+    if (dto.alto_cm) {
+      data.alto_cm = new Prisma.Decimal(dto.alto_cm);
+    }
+
+    if (dto.ancho_cm) {
+      data.ancho_cm = new Prisma.Decimal(dto.ancho_cm);
+    }
+
+    if (dto.largo_cm) {
+      data.largo_cm = new Prisma.Decimal(dto.largo_cm);
+    }
+
+    const producto = await this.prisma.productos.create({
+      data,
+      include: {
+        tiendas: true,
+        categorias_productos: { include: { categorias: true } },
+        producto_imagenes: true,
       },
-      include: productoInclude,
     });
 
-    return serializeBigInts(mapProductoResponse(created));
+    // Crear asociaciones con categorías si se proporcionan
+    if (dto.categorias && dto.categorias.length > 0) {
+      await Promise.all(
+        dto.categorias.map((id_categoria) =>
+          this.prisma.categorias_productos.create({
+            data: {
+              id_producto: producto.id_producto,
+              id_categoria,
+            },
+          }),
+        ),
+      );
+    }
+
+    // Crear imágenes adicionales si se proporcionan
+    if (dto.imagenes && dto.imagenes.length > 0) {
+      await Promise.all(
+        dto.imagenes.map((img, index) =>
+          this.prisma.producto_imagenes.create({
+            data: {
+              id_producto: producto.id_producto,
+              url: img.url,
+              orden: img.orden ?? index,
+              es_principal: img.es_principal ?? false,
+              alt_text: img.alt_text || null,
+            },
+          }),
+        ),
+      );
+    }
+
+    return serializeBigInts(producto);
   }
 
   async update(id: string, dto: UpdateProductoDto) {
-    const id_producto = toBigIntId(id);
     const current = await this.prisma.productos.findUnique({
-      where: { id_producto },
-    });
-    if (!current || current.eliminado_en)
-      throw new NotFoundException("Producto no encontrado");
-
-    const updated = await this.prisma.productos.update({
-      where: { id_producto },
-      data: {
-        id_tienda: dto.id_tienda,
-        id_lote: dto.id_lote ?? undefined,
-        nombre: dto.nombre?.trim(),
-        descripcion: dto.descripcion,
-        traducciones: dto.traducciones as Prisma.InputJsonValue | undefined,
-        precio_base: dto.precio_base,
-        moneda_base: dto.moneda_base?.trim(),
-        metadata: dto.metadata as Prisma.InputJsonValue | undefined,
-        peso_kg: dto.peso_kg,
-        alto_cm: dto.alto_cm,
-        ancho_cm: dto.ancho_cm,
-        largo_cm: dto.largo_cm,
-        status: dto.status?.trim(),
-        creado_por: dto.creado_por,
-        actualizado_por: dto.actualizado_por,
-        imagen_principal_url: dto.imagen_principal_url ?? dto.imagen_url,
-      },
-      include: productoInclude,
+      where: { id_producto: BigInt(id) },
     });
 
-    if (dto.imagenes) {
-      await this.prisma.producto_imagenes.deleteMany({
-        where: { id_producto },
-      });
-      await this.prisma.producto_imagenes.createMany({
-        data: dto.imagenes.map(
-          (
-            item: {
-              url: string;
-              orden?: number;
-              es_principal?: boolean;
-              alt_text?: string;
-            },
-            index: number,
-          ) => ({
-            id_producto,
-            url: item.url.trim(),
-            orden: item.orden ?? index,
-            es_principal: item.es_principal ?? index === 0,
-            alt_text: item.alt_text ?? null,
-          }),
-        ),
-      });
+    if (!current || current.eliminado_en) {
+      throw new NotFoundException('Producto no encontrado');
     }
 
-    if (dto.categorias) {
+    const data: Prisma.productosUpdateInput = {};
+
+    if (dto.nombre !== undefined) data.nombre = dto.nombre;
+    if (dto.descripcion !== undefined) data.descripcion = dto.descripcion;
+    if (dto.traducciones !== undefined) data.traducciones = dto.traducciones as any;
+    if (dto.precio_base !== undefined) data.precio_base = new Prisma.Decimal(dto.precio_base);
+    if (dto.metadata !== undefined) data.metadata = dto.metadata as any;
+    if (dto.status !== undefined) data.status = dto.status;
+    if (dto.imagen_principal_url !== undefined) data.imagen_principal_url = dto.imagen_principal_url;
+    if (dto.peso_kg !== undefined) data.peso_kg = dto.peso_kg ? new Prisma.Decimal(dto.peso_kg) : null;
+    if (dto.alto_cm !== undefined) data.alto_cm = dto.alto_cm ? new Prisma.Decimal(dto.alto_cm) : null;
+    if (dto.ancho_cm !== undefined) data.ancho_cm = dto.ancho_cm ? new Prisma.Decimal(dto.ancho_cm) : null;
+    if (dto.largo_cm !== undefined) data.largo_cm = dto.largo_cm ? new Prisma.Decimal(dto.largo_cm) : null;
+
+    const producto = await this.prisma.productos.update({
+      where: { id_producto: BigInt(id) },
+      data,
+      include: {
+        tiendas: true,
+        categorias_productos: { include: { categorias: true } },
+        producto_imagenes: true,
+      },
+    });
+
+    // Actualizar categorías si se proporcionan
+    if (dto.categorias && Array.isArray(dto.categorias)) {
       await this.prisma.categorias_productos.deleteMany({
-        where: { id_producto },
+        where: { id_producto: BigInt(id) },
       });
+
       if (dto.categorias.length > 0) {
-        await this.prisma.categorias_productos.createMany({
-          data: dto.categorias.map((id_cat) => ({
-            id_producto,
-            id_categoria: id_cat,
-          })),
-        });
+        await Promise.all(
+          dto.categorias.map((id_categoria) =>
+            this.prisma.categorias_productos.create({
+              data: {
+                id_producto: BigInt(id),
+                id_categoria,
+              },
+            }),
+          ),
+        );
       }
     }
 
-    return serializeBigInts(mapProductoResponse(updated));
+    return serializeBigInts(producto);
   }
 
   async remove(id: string) {
-    const id_producto = toBigIntId(id);
     const current = await this.prisma.productos.findUnique({
-      where: { id_producto },
+      where: { id_producto: BigInt(id) },
     });
-    if (!current || current.eliminado_en)
-      throw new NotFoundException("Producto no encontrado");
-    return serializeBigInts(
-      mapProductoResponse(
-        await this.prisma.productos.update({
-          where: { id_producto },
-          data: { eliminado_en: new Date() },
-          include: productoInclude,
-        }),
-      ),
-    );
+
+    if (!current || current.eliminado_en) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    const producto = await this.prisma.productos.update({
+      where: { id_producto: BigInt(id) },
+      data: { eliminado_en: new Date() },
+    });
+
+    return serializeBigInts(producto);
   }
-}
-
-// FIX: Added apellido_paterno + apellido_materno to usuarios select in both lotes and tiendas
-const productoInclude = {
-  inventario: {
-    select: {
-      stock: true,
-    },
-  },
-  producto_imagenes: {
-    select: {
-      url: true,
-      orden: true,
-      es_principal: true,
-    },
-    orderBy: {
-      orden: "asc" as const,
-    },
-  },
-  categorias_productos: {
-    include: {
-      categorias: {
-        select: {
-          nombre: true,
-        },
-      },
-    },
-  },
-  lotes: {
-    select: {
-      id_productor: true,
-      datos_api: true,
-      codigo_lote: true,
-      sitio: true,
-      grado_alcohol: true,
-      nombre_comun: true,
-      nombre_cientifico: true,
-      unidades: true,
-      fecha_elaboracion: true,
-      estado_lote: true,
-      descripcion: true,
-      marca: true,
-      productores: {
-        select: {
-          biografia: true,
-          otras_caracteristicas: true,
-          usuarios: {
-            select: {
-              nombre: true,
-              apellido_paterno: true,
-              apellido_materno: true,
-            },
-          },
-        },
-      },
-    },
-  },
-  tiendas: {
-    select: {
-      nombre: true,
-      descripcion: true,
-      ciudad_origen: true,
-      estado_origen: true,
-      pais_operacion: true,
-      nombre_contacto: true,
-      telefono_contacto: true,
-      productores: {
-        select: {
-          usuarios: {
-            select: {
-              nombre: true,
-              apellido_paterno: true,
-              apellido_materno: true,
-            },
-          },
-        },
-      },
-    },
-  },
-} satisfies Prisma.productosInclude;
-
-type UsuarioNombre = {
-  nombre?: string | null;
-  apellido_paterno?: string | null;
-  apellido_materno?: string | null;
-} | null;
-
-type ProductoWithRelations = {
-  [key: string]: any;
-};
-
-// FIX: Build full name joining nombre + apellido_paterno + apellido_materno
-function buildNombreCompleto(usuario?: UsuarioNombre): string | null {
-  if (!usuario?.nombre) return null;
-  return [usuario.nombre, usuario.apellido_paterno, usuario.apellido_materno]
-    .filter(Boolean)
-    .join(" ");
-}
-
-// FIX: Return ALL categories as array (not just the first one)
-function getCategorias(item: ProductoWithRelations): string[] {
-  const cats = item.categorias_productos;
-  if (!cats || cats.length === 0) return [];
-  return cats
-    .map((cp: any) => cp.categorias?.nombre)
-    .filter((n: string | undefined): n is string => !!n);
-}
-
-function mapProductoResponse<
-  T extends ProductoWithRelations | Array<ProductoWithRelations>,
->(data: T): T {
-  if (Array.isArray(data)) {
-    return data.map((item) => ({
-      ...item,
-      imagen_url: item.imagen_principal_url ?? null,
-      stock: getProductoStock(item.inventario),
-      // FIX: Full name with apellidos, fallback lote → tienda
-      nombre_productor:
-        buildNombreCompleto(item.lotes?.productores?.usuarios) ??
-        buildNombreCompleto(item.tiendas?.productores?.usuarios) ??
-        null,
-      nombre_tienda: item.tiendas?.nombre ?? null,
-      // FIX: categorias = full array, categoria = first item (backwards compat)
-      categorias: getCategorias(item),
-      categoria: getCategorias(item)[0] ?? null,
-    })) as unknown as T;
-  }
-
-  return {
-    ...data,
-    imagen_url: data.imagen_principal_url ?? null,
-    stock: getProductoStock(data.inventario),
-    // FIX: Full name with apellidos, fallback lote → tienda
-    nombre_productor:
-      buildNombreCompleto(data.lotes?.productores?.usuarios) ??
-      buildNombreCompleto(data.tiendas?.productores?.usuarios) ??
-      null,
-    nombre_tienda: data.tiendas?.nombre ?? null,
-    // FIX: categorias = full array, categoria = first item (backwards compat)
-    categorias: getCategorias(data),
-    categoria: getCategorias(data)[0] ?? null,
-  } as T;
-}
-
-function getProductoStock(inventario?: Array<{ stock?: number | null }>) {
-  return (inventario ?? []).reduce(
-    (total, item) => total + Number(item.stock ?? 0),
-    0,
-  );
-}
-
-function getUserIdFromAccessToken(token: string) {
-  const payload = token.split(".")[1];
-  if (!payload) {
-    throw new NotFoundException("Token inválido");
-  }
-
-  const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized.padEnd(
-    Math.ceil(normalized.length / 4) * 4,
-    "=",
-  );
-  const decoded = Buffer.from(padded, "base64").toString("utf8");
-  const parsed = JSON.parse(decoded) as { sub?: string };
-
-  if (!parsed.sub) {
-    throw new NotFoundException("Token inválido");
-  }
-
-  return parsed.sub;
 }

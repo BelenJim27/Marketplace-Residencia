@@ -68,6 +68,7 @@ export class UsuariosService {
         foto_url: dto.foto_url?.trim(),
         idioma_preferido: dto.idioma_preferido?.trim(),
         moneda_preferida: dto.moneda_preferida?.trim(),
+        fecha_nacimiento: dto.fecha_nacimiento ? new Date(dto.fecha_nacimiento) : undefined,
       }),
     });
 

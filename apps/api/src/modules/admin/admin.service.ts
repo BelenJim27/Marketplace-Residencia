@@ -133,6 +133,15 @@ async getStats() {
 
     if (dto.estado === 'aprobado') {
       rolProductor = await this.prisma.roles.findUnique({ where: { nombre: 'productor' } });
+      const rolCliente = await this.prisma.roles.findUnique({ where: { nombre: 'cliente' } });
+
+      if (rolCliente) {
+        await this.prisma.usuario_rol.updateMany({
+          where: { id_usuario: usuario.id_usuario, id_rol: rolCliente.id_rol },
+          data: { estado: 'inactivo' },
+        });
+      }
+
       if (rolProductor) {
         await this.prisma.usuario_rol.upsert({
           where: { id_usuario_id_rol: { id_usuario: usuario.id_usuario, id_rol: rolProductor.id_rol } },

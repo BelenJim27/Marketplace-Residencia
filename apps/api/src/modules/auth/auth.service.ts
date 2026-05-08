@@ -1,9 +1,11 @@
 import { ConflictException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { Prisma, usuarios } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { createHash, createHmac, randomBytes, timingSafeEqual, scrypt } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+
 import {
   AuthResponseDto,
   AuthUserDto,
@@ -14,6 +16,8 @@ import {
   RequestPasswordResetDto,
   ResetPasswordDto,
 } from './dto/auth.dto';
+
+type UsuarioPayload = Prisma.usuariosGetPayload<Record<string, never>>;
 
 type JwtPayload = Record<string, string | number | boolean | null | undefined | string[]>;
 
@@ -83,14 +87,13 @@ export class AuthService {
           moneda_preferida: dto.moneda_preferida?.trim() || 'MXN',
           usuario_rol: {
             create: {
-              id_rol: 1, // Rol cliente por defecto
+              id_rol: 1,
               estado: 'activo',
             },
           },
         },
       });
 
-      // Enviar email de bienvenida
       try {
         await this.emailService.sendWelcomeEmail(user.email, user.nombre);
       } catch (emailError) {
@@ -102,7 +105,8 @@ export class AuthService {
       return this.issueTokens(user);
     } catch (error) {
       console.error('[AuthService] register error:', error);
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      // ✅ Usar Prisma.PrismaClientKnownRequestError en lugar de la clase directa
+     if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('No fue posible registrar el usuario');
       }
 
@@ -286,7 +290,8 @@ export class AuthService {
 
     const accessData = await getAccessData(this.prisma, user.id_usuario);
 
-    const biografia = (user as usuarios & { biografia?: string | null }).biografia ?? null;
+    // ✅ Uso del tipo local en lugar del import directo
+    const biografia = (user as UsuarioPayload & { biografia?: string | null }).biografia ?? null;
 
     return {
       id_usuario: user.id_usuario,
@@ -305,7 +310,8 @@ export class AuthService {
     };
   }
 
-  private async issueTokens(user: usuarios): Promise<AuthResponseDto> {
+  // ✅ Usa UsuarioPayload en lugar de usuarios importado directamente
+  private async issueTokens(user: UsuarioPayload): Promise<AuthResponseDto> {
     const freshUser = await this.prisma.usuarios.findUnique({
       where: { id_usuario: user.id_usuario },
     });
@@ -348,7 +354,7 @@ export class AuthService {
       },
     });
 
-    const biografia = (freshUser as usuarios & { biografia?: string | null }).biografia ?? null;
+    const biografia = (freshUser as UsuarioPayload & { biografia?: string | null }).biografia ?? null;
 
     return {
       user: {
@@ -384,7 +390,7 @@ export class AuthService {
           accion: `auth.${action}`,
           tabla_afectada: 'usuarios',
           registro_id: idUsuario || undefined,
-          valor_anterior: metadata as Prisma.InputJsonValue | undefined,
+          valor_anterior: metadata as any,
           valor_nuevo: { success: true },
           ip_origen: undefined,
         },
@@ -395,7 +401,10 @@ export class AuthService {
   }
 }
 
-async function getAccessData(prisma: PrismaService, id_usuario: string): Promise<{ roles: string[]; permisos: string[]; id_productor: number | null }> {
+async function getAccessData(
+  prisma: PrismaService,
+  id_usuario: string,
+): Promise<{ roles: string[]; permisos: string[]; id_productor: number | null }> {
   const user = await prisma.usuarios.findUnique({
     where: { id_usuario },
     include: {
@@ -417,15 +426,16 @@ async function getAccessData(prisma: PrismaService, id_usuario: string): Promise
     throw new NotFoundException('Usuario no encontrado');
   }
 
+  // ✅ Tipos explícitos en los callbacks para evitar implicit any
   const roles = user.usuario_rol
-    .map((relation) => relation.roles?.nombre)
+    .map((relation: (typeof user.usuario_rol)[number]) => relation.roles?.nombre)
     .filter((role): role is string => Boolean(role));
 
-  const permisos = Array.from(
+  const permisos: string[] = Array.from(
     new Set(
-      user.usuario_rol.flatMap((relation) =>
+      user.usuario_rol.flatMap((relation: (typeof user.usuario_rol)[number]) =>
         relation.roles?.rol_permiso
-          .map((permiso) => permiso.permisos?.nombre)
+          .map((permiso: (typeof relation.roles.rol_permiso)[number]) => permiso.permisos?.nombre)
           .filter((permiso): permiso is string => Boolean(permiso)) ?? [],
       ),
     ),
@@ -558,17 +568,9 @@ function parseDurationToSeconds(value: string | undefined, fallback: number): nu
   const amount = Number(match[1]);
   const unit = match[2]?.toLowerCase() ?? 's';
 
-  if (unit === 'm') {
-    return amount * 60;
-  }
-
-  if (unit === 'h') {
-    return amount * 60 * 60;
-  }
-
-  if (unit === 'd') {
-    return amount * 24 * 60 * 60;
-  }
+  if (unit === 'm') return amount * 60;
+  if (unit === 'h') return amount * 60 * 60;
+  if (unit === 'd') return amount * 24 * 60 * 60;
 
   return amount;
 }
