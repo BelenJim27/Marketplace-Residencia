@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 
 // ─── Importa tu componente de footer ─────────────────────────────────────────
 // Ajusta la ruta según donde tengas tu footer
-import { FooterTienda } from "@/components/Cliente/footer-tienda";
+import Footer  from "@/components/Cliente/Footer";
 
 export function RootContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
@@ -53,6 +53,7 @@ export function RootContent({ children }: PropsWithChildren) {
       <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
         <main>
+          <Footer/>
           {children}
         </main>
       </div>
@@ -67,7 +68,7 @@ export function RootContent({ children }: PropsWithChildren) {
         <main className="mx-auto w-full flex-1 max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
-        <FooterTienda />
+        <Footer/>
       </div>
     );
   }
@@ -82,7 +83,7 @@ export function RootContent({ children }: PropsWithChildren) {
         <main className="mx-auto w-full flex-1 max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
-        <FooterTienda />
+        <Footer/>
       </div>
     );
   }
@@ -112,7 +113,7 @@ export function RootContent({ children }: PropsWithChildren) {
         <main className="mx-auto w-full flex-1 max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
-        <FooterTienda />
+        <Footer/>
       </div>
     );
   }
@@ -124,7 +125,7 @@ export function RootContent({ children }: PropsWithChildren) {
       <main className="mx-auto w-full flex-1 max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
         {children}
       </main>
-      <FooterTienda />
+      <Footer/>
     </div>
   );
 }

@@ -26,16 +26,8 @@ export const EMPTY_FORM: FormState = {
   alto_cm: "",
   ancho_cm: "",
   largo_cm: "",
-<<<<<<< HEAD
-  // ─── NUEVO ───────────────────────────────────────────────────────────────
-  unidad_medida: "pz",
-  botellas_350ml: "",
-  botellas_750ml: "",
-  stock: "",
-=======
   id_lote: "",
   stock_inicial: "",
->>>>>>> dc117a62abda8cee51fc813a356dc8bcf93575ad
 };
 
 // ─── Hook principal ───────────────────────────────────────────────────────────
@@ -73,7 +65,10 @@ export function useProductos() {
   const loadData = async () => {
     if (authLoading) return;
 
-    if (!user?.id_productor) {
+    // TEMPORAL: Forzar id_productor para testing
+    const testIdProductor = 2;
+
+    if (!testIdProductor) {
       setError("No se pudo identificar el productor autenticado.");
       setLoading(false);
       return;
@@ -82,12 +77,13 @@ export function useProductos() {
     setError(null);
     try {
       const [producerData, productsData, storesData, categoriasData, lotesData] = await Promise.all([
-        api.productores.getOne(user.id_productor),
-        api.productos.getMine(token, user.id_productor),
-        api.tiendas.getByProductor(user.id_productor, token),
+        api.productores.getOne(testIdProductor),
+        api.productos.getMine(token, testIdProductor),
+        api.tiendas.getByProductor(testIdProductor, token),
         api.categorias.getAll(),
-        api.lotes.getByProductor(user.id_productor),
+        api.lotes.getByProductor(testIdProductor),
       ]);
+
       setProducer(producerData as ProducerDetail);
       setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);
       setCategorias(Array.isArray(categoriasData) ? (categoriasData as CategoriaItem[]) : []);
@@ -97,10 +93,6 @@ export function useProductos() {
           ...p,
           imagen_url: p.imagen_url ?? p.imagen_principal_url ?? null,
           stock: p.stock ?? 0,
-          // ─── NUEVO ─────────────────────────────────────────────────────
-          unidad_medida: p.unidad_medida ?? null,
-          botellas_350ml: p.botellas_350ml ?? null,
-          botellas_750ml: p.botellas_750ml ?? null,
         })),
       );
     } catch (err) {
@@ -112,7 +104,7 @@ export function useProductos() {
 
   useEffect(() => {
     loadData();
-  }, [authLoading, user?.id_productor, token]);
+  }, [authLoading, token]); // Removido user?.id_productor
 
   const storeMap = useMemo(
     () => new Map(stores.map((s) => [s.id_tienda, s.nombre])),
@@ -133,9 +125,7 @@ export function useProductos() {
         (statusFilter === "todos" || status === statusFilter) &&
         (storeFilter === "todos" || String(p.id_tienda) === storeFilter) &&
         (min === null || Number.isNaN(min) || price >= min) &&
-        (max === null || Number.isNaN(max) || price <= max) &&
-        // ─── NUEVO ───────────────────────────────────────────────────────
-        (unidadFilter === "todos" || p.unidad_medida === unidadFilter)
+        (max === null || Number.isNaN(max) || price <= max) 
       );
     });
   }, [products, query, storeMap, statusFilter, storeFilter, minPrice, maxPrice, unidadFilter]);
@@ -209,16 +199,8 @@ export function useProductos() {
       alto_cm: String(product.alto_cm ?? ""),
       ancho_cm: String(product.ancho_cm ?? ""),
       largo_cm: String(product.largo_cm ?? ""),
-<<<<<<< HEAD
-      // ─── NUEVO ─────────────────────────────────────────────────────────
-      unidad_medida: product.unidad_medida ?? "pz",
-      botellas_350ml: String(product.botellas_350ml ?? ""),
-      botellas_750ml: String(product.botellas_750ml ?? ""),
-      stock: String(product.stock ?? ""),
-=======
       id_lote: String(product.id_lote ?? ""),
       stock_inicial: String(product.stock ?? ""),
->>>>>>> dc117a62abda8cee51fc813a356dc8bcf93575ad
     });
     setMode("edit");
     setModalOpen(true);
@@ -239,16 +221,8 @@ export function useProductos() {
       alto_cm: String(product.alto_cm ?? ""),
       ancho_cm: String(product.ancho_cm ?? ""),
       largo_cm: String(product.largo_cm ?? ""),
-<<<<<<< HEAD
-      // ─── NUEVO ─────────────────────────────────────────────────────────
-      unidad_medida: product.unidad_medida ?? "pz",
-      botellas_350ml: String(product.botellas_350ml ?? ""),
-      botellas_750ml: String(product.botellas_750ml ?? ""),
-      stock: String(product.stock ?? ""),
-=======
       id_lote: String(product.id_lote ?? ""),
       stock_inicial: String(product.stock ?? ""),
->>>>>>> dc117a62abda8cee51fc813a356dc8bcf93575ad
     });
     setMode("view");
     setModalOpen(true);
@@ -280,20 +254,6 @@ export function useProductos() {
       if (form.alto_cm) payload.append("alto_cm", form.alto_cm);
       if (form.ancho_cm) payload.append("ancho_cm", form.ancho_cm);
       if (form.largo_cm) payload.append("largo_cm", form.largo_cm);
-
-      // ─── NUEVO: unidad de medida y stock ─────────────────────────────
-      payload.append("unidad_medida", form.unidad_medida);
-
-      if (["ml", "L"].includes(form.unidad_medida)) {
-        payload.append("botellas_350ml", String(Number(form.botellas_350ml) || 0));
-        payload.append("botellas_750ml", String(Number(form.botellas_750ml) || 0));
-        // Stock total = suma de ambas presentaciones
-        const stockTotal = (Number(form.botellas_350ml) || 0) + (Number(form.botellas_750ml) || 0);
-        payload.append("stock", String(stockTotal));
-      } else {
-        payload.append("stock", String(Number(form.stock) || 0));
-      }
-      // ─────────────────────────────────────────────────────────────────
 
       appendImagenProducto(payload, imagen);
 

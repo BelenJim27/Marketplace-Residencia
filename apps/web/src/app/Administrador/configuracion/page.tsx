@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { useState, useEffect } from "react";
 import { Save, RotateCcw } from "lucide-react";
+import LandingConfigSection from "@/components/Administrator/Configuration/Landingconfigsection";
 
 const FONT_OPTIONS = [
   { value: "Georgia, serif", label: "Georgia Serif" },
@@ -316,6 +317,14 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
             </div>
+          </section>
+
+          {/* SECCIÓN: Página de Inicio ← NUEVA SECCIÓN AGREGADA */}
+          <section>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+              Página de Inicio
+            </h3>
+            <LandingConfigSection />
           </section>
 
           {/* BOTONES DE ACCIÓN */}

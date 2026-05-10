@@ -24,6 +24,21 @@ export default function ProductosPage() {
   return (
     <div className="mx-auto w-full max-w-[1200px]">
 
+      {/* DEBUG INFO */}
+      <div className="mb-4 rounded-lg bg-yellow-50 p-4 text-sm">
+        <h3 className="font-bold text-yellow-800">🔍 Debug Info (TEST MODE - id_productor=2):</h3>
+        <div className="mt-2 space-y-1 text-yellow-700">
+          <div>User ID Productor: {ctx.producer?.id_productor ?? 'null'}</div>
+          <div>Total Products: {ctx.products.length}</div>
+          <div>Visible Products: {ctx.visibleProducts.length}</div>
+          <div>Stores: {ctx.stores.length}</div>
+          <div>Error: {ctx.error ?? 'none'}</div>
+          {ctx.products.length > 0 && (
+            <div>Sample Product: {ctx.products[0]?.nombre} (ID: {ctx.products[0]?.id_producto})</div>
+          )}
+        </div>
+      </div>
+
       <ProductoHeader
         onNew={ctx.openCreate}
         disableNew={ctx.stores.length === 0}

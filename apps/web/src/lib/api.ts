@@ -1,11 +1,10 @@
 import { getCookie, setCookie } from "@/lib/cookies";
+import type { InventarioItem, ProductItem } from "@/types/producer";
 
 // En el browser usamos URLs relativas para que Next.js las proxee al API
 // (evita CORS sin tocar la configuración del servidor de producción).
 // En el servidor (SSR / NextAuth callbacks) usamos la URL directa.
-const API_BASE = typeof window === "undefined"
-  ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "")
-  : "";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "");
 
 /**
  * Error con la respuesta del backend preservada (status + payload). Permite que los
@@ -207,14 +206,14 @@ export const api = {
         if (filtros.maestro_mezcalero) params.append("maestro_mezcalero", filtros.maestro_mezcalero);
       }
       const query = params.toString();
-      return fetchJson(endpoint("/productos" + (query ? `?${query}` : "")));
+      return fetchJson<ProductItem[]>(endpoint("/productos" + (query ? `?${query}` : "")));
     },
     getByProductor: (id_productor: number, token?: string) =>
-      fetchJson(endpoint(`/productos?id_productor=${id_productor}`), {
+      fetchJson<ProductItem[]>(endpoint(`/productos?id_productor=${id_productor}`), {
         headers: headers(token),
       }),
     getMine: (token: string, id_productor?: number) =>
-      fetchJson(
+      fetchJson<ProductItem[]>(
         endpoint(
           `/productos${
             id_productor ? `?${new URLSearchParams({ id_productor: String(id_productor) }).toString()}` : ""
@@ -222,15 +221,15 @@ export const api = {
         ),
         { headers: headers(token) },
       ),
-    getOne: (id: string) => fetchJson(endpoint(`/productos/${id}`)),
+    getOne: (id: string) => fetchJson<ProductItem>(endpoint(`/productos/${id}`)),
     create: (token: string, data: any) =>
-      fetchJson(endpoint("/productos"), {
+      fetchJson<ProductItem>(endpoint("/productos"), {
         method: "POST",
         headers: headers(token, data instanceof FormData),
         body: data instanceof FormData ? data : JSON.stringify(data),
       }),
     update: (token: string, id: string, data: any) =>
-      fetchJson(endpoint(`/productos/${id}`), {
+      fetchJson<ProductItem>(endpoint(`/productos/${id}`), {
         method: "PATCH",
         headers: headers(token, data instanceof FormData),
         body: data instanceof FormData ? data : JSON.stringify(data),
@@ -443,13 +442,14 @@ export const api = {
   },
 
   inventario: {
-    getAll: () => fetchJson(endpoint("/inventario")),
-    getOne: (id: string) => fetchJson(endpoint(`/inventario/${id}`)),
-    getByProducto: (id_producto: string | number) => fetchJson(endpoint(`/inventario/producto/${id_producto}`)),
+    getAll: () => fetchJson<InventarioItem[]>(endpoint("/inventario")),
+    getOne: (id: string) => fetchJson<InventarioItem>(endpoint(`/inventario/${id}`)),
+    getByProducto: (id_producto: string | number) =>
+      fetchJson<InventarioItem | null>(endpoint(`/inventario/producto/${id_producto}`)),
     create: (token: string, data: any) =>
-      fetchJson(endpoint("/inventario"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+      fetchJson<InventarioItem>(endpoint("/inventario"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: string, data: any) =>
-      fetchJson(endpoint(`/inventario/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
+      fetchJson<InventarioItem>(endpoint(`/inventario/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
     delete: (token: string, id: string) =>
       fetchJson(endpoint(`/inventario/${id}`), { method: "DELETE", headers: headers(token) }),
   },
