@@ -8,7 +8,6 @@ import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
 import { AlertCircle, CheckCircle2, Loader2, UploadIcon, Building2, MapPin, CreditCard } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import { useLocale } from "@/context/LocaleContext";
 
 interface Region {
   id_region: number;
@@ -38,6 +37,8 @@ export default function SolicitarPage() {
   const [certificadoUrl, setCertificadoUrl] = useState("");
   const [certificadoFile, setCertificadoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  // ── Nuevo estado para bloquear si ya tiene pedidos como cliente ──
+  const [noElegible, setNoElegible] = useState(false);
 
   const [formData, setFormData] = useState({
     rfc: "",
@@ -71,14 +72,31 @@ export default function SolicitarPage() {
         // Obtener token (con retry si es necesario)
         let token = (session as any)?.accessToken || getCookie("token");
 
-        // Si no hay token inmediatamente, esperar un poco (race condition al guardar cookies)
         if (!token) {
           await new Promise(resolve => setTimeout(resolve, 300));
           token = getCookie("token");
         }
 
-        // Obtener solicitud actual si hay token
         if (token) {
+          // ── Verificar si el usuario ya tiene pedidos como cliente ──
+          try {
+            const userId = (user as any)?.id_usuario;
+            if (userId) {
+              const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/pedidos?id_usuario=${userId}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              const pedidos = await res.json();
+              if (Array.isArray(pedidos) && pedidos.length > 0) {
+                setNoElegible(true);
+                return; // no hace falta cargar más datos
+              }
+            }
+          } catch {
+            // Si falla la verificación, dejamos pasar y el backend rechazará si aplica
+          }
+
+          // Obtener solicitud actual
           try {
             const solicitud = await api.productores.getMiSolicitud(token);
             if (solicitud) {
@@ -98,6 +116,7 @@ export default function SolicitarPage() {
     initializePage();
   }, [isAuthenticated, authLoading, router, session]);
 
+  // ── 1. Loading ──
   if (authLoading || loadingSolicitud) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -106,6 +125,46 @@ export default function SolicitarPage() {
     );
   }
 
+  // ── 2. No elegible: ya hizo pedidos como cliente ──
+  if (noElegible) {
+    return (
+      <div className="mx-auto w-full max-w-4xl px-4 py-8">
+        <Breadcrumb pageName="No disponible" />
+        <div className="mt-6 rounded-xl bg-white p-8 shadow-1 dark:bg-gray-dark">
+          <div className="flex flex-col items-center justify-center text-center">
+            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-yellow-100">
+              <AlertCircle className="h-10 w-10 text-yellow-600" />
+            </div>
+            <h2 className="mb-2 text-2xl font-bold text-dark dark:text-white">
+              No puedes ser productor con esta cuenta
+            </h2>
+            <p className="mb-2 text-gray-500">
+              Esta cuenta ya realizó pedidos como cliente.
+            </p>
+            <p className="mb-6 text-gray-500">
+              Para vender en Tierra Agaves necesitas crear una cuenta nueva dedicada a tu actividad como productor.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={() => router.push("/producto")}
+                className="rounded-lg border border-gray-4 px-6 py-3 font-medium text-dark hover:bg-gray-1 dark:border-dark-3 dark:text-white dark:hover:bg-dark-2"
+              >
+                Volver a la tienda
+              </button>
+              <button
+                onClick={() => router.push("/auth/sign-up?vender=true")}
+                className="rounded-lg bg-primary px-6 py-3 font-medium text-white hover:bg-opacity-90"
+              >
+                Crear cuenta nueva para vender
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── 3. Estados de solicitud existente ──
   if (solicitudActual) {
     if (solicitudActual.estado === "pendiente") {
       return (
@@ -192,7 +251,6 @@ export default function SolicitarPage() {
                     direccion_estado: "",
                     datos_bancarios: "",
                     id_region: null,
-                    // ← estos son los que faltan:
                     produccion_calle: "",
                     produccion_ciudad: "",
                     produccion_estado: "",
@@ -295,6 +353,7 @@ export default function SolicitarPage() {
     }
   };
 
+  // ── 4. Éxito al enviar solicitud ──
   if (success) {
     return (
       <div className="mx-auto w-full max-w-4xl px-4 py-8">
@@ -323,6 +382,7 @@ export default function SolicitarPage() {
     );
   }
 
+  // ── 5. Formulario ──
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8">
       <Breadcrumb pageName="Solicitar ser Productor" />
@@ -330,7 +390,7 @@ export default function SolicitarPage() {
       <div className="mt-6 rounded-xl bg-white p-6 shadow-1 dark:bg-gray-dark sm:p-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-dark dark:text-white">
-            
+            Solicitar ser Productor
           </h1>
           <p className="mt-1 text-gray-500">
             Completa el formulario para convertirte en productor en nuestra plataforma.

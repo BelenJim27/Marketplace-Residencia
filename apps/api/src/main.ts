@@ -11,7 +11,7 @@ dotenv.config({ path: resolve(process.cwd(), '.env'), override: false });
 (BigInt.prototype as any).toJSON = function () {
   return Number(this);
 };
-
+ 
 async function bootstrap() {
   const { AppModule } = await import('./app.module');
   const app = await NestFactory.create(AppModule, {
