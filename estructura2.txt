@@ -132,3 +132,5 @@ C:\Users\nanir\Documents\oaxaca\Marketplace-Residencia
 directory: 4182
 
 ignored: directory (97)
+
+.env en la raiz, packages/database/prisma/.env, apps/web y apps/api

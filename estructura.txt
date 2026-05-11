@@ -1,99 +1,173 @@
-C:\Users\nanir\Documents\oaxaca\Marketplace-Residencia
+C:\Users\anir\Documents\oaxaca\Marketplace-Residencia
 ├── AGENTS.md
-├── api-dev.log
-├── apps
-|  ├── api
-|  |  ├── api-3002.err.log
-|  |  ├── api-3002.log
-|  |  ├── api-3002.out.log
-|  |  ├── api-3003.log
-|  |  ├── dist
-|  |  |  ├── app.module.d.ts
-|  |  |  ├── app.module.js
-|  |  |  ├── app.module.js.map
-|  |  |  ├── main.d.ts
-|  |  |  ├── main.js
-|  |  |  ├── main.js.map
-|  |  |  ├── modules
-|  |  |  └── prisma
-|  |  ├── nest-cli.json
-|  |  ├── package.json
-|  |  ├── scripts
-|  |  |  ├── productores.csv
-|  |  |  ├── roles.csv
-|  |  |  ├── seed-admin.js
-|  |  |  ├── seed-base.js
-|  |  |  ├── seed-dashboard-productor.js
-|  |  |  ├── seed-imports.js
-|  |  |  ├── seed-productos.js
-|  |  |  ├── seed-roles.js
-|  |  |  ├── seed-tiendas.js
-|  |  |  ├── seed-usuarios.js
-|  |  |  ├── usuarios.csv
-|  |  |  └── usuario_rol.csv
-|  |  ├── src
-|  |  |  ├── app.module.ts
-|  |  |  ├── main.ts
-|  |  |  ├── modules
-|  |  |  ├── prisma
-|  |  |  └── types
-|  |  ├── tsc-build.log
-|  |  ├── tsconfig.build.json
-|  |  ├── tsconfig.json
-|  |  └── uploads
-|  |     ├── archivos
-|  |     ├── productos
-|  |     └── usuarios
-|  └── web
-|     ├── jsvectormap.d.ts
-|     ├── middleware.ts
-|     ├── next-env.d.ts
-|     ├── next.config.mjs
-|     ├── package.json
-|     ├── postcss.config.js
-|     ├── public
-|     |  ├── fotos
-|     |  └── images
-|     ├── README.md
-|     ├── src
-|     |  ├── app
-|     |  ├── assets
-|     |  ├── components
-|     |  ├── context
-|     |  ├── css
-|     |  ├── fonts
-|     |  ├── hooks
-|     |  ├── i18n
-|     |  ├── lib
-|     |  └── types
-|     ├── tailwind.config.ts
-|     ├── tsconfig.json
-|     └── tsconfig.tsbuildinfo
-├── backup.sql
 ├── CLAUDE.md
-├── docs
-|  └── autenticacion.md
-├── netlify.toml
-├── package-lock.json
-├── package.json
-├── packages
-|  └── database
-|     ├── package.json
-|     └── prisma
-|        ├── migrations
-|        ├── prisma.config.ts
-|        ├── schema.prisma
-|        └── seed.ts
 ├── Procfile
 ├── README.md
 ├── SENDGRID_PRODUCTION_SETUP.md
+├── backup.sql
+├── dev.log
+├── estructura.txt
+├── estructura2.txt
+├── netlify.toml
+├── package-lock.json
+├── package.json
 ├── setup.md
 ├── temp_dashboard.tsx
 ├── tsconfig.json
 ├── turbo.json
 ├── vercel.json
-└── web-dev.log
-
-directory: 2881 file: 11553 symboliclink: 3
-
-ignored: directory (94)
+├── apps
+│   ├── api
+│   │   ├── dist
+│   │   ├── nest-cli.json
+│   │   ├── node_modules
+│   │   ├── package.json
+│   │   ├── scripts
+│   │   │   ├── seed-admin.js
+│   │   │   ├── seed-base.js
+│   │   │   ├── seed-dashboard-productor.js
+│   │   │   ├── seed-imports.js
+│   │   │   ├── seed-productos.js
+│   │   │   ├── seed-roles.js
+│   │   │   ├── seed-tiendas.js
+│   │   │   ├── seed-usuarios.js
+│   │   │   ├── productores.csv
+│   │   │   ├── roles.csv
+│   │   │   ├── usuarios.csv
+│   │   │   └── usuario_rol.csv
+│   │   ├── src
+│   │   │   ├── app.module.ts
+│   │   │   ├── main.ts
+│   │   │   ├── modules
+│   │   │   │   ├── admin
+│   │   │   │   ├── archivos
+│   │   │   │   ├── auditoria
+│   │   │   │   ├── auth
+│   │   │   │   ├── carrito
+│   │   │   │   ├── categorias
+│   │   │   │   ├── comisiones
+│   │   │   │   ├── configuracion
+│   │   │   │   ├── direcciones
+│   │   │   │   ├── email
+│   │   │   │   │   └── templates
+│   │   │   │   ├── envios
+│   │   │   │   ├── estadisticas-landing
+│   │   │   │   ├── i18n
+│   │   │   │   ├── idiomas
+│   │   │   │   ├── inventario
+│   │   │   │   ├── lotes
+│   │   │   │   ├── notificaciones
+│   │   │   │   ├── pagos
+│   │   │   │   ├── paises
+│   │   │   │   ├── payouts
+│   │   │   │   ├── pedidos
+│   │   │   │   ├── productores
+│   │   │   │   ├── productos
+│   │   │   │   ├── resenas
+│   │   │   │   ├── roles
+│   │   │   │   ├── shared
+│   │   │   │   ├── tasas-cambio
+│   │   │   │   ├── tiendas
+│   │   │   │   ├── transportistas
+│   │   │   │   ├── usuarios
+│   │   │   │   └── wishlist
+│   │   │   ├── prisma
+│   │   │   │   ├── prisma-types.ts
+│   │   │   │   ├── prisma.module.ts
+│   │   │   │   └── prisma.service.ts
+│   │   │   └── types
+│   │   │       └── multer.d.ts
+│   │   ├── tsconfig.build.json
+│   │   ├── tsconfig.json
+│   │   └── uploads
+│   │       ├── archivos
+│   │       ├── productos
+│   │       └── usuarios
+│   └── web
+│       ├── README.md
+│       ├── jsvectormap.d.ts
+│       ├── middleware.ts
+│       ├── next-env.d.ts
+│       ├── next.config.mjs
+│       ├── node_modules
+│       ├── package.json
+│       ├── postcss.config.js
+│       ├── public
+│       │   ├── fotos
+│       │   └── images
+│       ├── src
+│       │   ├── app
+│       │   │   ├── (home)
+│       │   │   ├── (legal)
+│       │   │   ├── administrador
+│       │   │   ├── api
+│       │   │   ├── auth
+│       │   │   ├── categoria
+│       │   │   ├── cliente
+│       │   │   ├── dashboard
+│       │   │   ├── layout.tsx
+│       │   │   ├── page.tsx
+│       │   │   ├── producto
+│       │   │   ├── profile
+│       │   │   ├── providers.tsx
+│       │   │   ├── root-content.tsx
+│       │   │   ├── tienda
+│       │   │   └── ui-elements
+│       │   ├── assets
+│       │   │   ├── icons.tsx
+│       │   │   └── logos
+│       │   ├── components
+│       │   │   ├── Administrator
+│       │   │   ├── AgeGate.tsx
+│       │   │   ├── Breadcrumbs
+│       │   │   ├── CategoryDisclaimer.tsx
+│       │   │   ├── Charts
+│       │   │   ├── Cliente
+│       │   │   ├── FormElements
+│       │   │   ├── Layouts
+│       │   │   ├── Producer
+│       │   │   ├── Products
+│       │   │   ├── catalog
+│       │   │   ├── logo.tsx
+│       │   │   ├── period-picker.tsx
+│       │   │   ├── shadcn
+│       │   │   ├── ui
+│       │   │   └── ui-elements
+│       │   ├── context
+│       │   │   ├── AuthContext.tsx
+│       │   │   ├── CarritoContext.tsx
+│       │   │   ├── ConfigContext.tsx
+│       │   │   ├── LocaleContext.tsx
+│       │   │   ├── SidebarContext.tsx
+│       │   │   └── WishlistContext.tsx
+│       │   ├── css
+│       │   │   ├── satoshi.css
+│       │   │   └── style.css
+│       │   ├── fonts
+│       │   ├── hooks
+│       │   ├── i18n
+│       │   │   ├── locales
+│       │   │   │   ├── en
+│       │   │   │   ├── es
+│       │   │   │   └── mix
+│       │   │   └── i18n.ts
+│       │   ├── lib
+│       │   │   ├── actions
+│       │   │   ├── api.ts
+│       │   │   ├── utils.ts
+│       │   │   └── validations.ts
+│       │   └── types
+│       │       ├── env.d.ts
+│       │       └── next-auth.d.ts
+│       ├── tailwind.config.ts
+│       ├── tsconfig.json
+│       └── tsconfig.tsbuildinfo
+├── docs
+│   └── autenticacion.md
+└── packages
+    └── database
+        ├── package.json
+        └── prisma
+            ├── migrations
+            ├── schema.prisma
+            └── seed.ts
