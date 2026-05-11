@@ -246,20 +246,71 @@ export class EnviosService {
     );
   }
 
+  private normalizarEstadoFedex(estado: string): string | null {
+    const FEDEX_STATE_MAP: Record<string, string> = {
+      delivered: 'entregado',
+      in_transit: 'en_transito',
+      in_transit_en_ruta: 'en_transito',
+      out_for_delivery: 'en_reparto',
+      out_for_delivery_en_reparto: 'en_reparto',
+      picked_up: 'recogido',
+      picked_up_recogido: 'recogido',
+      delay: 'retrasado',
+      delayed: 'retrasado',
+      exception: 'fallido',
+      failed: 'fallido',
+      returned: 'devuelto',
+      return_to_sender: 'devuelto',
+    };
+
+    const normalized = estado
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '_');
+
+    return FEDEX_STATE_MAP[normalized] ?? null;
+  }
+
   async registrarEvento(
     id_envio: string,
     descripcion: string,
     estado: string,
     fecha?: Date,
   ) {
-    // Just update envio status - eventos are recorded via envio_guias
+    const id_envio_big = toBigIntId(id_envio);
+
+    const envio = await this.prisma.envios.findUnique({
+      where: { id_envio: id_envio_big },
+      include: { envio_guias: { where: { eliminado_en: null }, take: 1 } },
+    });
+
+    if (!envio) throw new NotFoundException('Envío no encontrado');
+
+    const estadoNormalizado = this.normalizarEstadoFedex(estado);
+
+    const guia = envio.envio_guias?.[0];
+    if (guia) {
+      await this.prisma.envio_eventos.create({
+        data: {
+          id_guia: guia.id_guia,
+          id_transportista: envio.id_transportista ?? undefined,
+          numero_guia: guia.numero_guia,
+          origen: 'webhook',
+          estado_paqueteria: estado,
+          estado_normalizado: estadoNormalizado ?? undefined,
+          descripcion,
+          payload: {},
+          fecha_evento: fecha ?? new Date(),
+        },
+      });
+    }
+
     const updated = await this.prisma.envios.update({
-      where: { id_envio: toBigIntId(id_envio) },
-      data: { estado },
+      where: { id_envio: id_envio_big },
+      data: { estado: estadoNormalizado ?? estado },
       include: { envio_guias: true },
     });
 
-    // If there's a guía, we could record the event there, but for now just update status
     return serializeBigInts(updated);
   }
 

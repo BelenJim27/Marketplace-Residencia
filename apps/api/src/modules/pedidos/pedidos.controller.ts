@@ -83,6 +83,12 @@ export class PedidosController {
     return this.service.validarEnvio(dto);
   }
 
+  @UseGuards(AuthGuard)
+  @Post(':id/cotizar-envio')
+  cotizarEnvio(@Param('id') id: string) {
+    return this.service.cotizarEnvio(id);
+  }
+
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
   @Post() create(@Body() dto: CreatePedidoDto) { return this.service.create(dto); }
   @Patch(':id') update(@Param('id') id: string, @Body() dto: UpdatePedidoDto) { return this.service.update(id, dto); }

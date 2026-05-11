@@ -11,5 +11,6 @@ import { FedexService } from './fedex.service';
   imports: [ConfigModule, PrismaModule, HttpModule, TasasCambioModule],
   controllers: [EnviosController],
   providers: [EnviosService, FedexService],
+  exports: [FedexService],
 })
 export class EnviosModule {}

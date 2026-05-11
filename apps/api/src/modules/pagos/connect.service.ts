@@ -88,13 +88,22 @@ export class ConnectService {
       };
     }
     const acc = await this.stripe.accounts.retrieve(prod.stripe_account_id);
+    const liveCompleted = !!(acc.charges_enabled && acc.payouts_enabled && acc.details_submitted);
+
+    if (liveCompleted && !prod.stripe_onboarding_completed) {
+      await this.prisma.productores.update({
+        where: { id_productor },
+        data: { stripe_onboarding_completed: true },
+      });
+    }
+
     return {
       connected: true,
       account_id: acc.id,
       charges_enabled: !!acc.charges_enabled,
       payouts_enabled: !!acc.payouts_enabled,
       details_submitted: !!acc.details_submitted,
-      onboarding_completed: prod.stripe_onboarding_completed,
+      onboarding_completed: liveCompleted,
     };
   }
 
