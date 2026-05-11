@@ -171,10 +171,7 @@ export default function ProductCatalogClient() {
       if (f.maestro_mezcalero) params.maestro_mezcalero = f.maestro_mezcalero;
 
       const data = await api.productos.getAll(params);
-      const filtrados = (data as Producto[]).filter(
-        (p) => p.categorias && p.categorias.length > 0 && p.nombre_productor
-      );
-      setProductos(filtrados);
+      setProductos(data as unknown as Producto[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar productos");
     } finally {

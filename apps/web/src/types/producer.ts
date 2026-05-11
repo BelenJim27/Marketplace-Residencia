@@ -37,6 +37,12 @@ export type ProductItem = {
   id_lote?: number | null;
 };
 
+export type InventarioItem = {
+  id_inventario: number;
+  id_producto: number;
+  stock: number;
+};
+
 export type ProducerDetail = {
   id_productor: number;
   tiendas?: StoreItem[];

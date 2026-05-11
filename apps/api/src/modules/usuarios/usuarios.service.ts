@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, usuarios } from '@prisma/client';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -97,6 +97,20 @@ export class UsuariosService {
 
   async addRole(id_usuario: string, id_rol: number) {
     await this.ensureUserExists(id_usuario);
+
+    // Verificar si el rol que se está asignando es "productor"
+    const rol = await this.prisma.roles.findUnique({ where: { id_rol } });
+    if (rol?.nombre === 'productor') {
+      const pedidosComoCliente = await this.prisma.pedidos.count({
+        where: { id_usuario, eliminado_en: null },
+      });
+      if (pedidosComoCliente > 0) {
+        throw new BadRequestException(
+          'No puedes convertirte en productor porque ya realizaste pedidos como cliente. Si deseas ser productor, crea una cuenta nueva.',
+        );
+      }
+    }
+
     const relation = await this.prisma.usuario_rol.upsert({
       where: { id_usuario_id_rol: { id_usuario, id_rol } },
       create: { id_usuario, id_rol },
@@ -106,7 +120,22 @@ export class UsuariosService {
   }
 
   async removeRole(id_usuario: string, id_rol: number) {
-    await this.prisma.usuario_rol.delete({ where: { id_usuario_id_rol: { id_usuario, id_rol } } });
+    // Verificar si el rol que se remueve es "productor"
+    const rol = await this.prisma.roles.findUnique({ where: { id_rol } });
+
+    await this.prisma.usuario_rol.delete({
+      where: { id_usuario_id_rol: { id_usuario, id_rol } },
+    });
+
+    // Si era productor, marcar su registro como inactivo
+    // Esto hace que el frontend limpie id_productor y oculte el panel
+    if (rol?.nombre === 'productor') {
+      await this.prisma.productores.updateMany({
+        where: { id_usuario, eliminado_en: null },
+        data: { estado: 'inactivo' },
+      });
+    }
+
     return { message: 'Rol removido del usuario' };
   }
 

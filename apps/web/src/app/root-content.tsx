@@ -31,6 +31,7 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
+  // Rutas de auth — sin footer
   if (isAuthRoute) {
     return (
       <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
@@ -42,6 +43,8 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
+  // Página de inicio del cliente — el footer ya viene dentro del LandingPage,
+  // así que NO lo agregamos aquí para no duplicarlo
   if (isClientHome) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
@@ -54,6 +57,7 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
+  // Rutas de cliente (/tienda/ y /cliente/) — CON footer
   if (isClientOnlyRoute) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
@@ -68,6 +72,7 @@ export function RootContent({ children }: PropsWithChildren) {
 
   const isTiendaRoute = pathname === "/" || pathname === "/producto" || pathname.startsWith("/producto/");
 
+  // Rutas de tienda — CON footer
   if (isTiendaRoute) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
@@ -80,6 +85,7 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
+  // Admin / productor — sin footer
   if (isLoggedIn) {
     if (isAdminOrProductor) {
       return (
@@ -97,6 +103,7 @@ export function RootContent({ children }: PropsWithChildren) {
       );
     }
 
+    // Cliente logueado — CON footer
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
@@ -108,6 +115,7 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
+  // Fallback — CON footer
   return (
     <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
       <TiendaHeader />

@@ -62,15 +62,15 @@ model categorias {
   tipo                          String                          @default("general") @db.VarChar(50)
   imagen_url                    String?                         @db.VarChar(500)
   activo                        Boolean                         @default(true)
-  creado_en                     DateTime                        @default(now()) @db.Timestamptz(6)
   requiere_edad_minima          Int?
+  creado_en                     DateTime                        @default(now()) @db.Timestamptz(6)
   categorias                    categorias?                     @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
   other_categorias              categorias[]                    @relation("categoriasTocategorias")
   categorias_productos          categorias_productos[]
-  categorias_traducciones       categorias_traducciones[]
-  comisiones                    comisiones[]
-  restricciones_envio_categoria restricciones_envio_categoria[]
   tasas_impuesto                tasas_impuesto[]
+  comisiones                    comisiones[]
+  categorias_traducciones       categorias_traducciones[]
+  restricciones_envio_categoria restricciones_envio_categoria[]
 
   @@index([id_padre], map: "idx_cat_padre")
 }
@@ -209,10 +209,10 @@ model envios {
   costo_envio              Decimal?           @db.Decimal(14, 2)
   moneda_costo             String             @default("MXN") @db.Char(3)
   estado                   String             @default("preparando") @db.VarChar(30)
+  requires_adult_signature Boolean            @default(false)
   fecha_envio              DateTime?          @db.Timestamptz(6)
   fecha_entrega_estimada   DateTime?          @db.Timestamptz(6)
   fecha_entrega            DateTime?          @db.Timestamptz(6)
-  requires_adult_signature Boolean            @default(false)
   envio_guias              envio_guias[]
   pedido_productor         pedido_productor[]
   pedidos                  pedidos            @relation(fields: [id_pedido], references: [id_pedido], onUpdate: NoAction)
@@ -533,18 +533,18 @@ model productos {
   ancho_cm                                     Decimal?                 @db.Decimal(8, 2)
   largo_cm                                     Decimal?                 @db.Decimal(8, 2)
   status                                       String                   @default("activo") @db.VarChar(20)
+  requiere_firma_adulto                        Boolean                  @default(false)
+  requiere_edad_minima                         Int?
+  alergenos                                    String[]
+  unidad_medida                                String?                  @db.VarChar(50)
+  botellas_350ml                               Int?                     @default(0)
+  botellas_750ml                               Int?                     @default(0)
   creado_por                                   String?                  @db.Uuid
   actualizado_por                              String?                  @db.Uuid
   creado_en                                    DateTime                 @default(now()) @db.Timestamptz(6)
   actualizado_en                               DateTime                 @default(now()) @db.Timestamptz(6)
   eliminado_en                                 DateTime?                @db.Timestamptz(6)
   imagen_principal_url                         String?                  @db.VarChar(500)
-  requiere_firma_adulto                        Boolean                  @default(false)
-  alergenos                                    String[]
-  requiere_edad_minima                         Int?
-  unidad_medida                                String?                  @db.VarChar(50)
-  botellas_350ml                               Int?                     @default(0)
-  botellas_750ml                               Int?                     @default(0)
   carrito_item                                 carrito_item[]
   categorias_productos                         categorias_productos[]
   detalle_pedido                               detalle_pedido[]

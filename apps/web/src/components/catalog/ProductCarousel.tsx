@@ -57,10 +57,7 @@ export default function ProductCarousel() {
       try {
         setLoading(true);
         const data = await api.productos.getAll({});
-        const filtrados = (data as Producto[]).filter(
-          (p) => p.categorias && p.categorias.length > 0 && p.nombre_productor
-        );
-        setProductos(filtrados.slice(0, 6));
+        setProductos((data as unknown as Producto[]).slice(0, 6));
       } catch (err) {
         console.error("Error al cargar productos para carrusel:", err);
       } finally {
@@ -182,9 +179,8 @@ export default function ProductCarousel() {
                 goToSlide(idx);
                 setActiveIndex(idx);
               }}
-              className={`transition-all duration-300 ${
-                idx === activeIndex ? "h-2 w-8 rounded-full" : "h-2 w-2 rounded-full hover:w-4"
-              }`}
+              className={`transition-all duration-300 ${idx === activeIndex ? "h-2 w-8 rounded-full" : "h-2 w-2 rounded-full hover:w-4"
+                }`}
               style={{
                 backgroundColor:
                   idx === activeIndex ? "var(--bio-color-boton, #5c3d1e)" : "rgba(92, 61, 30, 0.2)",
@@ -212,9 +208,8 @@ export default function ProductCarousel() {
             return (
               <div
                 key={String(producto.id_producto)}
-                className={`group relative flex-shrink-0 flex items-center gap-6 transition-all duration-500 ${
-                  isActive ? "opacity-100" : "opacity-60"
-                }`}
+                className={`group relative flex-shrink-0 flex items-center gap-6 transition-all duration-500 ${isActive ? "opacity-100" : "opacity-60"
+                  }`}
                 style={{ width: "600px", minHeight: "320px" }}
               >
                 {/* ─── Imagen ─── */}
@@ -365,11 +360,10 @@ export default function ProductCarousel() {
 
                   {/* Botón */}
                   <button
-                    className={`flex items-center justify-center gap-2 rounded-xl py-3 px-6 text-sm font-semibold text-white transition-all duration-300 w-fit ${
-                      agregadoId === producto.id_producto
+                    className={`flex items-center justify-center gap-2 rounded-xl py-3 px-6 text-sm font-semibold text-white transition-all duration-300 w-fit ${agregadoId === producto.id_producto
                         ? "scale-95 opacity-80"
                         : "hover:scale-105 active:scale-95"
-                    }`}
+                      }`}
                     style={{
                       fontFamily: "var(--bio-fuente-titulo, Georgia, serif)",
                       backgroundColor: "var(--bio-color-boton, #5c3d1e)",

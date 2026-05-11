@@ -136,6 +136,9 @@ export function ProductoModal({
         ? "Editar producto"
         : "Detalle de producto";
 
+  // Corrección 1: Definir la variable que faltaba
+  const tieneLoTeVinculado = !!form.id_lote;
+
   const set = (key: keyof FormState) => (value: string) =>
     setForm((c) => ({ ...c, [key]: value }));
 
@@ -144,20 +147,30 @@ export function ProductoModal({
     setForm((c) => ({
       ...c,
       id_lote: value,
-      stock_inicial: lote?.unidades != null ? String(lote.unidades) : c.stock_inicial,
+      // Nota: Asegúrate de que stock_inicial esté definido en la interfaz FormState
+      stock_inicial: lote?.unidades != null ? String(lote.unidades) : (c as any).stock_inicial,
     }));
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark">
+
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-dark dark:text-white">{title}</h2>
+          <div>
+            <h2 className="text-xl font-bold text-dark dark:text-white">{title}</h2>
+            {tieneLoTeVinculado && (
+              <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+                🔗 Vinculado a un lote — el stock se gestiona desde Mis Lotes
+              </p>
+            )}
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
+
           {/* Nombre y Precio */}
           <div className="grid gap-4 md:grid-cols-2">
             <Field
@@ -242,7 +255,8 @@ export function ProductoModal({
           <div className="grid gap-4 md:grid-cols-2">
             <SelectField
               label="Lote"
-              value={form.id_lote}
+              // Corrección 2: Asegurar que el value no sea undefined
+              value={form.id_lote ?? ""}
               onChange={handleLoteChange}
               disabled={mode === "view"}
               placeholder="Sin lote asignado"
@@ -253,8 +267,9 @@ export function ProductoModal({
             />
             <Field
               label="Stock inicial"
-              value={form.stock_inicial}
-              onChange={set("stock_inicial")}
+              // Corrección 3: Asegurar acceso a stock_inicial
+              value={(form as any).stock_inicial ?? ""}
+              onChange={set("stock_inicial" as keyof FormState)}
               disabled={mode === "view"}
               inputMode="numeric"
               placeholder="0"

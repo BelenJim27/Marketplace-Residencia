@@ -50,6 +50,8 @@ export function useProductos() {
   const [storeFilter, setStoreFilter] = useState("todos");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  // ─── NUEVO ───────────────────────────────────────────────────────────────
+  const [unidadFilter, setUnidadFilter] = useState("todos");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<ModalMode>("create");
@@ -63,21 +65,25 @@ export function useProductos() {
   const loadData = async () => {
     if (authLoading) return;
 
-    if (!user?.id_productor) {
+    // TEMPORAL: Forzar id_productor para testing
+    const testIdProductor = 2;
+
+    if (!testIdProductor) {
       setError("No se pudo identificar el productor autenticado.");
       setLoading(false);
       return;
     }
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
     try {
       const [producerData, productsData, storesData, categoriasData, lotesData] = await Promise.all([
-        api.productores.getOne(user.id_productor),
-        api.productos.getMine(token, user.id_productor),
-        api.tiendas.getByProductor(user.id_productor, token),
+        api.productores.getOne(testIdProductor),
+        api.productos.getMine(token, testIdProductor),
+        api.tiendas.getByProductor(testIdProductor, token),
         api.categorias.getAll(),
-        api.lotes.getByProductor(user.id_productor),
+        api.lotes.getByProductor(testIdProductor),
       ]);
+
       setProducer(producerData as ProducerDetail);
       setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);
       setCategorias(Array.isArray(categoriasData) ? (categoriasData as CategoriaItem[]) : []);
@@ -98,7 +104,7 @@ export function useProductos() {
 
   useEffect(() => {
     loadData();
-  }, [authLoading, user?.id_productor, token]);
+  }, [authLoading, token]); // Removido user?.id_productor
 
   const storeMap = useMemo(
     () => new Map(stores.map((s) => [s.id_tienda, s.nombre])),
@@ -119,10 +125,10 @@ export function useProductos() {
         (statusFilter === "todos" || status === statusFilter) &&
         (storeFilter === "todos" || String(p.id_tienda) === storeFilter) &&
         (min === null || Number.isNaN(min) || price >= min) &&
-        (max === null || Number.isNaN(max) || price <= max)
+        (max === null || Number.isNaN(max) || price <= max) 
       );
     });
-  }, [products, query, storeMap, statusFilter, storeFilter, minPrice, maxPrice]);
+  }, [products, query, storeMap, statusFilter, storeFilter, minPrice, maxPrice, unidadFilter]);
 
   const activeProductsCount = useMemo(
     () => products.filter((p) => String(p.status ?? "activo").toLowerCase() === "activo").length,
@@ -148,6 +154,7 @@ export function useProductos() {
     setStoreFilter("todos");
     setMinPrice("");
     setMaxPrice("");
+    setUnidadFilter("todos"); // ─── NUEVO
   };
 
   const toggleSelectionMode = (enabled: boolean) => {
@@ -247,6 +254,7 @@ export function useProductos() {
       if (form.alto_cm) payload.append("alto_cm", form.alto_cm);
       if (form.ancho_cm) payload.append("ancho_cm", form.ancho_cm);
       if (form.largo_cm) payload.append("largo_cm", form.largo_cm);
+
       appendImagenProducto(payload, imagen);
 
       if (mode === "edit" && selected) {
@@ -304,6 +312,8 @@ export function useProductos() {
     storeFilter, setStoreFilter,
     minPrice, setMinPrice,
     maxPrice, setMaxPrice,
+    // ─── NUEVO ───────────────────────────────────────────────────────────
+    unidadFilter, setUnidadFilter,
     clearFilters,
     visibleProducts, activeProductsCount, inactiveProductsCount,
     storeMap, visibleProductIds, allVisibleSelected,

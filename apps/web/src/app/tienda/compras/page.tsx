@@ -27,13 +27,13 @@ const ESTADO_COLORES: Record<string, string> = {
 };
 
 export default function MisComprasPage() {
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated || !user?.id_usuario) {
+    if (!isAuthenticated) {
       setCargando(false);
       return;
     }
@@ -43,7 +43,6 @@ export default function MisComprasPage() {
       .getMisCompras(token)
       .then((data) => {
         const lista = Array.isArray(data) ? data : [];
-        // Ordenar por más reciente
         lista.sort((a: Pedido, b: Pedido) => {
           const dateA = new Date(a.creado_en || 0).getTime();
           const dateB = new Date(b.creado_en || 0).getTime();
@@ -53,7 +52,7 @@ export default function MisComprasPage() {
       })
       .catch(() => setPedidos([]))
       .finally(() => setCargando(false));
-  }, [user?.id_usuario, isAuthenticated, authLoading]);
+  }, [isAuthenticated, authLoading]);
 
   if (cargando) {
     return (
@@ -101,7 +100,9 @@ export default function MisComprasPage() {
             const fecha = pedido.creado_en
               ? new Date(pedido.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })
               : "—";
-            const total = pedido.total ? `$${formatPrice(Number(pedido.total), { showCurrency: false })} ${pedido.moneda || "MXN"}` : "—";
+            const total = pedido.total
+              ? `$${formatPrice(Number(pedido.total), { showCurrency: false })} ${pedido.moneda || "MXN"}`
+              : "—";
             const numItems = pedido.detalle_pedido?.length ?? 0;
 
             return (
@@ -116,7 +117,9 @@ export default function MisComprasPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white">Pedido #{id}</p>
-                    <p className="text-sm text-gray-500">{fecha} · {numItems > 0 ? `${numItems} producto(s)` : "Sin detalles"}</p>
+                    <p className="text-sm text-gray-500">
+                      {fecha} · {numItems > 0 ? `${numItems} producto(s)` : "Sin detalles"}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">

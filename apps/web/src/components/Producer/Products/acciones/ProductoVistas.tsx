@@ -82,9 +82,10 @@ export function ProductoFiltros({
       </div>
 
       <div className="mb-6 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 xl:grid-cols-5">
+
           <label className="block">
-            <span className={lbl}>Filtro por Estatus</span>
+            <span className={lbl}>Estatus</span>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={input}>
               <option value="todos">Todos</option>
               <option value="activo">Activo</option>
@@ -94,7 +95,7 @@ export function ProductoFiltros({
           </label>
 
           <label className="block">
-            <span className={lbl}>Filtro por Tienda</span>
+            <span className={lbl}>Tienda</span>
             <select value={storeFilter} onChange={(e) => setStoreFilter(e.target.value)} className={input}>
               <option value="todos">Todas</option>
               {stores.map((s) => (
@@ -113,11 +114,12 @@ export function ProductoFiltros({
             <input type="text" inputMode="numeric" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Precio máx" className={input} />
           </label>
 
-          <div className="flex items-end xl:col-span-1">
+          <div className="flex items-end">
             <button type="button" onClick={onClear} className="w-full rounded-lg border border-stroke px-4 py-3 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-dark-3 dark:text-white dark:hover:bg-white/5">
               Limpiar filtros
             </button>
           </div>
+
         </div>
       </div>
     </>
@@ -226,7 +228,7 @@ export function ProductoTabla({
   return (
     <div className="overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left">
+        <table className="w-full min-w-[800px] text-left">
           <thead className="bg-gray-2 dark:bg-dark-2">
             <tr className="text-sm text-gray-500">
               {selectionEnabled && (
@@ -239,12 +241,11 @@ export function ProductoTabla({
                   />
                 </th>
               )}
-              <th className="w-[36%] px-5 py-4">Nombre</th>
-              <th className="w-[13%] px-5 py-4">Precio base</th>
+              <th className="w-[40%] px-5 py-4">Nombre</th>
+              <th className="w-[15%] px-5 py-4">Precio base</th>
               <th className="w-[10%] px-5 py-4">Moneda</th>
-              <th className="w-[13%] px-5 py-4">Status</th>
-              <th className="w-[10%] px-5 py-4">Stock</th>
-              <th className="w-[16%] px-5 py-4 text-right">Acciones</th>
+              <th className="w-[15%] px-5 py-4">Status</th>
+              <th className="w-[20%] px-5 py-4 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>

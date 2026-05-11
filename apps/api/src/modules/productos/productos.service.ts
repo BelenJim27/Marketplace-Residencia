@@ -1,9 +1,8 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
-import { serializeBigInts, toBigIntId } from "../shared/serialize";
+import { serializeBigInts } from "../shared/serialize";
 import { CreateProductoDto, UpdateProductoDto } from "./dto/productos.dto";
-import { Decimal } from '@prisma/client/runtime/library';
 
 export interface FiltrosProducto {
   busqueda?: string;
@@ -137,11 +136,24 @@ export class ProductosService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(
-    accessToken?: string,
-    id_productor?: number,
-    filtros?: FiltrosProducto,
+    token?: string,
+    idProductor?: number,
+    filtros?: {
+      busqueda?: string;
+      tipoMezcal?: string;
+      maguey?: string;
+      precioMin?: string;
+      precioMax?: string;
+      destilacion?: string;
+      molienda?: string;
+      maestroMezcalero?: string;
+    },
   ) {
     const where: Prisma.productosWhereInput = { eliminado_en: null };
+
+    if (idProductor) {
+      where.tiendas = { id_productor: idProductor };
+    }
 
     if (filtros) {
       if (filtros.busqueda) {
@@ -162,9 +174,9 @@ export class ProductosService {
       if (filtros.precioMin || filtros.precioMax) {
         where.precio_base = {};
         if (filtros.precioMin)
-          where.precio_base.gte = new Decimal(filtros.precioMin);
+          (where.precio_base as any).gte = new Prisma.Decimal(filtros.precioMin);
         if (filtros.precioMax)
-          where.precio_base.lte = new Decimal(filtros.precioMax);
+          (where.precio_base as any).lte = new Prisma.Decimal(filtros.precioMax);
       }
     }
 
@@ -196,16 +208,14 @@ export class ProductosService {
       });
     };
 
-    if (accessToken) {
-      const id_usuario = getUserIdFromAccessToken(accessToken);
+    if (token) {
+      const id_usuario = getUserIdFromAccessToken(token);
       const productor = await this.prisma.productores.findFirst({
         where: { id_usuario, eliminado_en: null },
         select: { id_productor: true },
       });
 
-      if (!productor?.id_productor) {
-        return [];
-      }
+      if (!productor) return [];
 
       const stores = await this.prisma.tiendas.findMany({
         where: { id_productor: productor.id_productor, eliminado_en: null },
@@ -221,177 +231,170 @@ export class ProductosService {
         : [];
 
       return serializeBigInts(
-        await mapProductoResponse(applyFiltersToProductos(productos)),
+        mapProductoResponse(applyFiltersToProductos(productos)),
       );
     }
 
-    if (id_productor) {
-      const stores = await this.prisma.tiendas.findMany({
-        where: { id_productor, eliminado_en: null },
-        select: { id_tienda: true },
-      });
-      const ids = stores.map((store) => store.id_tienda);
-      const productosRaw = await this.prisma.productos.findMany({
-        where: { ...where, id_tienda: { in: ids } },
-        include: productoInclude as any,
-      });
-      return serializeBigInts(
-        await mapProductoResponse(applyFiltersToProductos(productosRaw)),
-      );
-    }
-
-    const productosRaw = await this.prisma.productos.findMany({
+    const items = await this.prisma.productos.findMany({
       where,
       include: productoInclude as any,
+      orderBy: { creado_en: 'desc' },
     });
+
     return serializeBigInts(
-      await mapProductoResponse(applyFiltersToProductos(productosRaw)),
+      mapProductoResponse(applyFiltersToProductos(items)),
     );
   }
 
   async findOne(id: string) {
     const item = await this.prisma.productos.findUnique({
-      where: { id_producto: toBigIntId(id) },
-      include: productoInclude as any,
+      where: { id_producto: BigInt(id) },
+      include: {
+        tiendas: true,
+        categorias_productos: { include: { categorias: true } },
+        producto_imagenes: true,
+        resenas: true,
+      },
     });
-    if (!item || item.eliminado_en)
-      throw new NotFoundException("Producto no encontrado");
-    return serializeBigInts(mapProductoResponse(item));
+
+    if (!item || item.eliminado_en) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    return serializeBigInts(item);
   }
 
   async create(dto: CreateProductoDto) {
-    const created = await this.prisma.productos.create({
-      data: {
-        id_tienda: dto.id_tienda,
-        id_lote: dto.id_lote ?? null,
-        nombre: dto.nombre.trim(),
-        descripcion: dto.descripcion ?? null,
-        traducciones: (dto.traducciones ?? {}) as Prisma.InputJsonValue,
-        precio_base: dto.precio_base,
-        moneda_base: dto.moneda_base?.trim() ?? "MXN",
-        metadata: (dto.metadata ?? {}) as Prisma.InputJsonValue,
-        peso_kg: dto.peso_kg ?? null,
-        alto_cm: dto.alto_cm ?? null,
-        ancho_cm: dto.ancho_cm ?? null,
-        largo_cm: dto.largo_cm ?? null,
-        status: dto.status?.trim() ?? "activo",
-        creado_por: dto.creado_por ?? null,
-        actualizado_por: dto.actualizado_por ?? null,
-        imagen_principal_url:
-          dto.imagen_principal_url ?? dto.imagen_url ?? null,
-        producto_imagenes: dto.imagenes?.length
-          ? {
-              create: dto.imagenes.map((item, index) => ({
-                url: item.url.trim(),
-                orden: item.orden ?? index,
-                es_principal: item.es_principal ?? index === 0,
-                alt_text: item.alt_text ?? null,
-              })),
-            }
-          : undefined,
-        categorias_productos: dto.categorias?.length
-          ? {
-              create: dto.categorias.map((id_cat) => ({
-                id_categoria: id_cat,
-              })),
-            }
-          : undefined,
+    const data: any = {
+      id_tienda: dto.id_tienda,
+      id_lote: dto.id_lote ?? null,
+      nombre: dto.nombre,
+      descripcion: dto.descripcion || null,
+      traducciones: (dto.traducciones || {}) as Prisma.InputJsonValue,
+      precio_base: new Prisma.Decimal(dto.precio_base),
+      moneda_base: dto.moneda_base?.trim() ?? "MXN",
+      metadata: (dto.metadata || {}) as Prisma.InputJsonValue,
+      peso_kg: dto.peso_kg ? new Prisma.Decimal(dto.peso_kg) : null,
+      alto_cm: dto.alto_cm ? new Prisma.Decimal(dto.alto_cm) : null,
+      ancho_cm: dto.ancho_cm ? new Prisma.Decimal(dto.ancho_cm) : null,
+      largo_cm: dto.largo_cm ? new Prisma.Decimal(dto.largo_cm) : null,
+      status: dto.status || 'activo',
+      creado_por: dto.creado_por ?? null,
+      actualizado_por: dto.actualizado_por ?? null,
+      imagen_principal_url: dto.imagen_principal_url ?? (dto as any).imagen_url ?? null,
+    };
+
+    const producto = await this.prisma.productos.create({
+      data,
+      include: {
+        tiendas: true,
+        categorias_productos: { include: { categorias: true } },
+        producto_imagenes: true,
       },
-      include: productoInclude as any,
     });
 
-    return serializeBigInts(mapProductoResponse(created));
+    if (dto.categorias && dto.categorias.length > 0) {
+      await Promise.all(
+        dto.categorias.map((id_categoria) =>
+          this.prisma.categorias_productos.create({
+            data: {
+              id_producto: producto.id_producto,
+              id_categoria,
+            },
+          }),
+        ),
+      );
+    }
+
+    if (dto.imagenes && dto.imagenes.length > 0) {
+      await Promise.all(
+        dto.imagenes.map((img, index) =>
+          this.prisma.producto_imagenes.create({
+            data: {
+              id_producto: producto.id_producto,
+              url: img.url,
+              orden: img.orden ?? index,
+              es_principal: img.es_principal ?? false,
+              alt_text: img.alt_text || null,
+            },
+          }),
+        ),
+      );
+    }
+
+    return serializeBigInts(producto);
   }
 
   async update(id: string, dto: UpdateProductoDto) {
-    const id_producto = toBigIntId(id);
     const current = await this.prisma.productos.findUnique({
-      where: { id_producto },
-    });
-    if (!current || current.eliminado_en)
-      throw new NotFoundException("Producto no encontrado");
-
-    const updated = await this.prisma.productos.update({
-      where: { id_producto },
-      data: {
-        id_tienda: dto.id_tienda,
-        id_lote: dto.id_lote ?? undefined,
-        nombre: dto.nombre?.trim(),
-        descripcion: dto.descripcion,
-        traducciones: dto.traducciones as Prisma.InputJsonValue | undefined,
-        precio_base: dto.precio_base,
-        moneda_base: dto.moneda_base?.trim(),
-        metadata: dto.metadata as Prisma.InputJsonValue | undefined,
-        peso_kg: dto.peso_kg,
-        alto_cm: dto.alto_cm,
-        ancho_cm: dto.ancho_cm,
-        largo_cm: dto.largo_cm,
-        status: dto.status?.trim(),
-        creado_por: dto.creado_por,
-        actualizado_por: dto.actualizado_por,
-        imagen_principal_url: dto.imagen_principal_url ?? dto.imagen_url,
-      },
-      include: productoInclude as any,
+      where: { id_producto: BigInt(id) },
     });
 
-    if (dto.imagenes) {
-      await this.prisma.producto_imagenes.deleteMany({
-        where: { id_producto },
-      });
-      await this.prisma.producto_imagenes.createMany({
-        data: dto.imagenes.map(
-          (
-            item: {
-              url: string;
-              orden?: number;
-              es_principal?: boolean;
-              alt_text?: string;
-            },
-            index: number,
-          ) => ({
-            id_producto,
-            url: item.url.trim(),
-            orden: item.orden ?? index,
-            es_principal: item.es_principal ?? index === 0,
-            alt_text: item.alt_text ?? null,
-          }),
-        ),
-      });
+    if (!current || current.eliminado_en) {
+      throw new NotFoundException('Producto no encontrado');
     }
 
-    if (dto.categorias) {
+    const data: Prisma.productosUpdateInput = {};
+
+    if (dto.nombre !== undefined) data.nombre = dto.nombre;
+    if (dto.descripcion !== undefined) data.descripcion = dto.descripcion;
+    if (dto.traducciones !== undefined) data.traducciones = dto.traducciones as any;
+    if (dto.precio_base !== undefined) data.precio_base = new Prisma.Decimal(dto.precio_base);
+    if (dto.metadata !== undefined) data.metadata = dto.metadata as any;
+    if (dto.status !== undefined) data.status = dto.status;
+    if (dto.imagen_principal_url !== undefined) data.imagen_principal_url = dto.imagen_principal_url;
+    if (dto.peso_kg !== undefined) data.peso_kg = dto.peso_kg ? new Prisma.Decimal(dto.peso_kg) : null;
+    if (dto.alto_cm !== undefined) data.alto_cm = dto.alto_cm ? new Prisma.Decimal(dto.alto_cm) : null;
+    if (dto.ancho_cm !== undefined) data.ancho_cm = dto.ancho_cm ? new Prisma.Decimal(dto.ancho_cm) : null;
+    if (dto.largo_cm !== undefined) data.largo_cm = dto.largo_cm ? new Prisma.Decimal(dto.largo_cm) : null;
+
+    const producto = await this.prisma.productos.update({
+      where: { id_producto: BigInt(id) },
+      data,
+      include: {
+        tiendas: true,
+        categorias_productos: { include: { categorias: true } },
+        producto_imagenes: true,
+      },
+    });
+
+    if (dto.categorias && Array.isArray(dto.categorias)) {
       await this.prisma.categorias_productos.deleteMany({
-        where: { id_producto },
+        where: { id_producto: BigInt(id) },
       });
+
       if (dto.categorias.length > 0) {
-        await this.prisma.categorias_productos.createMany({
-          data: dto.categorias.map((id_cat) => ({
-            id_producto,
-            id_categoria: id_cat,
-          })),
-        });
+        await Promise.all(
+          dto.categorias.map((id_categoria) =>
+            this.prisma.categorias_productos.create({
+              data: {
+                id_producto: BigInt(id),
+                id_categoria,
+              },
+            }),
+          ),
+        );
       }
     }
 
-    return serializeBigInts(mapProductoResponse(updated));
+    return serializeBigInts(producto);
   }
 
   async remove(id: string) {
-    const id_producto = toBigIntId(id);
     const current = await this.prisma.productos.findUnique({
-      where: { id_producto },
+      where: { id_producto: BigInt(id) },
     });
-    if (!current || current.eliminado_en)
-      throw new NotFoundException("Producto no encontrado");
-    return serializeBigInts(
-      mapProductoResponse(
-        await this.prisma.productos.update({
-          where: { id_producto },
-          data: { eliminado_en: new Date() },
-          include: productoInclude as any,
-        }),
-      ),
-    );
+
+    if (!current || current.eliminado_en) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    const producto = await this.prisma.productos.update({
+      where: { id_producto: BigInt(id) },
+      data: { eliminado_en: new Date() },
+    });
+
+    return serializeBigInts(producto);
   }
 }
 
