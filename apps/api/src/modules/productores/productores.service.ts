@@ -56,6 +56,8 @@ export class ProductoresService {
     private readonly emailService: EmailService,
   ) {}
 
+  // ── CRUD básico ────────────────────────────────────────────────────────────
+
   async findAll() {
     return serializeBigInts(
       await this.prisma.productores.findMany({
@@ -64,6 +66,7 @@ export class ProductoresService {
       }),
     );
   }
+
   async findOne(id_productor: number) {
     const item = await this.prisma.productores.findUnique({
       where: { id_productor },
@@ -73,6 +76,7 @@ export class ProductoresService {
       throw new NotFoundException("Productor no encontrado");
     return serializeBigInts(item);
   }
+
   async findByUsuario(id_usuario: string) {
     const item = await this.prisma.productores.findFirst({
       where: { id_usuario, eliminado_en: null },
@@ -80,6 +84,7 @@ export class ProductoresService {
     });
     return item ? serializeBigInts(item) : null;
   }
+
   async create(dto: CreateProductorDto) {
     return serializeBigInts(
       await this.prisma.productores.create({
@@ -91,6 +96,7 @@ export class ProductoresService {
       }),
     );
   }
+
   async update(id_productor: number, dto: UpdateProductorDto) {
     return serializeBigInts(
       await this.prisma.productores.update({
@@ -103,6 +109,7 @@ export class ProductoresService {
       }),
     );
   }
+
   async remove(id_productor: number) {
     return serializeBigInts(
       await this.prisma.productores.update({
@@ -111,11 +118,15 @@ export class ProductoresService {
       }),
     );
   }
+
+  // ── Regiones ───────────────────────────────────────────────────────────────
+
   async listRegiones() {
     return serializeBigInts(
       await this.prisma.regiones.findMany({ where: { activo: true } }),
     );
   }
+
   async createRegion(dto: CreateRegionDto) {
     return serializeBigInts(
       await this.prisma.regiones.create({
@@ -128,6 +139,7 @@ export class ProductoresService {
       }),
     );
   }
+
   async updateRegion(id_region: number, dto: UpdateRegionDto) {
     return serializeBigInts(
       await this.prisma.regiones.update({
@@ -141,10 +153,13 @@ export class ProductoresService {
       }),
     );
   }
+
   async removeRegion(id_region: number) {
     await this.prisma.regiones.delete({ where: { id_region } });
     return { message: "Region eliminada" };
   }
+
+  // ── Solicitar productor ────────────────────────────────────────────────────
 
   async solicitarProductor(dto: SolicitarProductorDto, id_usuario: string) {
     const existing = await this.prisma.productores.findFirst({
@@ -157,7 +172,27 @@ export class ProductoresService {
       if (existing.estado === "aprobado")
         throw new BadRequestException("Ya eres productor aprobado");
       if (existing.estado === "suspendido")
-        throw new BadRequestException("Tu cuenta fue suspendida. Contacta al administrador");
+        throw new BadRequestException(
+          "Tu cuenta fue suspendida. Contacta al administrador",
+        );
+    }
+
+    // Validar que las categorías existen y están activas
+    if (dto.categorias_ids && dto.categorias_ids.length > 0) {
+      const categoriasExistentes = await this.prisma.categorias.findMany({
+        where: { id_categoria: { in: dto.categorias_ids }, activo: true },
+        select: { id_categoria: true },
+      });
+
+      if (categoriasExistentes.length !== dto.categorias_ids.length) {
+        const encontrados = categoriasExistentes.map((c) => c.id_categoria);
+        const invalidos = dto.categorias_ids.filter(
+          (id) => !encontrados.includes(id),
+        );
+        throw new BadRequestException(
+          `Categorías no válidas o inactivas: ${invalidos.join(", ")}`,
+        );
+      }
     }
 
     const datosBancariosEncriptados = dto.datos_bancarios
@@ -167,6 +202,7 @@ export class ProductoresService {
     let resultado: any;
 
     if (existing && existing.estado === "rechazado") {
+      // ── Re-solicitud tras rechazo ──────────────────────────────────────────
       resultado = await this.prisma.productores.update({
         where: { id_productor: existing.id_productor },
         data: {
@@ -181,7 +217,22 @@ export class ProductoresService {
           revisado_en: null,
         },
       });
+
+      // Reemplazar categorías anteriores
+      if (dto.categorias_ids && dto.categorias_ids.length > 0) {
+        await this.prisma.productor_categoria.deleteMany({
+          where: { id_productor: existing.id_productor },
+        });
+        await this.prisma.productor_categoria.createMany({
+          data: dto.categorias_ids.map((id_categoria) => ({
+            id_productor: existing.id_productor,
+            id_categoria,
+          })),
+          skipDuplicates: true,
+        });
+      }
     } else {
+      // ── Nueva solicitud ────────────────────────────────────────────────────
       resultado = await this.prisma.productores.create({
         data: {
           id_usuario,
@@ -191,9 +242,23 @@ export class ProductoresService {
           rfc: dto.rfc ?? null,
           razon_social: dto.razon_social ?? null,
           datos_bancarios: datosBancariosEncriptados,
+          ...(dto.categorias_ids && dto.categorias_ids.length > 0
+            ? {
+                productor_categoria: {
+                  createMany: {
+                    data: dto.categorias_ids.map((id_categoria) => ({
+                      id_categoria,
+                    })),
+                    skipDuplicates: true,
+                  },
+                },
+              }
+            : {}),
         },
       });
     }
+
+    // ── Dirección fiscal ───────────────────────────────────────────────────
 
     if (dto.direccion_fiscal) {
       const direccionFiscalExistente = await this.prisma.direcciones.findFirst({
@@ -234,10 +299,13 @@ export class ProductoresService {
       }
     }
 
+    // ── Dirección de producción ────────────────────────────────────────────
+
     if (dto.direccion_produccion) {
-      const direccionProduccionExistente = await this.prisma.direcciones.findFirst({
-        where: { id_usuario, tipo: "produccion", eliminado_en: null },
-      });
+      const direccionProduccionExistente =
+        await this.prisma.direcciones.findFirst({
+          where: { id_usuario, tipo: "produccion", eliminado_en: null },
+        });
 
       if (direccionProduccionExistente) {
         await this.prisma.direcciones.update({
@@ -251,7 +319,8 @@ export class ProductoresService {
             codigo_postal: dto.direccion_produccion.codigo_postal ?? null,
             pais_iso2: dto.direccion_produccion.pais_iso2 ?? null,
             referencia: dto.direccion_produccion.referencia ?? null,
-            es_internacional: dto.direccion_produccion.es_internacional ?? false,
+            es_internacional:
+              dto.direccion_produccion.es_internacional ?? false,
           },
         });
       } else {
@@ -267,17 +336,21 @@ export class ProductoresService {
             pais_iso2: dto.direccion_produccion.pais_iso2 ?? null,
             referencia: dto.direccion_produccion.referencia ?? null,
             tipo: "produccion",
-            es_internacional: dto.direccion_produccion.es_internacional ?? false,
+            es_internacional:
+              dto.direccion_produccion.es_internacional ?? false,
           },
         });
       }
     }
 
+    // ── Notificación y email ───────────────────────────────────────────────
+
     await this.notificaciones.create({
       id_usuario,
       tipo: "solicitud_productor",
       titulo: "Solicitud enviada",
-      cuerpo: "Tu solicitud para convertirte en productor ha sido enviada. Te notificaremos cuando sea revisada.",
+      cuerpo:
+        "Tu solicitud para convertirte en productor ha sido enviada. Te notificaremos cuando sea revisada.",
       url_accion: "/Productor/solicitar",
     });
 
@@ -288,17 +361,28 @@ export class ProductoresService {
     if (usuarioData) {
       this.emailService
         .sendSolicitudRecibidaEmail(usuarioData.email, usuarioData.nombre)
-        .catch((err) => console.error("[Email] sendSolicitudRecibidaEmail:", err));
+        .catch((err) =>
+          console.error("[Email] sendSolicitudRecibidaEmail:", err),
+        );
     }
 
     return serializeBigInts(resultado);
   }
+
+  // ── Mi solicitud ───────────────────────────────────────────────────────────
 
   async getMiSolicitud(id_usuario: string) {
     const solicitud = await this.prisma.productores.findFirst({
       where: { id_usuario, eliminado_en: null },
       include: {
         usuarios: { select: { id_usuario: true, nombre: true, email: true } },
+        productor_categoria: {
+          include: {
+            categorias: {
+              select: { id_categoria: true, nombre: true, slug: true },
+            },
+          },
+        },
       },
     });
     if (!solicitud) return null;
@@ -306,11 +390,15 @@ export class ProductoresService {
     const decrypted = solicitud.datos_bancarios
       ? decrypt(solicitud.datos_bancarios)
       : null;
+
     return serializeBigInts({
       ...solicitud,
       datos_bancarios: decrypted,
+      categorias: solicitud.productor_categoria.map((pc) => pc.categorias),
     });
   }
+
+  // ── Solicitudes pendientes (admin) ─────────────────────────────────────────
 
   async getSolicitudesPendientes() {
     return serializeBigInts(
@@ -326,11 +414,20 @@ export class ProductoresService {
             },
           },
           regiones: true,
+          productor_categoria: {
+            include: {
+              categorias: {
+                select: { id_categoria: true, nombre: true, slug: true },
+              },
+            },
+          },
         },
         orderBy: { solicitado_en: "desc" },
       }),
     );
   }
+
+  // ── Revisar solicitud (admin) ──────────────────────────────────────────────
 
   async revisarSolicitud(
     id_productor: number,
@@ -362,7 +459,10 @@ export class ProductoresService {
         });
         if (rolCliente) {
           await this.prisma.usuario_rol.updateMany({
-            where: { id_usuario: usuario.id_usuario, id_rol: rolCliente.id_rol },
+            where: {
+              id_usuario: usuario.id_usuario,
+              id_rol: rolCliente.id_rol,
+            },
             data: { estado: "inactivo" },
           });
         }
@@ -421,17 +521,32 @@ export class ProductoresService {
       tipo: `solicitud_${dto.estado}`,
       titulo,
       cuerpo,
-      url_accion: dto.estado === "aprobado" ? "/dashboard/productor" : "/Productor/solicitar",
+      url_accion:
+        dto.estado === "aprobado"
+          ? "/dashboard/productor"
+          : "/Productor/solicitar",
     });
 
     if (dto.estado === "aprobado") {
       this.emailService
-        .sendProductorApprovedEmail(usuario.email, usuario.nombre, dto.motivo_aprobacion)
-        .catch((err) => console.error("[Email] sendProductorApprovedEmail:", err));
+        .sendProductorApprovedEmail(
+          usuario.email,
+          usuario.nombre,
+          dto.motivo_aprobacion,
+        )
+        .catch((err) =>
+          console.error("[Email] sendProductorApprovedEmail:", err),
+        );
     } else {
       this.emailService
-        .sendProductorRejectedEmail(usuario.email, usuario.nombre, dto.motivo_rechazo)
-        .catch((err) => console.error("[Email] sendProductorRejectedEmail:", err));
+        .sendProductorRejectedEmail(
+          usuario.email,
+          usuario.nombre,
+          dto.motivo_rechazo,
+        )
+        .catch((err) =>
+          console.error("[Email] sendProductorRejectedEmail:", err),
+        );
     }
 
     return serializeBigInts(actualizado);

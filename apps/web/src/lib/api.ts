@@ -265,7 +265,7 @@ export const api = {
   },
 
   productores: {
-    getAll: () => fetchJson(endpoint("/productores")),
+    getAll: (): Promise<any[]> => fetchJson<any[]>(endpoint("/productores")),
     getOne: (id: number) => fetchJson(endpoint(`/productores/${id}`)),
     getByUsuario: (id_usuario: string) => fetchJson(endpoint(`/productores/by-usuario/${id_usuario}`)),
     getByUbicacion: (ubicacion: string) => fetchJson(endpoint(`/productores?ubicacion=${ubicacion}`)),
@@ -278,8 +278,47 @@ export const api = {
     getRegiones: () => fetchJson(endpoint("/productores/regiones")),
     getMiSolicitud: (token: string) =>
       fetchJson(endpoint("/productores/mi-solicitud"), { headers: headers(token) }),
-    solicitar: (token: string, data: { id_region?: number; rfc?: string; razon_social?: string; datos_bancarios?: string; direccion_fiscal?: { linea_1?: string; linea_2?: string; ciudad?: string; estado?: string; codigo_postal?: string; pais_iso2?: string; referencia?: string; ubicacion?: Record<string, unknown>; es_internacional?: boolean }; direccion_produccion?: { linea_1?: string; linea_2?: string; ciudad?: string; estado?: string; codigo_postal?: string; pais_iso2?: string; referencia?: string; ubicacion?: Record<string, unknown>; es_internacional?: boolean } }) =>
-      fetchJson(endpoint("/productores/solicitar"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
+
+    // ── CAMBIO: se agregó categorias_ids al tipo de data ─────────────────────
+    solicitar: (
+      token: string,
+      data: {
+        id_region?: number;
+        rfc?: string;
+        razon_social?: string;
+        datos_bancarios?: string;
+        categorias_ids?: number[];  // ← CAMPO NUEVO
+        direccion_fiscal?: {
+          linea_1?: string;
+          linea_2?: string;
+          ciudad?: string;
+          estado?: string;
+          codigo_postal?: string;
+          pais_iso2?: string;
+          referencia?: string;
+          ubicacion?: Record<string, unknown>;
+          es_internacional?: boolean;
+        };
+        direccion_produccion?: {
+          linea_1?: string;
+          linea_2?: string;
+          ciudad?: string;
+          estado?: string;
+          codigo_postal?: string;
+          pais_iso2?: string;
+          referencia?: string;
+          ubicacion?: Record<string, unknown>;
+          es_internacional?: boolean;
+        };
+      },
+    ) =>
+      fetchJson(endpoint("/productores/solicitar"), {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify(data),
+      }),
+    // ─────────────────────────────────────────────────────────────────────────
+
     getSolicitudesPendientes: (token: string) =>
       fetchJson(endpoint("/admin/productores/solicitudes"), { headers: headers(token) }),
     revisarSolicitud: (token: string, id: number, data: { estado: string; motivo_rechazo?: string }) =>

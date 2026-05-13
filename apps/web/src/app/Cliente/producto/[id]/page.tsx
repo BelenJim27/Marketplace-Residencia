@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap } from "lucide-react";
 import { api } from "@/lib/api";
+import type { ProductItem } from "@/types/producer";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
@@ -40,15 +41,7 @@ interface LoteData {
   };
 }
 
-interface Producto {
-  id: number;
-  id_tienda?: number;
-  id_producto: bigint;
-  nombre: string;
-  descripcion: string;
-  precio_base: string;
-  imagen_principal_url?: string;
-  imagen_url?: string;
+interface Producto extends ProductItem {
   producto_imagenes?: { url: string }[];
   tipo_mezcal?: string;
   maguey?: string;
@@ -119,11 +112,12 @@ export default function ProductoDetallePage() {
 
   const handleAgregar = () => {
     if (!producto) return;
+    const precioBase = producto.precio_base == null ? "0" : String(producto.precio_base);
     const res = agregarProducto({
       id_producto: producto.id_producto,
       nombre: producto.nombre,
-      precio_base: producto.precio_base,
-      imagen_principal_url: producto.imagen_principal_url,
+      precio_base: precioBase,
+      imagen_principal_url: producto.imagen_principal_url ?? undefined,
       producto_imagenes: producto.producto_imagenes,
       edad_minima: producto.edad_minima ?? producto.requiere_edad_minima ?? null,
       cantidad,
@@ -142,11 +136,12 @@ export default function ProductoDetallePage() {
       router.push("/auth/sign-in?redirect=/tienda/checkout");
       return;
     }
+    const precioBase = producto.precio_base == null ? "0" : String(producto.precio_base);
     const res = agregarProducto({
       id_producto: producto.id_producto,
       nombre: producto.nombre,
-      precio_base: producto.precio_base,
-      imagen_principal_url: producto.imagen_principal_url,
+      precio_base: precioBase,
+      imagen_principal_url: producto.imagen_principal_url ?? undefined,
       producto_imagenes: producto.producto_imagenes,
       edad_minima: producto.edad_minima ?? producto.requiere_edad_minima ?? null,
       cantidad,
@@ -546,8 +541,8 @@ export default function ProductoDetallePage() {
                       agregarWishlist({
                         id_producto: producto.id_producto,
                         nombre: producto.nombre,
-                        precio_base: producto.precio_base,
-                        imagen_principal_url: producto.imagen_principal_url,
+                        precio_base: producto.precio_base == null ? "0" : String(producto.precio_base),
+                        imagen_principal_url: producto.imagen_principal_url ?? undefined,
                         producto_imagenes: producto.producto_imagenes,
                       });
                     }

@@ -149,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (!prod || (typeof prod === "object" && !Array.isArray(prod) && !prod.id_productor)) return;
 
+        console.log("Respuesta completa del productor:", JSON.stringify(prod, null, 2));
         const idProductor = Array.isArray(prod) ? prod[0]?.id_productor : prod.id_productor;
         const estadoProductor = Array.isArray(prod) ? prod[0]?.estado : prod.estado;
 

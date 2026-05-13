@@ -6,13 +6,31 @@ import { useAuth } from "@/context/AuthContext";
 import { useSession } from "next-auth/react";
 import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
-import { AlertCircle, CheckCircle2, Loader2, UploadIcon, Building2, MapPin, CreditCard } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  UploadIcon,
+  Building2,
+  MapPin,
+  CreditCard,
+  ShoppingBag,
+  Check,
+} from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+
+// ── Interfaces ────────────────────────────────────────────────────────────────
 
 interface Region {
   id_region: number;
   nombre: string;
   estado_prov?: string;
+}
+
+interface Categoria {
+  id_categoria: number;
+  nombre: string;
+  descripcion?: string;
 }
 
 interface Solicitud {
@@ -23,21 +41,35 @@ interface Solicitud {
   razon_social?: string;
 }
 
+// ── Iconos por categoría (emoji como fallback visual) ─────────────────────────
+
+const CATEGORIA_ICONS: Record<string, string> = {
+  Bebidas: "🥃",
+  Alimentos: "🌽",
+  Textiles: "🧵",
+  Artesanías: "🏺",
+  "Cosméticos y Bienestar": "🌿",
+  "Arte y Cultura": "🎨",
+};
+
+// ── Componente principal ──────────────────────────────────────────────────────
+
 export default function SolicitarPage() {
   const router = useRouter();
   const { isAuthenticated, loading: authLoading, user: contextUser } = useAuth();
   const { data: session } = useSession();
   const user = session?.user || contextUser;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loadingSolicitud, setLoadingSolicitud] = useState(true);
   const [solicitudActual, setSolicitudActual] = useState<Solicitud | null>(null);
   const [regiones, setRegiones] = useState<Region[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [certificadoUrl, setCertificadoUrl] = useState("");
   const [certificadoFile, setCertificadoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  // ── Nuevo estado para bloquear si ya tiene pedidos como cliente ──
   const [noElegible, setNoElegible] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -54,7 +86,29 @@ export default function SolicitarPage() {
     produccion_estado: "",
     produccion_cp: "",
     produccion_referencia: "",
+    categorias_ids: [] as number[],
   });
+
+  // ── Handlers de categorías ────────────────────────────────────────────────
+
+  const handleCategoriaToggle = (id: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      categorias_ids: prev.categorias_ids.includes(id)
+        ? prev.categorias_ids.filter((c) => c !== id)
+        : [...prev.categorias_ids, id],
+    }));
+  };
+
+  const handleTodasCategorias = () => {
+    const todasSeleccionadas = formData.categorias_ids.length === categorias.length;
+    setFormData((prev) => ({
+      ...prev,
+      categorias_ids: todasSeleccionadas
+        ? []
+        : categorias.map((c) => c.id_categoria),
+    }));
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -65,58 +119,74 @@ export default function SolicitarPage() {
 
     const initializePage = async () => {
       try {
-        // Obtener regiones
-        const regionesData = await api.productores.getRegiones();
+        // Regiones y categorías en paralelo
+        const [regionesData, categoriasData] = await Promise.all([
+          api.productores.getRegiones(),
+          api.categorias.getAll(),
+        ]);
         setRegiones(regionesData as Region[]);
+        setCategorias(categoriasData as Categoria[]);
 
-        // Obtener token (con retry si es necesario)
         let token = (session as any)?.accessToken || getCookie("token");
-
         if (!token) {
-          await new Promise(resolve => setTimeout(resolve, 300));
+          await new Promise((resolve) => setTimeout(resolve, 300));
           token = getCookie("token");
         }
 
         if (token) {
-          // ── Verificar si el usuario ya tiene pedidos como cliente ──
-          try {
-            const userId = (user as any)?.id_usuario;
-            if (userId) {
+          const userId = (user as any)?.id_usuario || (user as any)?.id;
+
+          if (userId) {
+            // ── VERIFICACIÓN DE PEDIDOS (SEGURA) ──
+            try {
               const res = await fetch(
                 `${process.env.NEXT_PUBLIC_API_URL}/pedidos?id_usuario=${userId}`,
                 { headers: { Authorization: `Bearer ${token}` } }
               );
-              const pedidos = await res.json();
-              if (Array.isArray(pedidos) && pedidos.length > 0) {
-                setNoElegible(true);
-                return; // no hace falta cargar más datos
-              }
-            }
-          } catch {
-            // Si falla la verificación, dejamos pasar y el backend rechazará si aplica
-          }
 
-          // Obtener solicitud actual
-          try {
-            const solicitud = await api.productores.getMiSolicitud(token);
-            if (solicitud) {
-              setSolicitudActual(solicitud as Solicitud);
+              // Verificamos que la respuesta sea OK y tenga contenido
+              const text = await res.text();
+              const pedidos = text ? JSON.parse(text) : [];
+
+              if (Array.isArray(pedidos) && pedidos.length > 0) {
+                // Verificación extra: confirmar que al menos uno pertenece al usuario
+                const tienePedidos = pedidos.some((p: any) =>
+                  String(p.id_usuario) === String(userId)
+                );
+
+                if (tienePedidos) {
+                  setNoElegible(true);
+                  setLoadingSolicitud(false);
+                  return;
+                }
+              }
+            } catch (error) {
+              console.error("Error silencioso en verificación de pedidos:", error);
+              // No bloqueamos al usuario si el microservicio de pedidos falla
             }
-          } catch (err) {
-            console.error("Error al obtener solicitud:", err);
+
+            // ── OBTENER SOLICITUD ACTUAL ──
+            try {
+              const solicitud = await api.productores.getMiSolicitud(token);
+              if (solicitud) {
+                setSolicitudActual(solicitud as Solicitud);
+              }
+            } catch (err) {
+              console.error("Error al obtener solicitud:", err);
+            }
           }
         }
       } catch (err) {
-        console.error("Error al inicializar página:", err);
+        console.error("Error crítico al inicializar página:", err);
+        setError("Hubo un problema al cargar la información inicial.");
       } finally {
         setLoadingSolicitud(false);
       }
     };
 
     initializePage();
-  }, [isAuthenticated, authLoading, router, session]);
+  }, [isAuthenticated, authLoading, router, session, user]);  // ── Estados de carga / bloqueo ────────────────────────────────────────────
 
-  // ── 1. Loading ──
   if (authLoading || loadingSolicitud) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -125,7 +195,6 @@ export default function SolicitarPage() {
     );
   }
 
-  // ── 2. No elegible: ya hizo pedidos como cliente ──
   if (noElegible) {
     return (
       <div className="mx-auto w-full max-w-4xl px-4 py-8">
@@ -142,7 +211,8 @@ export default function SolicitarPage() {
               Esta cuenta ya realizó pedidos como cliente.
             </p>
             <p className="mb-6 text-gray-500">
-              Para vender en Tierra Agaves necesitas crear una cuenta nueva dedicada a tu actividad como productor.
+              Para vender en Tierra Agaves necesitas crear una cuenta nueva
+              dedicada a tu actividad como productor.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
@@ -164,7 +234,8 @@ export default function SolicitarPage() {
     );
   }
 
-  // ── 3. Estados de solicitud existente ──
+  // ── Estados de solicitud existente ────────────────────────────────────────
+
   if (solicitudActual) {
     if (solicitudActual.estado === "pendiente") {
       return (
@@ -179,8 +250,8 @@ export default function SolicitarPage() {
                 Solicitud en Revisión
               </h2>
               <p className="mb-6 text-gray-500">
-                Tu solicitud para convertirte en productor está siendo revisada por un administrador.
-                Te notificaremos cuando sea aprobada.
+                Tu solicitud para convertirte en productor está siendo revisada
+                por un administrador. Te notificaremos cuando sea aprobada.
               </p>
               <button
                 onClick={() => router.push("/producto")}
@@ -207,7 +278,8 @@ export default function SolicitarPage() {
                 ¡Ya eres Productor!
               </h2>
               <p className="mb-6 text-gray-500">
-                Tu solicitud fue aprobada. Ahora puedes publicar y vender tus productos.
+                Tu solicitud fue aprobada. Ahora puedes publicar y vender tus
+                productos.
               </p>
               <button
                 onClick={() => router.push("/dashboard/productor")}
@@ -233,11 +305,10 @@ export default function SolicitarPage() {
               <h2 className="mb-2 text-2xl font-bold text-dark dark:text-white">
                 Solicitud Rechazada
               </h2>
-              <p className="mb-2 text-gray-500">
-                Tu solicitud fue rechazada.
-              </p>
+              <p className="mb-2 text-gray-500">Tu solicitud fue rechazada.</p>
               <p className="mb-6 rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20">
-                <strong>Motivo:</strong> {solicitudActual.motivo_rechazo || "No especificado"}
+                <strong>Motivo:</strong>{" "}
+                {solicitudActual.motivo_rechazo || "No especificado"}
               </p>
               <button
                 onClick={() => {
@@ -256,6 +327,7 @@ export default function SolicitarPage() {
                     produccion_estado: "",
                     produccion_cp: "",
                     produccion_referencia: "",
+                    categorias_ids: [],
                   });
                 }}
                 className="rounded-lg bg-primary px-6 py-3 font-medium text-white hover:bg-opacity-90"
@@ -269,8 +341,12 @@ export default function SolicitarPage() {
     }
   }
 
+  // ── Handlers del formulario ───────────────────────────────────────────────
+
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -286,7 +362,6 @@ export default function SolicitarPage() {
 
     try {
       const token = (session as any)?.accessToken || getCookie("token");
-
       if (!token) {
         setError("Error: No se detectó sesión. Por favor inicia sesión.");
         return;
@@ -300,7 +375,8 @@ export default function SolicitarPage() {
       const result = await api.archivos.upload(token, formDataUpload);
       setCertificadoUrl((result as any).url || `/${(result as any).id}`);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error al subir el certificado";
+      const msg =
+        err instanceof Error ? err.message : "Error al subir el certificado";
       setError(msg);
     } finally {
       setUploading(false);
@@ -311,6 +387,13 @@ export default function SolicitarPage() {
     e.preventDefault();
     setIsSubmitting(true);
     setError("");
+
+    // Validar categorías
+    if (formData.categorias_ids.length === 0) {
+      setError("Selecciona al menos una categoría de productos");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const token = (session as any)?.accessToken || getCookie("token");
@@ -327,33 +410,44 @@ export default function SolicitarPage() {
         rfc: formData.rfc || undefined,
         razon_social: formData.razon_social || undefined,
         datos_bancarios: formData.datos_bancarios || undefined,
-        direccion_fiscal: formData.direccion_calle || formData.direccion_ciudad ? {
-          linea_1: formData.direccion_calle || undefined,
-          ciudad: formData.direccion_ciudad || undefined,
-          estado: formData.direccion_estado || undefined,
-          codigo_postal: formData.direccion_cp || undefined,
-          pais_iso2: "MX",
-        } : undefined,
-        direccion_produccion: formData.produccion_calle || formData.produccion_ciudad ? {
-          linea_1: formData.produccion_calle || undefined,
-          ciudad: formData.produccion_ciudad || undefined,
-          estado: formData.produccion_estado || undefined,
-          codigo_postal: formData.produccion_cp || undefined,
-          referencia: formData.produccion_referencia || undefined,
-          pais_iso2: "MX",
-        } : undefined,
+        direccion_fiscal:
+          formData.direccion_calle || formData.direccion_ciudad
+            ? {
+              linea_1: formData.direccion_calle || undefined,
+              ciudad: formData.direccion_ciudad || undefined,
+              estado: formData.direccion_estado || undefined,
+              codigo_postal: formData.direccion_cp || undefined,
+              pais_iso2: "MX",
+            }
+            : undefined,
+        direccion_produccion:
+          formData.produccion_calle || formData.produccion_ciudad
+            ? {
+              linea_1: formData.produccion_calle || undefined,
+              ciudad: formData.produccion_ciudad || undefined,
+              estado: formData.produccion_estado || undefined,
+              codigo_postal: formData.produccion_cp || undefined,
+              referencia: formData.produccion_referencia || undefined,
+              pais_iso2: "MX",
+            }
+            : undefined,
         id_region: formData.id_region ?? undefined,
-      });
+        // @ts-ignore — campo nuevo; el tipo del api.ts se puede ampliar luego
+        categorias_ids: formData.categorias_ids,
+      } as any);
 
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al enviar la solicitud");
+      setError(
+        err instanceof Error ? err.message : "Error al enviar la solicitud"
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ── 4. Éxito al enviar solicitud ──
+  // ── Pantalla de éxito ─────────────────────────────────────────────────────
+
   if (success) {
     return (
       <div className="mx-auto w-full max-w-4xl px-4 py-8">
@@ -367,8 +461,9 @@ export default function SolicitarPage() {
               Solicitud Enviada
             </h2>
             <p className="mb-6 text-gray-500">
-              Tu solicitud para convertirte en productor ha sido enviada exitosamente.
-              Un administrador la revisará y te notificará cuando sea aprobada.
+              Tu solicitud para convertirte en productor ha sido enviada
+              exitosamente. Un administrador la revisará y te notificará cuando
+              sea aprobada.
             </p>
             <button
               onClick={() => router.push("/producto")}
@@ -382,7 +477,12 @@ export default function SolicitarPage() {
     );
   }
 
-  // ── 5. Formulario ──
+  // ── Formulario principal ──────────────────────────────────────────────────
+
+  const todasSeleccionadas =
+    categorias.length > 0 &&
+    formData.categorias_ids.length === categorias.length;
+
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8">
       <Breadcrumb pageName="Solicitar ser Productor" />
@@ -393,7 +493,8 @@ export default function SolicitarPage() {
             Solicitar ser Productor
           </h1>
           <p className="mt-1 text-gray-500">
-            Completa el formulario para convertirte en productor en nuestra plataforma.
+            Completa el formulario para convertirte en productor en nuestra
+            plataforma.
           </p>
         </div>
 
@@ -405,6 +506,7 @@ export default function SolicitarPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* ── Datos Fiscales ── */}
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
               <Building2 className="h-5 w-5" />
@@ -425,7 +527,6 @@ export default function SolicitarPage() {
                   placeholder="Mi Empresa S.A. de C.V."
                 />
               </div>
-
               <div className="w-44">
                 <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
                   RFC
@@ -443,6 +544,7 @@ export default function SolicitarPage() {
             </div>
           </div>
 
+          {/* ── Dirección Fiscal ── */}
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
               <MapPin className="h-5 w-5" />
@@ -463,7 +565,6 @@ export default function SolicitarPage() {
                   placeholder="Av. Principal #123"
                 />
               </div>
-
               <div>
                 <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
                   Código Postal
@@ -478,7 +579,6 @@ export default function SolicitarPage() {
                   placeholder="12345"
                 />
               </div>
-
               <div>
                 <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
                   Ciudad
@@ -492,7 +592,6 @@ export default function SolicitarPage() {
                   placeholder="Ciudad de México"
                 />
               </div>
-
               <div>
                 <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
                   Estado
@@ -509,6 +608,7 @@ export default function SolicitarPage() {
             </div>
           </div>
 
+          {/* ── Lugar de Producción ── */}
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
               <MapPin className="h-5 w-5" />
@@ -529,7 +629,6 @@ export default function SolicitarPage() {
                   placeholder="Av. Producción #456"
                 />
               </div>
-
               <div>
                 <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
                   Código Postal
@@ -544,7 +643,6 @@ export default function SolicitarPage() {
                   placeholder="12345"
                 />
               </div>
-
               <div>
                 <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
                   Ciudad
@@ -558,7 +656,6 @@ export default function SolicitarPage() {
                   placeholder="Oaxaca"
                 />
               </div>
-
               <div>
                 <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
                   Estado
@@ -572,7 +669,6 @@ export default function SolicitarPage() {
                   placeholder="Oaxaca"
                 />
               </div>
-
               <div className="sm:col-span-2">
                 <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
                   Referencia (opcional)
@@ -589,15 +685,107 @@ export default function SolicitarPage() {
             </div>
           </div>
 
+          {/* ── Categorías de Productos ── */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
+                <ShoppingBag className="h-5 w-5" />
+                Categorías de Productos *
+              </h3>
+              <button
+                type="button"
+                onClick={handleTodasCategorias}
+                className="text-sm font-medium text-primary hover:underline disabled:opacity-40"
+                disabled={categorias.length === 0}
+              >
+                {todasSeleccionadas ? "Deseleccionar todas" : "Seleccionar todas"}
+              </button>
+            </div>
+
+            <p className="mb-4 text-sm text-gray-500">
+              Selecciona las categorías de productos que vas a ofrecer. Puedes
+              elegir varias.
+            </p>
+
+            {categorias.length === 0 ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                <span className="ml-2 text-sm text-gray-400">
+                  Cargando categorías...
+                </span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {categorias.map((cat) => {
+                  const selected = formData.categorias_ids.includes(
+                    cat.id_categoria
+                  );
+                  const emoji = CATEGORIA_ICONS[cat.nombre] ?? "📦";
+
+                  return (
+                    <button
+                      key={cat.id_categoria}
+                      type="button"
+                      onClick={() => handleCategoriaToggle(cat.id_categoria)}
+                      className={`relative flex flex-col items-start gap-1 rounded-xl border-2 px-4 py-3 text-left transition-all duration-150 ${selected
+                        ? "border-primary bg-primary/10 dark:bg-primary/20"
+                        : "border-gray-200 bg-white hover:border-primary/40 dark:border-dark-3 dark:bg-dark"
+                        }`}
+                    >
+                      {/* Checkmark en esquina superior derecha */}
+                      <span
+                        className={`absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all ${selected
+                          ? "border-primary bg-primary"
+                          : "border-gray-300 dark:border-dark-3"
+                          }`}
+                      >
+                        {selected && (
+                          <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                        )}
+                      </span>
+
+                      {/* Emoji + nombre */}
+                      <span className="text-2xl leading-none">{emoji}</span>
+                      <span
+                        className={`text-sm font-medium leading-tight ${selected
+                          ? "text-primary"
+                          : "text-dark dark:text-gray-300"
+                          }`}
+                      >
+                        {cat.nombre}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Contador */}
+            <div className="mt-3 flex items-center justify-between">
+              <p
+                className={`text-xs ${formData.categorias_ids.length === 0
+                  ? "text-red-400"
+                  : "text-gray-400"
+                  }`}
+              >
+                {formData.categorias_ids.length === 0
+                  ? "Debes seleccionar al menos una categoría"
+                  : `${formData.categorias_ids.length} categoría${formData.categorias_ids.length > 1 ? "s" : ""
+                  } seleccionada${formData.categorias_ids.length > 1 ? "s" : ""
+                  }`}
+              </p>
+            </div>
+          </div>
+
+          {/* ── Datos Bancarios ── */}
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
               <CreditCard className="h-5 w-5" />
               Datos Bancarios (para pagos)
             </h3>
-
             <div>
               <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                Datos de cuenta bancaria (número de cuenta o CLABE)
+                Número de cuenta o CLABE
               </label>
               <input
                 type="text"
@@ -613,6 +801,7 @@ export default function SolicitarPage() {
             </div>
           </div>
 
+          {/* ── Región ── */}
           <div>
             <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
               Región *
@@ -620,7 +809,12 @@ export default function SolicitarPage() {
             <select
               name="id_region"
               value={formData.id_region ?? ""}
-              onChange={(e) => setFormData((prev) => ({ ...prev, id_region: e.target.value ? Number(e.target.value) : null }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  id_region: e.target.value ? Number(e.target.value) : null,
+                }))
+              }
               required
               className="w-full rounded-lg border border-gray-4 bg-gray-1 px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark-2 dark:text-white"
             >
@@ -633,6 +827,7 @@ export default function SolicitarPage() {
             </select>
           </div>
 
+          {/* ── Certificado ── */}
           <div>
             <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
               Certificado de Origen (PDF o imagen) *
@@ -647,7 +842,10 @@ export default function SolicitarPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => { setCertificadoUrl(""); setCertificadoFile(null); }}
+                  onClick={() => {
+                    setCertificadoUrl("");
+                    setCertificadoFile(null);
+                  }}
                   className="text-sm text-red-500 hover:text-red-600"
                 >
                   Eliminar
@@ -668,7 +866,8 @@ export default function SolicitarPage() {
                 >
                   <UploadIcon className="mb-2 h-8 w-8 text-gray-4" />
                   <p className="text-body-sm font-medium text-gray-500">
-                    <span className="text-primary">Click para subir</span> o arrastra
+                    <span className="text-primary">Click para subir</span> o
+                    arrastra
                   </p>
                   <p className="mt-1 text-body-xs text-gray-400">
                     PDF, JPG, PNG (máx. 10MB)
@@ -678,6 +877,7 @@ export default function SolicitarPage() {
             )}
           </div>
 
+          {/* ── Botones ── */}
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-end">
             <button
               type="button"
@@ -688,7 +888,7 @@ export default function SolicitarPage() {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !certificadoUrl}
+              disabled={isSubmitting || !certificadoUrl || uploading}
               className="flex items-center justify-center rounded-lg bg-primary px-6 py-3 font-medium text-white hover:bg-opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isSubmitting ? (
@@ -699,7 +899,7 @@ export default function SolicitarPage() {
               ) : uploading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Subiendo...
+                  Subiendo archivo...
                 </>
               ) : (
                 "Enviar Solicitud"

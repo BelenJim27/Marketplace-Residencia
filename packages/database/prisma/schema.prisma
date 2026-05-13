@@ -71,6 +71,7 @@ model categorias {
   comisiones                    comisiones[]
   categorias_traducciones       categorias_traducciones[]
   restricciones_envio_categoria restricciones_envio_categoria[]
+  productor_categoria productor_categoria[]
 
   @@index([id_padre], map: "idx_cat_padre")
 }
@@ -486,6 +487,15 @@ model producto_imagenes {
 
   @@index([id_producto], map: "idx_producto_imagenes_producto")
 }
+model productor_categoria {
+  id_productor Int
+  id_categoria Int
+  creado_en    DateTime    @default(now()) @db.Timestamptz(6)
+  productores  productores @relation(fields: [id_productor], references: [id_productor], onDelete: Cascade, onUpdate: NoAction)
+  categorias   categorias  @relation(fields: [id_categoria], references: [id_categoria], onDelete: Cascade, onUpdate: NoAction)
+  @@id([id_productor, id_categoria])
+  @@index([id_categoria], map: "idx_prod_cat_categoria")
+}
 
 model productores {
   id_productor                Int                @id @default(autoincrement())
@@ -515,6 +525,8 @@ model productores {
   usuarios                    usuarios           @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
   revisor                     usuarios?          @relation("RevisorProductor", fields: [revisado_por], references: [id_usuario], onUpdate: NoAction)
   tiendas                     tiendas[]
+  productor_categoria productor_categoria[]
+
 }
 
 model productos {

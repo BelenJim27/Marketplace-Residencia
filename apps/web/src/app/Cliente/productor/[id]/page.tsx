@@ -5,17 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Users, MapPin, ShoppingCart, Heart, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
+import type { ProductItem } from "@/types/producer";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/format-number";
 
-interface Producto {
-  id_producto: bigint;
-  nombre: string;
-  descripcion: string;
-  precio_base: string;
-  imagen_principal_url?: string;
+interface Producto extends ProductItem {
   producto_imagenes?: { url: string }[];
   categorias?: string[];
   nombre_productor?: string;
@@ -42,7 +38,7 @@ export default function ProductorPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [agregadoId, setAgregadoId] = useState<bigint | null>(null);
+  const [agregadoId, setAgregadoId] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     const id = params.id;
@@ -90,8 +86,8 @@ export default function ProductorPage() {
       agregarWishlist({
         id_producto: producto.id_producto,
         nombre: producto.nombre,
-        precio_base: producto.precio_base,
-        imagen_principal_url: producto.imagen_principal_url,
+        precio_base: producto.precio_base == null ? "0" : String(producto.precio_base),
+        imagen_principal_url: producto.imagen_principal_url ?? undefined,
         producto_imagenes: producto.producto_imagenes,
       });
     }
@@ -313,8 +309,8 @@ export default function ProductorPage() {
                         agregarProducto({
                           id_producto: producto.id_producto,
                           nombre: producto.nombre,
-                          precio_base: producto.precio_base,
-                          imagen_principal_url: producto.imagen_principal_url,
+                          precio_base: producto.precio_base == null ? "0" : String(producto.precio_base),
+                          imagen_principal_url: producto.imagen_principal_url ?? undefined,
                           producto_imagenes: producto.producto_imagenes,
                           cantidad: 1,
                         });
