@@ -10,6 +10,7 @@ import { VentasChart } from "./charts/VentasChart";
 import { StatsCards } from "./StatsCards";
 import { DashboardPeriod, useVentasData } from "@/hooks/useVentasData";
 import { useProductosData } from "@/hooks/useProductosData";
+import { useProductorCategorias } from "@/hooks/useProductorCategorias";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
@@ -38,53 +39,6 @@ type CategoriaProductor = {
 
 // ── Constante: categorías que tienen panel con Lotes ───────────────────────────
 const CATEGORIAS_CON_LOTES = ["Bebidas", "Bebidas_mezcal"];
-
-// ── Hook: obtener categorías del productor ─────────────────────────────────────
-function useProductorCategorias(token: string) {
-  const [categorias, setCategorias] = useState<CategoriaProductor[]>([]);
-  const [loadingCategorias, setLoadingCategorias] = useState(true);
-
-  useEffect(() => {
-    if (!token) {
-      setLoadingCategorias(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchCategorias = async () => {
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/productores/mi-solicitud`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled) return;
-        setCategorias(Array.isArray(data?.categorias) ? data.categorias : []);
-      } catch {
-        // Si falla, dejamos categorias vacías — el panel muestra versión genérica
-      } finally {
-        if (!cancelled) setLoadingCategorias(false);
-      }
-    };
-
-    fetchCategorias();
-    return () => { cancelled = true; };
-  }, [token]);
-
-  const tieneLotes = useMemo(
-    () =>
-      categorias.some(
-        (c) =>
-          CATEGORIAS_CON_LOTES.includes(c.nombre) ||
-          CATEGORIAS_CON_LOTES.includes(c.slug)
-      ),
-    [categorias]
-  );
-
-  return { categorias, loadingCategorias, tieneLotes };
-}
 
 // ── Componente principal ───────────────────────────────────────────────────────
 export function ProductorDashboard() {

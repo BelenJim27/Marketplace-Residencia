@@ -11,49 +11,30 @@ import type {
 } from "@/hooks/useProductos";
 import type { ImagenProductoState } from "@/components/Producer/Products/ImagenProducto";
 
+// ─── Constantes ───────────────────────────────────────────────────────────────
+
+const ID_BEBIDAS = 5;
+const SUBCATEGORIAS_BEBIDAS_IDS = [3, 4]; // Mezcal artesanal, Mezcal Ancestral
+const TODAS_CATEGORIAS_BEBIDAS = [ID_BEBIDAS, ...SUBCATEGORIAS_BEBIDAS_IDS];
+
 // ─── Field ────────────────────────────────────────────────────────────────────
 
 function Field({
-  label,
-  value,
-  onChange,
-  disabled,
-  textarea,
-  inputMode,
-  placeholder,
+  label, value, onChange, disabled, textarea, inputMode, placeholder,
 }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  textarea?: boolean;
+  label: string; value: string; onChange: (value: string) => void;
+  disabled?: boolean; textarea?: boolean;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   placeholder?: string;
 }) {
-  const base =
-    "w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary disabled:opacity-60 dark:border-dark-3 dark:bg-dark-2";
+  const base = "w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary disabled:opacity-60 dark:border-dark-3 dark:bg-dark-2";
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-dark dark:text-white">{label}</span>
       {textarea ? (
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          rows={4}
-          placeholder={placeholder}
-          className={base}
-        />
+        <textarea value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} rows={4} placeholder={placeholder} className={base} />
       ) : (
-        <input
-          type="text"
-          inputMode={inputMode}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          placeholder={placeholder}
-          className={base}
-        />
+        <input type="text" inputMode={inputMode} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} placeholder={placeholder} className={base} />
       )}
     </label>
   );
@@ -62,35 +43,19 @@ function Field({
 // ─── SelectField ──────────────────────────────────────────────────────────────
 
 function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-  disabled,
-  placeholder,
+  label, value, onChange, options, disabled, placeholder,
 }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
+  label: string; value: string; onChange: (value: string) => void;
   options: Array<{ label: string; value: string }>;
-  disabled?: boolean;
-  placeholder?: string;
+  disabled?: boolean; placeholder?: string;
 }) {
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-dark dark:text-white">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary disabled:opacity-60 dark:border-dark-3 dark:bg-dark-2"
-      >
+      <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
+        className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary disabled:opacity-60 dark:border-dark-3 dark:bg-dark-2">
         {placeholder && <option value="">{placeholder}</option>}
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
+        {options.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
       </select>
     </label>
   );
@@ -111,33 +76,30 @@ type ProductoModalProps = {
   saving: boolean;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onClose: () => void;
+  // ID de categoría del productor — viene del hook useProductorCategorias
+  categoriaProductorId?: number;
 };
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export function ProductoModal({
-  mode,
-  form,
-  setForm,
-  imagen,
-  setImagen,
-  selected,
-  stores,
-  categorias,
-  lotes,
-  saving,
-  onSubmit,
-  onClose,
+  mode, form, setForm, imagen, setImagen, selected,
+  stores, categorias, lotes, saving, onSubmit, onClose,
+  categoriaProductorId,
 }: ProductoModalProps) {
-  const title =
-    mode === "create"
-      ? "Nuevo producto"
-      : mode === "edit"
-        ? "Editar producto"
-        : "Detalle de producto";
+  const title = mode === "create" ? "Nuevo producto" : mode === "edit" ? "Editar producto" : "Detalle de producto";
 
-  // Corrección 1: Definir la variable que faltaba
-  const tieneLoTeVinculado = !!form.id_lote;
+  // ── ¿El productor pertenece a la categoría Bebidas? ──────────────────────
+  const esProductorBebidas = categoriaProductorId !== undefined
+    ? TODAS_CATEGORIAS_BEBIDAS.includes(categoriaProductorId)
+    : false;
+
+  // Solo Mezcal artesanal y Mezcal Ancestral para el selector interno
+  const subcategoriasMezcal = categorias.filter((c) =>
+    SUBCATEGORIAS_BEBIDAS_IDS.includes(c.id_categoria)
+  );
+
+  const tieneLoteVinculado = !!form.id_lote;
 
   const set = (key: keyof FormState) => (value: string) =>
     setForm((c) => ({ ...c, [key]: value }));
@@ -147,7 +109,6 @@ export function ProductoModal({
     setForm((c) => ({
       ...c,
       id_lote: value,
-      // Nota: Asegúrate de que stock_inicial esté definido en la interfaz FormState
       stock_inicial: lote?.unidades != null ? String(lote.unidades) : (c as any).stock_inicial,
     }));
   };
@@ -160,7 +121,7 @@ export function ProductoModal({
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-dark dark:text-white">{title}</h2>
-            {tieneLoTeVinculado && (
+            {tieneLoteVinculado && esProductorBebidas && (
               <p className="mt-1 text-xs text-green-600 dark:text-green-400">
                 🔗 Vinculado a un lote — el stock se gestiona desde Mis Lotes
               </p>
@@ -173,30 +134,12 @@ export function ProductoModal({
 
           {/* Nombre y Precio */}
           <div className="grid gap-4 md:grid-cols-2">
-            <Field
-              label="Nombre"
-              value={form.nombre}
-              onChange={set("nombre")}
-              disabled={mode === "view"}
-            />
-            <Field
-              label="Precio base"
-              value={form.precio_base}
-              onChange={set("precio_base")}
-              disabled={mode === "view"}
-              inputMode="decimal"
-              placeholder="0.00"
-            />
+            <Field label="Nombre" value={form.nombre} onChange={set("nombre")} disabled={mode === "view"} />
+            <Field label="Precio base" value={form.precio_base} onChange={set("precio_base")} disabled={mode === "view"} inputMode="decimal" placeholder="0.00" />
           </div>
 
           {/* Descripción */}
-          <Field
-            label="Descripción"
-            value={form.descripcion}
-            onChange={set("descripcion")}
-            disabled={mode === "view"}
-            textarea
-          />
+          <Field label="Descripción" value={form.descripcion} onChange={set("descripcion")} disabled={mode === "view"} textarea />
 
           {/* Imagen */}
           <ImagenProducto
@@ -209,78 +152,69 @@ export function ProductoModal({
 
           {/* Tienda / Moneda / Status */}
           <div className="grid gap-4 md:grid-cols-3">
-            <SelectField
-              label="Tienda"
-              value={form.id_tienda}
-              onChange={set("id_tienda")}
-              disabled={mode === "view"}
-              options={stores.map((s) => ({ label: s.nombre, value: String(s.id_tienda) }))}
-            />
-            <SelectField
-              label="Moneda"
-              value={form.moneda_base}
-              onChange={set("moneda_base")}
-              disabled={mode === "view"}
-              options={[
-                { label: "MXN", value: "MXN" },
-                { label: "USD", value: "USD" },
-              ]}
-            />
-            <SelectField
-              label="Status"
-              value={form.status}
-              onChange={set("status")}
-              disabled={mode === "view"}
-              options={[
-                { label: "Activo", value: "activo" },
-                { label: "Inactivo", value: "inactivo" },
-              ]}
-            />
+            <SelectField label="Tienda" value={form.id_tienda} onChange={set("id_tienda")} disabled={mode === "view"}
+              options={stores.map((s) => ({ label: s.nombre, value: String(s.id_tienda) }))} />
+            <SelectField label="Moneda" value={form.moneda_base} onChange={set("moneda_base")} disabled={mode === "view"}
+              options={[{ label: "MXN", value: "MXN" }, { label: "USD", value: "USD" }]} />
+            <SelectField label="Status" value={form.status} onChange={set("status")} disabled={mode === "view"}
+              options={[{ label: "Activo", value: "activo" }, { label: "Inactivo", value: "inactivo" }]} />
           </div>
 
-          {/* Categoría */}
-          <SelectField
-            label="Categoría"
-            value={form.id_categoria}
-            onChange={set("id_categoria")}
-            disabled={mode === "view"}
-            placeholder="Selecciona una categoría"
-            options={categorias.map((c) => ({
-              label: c.nombre,
-              value: String(c.id_categoria),
-            }))}
-          />
+          {/* ── SOLO BEBIDAS: Tipo de mezcal + Lote + Stock ──────────────────── */}
+          {esProductorBebidas ? (
+            <>
+              {/* Selector: Mezcal Artesanal o Mezcal Ancestral */}
+              <SelectField
+                label="Tipo de mezcal"
+                value={form.id_categoria}
+                onChange={set("id_categoria")}
+                disabled={mode === "view"}
+                placeholder="Selecciona el tipo"
+                options={subcategoriasMezcal.map((c) => ({
+                  label: c.nombre,
+                  value: String(c.id_categoria),
+                }))}
+              />
 
-          {/* Lote y Stock inicial */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <SelectField
-              label="Lote"
-              // Corrección 2: Asegurar que el value no sea undefined
-              value={form.id_lote ?? ""}
-              onChange={handleLoteChange}
-              disabled={mode === "view"}
-              placeholder="Sin lote asignado"
-              options={lotes.map((l) => ({
-                label: `${l.codigo_lote}${l.nombre_comun ? ` - ${l.nombre_comun}` : ""}`,
-                value: String(l.id_lote),
-              }))}
-            />
+              {/* Lote y Stock juntos */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <SelectField
+                  label="Lote"
+                  value={form.id_lote ?? ""}
+                  onChange={handleLoteChange}
+                  disabled={mode === "view"}
+                  placeholder="Sin lote asignado"
+                  options={lotes.map((l) => ({
+                    label: `${l.codigo_lote}${l.nombre_comun ? ` - ${l.nombre_comun}` : ""}`,
+                    value: String(l.id_lote),
+                  }))}
+                />
+                <Field
+                  label="Stock inicial"
+                  value={(form as any).stock_inicial ?? ""}
+                  onChange={set("stock_inicial" as keyof FormState)}
+                  disabled={mode === "view"}
+                  inputMode="numeric"
+                  placeholder="0"
+                />
+              </div>
+            </>
+          ) : (
+            /* ── OTRAS CATEGORÍAS: solo Stock, sin categoría ni lote ────────── */
             <Field
               label="Stock inicial"
-              // Corrección 3: Asegurar acceso a stock_inicial
               value={(form as any).stock_inicial ?? ""}
               onChange={set("stock_inicial" as keyof FormState)}
               disabled={mode === "view"}
               inputMode="numeric"
               placeholder="0"
             />
-          </div>
+          )}
 
           {/* Dimensiones y peso */}
           <div>
             <p className="mb-3 text-sm font-semibold text-dark dark:text-white">
-              Dimensiones y peso{" "}
-              <span className="font-normal text-gray-400">(opcional)</span>
+              Dimensiones y peso <span className="font-normal text-gray-400">(opcional)</span>
             </p>
             <div className="grid gap-4 md:grid-cols-4">
               <Field label="Peso (kg)" value={form.peso_kg} onChange={set("peso_kg")} disabled={mode === "view"} inputMode="decimal" placeholder="0.0" />
@@ -292,19 +226,13 @@ export function ProductoModal({
 
           {/* Botones */}
           <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-stroke px-5 py-3 font-medium text-dark dark:border-dark-3 dark:text-white"
-            >
+            <button type="button" onClick={onClose}
+              className="rounded-lg border border-stroke px-5 py-3 font-medium text-dark dark:border-dark-3 dark:text-white">
               Cerrar
             </button>
             {mode !== "view" && (
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-lg bg-primary px-5 py-3 font-medium text-white hover:bg-opacity-90 disabled:opacity-60"
-              >
+              <button type="submit" disabled={saving}
+                className="rounded-lg bg-primary px-5 py-3 font-medium text-white hover:bg-opacity-90 disabled:opacity-60">
                 {saving ? "Guardando..." : "Guardar"}
               </button>
             )}

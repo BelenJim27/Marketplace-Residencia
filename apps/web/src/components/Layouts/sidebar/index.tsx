@@ -11,6 +11,8 @@ import { MenuItem } from "./menu-item";
 import { useSidebarContext } from "@/context/SidebarContext";
 import { useAuth } from "@/context/AuthContext";
 import { ChevronDown, LogOut } from "lucide-react";
+import { useProductorCategorias } from "../../../hooks/useProductorCategorias";
+import { getCookie } from "@/lib/cookies";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -25,14 +27,20 @@ export function Sidebar() {
     if (pathname.includes("/categorias") || pathname.includes("/productos")) menus.push("Inventario");
     return menus;
   });
-  const navData = getNavData(isProductor, isAdmin);
+
+  // ── Categorías del productor para mostrar/ocultar Lotes y Categorías ──────
+  const token = getCookie("token") ?? "";
+  const { tieneLotes } = useProductorCategorias(token);
+
+  // ── LÍNEA MODIFICADA: se pasa tieneLotes a getNavData ────────────────────
+  const navData = getNavData(isProductor, isAdmin, tieneLotes);
+
   const isFilesRoute = pathname.startsWith("/dashboard/productor/archivos");
 
   const isItemActive = (item: { url?: string; children?: Array<{ url: string }> }) => {
     if (item.children?.length) {
       return item.children.some((child) => pathname === child.url) || (item.url ? pathname === item.url : false);
     }
-
     return item.url ? pathname === item.url : false;
   };
 
@@ -50,25 +58,24 @@ export function Sidebar() {
       )}
 
       <aside
-          style={{ 
-            
-            borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)", 
-            backgroundColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.08)" 
-          }}
-          className={cn(
-            "border-r transition-all duration-300 ease-linear overflow-hidden h-screen sticky top-0 dark:border-gray-800 dark:bg-gray-900",
-            isMobile 
-              ? isOpen 
-                ? "translate-x-0 fixed bottom-0 top-0 left-0 z-50 w-[280px] max-w-[85vw]" 
-                : "-translate-x-full fixed bottom-0 top-0 left-0 z-50 w-[280px] max-w-[85vw]"
-              : isCollapsed 
-                ? "w-24" 
-                : "max-w-[290px] w-full",
-            !isOpen && !isMobile && "w-0",
-          )}
-        >
+        style={{
+          borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)",
+          backgroundColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.08)",
+        }}
+        className={cn(
+          "border-r transition-all duration-300 ease-linear overflow-hidden h-screen sticky top-0 dark:border-gray-800 dark:bg-gray-900",
+          isMobile
+            ? isOpen
+              ? "translate-x-0 fixed bottom-0 top-0 left-0 z-50 w-[280px] max-w-[85vw]"
+              : "-translate-x-full fixed bottom-0 top-0 left-0 z-50 w-[280px] max-w-[85vw]"
+            : isCollapsed
+              ? "w-24"
+              : "max-w-[290px] w-full",
+          !isOpen && !isMobile && "w-0",
+        )}
+      >
         <div className="flex h-full flex-col py-6 md:py-10 pl-4 md:pl-[25px] pr-2 md:pr-[7px]">
-          
+
           {/* Logo y botón collapse */}
           <div className="relative pr-2 md:pr-4.5 flex items-center justify-between">
             {!isCollapsed && (
@@ -111,7 +118,7 @@ export function Sidebar() {
           <div className="mt-4 md:mt-6 flex-1 overflow-y-auto pr-2 md:pr-3">
             {navData.map((section) => (
               <div key={section.label} className="mb-6 md:mb-8">
-                
+
                 {!isCollapsed && (
                   <h2 className="mb-3 md:mb-5 text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
                     {section.label}
@@ -120,8 +127,8 @@ export function Sidebar() {
 
                 <ul className={cn("space-y-1 md:space-y-2", isCollapsed ? "flex flex-col items-center gap-2 md:gap-4" : "")}>
                   {section.items.map((item) => (
-                    <li 
-                      key={item.title} 
+                    <li
+                      key={item.title}
                       className={cn(
                         "relative",
                         isCollapsed ? "w-12" : ""
@@ -190,14 +197,14 @@ export function Sidebar() {
                           <item.icon className={cn("shrink-0 text-gray-600 transition-colors group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white", isCollapsed ? "size-6 md:size-7" : "size-5 md:size-6", isItemActive(item) && "text-gray-900 dark:text-white")} />
                           {!isCollapsed && <span className="text-sm md:text-base truncate">{item.title}</span>}
                         </MenuItem>
-                      ) : null
-                    }
+                      ) : null}
+
                       {/* Menú flotante cuando está colapsado */}
                       {isCollapsed && hoveredItem === item.title && !isMobile && (
-                          <div className="absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white shadow-lg pointer-events-none">
-                            {item.title}
-                            <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-primary"></div>
-                          </div>
+                        <div className="absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white shadow-lg pointer-events-none">
+                          {item.title}
+                          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-primary"></div>
+                        </div>
                       )}
                     </li>
                   ))}

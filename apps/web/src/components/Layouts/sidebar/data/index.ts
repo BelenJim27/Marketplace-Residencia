@@ -170,8 +170,71 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
   },
 ];
 
-export function getNavData(isProductor: boolean, isAdmin: boolean = false) {
+
+export function getNavData(isProductor: boolean, isAdmin: boolean = false, tieneLotes: boolean = false) {
   if (isAdmin) return ADMIN_NAV_DATA;
-  if (isProductor) return PRODUCTOR_NAV_DATA;
+  if (isProductor) {
+    return [
+      {
+        label: "PRODUCTOR",
+        items: [
+          {
+            title: "Dashboard",
+            url: "/dashboard/productor",
+            icon: LayoutDashboard,
+          },
+          // Lotes solo si es de bebidas
+          ...(tieneLotes ? [{
+            title: "Lotes",
+            url: "/dashboard/productor/lotes",
+            icon: Layers,
+          }] : []),
+          {
+            title: "Inventario",
+            icon: Boxes,
+            children: [
+              // Categorías solo si es de bebidas
+              ...(tieneLotes ? [{
+                title: "Categorías",
+                url: "/dashboard/productor/categorias",
+                icon: Layers,
+              }] : []),
+              {
+                title: "Productos",
+                url: "/dashboard/productor/productos",
+                icon: Package,
+              },
+            ],
+          },
+          {
+            title: "Pedidos",
+            url: "/dashboard/productor/pedidos",
+            icon: ShoppingCart,
+          },
+          {
+            title: "Ventas",
+            url: "/dashboard/productor/ventas",
+            icon: BadgeDollarSign,
+          },
+          {
+            title: "Mis Ingresos",
+            url: "/dashboard/productor/ingresos",
+            icon: TrendingUp,
+          },
+          {
+            title: "Archivos",
+            icon: FolderOpen,
+            children: [
+              {
+                title: "NOM-070",
+                url: "/dashboard/productor/archivos/nom070",
+                icon: FileText,
+              },
+            ],
+          },
+        ],
+      },
+    ];
+  }
   return [];
 }
