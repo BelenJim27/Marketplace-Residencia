@@ -317,6 +317,7 @@ export class LotesService {
           nombre_cientifico: especie?.nombre_cientifico ?? null,
           estado_lote:      apiData.estado           ?? 'disponible',
           sitio:            apiData.sitio?.nombre    ?? null,
+          url_trazabilidad: apiData.url_trazabilidad ?? null,
           datos_api: apiData as any,
           actualizado_en:   new Date(),
         },
@@ -341,6 +342,7 @@ export class LotesService {
         nombre_cientifico: especie?.nombre_cientifico ?? null,
         estado_lote:      apiData.estado           ?? 'disponible',
         sitio:            apiData.sitio?.nombre    ?? null,
+        url_trazabilidad: apiData.url_trazabilidad ?? null,
         datos_api: apiData as any,
       },
     });
@@ -412,6 +414,7 @@ export class LotesService {
             nombre_cientifico: especie?.nombre_cientifico ?? null,
             estado_lote:      loteApi.estado           ?? 'disponible',
             sitio:            loteApi.sitio?.nombre    ?? null,
+            url_trazabilidad: loteApi.url_trazabilidad ?? null,
             datos_api:        loteApi,
             actualizado_en:   new Date(),
           },
@@ -433,6 +436,7 @@ export class LotesService {
             nombre_cientifico: especie?.nombre_cientifico ?? null,
             estado_lote:      loteApi.estado           ?? 'disponible',
             sitio:            loteApi.sitio?.nombre    ?? null,
+            url_trazabilidad: loteApi.url_trazabilidad ?? null,
             datos_api:        loteApi,
           },
         });

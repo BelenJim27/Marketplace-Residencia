@@ -17,6 +17,14 @@ export class PedidosController {
   }
 
   @UseGuards(AuthGuard)
+  @Get('mis-compras')
+  getMisCompras(@Headers('authorization') authorization: string) {
+    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
+    if (!token) throw new BadRequestException('Token requerido');
+    return this.service.getMisCompras(token);
+  }
+
+  @UseGuards(AuthGuard)
   @Get('mis-pedidos')
   getMisPedidos(@Headers('authorization') authorization: string) {
     const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
@@ -73,6 +81,12 @@ export class PedidosController {
   @Post('validar-envio')
   validarEnvio(@Body() dto: ValidarEnvioDto) {
     return this.service.validarEnvio(dto);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post(':id/cotizar-envio')
+  cotizarEnvio(@Param('id') id: string) {
+    return this.service.cotizarEnvio(id);
   }
 
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }

@@ -38,10 +38,9 @@ export default function MisComprasPage() {
       return;
     }
 
-    const token = getCookie("token") ?? "";
-
+    const token = getCookie("token") || "";
     api.pedidos
-      .getMisPedidos(token)
+      .getMisCompras(token)
       .then((data) => {
         const lista = Array.isArray(data) ? data : [];
         lista.sort((a: Pedido, b: Pedido) => {

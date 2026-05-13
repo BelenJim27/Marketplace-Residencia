@@ -112,6 +112,10 @@ export class PagosService {
         where: { id_pedido: pago.id_pedido },
         data: { estado: 'pagado' },
       });
+      await this.prisma.pedido_productor.updateMany({
+        where: { id_pedido: pago.id_pedido },
+        data: { estado: 'confirmado' },
+      });
       const buyer = (pago as any).pedidos?.usuarios;
       if (buyer?.email) {
         try {

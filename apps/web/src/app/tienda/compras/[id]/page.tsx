@@ -273,7 +273,7 @@ export default function DetallePedidoPage() {
                       Estado de entrega
                     </div>
                     <button
-                      onClick={() => fetchTracking(params.id)}
+                      onClick={() => envio?.id_envio && fetchTracking(envio.id_envio)}
                       disabled={trackingLoading}
                       className="text-xs text-gray-500 hover:text-blue-600 disabled:opacity-50"
                     >

@@ -18,9 +18,10 @@ import { ProductosSimilares, TambienCompraron } from "@/components/Cliente/Produ
 import AgeGate from "@/components/AgeGate";
 import CategoryDisclaimer from "@/components/CategoryDisclaimer";
 import { getEdadMinima } from "@/lib/edad";
+import QRCode from "react-qr-code";
 
 interface LoteData {
-  datos_api?: Record<string, string>;
+  datos_api?: Record<string, any>;
   id_productor?: number;
   codigo_lote?: string;
   sitio?: string;
@@ -32,6 +33,7 @@ interface LoteData {
   estado_lote?: string;
   descripcion?: string;
   marca?: string;
+  url_trazabilidad?: string;
   productores?: {
     usuarios?: {
       nombre: string;
@@ -163,20 +165,27 @@ export default function ProductoDetallePage() {
   const productor = loteData?.productores;
   const nombreProductor = producto?.nombre_productor || loteData?.productores?.usuarios?.nombre;
   const tiendaData = producto?.tiendas;
-  const datosApi = loteData?.datos_api || {};
+  const datosApi: Record<string, any> = loteData?.datos_api || {};
 
-  const region = datosApi.region || loteData?.sitio;
-  const codigoLote = datosApi.codigo_lote || loteData?.codigo_lote;
-  const sitio = datosApi.sitio || loteData?.sitio;
+  const strFromApi = (v: any): string | undefined =>
+    v && typeof v === "object" ? (v.nombre ?? undefined) : (v || undefined);
+
+  const region = strFromApi(datosApi.region) || loteData?.sitio;
+  const codigoLote = strFromApi(datosApi.codigo_lote) || loteData?.codigo_lote;
+  const sitio = strFromApi(datosApi.sitio) || loteData?.sitio;
   const gradoAlcohol = datosApi.grado_alcohol ? Number(datosApi.grado_alcohol) : loteData?.grado_alcohol;
-  const nombreComun = datosApi.nombre_comun || loteData?.nombre_comun;
-  const nombreCientifico = datosApi.nombre_cientifico || loteData?.nombre_cientifico;
+  const nombreComun = strFromApi(datosApi.nombre_comun) || loteData?.nombre_comun;
+  const nombreCientifico = strFromApi(datosApi.nombre_cientifico) || loteData?.nombre_cientifico;
   const unidades = loteData?.unidades;
   const fechaElaboracion = loteData?.fecha_elaboracion
     ? new Date(loteData.fecha_elaboracion).toLocaleDateString("es-MX")
     : null;
   const estadoLote = loteData?.estado_lote;
-  const marcaLote = datosApi.marca || loteData?.marca;
+  const marcaLote = strFromApi(datosApi.marca) || loteData?.marca;
+  const urlTrazabilidad =
+    loteData?.url_trazabilidad ||
+    (typeof datosApi.url_trazabilidad === "string" ? datosApi.url_trazabilidad : null) ||
+    null;
 
   if (loading) {
     return (
@@ -579,6 +588,40 @@ export default function ProductoDetallePage() {
           </div>
         </div>
       </div>
+
+      {/* ── Trazabilidad QR ──────────────────────────────────────────────────── */}
+      {loteData && (
+        <div className="mt-10 rounded-lg p-6" style={{ border: "1px solid #e8dcc8", backgroundColor: "#fdf7ee" }}>
+          <h2
+            className="mb-4 text-lg font-semibold"
+            style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+          >
+            Trazabilidad del lote
+          </h2>
+          {urlTrazabilidad ? (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+              <div className="rounded bg-white p-3 shadow-sm">
+                <QRCode value={urlTrazabilidad} size={160} />
+              </div>
+              <div className="space-y-1 text-sm text-gray-600">
+                <p>Escanea el código QR para consultar la información oficial de trazabilidad de este lote.</p>
+                {codigoLote && <p className="text-xs text-gray-400">Lote: {codigoLote}</p>}
+                <a
+                  href={urlTrazabilidad}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-2 text-xs underline hover:opacity-70"
+                  style={{ color: "var(--bio-color-precio, #8b6914)" }}
+                >
+                  Ver en portal de trazabilidad
+                </a>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 italic">Trazabilidad no disponible para este producto.</p>
+          )}
+        </div>
+      )}
 
       {/* ── Reseñas ────────────────────────────────────────────────────────── */}
       <div className="mt-16">

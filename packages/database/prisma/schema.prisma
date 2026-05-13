@@ -309,6 +309,7 @@ model lotes {
   fecha_elaboracion DateTime?        @db.Date
   botellas_350ml    Int?             @default(0)
   botellas_750ml    Int?             @default(0)
+  url_trazabilidad  String?          @db.VarChar(500)
   lote_atributos    lote_atributos[]
   productores       productores      @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
   regiones          regiones?        @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
@@ -805,26 +806,26 @@ model pedido_productor {
 }
 
 model paises {
-  iso2             String   @id @db.Char(2)
-  iso3             String   @unique @db.Char(3)
-  nombre           String   @db.VarChar(120)
-  nombre_local     String?  @db.VarChar(120)
-  moneda_default   String   @db.Char(3)
-  idioma_default   String   @default("es") @db.VarChar(10)
-  prefijo_telefono String?  @db.VarChar(8)
-  activo_venta     Boolean  @default(false)
-  activo_envio     Boolean  @default(false)
-  creado_en        DateTime @default(now()) @db.Timestamptz(6)
-  comisiones       comisiones[]
-  direcciones      direcciones[]
-  idiomas          idiomas  @relation(fields: [idioma_default], references: [codigo], onUpdate: NoAction)
-  monedas          monedas  @relation(fields: [moneda_default], references: [codigo], onUpdate: NoAction)
-  pedidos          pedidos[]
-  regiones         regiones[]
-  tasas_impuesto   tasas_impuesto[]
-  tiendas          tiendas[]
-  usuarios         usuarios[]
+  iso2                          String                          @id @db.Char(2)
+  iso3                          String                          @unique @db.Char(3)
+  nombre                        String                          @db.VarChar(120)
+  nombre_local                  String?                         @db.VarChar(120)
+  moneda_default                String                          @db.Char(3)
+  idioma_default                String                          @default("es") @db.VarChar(10)
+  prefijo_telefono              String?                         @db.VarChar(8)
+  activo_venta                  Boolean                         @default(false)
+  activo_envio                  Boolean                         @default(false)
+  creado_en                     DateTime                        @default(now()) @db.Timestamptz(6)
+  comisiones                    comisiones[]
+  direcciones                   direcciones[]
+  idiomas                       idiomas                         @relation(fields: [idioma_default], references: [codigo], onUpdate: NoAction)
+  monedas                       monedas                         @relation(fields: [moneda_default], references: [codigo], onUpdate: NoAction)
+  pedidos                       pedidos[]
+  regiones                      regiones[]
   restricciones_envio_categoria restricciones_envio_categoria[]
+  tasas_impuesto                tasas_impuesto[]
+  tiendas                       tiendas[]
+  usuarios                      usuarios[]
 
   @@index([activo_venta], map: "idx_paises_activo_venta")
 }
@@ -947,10 +948,10 @@ model restricciones_envio_categoria {
   vigente_desde  DateTime   @default(now()) @db.Timestamptz(6)
   vigente_hasta  DateTime?  @db.Timestamptz(6)
   creado_en      DateTime   @default(now()) @db.Timestamptz(6)
-  paises         paises     @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
   categorias     categorias @relation(fields: [id_categoria], references: [id_categoria], onDelete: Cascade, onUpdate: NoAction)
+  paises         paises     @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
 
   @@unique([pais_iso2, estado_codigo, id_categoria])
-  @@index([pais_iso2, estado_codigo], map: "idx_restr_envio_pais_estado")
   @@index([id_categoria], map: "idx_restr_envio_categoria")
+  @@index([pais_iso2, estado_codigo], map: "idx_restr_envio_pais_estado")
 }

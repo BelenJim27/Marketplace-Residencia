@@ -7,10 +7,7 @@ import { Sidebar } from "@/components/Layouts/sidebar";
 import { SidebarProvider } from "@/context/SidebarContext";
 import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
 import { useAuth } from "@/context/AuthContext";
-
-// ─── Importa tu componente de footer ─────────────────────────────────────────
-// Ajusta la ruta según donde tengas tu footer
-import Footer  from "@/components/Cliente/Footer";
+import Footer from "@/components/Cliente/Footer";
 
 export function RootContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
@@ -50,12 +47,12 @@ export function RootContent({ children }: PropsWithChildren) {
   // así que NO lo agregamos aquí para no duplicarlo
   if (isClientHome) {
     return (
-      <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+      <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        <main>
-          <Footer/>
+        <main className="flex-1">
           {children}
         </main>
+        <Footer />
       </div>
     );
   }
@@ -65,10 +62,10 @@ export function RootContent({ children }: PropsWithChildren) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        <main className="mx-auto w-full flex-1 max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+        <main className="flex-1 mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
-        <Footer/>
+        <Footer />
       </div>
     );
   }
@@ -80,10 +77,10 @@ export function RootContent({ children }: PropsWithChildren) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        <main className="mx-auto w-full flex-1 max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+        <main className="flex-1 mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
-        <Footer/>
+        <Footer />
       </div>
     );
   }
@@ -110,10 +107,10 @@ export function RootContent({ children }: PropsWithChildren) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        <main className="mx-auto w-full flex-1 max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+        <main className="flex-1 mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
-        <Footer/>
+        <Footer />
       </div>
     );
   }
@@ -122,10 +119,10 @@ export function RootContent({ children }: PropsWithChildren) {
   return (
     <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
       <TiendaHeader />
-      <main className="mx-auto w-full flex-1 max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+      <main className="flex-1 mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
         {children}
       </main>
-      <Footer/>
+      <Footer />
     </div>
   );
 }
