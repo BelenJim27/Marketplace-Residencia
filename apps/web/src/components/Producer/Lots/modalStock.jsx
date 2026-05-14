@@ -4,7 +4,7 @@ import { Loader2, X, PackagePlus } from "lucide-react";
 const inputCls =
   "w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-400";
 
-export function ModalStock({ lote, onClose, onGuardar }) {
+export function ck({ lote, onClose, onGuardar }) {
   const tieneProducto = !!lote?.productoVinculado;
   const stockActual   = lote?.productoVinculado?.stock ?? 0;
 

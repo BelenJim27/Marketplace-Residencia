@@ -64,7 +64,7 @@ export function TiendaHeader() {
 
   // ─── Nav items por estado de autenticación ───────────────────
   const clientNavItems: NavItem[] = [
-    { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/cliente/inicio"),  href: "/cliente/inicio" },
+    { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/Cliente/inicio"),  href: "/Cliente/inicio" },
     { label: "Productos",      icon: <ShoppingBag size={22} />,  onClick: () => router.push("/producto"),        href: "/producto" },
     { label: t("Mis compras"), icon: <Package size={22} />,      onClick: handleMyPurchasesClick,                href: "/tienda/compras" },
     {
@@ -85,7 +85,7 @@ export function TiendaHeader() {
   ];
 
   const authNavItems: NavItem[] = [
-    { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/cliente/inicio"),  href: "/cliente/inicio" },
+    { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/Cliente/inicio"),  href: "/Cliente/inicio" },
     { label: "Productos",      icon: <ShoppingBag size={22} />,  onClick: () => router.push("/producto"),        href: "/producto" },
     { label: t("Mis compras"), icon: <Package size={22} />,      onClick: handleMyPurchasesClick,                href: "/tienda/compras" },
     {
@@ -100,14 +100,14 @@ export function TiendaHeader() {
 
   // Nav items desktop para guest — SIN "Ingresar" (va en dropdown Perfil)
   const guestNavItemsDesktop: NavItem[] = [
-    { label: t("Inicio"),   icon: <Home size={22} />,        onClick: () => router.push("/cliente/inicio"), href: "/cliente/inicio" },
+    { label: t("Inicio"),   icon: <Home size={22} />,        onClick: () => router.push("/Cliente/inicio"), href: "/Cliente/inicio" },
     { label: "Productos",   icon: <ShoppingBag size={22} />, onClick: () => router.push("/producto"),       href: "/producto" },
     { label: t("Vender"),   icon: <Store size={22} />,       onClick: handleSellClick },
   ];
 
   // Nav items móvil (bottom nav) para guest — CON "Ingresar"
   const guestNavItems: NavItem[] = [
-    { label: t("Inicio"),   icon: <Home size={22} />,        onClick: () => router.push("/cliente/inicio"), href: "/cliente/inicio" },
+    { label: t("Inicio"),   icon: <Home size={22} />,        onClick: () => router.push("/Cliente/inicio"), href: "/Cliente/inicio" },
     { label: "Productos",   icon: <ShoppingBag size={22} />, onClick: () => router.push("/producto"),       href: "/producto" },
     { label: t("Vender"),   icon: <Store size={22} />,       onClick: handleSellClick },
     { label: t("Ingresar"), icon: <User size={22} />,        onClick: () => router.push("/auth/sign-in"),  href: "/auth/sign-in" },

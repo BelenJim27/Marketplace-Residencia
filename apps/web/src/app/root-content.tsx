@@ -18,7 +18,7 @@ export function RootContent({ children }: PropsWithChildren) {
 
   const isAuthRoute = pathname.startsWith("/auth/");
   const isClientOnlyRoute = pathname.startsWith("/tienda/") || pathname.startsWith("/cliente/");
-  const isClientHome = pathname === "/cliente/inicio";
+  const isClientHome = pathname === "/Cliente/inicio";
 
   if (loading) {
     return (

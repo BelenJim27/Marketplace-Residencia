@@ -50,20 +50,20 @@ export const ADMIN_NAV_DATA: NavSection[] = [
     items: [
       {
         title: "Dashboard",
-        url: "/administrador/dashboard",
+        url: "/Administradordashboard",
         icon: LayoutDashboard,
       },
       { title: "Perfil", url: "/profile", icon: UserRound },
-      { title: "Usuarios", url: "/administrador/usuarios", icon: Users },
+      { title: "Usuarios", url: "/Administradorusuarios", icon: Users },
       {
         title: "Auditoría",
-        url: "/administrador/auditoria",
+        url: "/Administradorauditoria",
         icon: FileBarChart,
       },
-      { title: "Roles y pemisos", url: "/administrador/roles-permisos", icon: UserCog },
+      { title: "Roles y pemisos", url: "/Administradorroles-permisos", icon: UserCog },
       {
         title: "Productores",
-        url: "/administrador/tienda/productores",
+        url: "/Administradortienda/productores",
         icon: Users,
       },
       {
@@ -72,37 +72,37 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         children: [
           {
             title: "Categorías",
-            url: "/administrador/categorias",
+            url: "/Administradorcategorias",
             icon: Layers,
           },
           {
             title: "Productos",
-            url: "/administrador/productos",
+            url: "/Administradorproductos",
             icon: Users,
           },
         ],
       },
-      { title: "Pedidos", url: "/administrador/pedidos", icon: ShoppingCart },
+      { title: "Pedidos", url: "/Administradorpedidos", icon: ShoppingCart },
 
       {
         title: "Comisiones",
-        url: "/administrador/comisiones",
+        url: "/Administradorcomisiones",
         icon: BadgeDollarSign,
       },
       {
         title: "Payouts",
-        url: "/administrador/payouts",
+        url: "/Administradorpayouts",
         icon: BadgeDollarSign,
       },
 
       {
         title: "Solicitudes Productores",
-        url: "/administrador/solicitudes-productores",
+        url: "/Administradorsolicitudes-productores",
         icon: UserRound,
       },
       {
         title: "Configuración",
-        url: "/administrador/configuracion",
+        url: "/Administradorconfiguracion",
         icon: Settings,
       },
     ],
