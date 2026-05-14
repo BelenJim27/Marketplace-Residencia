@@ -4,7 +4,7 @@ import { useState } from "react";
 import { GoogleIcon } from "@/assets/icons";
 import { signIn } from "next-auth/react";
 
-export default function GoogleSigninButton({ text }: { text: string }) {
+export default function GoogleSigninButton({ text, redirectUrl }: { text: string; redirectUrl?: string | null }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,8 +14,10 @@ export default function GoogleSigninButton({ text }: { text: string }) {
       setError(null);
       console.log("🔵 Iniciando sesión con Google...");
       
+      const callbackUrl = redirectUrl || "/cliente/producto";
+      
       signIn("google", {
-        callbackUrl: "/cliente/producto",
+        callbackUrl,
         redirect: true,
       });
     } catch (error) {

@@ -16,6 +16,7 @@ async function bootstrap() {
   const { AppModule } = await import('./app.module');
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    rawBody: true,
   });
   app.use('/uploads', expressStatic(join(process.cwd(), 'uploads')));
 

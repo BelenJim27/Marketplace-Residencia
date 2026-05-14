@@ -41,4 +41,6 @@ export class CotizarEnvioDto {
   @IsOptional() @IsNumber() @Type(() => Number) largo_cm?: number;
   @IsOptional() @IsInt() @Type(() => Number) id_pedido?: number;
   @IsOptional() @IsBoolean() @Type(() => Boolean) adult_signature?: boolean;
+  @IsOptional() @IsString() @MaxLength(200) descripcion_contenido?: string;
+  @IsOptional() @IsNumber() @Type(() => Number) valor_declarado_usd?: number;
 }

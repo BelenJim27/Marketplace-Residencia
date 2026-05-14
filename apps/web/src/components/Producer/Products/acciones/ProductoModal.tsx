@@ -160,47 +160,36 @@ export function ProductoModal({
               options={[{ label: "Activo", value: "activo" }, { label: "Inactivo", value: "inactivo" }]} />
           </div>
 
-          {/* ── SOLO BEBIDAS: Tipo de mezcal + Lote + Stock ──────────────────── */}
-          {esProductorBebidas ? (
-            <>
-              {/* Selector: Mezcal Artesanal o Mezcal Ancestral */}
+          {/* ── Tipo de mezcal (solo para bebidas) ────────────────────────────── */}
+          {esProductorBebidas && (
+            <SelectField
+              label="Tipo de mezcal"
+              value={form.id_categoria}
+              onChange={set("id_categoria")}
+              disabled={mode === "view"}
+              placeholder="Selecciona el tipo"
+              options={subcategoriasMezcal.map((c) => ({
+                label: c.nombre,
+                value: String(c.id_categoria),
+              }))}
+            />
+          )}
+
+          {/* ── Lote y Stock (disponible para todos) ──────────────────────────── */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {lotes.length > 0 && (
               <SelectField
-                label="Tipo de mezcal"
-                value={form.id_categoria}
-                onChange={set("id_categoria")}
+                label="Lote"
+                value={form.id_lote ?? ""}
+                onChange={handleLoteChange}
                 disabled={mode === "view"}
-                placeholder="Selecciona el tipo"
-                options={subcategoriasMezcal.map((c) => ({
-                  label: c.nombre,
-                  value: String(c.id_categoria),
+                placeholder="Sin lote asignado"
+                options={lotes.map((l) => ({
+                  label: `${l.codigo_lote}${l.nombre_comun ? ` - ${l.nombre_comun}` : ""}`,
+                  value: String(l.id_lote),
                 }))}
               />
-
-              {/* Lote y Stock juntos */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <SelectField
-                  label="Lote"
-                  value={form.id_lote ?? ""}
-                  onChange={handleLoteChange}
-                  disabled={mode === "view"}
-                  placeholder="Sin lote asignado"
-                  options={lotes.map((l) => ({
-                    label: `${l.codigo_lote}${l.nombre_comun ? ` - ${l.nombre_comun}` : ""}`,
-                    value: String(l.id_lote),
-                  }))}
-                />
-                <Field
-                  label="Stock inicial"
-                  value={(form as any).stock_inicial ?? ""}
-                  onChange={set("stock_inicial" as keyof FormState)}
-                  disabled={mode === "view"}
-                  inputMode="numeric"
-                  placeholder="0"
-                />
-              </div>
-            </>
-          ) : (
-            /* ── OTRAS CATEGORÍAS: solo Stock, sin categoría ni lote ────────── */
+            )}
             <Field
               label="Stock inicial"
               value={(form as any).stock_inicial ?? ""}
@@ -209,7 +198,7 @@ export function ProductoModal({
               inputMode="numeric"
               placeholder="0"
             />
-          )}
+          </div>
 
           {/* Dimensiones y peso */}
           <div>

@@ -895,6 +895,9 @@ model payouts {
   notas              String?
   creado_en          DateTime           @default(now()) @db.Timestamptz(6)
   procesado_en       DateTime?          @db.Timestamptz(6)
+  intentos           Int                @default(0)
+  ultimo_error       String?            @db.VarChar(500)
+  proximo_reintento  DateTime?          @db.Timestamptz(6)
   productores        productores        @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
   monedas            monedas            @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
   pedido_productor   pedido_productor[]

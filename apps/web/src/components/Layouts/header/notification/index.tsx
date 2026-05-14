@@ -12,7 +12,7 @@ import { getCookie } from "@/lib/cookies";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CircleAlert, CircleCheckBig } from "lucide-react";
+import { AlertTriangle, CircleAlert, CircleCheckBig, DollarSign, CreditCard, AlertCircle, RefreshCw, Bell, CheckCircle } from "lucide-react";
 import { BellIcon } from "./icons";
 
 type AlertType = "stock_bajo" | "sin_existencias";
@@ -24,6 +24,16 @@ type StockAlert = {
   producto: string;
   stock_actual: number;
   fecha: Date;
+};
+
+type DbNotif = {
+  id_notificacion: string;
+  tipo: string;
+  titulo: string;
+  cuerpo: string;
+  url_accion: string | null;
+  leido: boolean;
+  creado_en: string;
 };
 
 type ProductItem = {
@@ -38,11 +48,25 @@ type StoreItem = {
   nombre?: string;
 };
 
+const NOTIF_ICON: Record<string, { Icon: typeof Bell; bgClass: string; textClass: string; defaultUrl?: string }> = {
+  pago_pendiente_onboarding: { Icon: CreditCard, bgClass: "bg-amber-100", textClass: "text-amber-600", defaultUrl: "/dashboard/productor/ingresos" },
+  pago_confirmado: { Icon: CheckCircle, bgClass: "bg-green-100", textClass: "text-green-600" },
+  pedido_pagado: { Icon: CheckCircle, bgClass: "bg-green-100", textClass: "text-green-600" },
+  pago_fallido: { Icon: AlertCircle, bgClass: "bg-red-100", textClass: "text-red-600" },
+  pago_reembolsado: { Icon: RefreshCw, bgClass: "bg-blue-100", textClass: "text-blue-600" },
+  default: { Icon: Bell, bgClass: "bg-gray-100", textClass: "text-gray-600" },
+};
+
+function getNotifIcon(tipo: string) {
+  return NOTIF_ICON[tipo] ?? NOTIF_ICON.default;
+}
+
 export function Notification() {
   const { user } = useAuth();
   const token = getCookie("token") ?? "";
   const [isOpen, setIsOpen] = useState(false);
   const [alerts, setAlerts] = useState<StockAlert[]>([]);
+  const [dbNotifs, setDbNotifs] = useState<DbNotif[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const isMobile = useIsMobile();
 
@@ -55,6 +79,21 @@ export function Notification() {
       setIsLoading(true);
 
       try {
+        // Fetch DB notifications (for any authenticated user)
+        let fetchedDbNotifs: DbNotif[] = [];
+        if (user) {
+          try {
+            const notifRes = await api.notificaciones.getAll(token);
+            fetchedDbNotifs = (Array.isArray(notifRes) ? notifRes : []).filter((n) => !n.leido);
+          } catch {
+            // Best-effort: if notifications fetch fails, continue without them
+          }
+        }
+
+        if (cancelled) return;
+        if (user) setDbNotifs(fetchedDbNotifs);
+
+        // Fetch stock alerts (only for producers)
         if (!user?.id_productor) {
           if (!cancelled) setAlerts([]);
           return;
@@ -113,9 +152,9 @@ export function Notification() {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, user?.id_productor, token]);
+  }, [isOpen, user?.id_productor, user, token]);
 
-  const alertCount = useMemo(() => alerts.length, [alerts]);
+  const alertCount = useMemo(() => alerts.length + dbNotifs.length, [alerts, dbNotifs]);
 
   return (
     <Dropdown
@@ -160,7 +199,20 @@ export function Notification() {
           {isLoading ? (
             <li className="rounded-lg px-2 py-4 text-sm text-dark-5 dark:text-dark-6">Cargando alertas...</li>
           ) : alertCount > 0 ? (
-            alerts.map((item) => <NotificationItem key={item.id} alert={item} onClose={() => setIsOpen(false)} />)
+            <>
+              {dbNotifs.map((notif) => (
+                <DbNotifItem
+                  key={notif.id_notificacion}
+                  notif={notif}
+                  token={token}
+                  onClose={() => setIsOpen(false)}
+                  onMarkRead={() => setDbNotifs((prev) => prev.filter((n) => n.id_notificacion !== notif.id_notificacion))}
+                />
+              ))}
+              {alerts.map((item) => (
+                <NotificationItem key={item.id} alert={item} onClose={() => setIsOpen(false)} />
+              ))}
+            </>
           ) : (
             <li className="flex items-start gap-4 rounded-lg px-2 py-3 outline-none">
               <span className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
@@ -169,22 +221,79 @@ export function Notification() {
               <div>
                 <strong className="block text-sm font-medium text-dark dark:text-white">Todo en orden</strong>
                 <span className="truncate text-sm font-medium text-dark-5 dark:text-dark-6">
-                  No hay productos con stock bajo
+                  No hay alertas pendientes
                 </span>
               </div>
             </li>
           )}
         </ul>
 
-        <Link
-          href="/dashboard/productor/productos"
-          onClick={() => setIsOpen(false)}
-          className="block rounded-lg border border-primary p-2 text-center text-sm font-medium tracking-wide text-primary outline-none transition-colors hover:bg-blue-light-5 focus:bg-blue-light-5 focus:text-primary focus-visible:border-primary dark:border-dark-3 dark:text-dark-6 dark:hover:border-dark-5 dark:hover:bg-dark-3 dark:hover:text-dark-7 dark:focus-visible:border-dark-5 dark:focus-visible:bg-dark-3 dark:focus-visible:text-dark-7"
-        >
-          Ver todos los productos
-        </Link>
+        {alerts.length > 0 && (
+          <Link
+            href="/dashboard/productor/productos"
+            onClick={() => setIsOpen(false)}
+            className="block rounded-lg border border-primary p-2 text-center text-sm font-medium tracking-wide text-primary outline-none transition-colors hover:bg-blue-light-5 focus:bg-blue-light-5 focus:text-primary focus-visible:border-primary dark:border-dark-3 dark:text-dark-6 dark:hover:border-dark-5 dark:hover:bg-dark-3 dark:hover:text-dark-7 dark:focus-visible:border-dark-5 dark:focus-visible:bg-dark-3 dark:focus-visible:text-dark-7"
+          >
+            Ver todos los productos
+          </Link>
+        )}
+        {dbNotifs.length > 0 && (
+          <Link
+            href="/dashboard/productor/ingresos"
+            onClick={() => setIsOpen(false)}
+            className="block rounded-lg border border-amber-300 bg-amber-50 p-2 text-center text-sm font-medium tracking-wide text-amber-700 outline-none transition-colors hover:bg-amber-100 focus:bg-amber-100 focus-visible:border-amber-600 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40 dark:focus-visible:border-amber-600"
+          >
+            Ver mis ingresos
+          </Link>
+        )}
       </DropdownContent>
     </Dropdown>
+  );
+}
+
+function DbNotifItem({
+  notif,
+  token,
+  onClose,
+  onMarkRead,
+}: {
+  notif: DbNotif;
+  token: string;
+  onClose: () => void;
+  onMarkRead: () => void;
+}) {
+  const { Icon, bgClass, textClass } = getNotifIcon(notif.tipo);
+  const urlAccion = notif.url_accion ?? (notif.tipo === "pago_pendiente_onboarding" ? "/dashboard/productor/ingresos" : null);
+
+  const handleClick = async () => {
+    try {
+      await api.notificaciones.update(token, notif.id_notificacion, { leido: true });
+      onMarkRead();
+    } catch {
+      // Best-effort: even if marking fails, navigate away
+    }
+    onClose();
+    if (urlAccion) {
+      window.location.href = urlAccion;
+    }
+  };
+
+  return (
+    <li role="menuitem">
+      <button
+        onClick={handleClick}
+        className="w-full flex items-center gap-4 rounded-lg px-2 py-1.5 outline-none hover:bg-gray-2 focus-visible:bg-gray-2 dark:hover:bg-dark-3 dark:focus-visible:bg-dark-3 text-left"
+      >
+        <span className={`grid size-14 shrink-0 place-items-center rounded-full ${bgClass} dark:bg-opacity-15 ${textClass}`}>
+          <Icon className="size-6" />
+        </span>
+
+        <div className="min-w-0">
+          <strong className="block text-sm font-medium text-dark dark:text-white">{notif.titulo}</strong>
+          <span className="line-clamp-2 text-sm font-medium text-dark-5 dark:text-dark-6">{notif.cuerpo}</span>
+        </div>
+      </button>
+    </li>
   );
 }
 

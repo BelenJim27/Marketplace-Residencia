@@ -65,10 +65,9 @@ export function useProductos() {
   const loadData = async () => {
     if (authLoading) return;
 
-    // TEMPORAL: Forzar id_productor para testing
-    const testIdProductor = 2;
+    const idProductor = user?.id_productor;
 
-    if (!testIdProductor) {
+    if (!idProductor) {
       setError("No se pudo identificar el productor autenticado.");
       setLoading(false);
       return;
@@ -77,11 +76,11 @@ export function useProductos() {
     setError(null);
     try {
       const [producerData, productsData, storesData, categoriasData, lotesData] = await Promise.all([
-        api.productores.getOne(testIdProductor),
-        api.productos.getMine(token, testIdProductor),
-        api.tiendas.getByProductor(testIdProductor, token),
+        api.productores.getOne(idProductor),
+        api.productos.getMine(token, idProductor),
+        api.tiendas.getByProductor(idProductor, token),
         api.categorias.getAll(),
-        api.lotes.getByProductor(testIdProductor),
+        api.lotes.getByProductor(idProductor),
       ]);
 
       setProducer(producerData as ProducerDetail);
@@ -104,7 +103,7 @@ export function useProductos() {
 
   useEffect(() => {
     loadData();
-  }, [authLoading, token]); // Removido user?.id_productor
+  }, [authLoading, token, user?.id_productor]);
 
   const storeMap = useMemo(
     () => new Map(stores.map((s) => [s.id_tienda, s.nombre])),

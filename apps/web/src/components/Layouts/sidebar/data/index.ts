@@ -183,22 +183,20 @@ export function getNavData(isProductor: boolean, isAdmin: boolean = false, tiene
             url: "/dashboard/productor",
             icon: LayoutDashboard,
           },
-          // Lotes solo si es de bebidas
-          ...(tieneLotes ? [{
+          {
             title: "Lotes",
             url: "/dashboard/productor/lotes",
             icon: Layers,
-          }] : []),
+          },
           {
             title: "Inventario",
             icon: Boxes,
             children: [
-              // Categorías solo si es de bebidas
-              ...(tieneLotes ? [{
+              {
                 title: "Categorías",
                 url: "/dashboard/productor/categorias",
                 icon: Layers,
-              }] : []),
+              },
               {
                 title: "Productos",
                 url: "/dashboard/productor/productos",

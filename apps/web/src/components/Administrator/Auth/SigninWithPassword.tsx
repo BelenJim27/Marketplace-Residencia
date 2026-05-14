@@ -6,11 +6,13 @@ import React, { useState } from "react";
 import InputGroup from "../../FormElements/InputGroup";
 import { Checkbox } from "../../FormElements/checkbox";
 import { api } from "@/lib/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 export default function SigninWithPassword({ isVenderFlow = false }: { isVenderFlow?: boolean }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect");
   const { login } = useAuth();
   const [data, setData] = useState({
     email: "",
@@ -67,6 +69,11 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
 
       if (permisos.includes("panel_productor") || roles.some((rol: string) => ["PRODUCTOR", "productor"].includes(rol))) {
         router.push("/dashboard/productor");
+        return;
+      }
+
+      if (redirectUrl) {
+        router.push(redirectUrl);
         return;
       }
 

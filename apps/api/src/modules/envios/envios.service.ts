@@ -211,7 +211,14 @@ export class EnviosService {
     const envio = await this.prisma.envios.findUnique({
       where: { id_envio: toBigIntId(id_envio) },
       include: {
-        pedidos: true,
+        pedidos: {
+          include: {
+            detalle_pedido: {
+              take: 3,
+              select: { productos: { select: { nombre: true } } },
+            },
+          },
+        },
         servicios_envio: true,
         transportistas: true,
         envio_guias: { where: { eliminado_en: null } },
@@ -222,7 +229,16 @@ export class EnviosService {
     if (envio.envio_guias.length > 0) throw new ConflictException('GUIA_YA_EXISTE');
     if (!envio.pedidos?.direccion_envio_snapshot) throw new UnprocessableEntityException('SIN_DIRECCION');
 
-    const result = await this.fedexService.createShipment(envio);
+    const productNames = (envio.pedidos as any)?.detalle_pedido
+      ?.map((d: any) => d.productos?.nombre)
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(', ');
+
+    const result = await this.fedexService.createShipment({
+      ...envio,
+      contenido_descripcion: productNames || 'Mezcal artesanal',
+    });
 
     return serializeBigInts(
       await this.prisma.$transaction(async (tx) => {

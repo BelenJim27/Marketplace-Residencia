@@ -303,7 +303,7 @@ packages/database/prisma/migrations/
 - [ ] apps/api/scripts/seed-usuarios.js
 
 ### Data Base
-- [ ] 4 roles creados: ADMIN, PRODUCTOR, CLIENTE, TRANSPORTISTA
+- [ ] roles creados: ADMIN, PRODUCTOR, CLIENTE
 - [ ] Usuarios demo por rol
 
 ---

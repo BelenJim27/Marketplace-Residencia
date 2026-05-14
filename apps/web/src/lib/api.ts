@@ -57,6 +57,7 @@ async function refreshAccessToken(): Promise<string> {
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
   if (response.status === 401) {
+    console.warn("🔐 401 detectado, intentando refresh de token...");
     try {
       if (!pendingRefresh) {
         pendingRefresh = refreshAccessToken().finally(() => {
@@ -65,6 +66,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
       }
 
       const newAccessToken = await pendingRefresh;
+      console.warn("✅ Token refrescado, reintentando请求...");
 
 
       const newHeaders = { ...options?.headers } as Record<string, string>;
@@ -73,13 +75,15 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
       }
 
       const retryResponse = await fetch(url, { ...options, headers: newHeaders });
+      console.warn("📡 Retry response status:", retryResponse.status);
       if (!retryResponse.ok) {
         const error = await retryResponse.json().catch(() => ({ message: "Error desconocido" }));
         throw new Error(error.message || `Error ${retryResponse.status}`);
       }
       return retryResponse.json() as Promise<T>;
-    } catch {
+    } catch (refreshErr) {
       // Limpiar cookies y redirigir al login
+      console.warn("❌ Refresh falló, limpiando cookies...");
       const cookies = document.cookie.split(";");
       cookies.forEach((cookie) => {
         const name = cookie.split("=")[0].trim();
@@ -276,8 +280,13 @@ export const api = {
     delete: (token: string, id: number) =>
       fetchJson(endpoint(`/productores/${id}`), { method: "DELETE", headers: headers(token) }),
     getRegiones: () => fetchJson(endpoint("/productores/regiones")),
-    getMiSolicitud: (token: string) =>
-      fetchJson(endpoint("/productores/mi-solicitud"), { headers: headers(token) }),
+    getMiSolicitud: (token: string) => {
+      if (!token || typeof token !== 'string' || token.trim() === '') {
+        console.warn("⚠️ getMiSolicitud llamado sin token válido");
+        return Promise.resolve(null);
+      }
+      return fetchJson(endpoint("/productores/mi-solicitud"), { headers: headers(token) });
+    },
 
     // ── CAMBIO: se agregó categorias_ids al tipo de data ─────────────────────
     solicitar: (
@@ -397,6 +406,11 @@ export const api = {
       fetchJson(endpoint(`/pagos/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
     delete: (token: string, id: string) =>
       fetchJson(endpoint(`/pagos/${id}`), { method: "DELETE", headers: headers(token) }),
+    reembolsar: (token: string, idPago: number | string) =>
+      fetchJson<{ mensaje: string }>(`${API_BASE}/pagos/${idPago}/reembolso`, {
+        method: "POST",
+        headers: headers(token),
+      }),
     stripe: {
       createIntent: (
         token: string,
@@ -447,6 +461,18 @@ export const api = {
         details_submitted: boolean;
         onboarding_completed: boolean;
       }> => fetchJson(endpoint("/pagos/connect/status"), { headers: headers(token) }),
+    },
+    ingresos: {
+      getResumen: (token: string, id_productor: number) =>
+        fetchJson<{
+          ventas_totales: string;
+          comision_total: string;
+          bruto_total: string;
+          ingresos_recibidos: string;
+          pendiente_recibir: string;
+          total_pedidos: number;
+          total_payouts: number;
+        }>(endpoint(`/pagos/ingresos/${id_productor}`), { headers: headers(token) }),
     },
   },
 
@@ -663,7 +689,7 @@ export const api = {
   },
 
   notificaciones: {
-    getAll: () => fetchJson(endpoint("/notificaciones")),
+    getAll: (token: string) => fetchJson(endpoint("/notificaciones"), { headers: headers(token) }),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/notificaciones"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: string, data: any) =>
@@ -923,7 +949,7 @@ export interface Payout {
   monto_bruto: string;
   monto_comision: string;
   monto_neto: string;
-  estado: "pendiente" | "en_proceso" | "pagado" | "fallido" | "cancelado";
+  estado: "pendiente" | "en_proceso" | "procesado" | "pagado" | "fallido" | "agotado" | "cancelado";
   proveedor: string | null;
   referencia_externa: string | null;
   periodo_desde: string;
@@ -931,7 +957,18 @@ export interface Payout {
   notas: string | null;
   creado_en: string;
   procesado_en: string | null;
+  intentos?: number;
+  ultimo_error?: string | null;
+  proximo_reintento?: string | null;
   productores?: { id_productor: number; razon_social: string | null };
+  pedido_productor?: Array<{
+    id_pedido: string;
+    estado: string;
+    subtotal_bruto: string | null;
+    comision_marketplace: string;
+    monto_neto_productor: string | null;
+    moneda: string | null;
+  }>;
 }
 
 export interface PayoutDetalle extends Payout {

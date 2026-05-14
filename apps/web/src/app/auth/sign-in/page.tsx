@@ -17,6 +17,8 @@ function SignInContent() {
     if (loading) return;
     if (!isAuthenticated) return;
 
+    const redirectUrl = searchParams.get("redirect");
+
     if (isVenderFlow) {
       router.replace("/dashboard/productor/solicitar");
       return;
@@ -29,8 +31,12 @@ function SignInContent() {
       router.replace("/dashboard/productor");
       return;
     }
+    if (redirectUrl) {
+      router.replace(redirectUrl);
+      return;
+    }
     router.replace("/cliente/producto");
-  }, [isAuthenticated, loading, isVenderFlow, isAdmin, isProductor, router]);
+  }, [isAuthenticated, loading, isVenderFlow, isAdmin, isProductor, router, searchParams]);
 
 
   if (isVenderFlow) {

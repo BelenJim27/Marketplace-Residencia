@@ -27,6 +27,7 @@ export interface CreatePaymentIntentInput {
    */
   connectedAccountId?: string;
   applicationFeeAmount?: number;    // marketplace fee in major units
+  transferGroup?: string;           // for tracking transfers alongside this intent
 }
 
 export interface CreatePaymentIntentResult {
@@ -143,6 +144,7 @@ export class StripeService {
                 : {}),
             }
           : {}),
+        ...(input.transferGroup ? { transfer_group: input.transferGroup } : {}),
         metadata: {
           ...metadata,
           ...(taxCalculationId ? { tax_calculation: taxCalculationId } : {}),
@@ -187,5 +189,89 @@ export class StripeService {
       calculation: calculationId,
       reference,
     });
+  }
+
+  async retrieveAccount(accountId: string) {
+    return this.stripe.accounts.retrieve(accountId);
+  }
+
+  async createTransfer(input: {
+    amountCents: number;
+    currency: string;
+    destination: string;
+    transferGroup: string;
+    idempotencyKey?: string;
+    metadata?: Record<string, string>;
+  }) {
+    return this.stripe.transfers.create(
+      {
+        amount: input.amountCents,
+        currency: input.currency.toLowerCase(),
+        destination: input.destination,
+        transfer_group: input.transferGroup,
+        metadata: input.metadata ?? {},
+      },
+      input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : undefined,
+    );
+  }
+
+  async createRefund(input: {
+    paymentIntentId: string;
+    reverseTransfer?: boolean;
+    refundApplicationFee?: boolean;
+  }) {
+    return this.stripe.refunds.create({
+      payment_intent: input.paymentIntentId,
+      reverse_transfer: input.reverseTransfer ?? false,
+      refund_application_fee: input.refundApplicationFee ?? false,
+    });
+  }
+
+  async createTransferReversal(transferId: string) {
+    return this.stripe.transfers.createReversal(transferId);
+  }
+
+  /**
+   * Verifica si existe alguna disputa abierta relacionada con un cargo.
+   * Retorna true si hay disputas activas (no resueltas), false en caso contrario.
+   */
+  async hasOpenDispute(chargeId: string): Promise<boolean> {
+    try {
+      const disputes = await this.stripe.disputes.list({
+        charge: chargeId,
+        status: 'open', // solo disputas abiertas
+        limit: 1,
+      });
+      return disputes.data.length > 0;
+    } catch (error: any) {
+      console.error('[stripe] Error checking disputes for charge', chargeId, ':', error?.message);
+      // En caso de error, asumir que hay disputa (ser conservador)
+      return true;
+    }
+  }
+
+  /**
+   * Verifica disputas de un PaymentIntent (que puede tener múltiples charges).
+   * Retorna el número de disputas abiertas.
+   */
+  async countOpenDisputesForPaymentIntent(paymentIntentId: string): Promise<number> {
+    try {
+      const pi = await this.stripe.paymentIntents.retrieve(paymentIntentId);
+      if (!pi.charges?.data || pi.charges.data.length === 0) {
+        return 0;
+      }
+
+      let openDisputeCount = 0;
+      for (const charge of pi.charges.data) {
+        const hasDispute = await this.hasOpenDispute(charge.id);
+        if (hasDispute) {
+          openDisputeCount++;
+        }
+      }
+      return openDisputeCount;
+    } catch (error: any) {
+      console.error('[stripe] Error checking disputes for payment intent', paymentIntentId, ':', error?.message);
+      return 0;
+    }
   }
 }
