@@ -6,7 +6,7 @@ import {
   RefreshCw, AlertCircle, Check, X,
 } from "lucide-react";
 import LotesAcciones from "./LotesAcciones";
-import { ModalStock } from "./ModalStock";
+import { ModalStock } from "./modalStock";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
