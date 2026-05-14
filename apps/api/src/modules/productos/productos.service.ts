@@ -235,8 +235,12 @@ export class ProductosService {
       );
     }
 
+    // Vista pública: solo productos con lote asociado (que vienen de API externa)
     const items = await this.prisma.productos.findMany({
-      where,
+      where: {
+        ...where,
+        id_lote: { not: null }, // Solo productos vinculados a lotes
+      },
       include: productoInclude as any,
       orderBy: { creado_en: 'desc' },
     });
@@ -250,7 +254,52 @@ export class ProductosService {
     const item = await this.prisma.productos.findUnique({
       where: { id_producto: BigInt(id) },
       include: {
-        tiendas: true,
+        tiendas: {
+          include: {
+            productores: {
+              include: {
+                usuarios: {
+                  select: {
+                    nombre: true,
+                    apellido_paterno: true,
+                    apellido_materno: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        lotes: {
+          select: {
+            id_lote: true,
+            id_productor: true,
+            codigo_lote: true,
+            sitio: true,
+            grado_alcohol: true,
+            nombre_comun: true,
+            nombre_cientifico: true,
+            unidades: true,
+            fecha_elaboracion: true,
+            estado_lote: true,
+            descripcion: true,
+            marca: true,
+            url_trazabilidad: true,
+            datos_api: true,
+            productores: {
+              select: {
+                biografia: true,
+                otras_caracteristicas: true,
+                usuarios: {
+                  select: {
+                    nombre: true,
+                    apellido_paterno: true,
+                    apellido_materno: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         categorias_productos: { include: { categorias: true } },
         producto_imagenes: true,
         resenas: true,
@@ -395,6 +444,37 @@ export class ProductosService {
     });
 
     return serializeBigInts(producto);
+  }
+
+  async findSinLote() {
+    const total = await this.prisma.productos.count();
+    const sinLote = await this.prisma.productos.count({ where: { id_lote: null } });
+    const conLote = await this.prisma.productos.count({ where: { id_lote: { not: null } } });
+
+    const productosAffectados = await this.prisma.productos.findMany({
+      where: { id_lote: null },
+      select: {
+        id_producto: true,
+        nombre: true,
+        tiendas: { select: { nombre: true, productores: { select: { usuarios: { select: { nombre: true } } } } } }
+      },
+      take: 50,
+    });
+
+    return {
+      resumen: {
+        total,
+        sinLote,
+        conLote,
+        porcentajeSinLote: total > 0 ? ((sinLote / total) * 100).toFixed(2) : '0.00',
+      },
+      productos: productosAffectados.map(p => ({
+        id: p.id_producto,
+        nombre: p.nombre,
+        tienda: p.tiendas?.nombre || 'N/A',
+        productor: p.tiendas?.productores?.usuarios?.nombre || 'N/A',
+      })),
+    };
   }
 }
 

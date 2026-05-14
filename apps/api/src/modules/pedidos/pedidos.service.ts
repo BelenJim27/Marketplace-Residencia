@@ -4,6 +4,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
 import { ComisionesService } from "../comisiones/comisiones.service";
 import { FedexService } from "../envios/fedex.service";
+import { StripeService } from "../pagos/stripe.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
 import {
   CreateDetallePedidoDto,
@@ -24,6 +25,7 @@ export class PedidosService {
     private readonly authService: AuthService,
     private readonly comisionesService: ComisionesService,
     private readonly fedexService: FedexService,
+    private readonly stripeService: StripeService,
   ) {}
   async findAll() {
     return serializeBigInts(
@@ -390,9 +392,12 @@ export class PedidosService {
 
   /**
    * Crea/actualiza el pedido_productor agregando los detalles de ese productor:
-   * recalcula subtotal_bruto, resuelve la comisión vigente y persiste todos los
-   * campos de marketplace (subtotal_bruto, comision_marketplace, monto_neto_productor,
-   * moneda, id_comision_aplicada).
+   * recalcula subtotal_bruto (incluyendo prorrateo de tax y envío),
+   * resuelve la comisión vigente y persiste todos los campos de marketplace
+   * (subtotal_bruto, comision_marketplace, monto_neto_productor, moneda, id_comision_aplicada).
+   *
+   * El prorrateo garantiza transparencia: el productor ve exactamente cuánto generó
+   * su parte del pedido (producto + impuesto + logística).
    */
   private async upsertPedidoProductorConComision(
     args: {
@@ -410,7 +415,41 @@ export class PedidosService {
     });
     if (detalles.length === 0) return;
 
-    const subtotal_bruto = detalles.reduce((sum: number, d: any) => sum + Number(d.precio_compra) * Number(d.cantidad), 0);
+    // Obtener el pedido para acceder a tax_amount y shipping_amount
+    const pedido = await prismaClient.pedidos.findUnique({
+      where: { id_pedido: args.id_pedido },
+    });
+    if (!pedido) return;
+
+    // Calcular subtotal de items del productor
+    const subtotal_items_productor = detalles.reduce(
+      (sum: number, d: any) => sum + Number(d.precio_compra) * Number(d.cantidad),
+      0,
+    );
+
+    // Calcular subtotal de todos los items del pedido (para prorrateo)
+    const todos_detalles = await prismaClient.detalle_pedido.findMany({
+      where: { id_pedido: args.id_pedido },
+    });
+    const subtotal_total_pedido = todos_detalles.reduce(
+      (sum: number, d: any) => sum + Number(d.precio_compra) * Number(d.cantidad),
+      0,
+    );
+
+    // Calcular porcentaje del productor
+    const porcentaje_productor =
+      subtotal_total_pedido > 0
+        ? subtotal_items_productor / subtotal_total_pedido
+        : 0;
+
+    // Prorratear tax y shipping
+    const tax_prorrateado = Number(pedido.tax_amount) * porcentaje_productor;
+    const envio_prorrateado = Number(pedido.shipping_amount) * porcentaje_productor;
+
+    // Subtotal bruto INCLUYE items + tax prorrateado + envío prorrateado
+    const subtotal_bruto = Number(
+      (subtotal_items_productor + tax_prorrateado + envio_prorrateado).toFixed(2),
+    );
 
     let id_comision_aplicada: number | null = null;
     let comision_marketplace = 0;
@@ -713,6 +752,16 @@ export class PedidosService {
       include: { pedidos: true },
     });
 
+    // When delivery is confirmed, trigger Stripe Transfer for this productor's payment
+    if (nuevoEstado === 'entregado' && anterior?.estado !== 'entregado') {
+      try {
+        await this.triggerPayoutForProductor(id_pedido_big, id_productor, updated.pedidos.moneda);
+      } catch (err: any) {
+        console.error(`[pedidos] Failed to trigger payout for productor ${id_productor}:`, err?.message);
+        // Don't block the status update; payout can be retried manually
+      }
+    }
+
     await this.prisma.auditoria.create({
       data: {
         accion: 'cambiar_estado_pedido_productor',
@@ -724,6 +773,128 @@ export class PedidosService {
     });
 
     return serializeBigInts(updated);
+  }
+
+  private async triggerPayoutForProductor(id_pedido: bigint, id_productor: number, moneda: string) {
+    const pp = (await this.prisma.pedido_productor.findUnique({
+      where: {
+        id_pedido_id_productor: { id_pedido, id_productor },
+      },
+      include: {
+        productores: { select: { stripe_account_id: true, stripe_onboarding_completed: true, id_usuario: true } },
+        pedidos: { include: { pagos: { select: { payment_intent_id: true }, take: 1 } } },
+      },
+    })) as any;
+
+    if (!pp) return;
+
+    // Si ya hay un payout (transfer completado), no hacer nada
+    if (pp.id_payout) {
+      console.log(`[pedidos] Payout ya existe para productor ${id_productor} pedido ${id_pedido}: ${pp.id_payout}`);
+      return;
+    }
+
+    if (!pp.productores?.stripe_account_id || !pp.productores.stripe_onboarding_completed) {
+      console.warn(`[pedidos] Productor ${id_productor} sin onboarding Stripe. Dinero retenido en plataforma hasta completar configuración.`);
+      try {
+        await this.prisma.notificaciones.create({
+          data: {
+            id_usuario: pp.productores?.id_usuario || '',
+            tipo: 'pago_pendiente_onboarding',
+            titulo: 'Tienes un pago pendiente por transferir',
+            cuerpo: `Tu pedido #${id_pedido} ha sido entregado, pero tu pago de ${pp.monto_neto_productor} ${moneda} está pendiente de transferir. Por favor completa tu configuración de Stripe.`,
+            url_accion: '/dashboard/productor/ingresos',
+          },
+        });
+      } catch (err: any) {
+        console.error('[pedidos] Failed to create notification', err?.message);
+      }
+      return;
+    }
+
+    // Validar disputas abiertas antes de ejecutar el transfer
+    const paymentIntent = pp.pedidos?.pagos?.[0]?.payment_intent_id;
+    if (paymentIntent) {
+      try {
+        const openDisputes = await this.stripeService.countOpenDisputesForPaymentIntent(paymentIntent);
+        if (openDisputes > 0) {
+          console.warn(`[pedidos] Disputa(s) abierta(s) detectada(s) (${openDisputes}) para pedido ${id_pedido}. Reteniendo pago hasta resolución.`);
+          return;
+        }
+      } catch (err: any) {
+        console.error('[pedidos] Error checking disputes, skipping transfer:', err?.message);
+        return;
+      }
+    }
+
+    const montoNetoCents = pp.monto_neto_productor ? Math.round(Number(pp.monto_neto_productor) * 100) : 0;
+    if (montoNetoCents <= 0) {
+      console.warn(`[pedidos] Monto neto no positivo para productor ${id_productor}. Skipping transfer.`);
+      return;
+    }
+
+    try {
+      const transfer = await this.stripeService.createTransfer({
+        amountCents: montoNetoCents,
+        currency: moneda,
+        destination: pp.productores.stripe_account_id,
+        transferGroup: `pedido-${id_pedido}`,
+        idempotencyKey: `transfer-${id_pedido}-${id_productor}`,
+        metadata: {
+          id_pedido: String(id_pedido),
+          id_productor: String(id_productor),
+        },
+      });
+
+      const today = new Date();
+      const payout = await this.prisma.payouts.create({
+        data: {
+          id_productor,
+          moneda: moneda.toLowerCase(),
+          monto_bruto: pp.subtotal_bruto ?? pp.monto_neto_productor ?? 0,
+          monto_comision: pp.comision_marketplace,
+          monto_neto: pp.monto_neto_productor ?? 0,
+          estado: 'procesado',
+          proveedor: 'stripe',
+          referencia_externa: transfer.id,
+          periodo_desde: today,
+          periodo_hasta: today,
+        },
+      });
+
+      await this.prisma.pedido_productor.update({
+        where: { id_pedido_id_productor: { id_pedido, id_productor } },
+        data: { id_payout: payout.id_payout },
+      });
+
+      console.log(`[pedidos] Payout creado al confirmar entrega. Productor ${id_productor}, Transfer: ${transfer.id}`);
+    } catch (error: any) {
+      console.error(`[pedidos] Error al crear transfer post-entrega para productor ${id_productor}:`, error?.message);
+      const today = new Date();
+      const payoutFallido = await this.prisma.payouts.create({
+        data: {
+          id_productor,
+          moneda: moneda.toLowerCase(),
+          monto_bruto: pp.subtotal_bruto ?? pp.monto_neto_productor ?? 0,
+          monto_comision: pp.comision_marketplace,
+          monto_neto: pp.monto_neto_productor ?? 0,
+          estado: 'fallido',
+          proveedor: 'stripe',
+          periodo_desde: today,
+          periodo_hasta: today,
+          intentos: 1,
+          ultimo_error: error?.message?.slice(0, 500),
+          proximo_reintento: new Date(Date.now() + 15 * 60 * 1000),
+        },
+      });
+
+      await this.prisma.pedido_productor.update({
+        where: { id_pedido_id_productor: { id_pedido, id_productor } },
+        data: { id_payout: payoutFallido.id_payout },
+      });
+
+      throw error;
+    }
   }
 
   async updateTrackingForProducer(

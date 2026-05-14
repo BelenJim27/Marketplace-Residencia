@@ -19,6 +19,11 @@ export class PagosController {
   @Patch('monedas/:codigo') updateMoneda(@Param('codigo') codigo: string, @Body() dto: UpdateMonedaDto) { return this.service.updateMoneda(codigo, dto); }
   @Delete('monedas/:codigo') removeMoneda(@Param('codigo') codigo: string) { return this.service.removeMoneda(codigo); }
 
+  @Get('ingresos/:id_productor')
+  getIngresosResumen(@Param('id_productor', ParseIntPipe) id_productor: number) {
+    return this.service.getIngresosResumen(id_productor);
+  }
+
   @Post('stripe/intent') createStripeIntent(@Body() dto: CreateStripeIntentDto) {
     return this.service.createStripePaymentIntent(dto);
   }
@@ -31,7 +36,9 @@ export class PagosController {
 
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as any;
-      await this.service.updatePaymentStatus(paymentIntent.id, 'completado');
+      const isDirectCharge = !!(paymentIntent.transfer_data?.destination);
+      const taxCalculationId = paymentIntent.metadata?.tax_calculation as string | undefined;
+      await this.service.updatePaymentStatus(paymentIntent.id, 'completado', isDirectCharge, taxCalculationId);
     } else if (event.type === 'payment_intent.payment_failed') {
       const paymentIntent = event.data.object as any;
       await this.service.updatePaymentStatus(paymentIntent.id, 'fallido');
@@ -41,6 +48,11 @@ export class PagosController {
     }
 
     return { received: true };
+  }
+
+  @Post(':id/reembolso')
+  reembolsarPago(@Param('id') id: string) {
+    return this.service.reembolsarPago(id);
   }
 
   @Get() findAll() { return this.service.findAll(); }

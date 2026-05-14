@@ -240,7 +240,7 @@ app/
 ├── profile/                         # Necesita layout
 ├── Cliente/                        # Mezcla español/inglés
 │   └── producto/
-├── Administrador/                  # Mezcla español
+├── Administrador                  # Mezcla español
 │   ├── usuarios/                   # Falta "s" en algunas rutas
 │   ├── usuarioss/                  # ❌ Doble "s" (error)
 │   ├── dashboard/
@@ -390,9 +390,9 @@ app/
 | `/tienda/carrito` | `(auth)/shop/cart` |
 | `/tienda/deseos` | `(auth)/shop/wishlist` |
 | `/tienda/compras` | `(auth)/shop/orders` |
-| `/Administrador/dashboard` | `(dashboard)/admin` |
-| `/Administrador/usuarios` | `(dashboard)/admin/users` |
-| `/Administrador/roles` | `(dashboard)/admin/roles` |
+| `/Administradordashboard` | `(dashboard)/admin` |
+| `/Administradorusuarios` | `(dashboard)/admin/users` |
+| `/Administradorroles` | `(dashboard)/admin/roles` |
 | `/dashboard/productor` | `(dashboard)/producer` |
 | `/tables` | `(dev)/tables` |
 | `/ui-elements` | `(dev)/ui` |

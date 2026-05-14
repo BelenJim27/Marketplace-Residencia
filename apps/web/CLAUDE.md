@@ -67,7 +67,7 @@ app/Productor/
 
 ### Administrador
 ```
-app/Administrador/
+app/Administrador
 ├── dashboard/page.tsx
 ├── usuarios/page.tsx
 ├── usuarios/[id]/page.tsx
@@ -98,7 +98,7 @@ Verificar que **cada ruta** tenga el layout correcto:
 - [ ] /categoria*
 
 ### ✅ Validar Sidebar + Header
-- [ ] /Administrador/* (si user.role === ADMIN)
+- [ ] /Administrador* (si user.role === ADMIN)
 - [ ] /Productor/* (si user.role === PRODUCTOR)
 
 ### ✅ Validar TiendaHeader (para otros autenticados)

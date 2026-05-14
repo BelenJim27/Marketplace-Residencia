@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { calcularEdadEnAnios } from '../productos/edad.helper';
@@ -8,6 +9,8 @@ import { StripeService } from './stripe.service';
 
 @Injectable()
 export class PagosService {
+  private readonly logger = new Logger(PagosService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripeService: StripeService,
@@ -22,6 +25,59 @@ export class PagosService {
   async createMoneda(dto: CreateMonedaDto) { return serializeBigInts(await this.prisma.monedas.create({ data: { codigo: dto.codigo.trim(), nombre: dto.nombre.trim(), simbolo: dto.simbolo ?? null, activo: dto.activo ?? true } })); }
   async updateMoneda(codigo: string, dto: UpdateMonedaDto) { return serializeBigInts(await this.prisma.monedas.update({ where: { codigo }, data: { codigo: dto.codigo?.trim(), nombre: dto.nombre?.trim(), simbolo: dto.simbolo, activo: dto.activo } })); }
   async removeMoneda(codigo: string) { await this.prisma.monedas.delete({ where: { codigo } }); return { message: 'Moneda eliminada' }; }
+
+  async getIngresosResumen(id_productor: number) {
+    const pedidoProductores = await this.prisma.pedido_productor.findMany({
+      where: { id_productor },
+      select: {
+        monto_neto_productor: true,
+        subtotal_bruto: true,
+        comision_marketplace: true,
+        estado: true,
+      },
+    });
+
+    const payouts = await this.prisma.payouts.findMany({
+      where: {
+        id_productor,
+        estado: { in: ['procesado', 'pagado'] },
+      },
+      select: {
+        monto_neto: true,
+        monto_bruto: true,
+        monto_comision: true,
+      },
+    });
+
+    const ventasTotales = pedidoProductores.reduce(
+      (acc, pp) => acc + (Number(pp.monto_neto_productor) || 0),
+      0,
+    );
+    const comisionTotal = pedidoProductores.reduce(
+      (acc, pp) => acc + (Number(pp.comision_marketplace) || 0),
+      0,
+    );
+    const brutoTotal = pedidoProductores.reduce(
+      (acc, pp) => acc + (Number(pp.subtotal_bruto) || 0),
+      0,
+    );
+
+    const ingresosRecibidos = payouts.reduce(
+      (acc, p) => acc + (Number(p.monto_neto) || 0),
+      0,
+    );
+    const pendienteRecibir = ventasTotales - ingresosRecibidos;
+
+    return {
+      ventas_totales: ventasTotales.toFixed(2),
+      comision_total: comisionTotal.toFixed(2),
+      bruto_total: brutoTotal.toFixed(2),
+      ingresos_recibidos: ingresosRecibidos.toFixed(2),
+      pendiente_recibir: Math.max(0, pendienteRecibir).toFixed(2),
+      total_pedidos: pedidoProductores.length,
+      total_payouts: payouts.length,
+    };
+  }
 
   async createStripePaymentIntent(dto: CreateStripeIntentDto) {
     const moneda = dto.moneda.toUpperCase();
@@ -55,6 +111,7 @@ export class PagosService {
       },
       connectedAccountId: directCharge?.connectedAccountId,
       applicationFeeAmount: directCharge?.applicationFeeAmount,
+      transferGroup: `pedido-${dto.id_pedido}`,
     });
 
     await this.prisma.pedidos.update({
@@ -90,7 +147,7 @@ export class PagosService {
     });
   }
 
-  async updatePaymentStatus(payment_intent_id: string, estado: string) {
+  async updatePaymentStatus(payment_intent_id: string, estado: string, isDirectCharge = false, taxCalculationId?: string) {
     const pago = await this.prisma.pagos.findFirst({
       where: { payment_intent_id },
       include: { pedidos: { include: { usuarios: true } } },
@@ -108,6 +165,18 @@ export class PagosService {
 
     // Update order status based on payment status
     if (estado === 'completado') {
+      // Record tax transaction with Stripe Tax if calculation exists
+      if (taxCalculationId) {
+        try {
+          await this.stripeService.createTaxTransactionFromCalculation(
+            taxCalculationId,
+            `pi-${payment_intent_id}`,
+          );
+        } catch (err: any) {
+          console.error('[pagos] createTaxTransactionFromCalculation failed:', err?.message);
+        }
+      }
+
       await this.prisma.pedidos.update({
         where: { id_pedido: pago.id_pedido },
         data: { estado: 'pagado' },
@@ -116,6 +185,13 @@ export class PagosService {
         where: { id_pedido: pago.id_pedido },
         data: { estado: 'confirmado' },
       });
+
+      // Transfers now occur when order is marked as 'entregado' in updateOrderStatusForProductor
+      // NOT here. Money is retained in platform account for escrow period until delivery confirmed.
+      // if (!isDirectCharge) {
+      //   await this.createTransfersForPedido(pago.id_pedido, updated.moneda);
+      // }
+
       const buyer = (pago as any).pedidos?.usuarios;
       if (buyer?.email) {
         try {
@@ -241,12 +317,22 @@ export class PagosService {
   private readonly DEFAULT_FEE_PCT = 0.10;
 
   /**
-   * For single-productor pedidos with a Connect-enabled productor, resolves the
-   * destination account and the marketplace application fee. Multi-productor
-   * pedidos (or productores without onboarding) fall back to a regular PI and
-   * the platform settles via the existing payouts pipeline.
+   * Always returns null to force manual transfers to all productores.
+   * This ensures multi-productor support - all payments go to the platform account
+   * and then transfers are created to each productor's Stripe Connect account.
    */
   private async resolveDirectCharge(
+    id_pedido: bigint,
+    subtotal: number,
+    shippingAmount: number,
+  ): Promise<{ connectedAccountId: string; applicationFeeAmount: number; id_productor: number } | null> {
+    return null;
+  }
+
+  /**
+   * Legacy direct charge - disabled. Use manual transfers instead.
+   */
+  private async resolveDirectChargeLegacy(
     id_pedido: bigint,
     subtotal: number,
     shippingAmount: number,
@@ -263,7 +349,24 @@ export class PagosService {
       where: { id_productor },
       select: { stripe_account_id: true, stripe_onboarding_completed: true },
     });
-    if (!prod?.stripe_account_id || !prod.stripe_onboarding_completed) return null;
+    if (!prod?.stripe_account_id) return null;
+
+    let onboardingOk = prod.stripe_onboarding_completed;
+    if (!onboardingOk) {
+      try {
+        const account = await this.stripeService.retrieveAccount(prod.stripe_account_id);
+        if (account.charges_enabled && account.payouts_enabled) {
+          onboardingOk = true;
+          await this.prisma.productores.update({
+            where: { id_productor },
+            data: { stripe_onboarding_completed: true },
+          });
+        }
+      } catch (error: any) {
+        console.warn('[pagos] retrieveAccount failed for', prod.stripe_account_id, ':', error?.message);
+      }
+    }
+    if (!onboardingOk) return null;
 
     const now = new Date();
     const productorRule = await this.prisma.comisiones.findFirst({
@@ -299,5 +402,255 @@ export class PagosService {
       applicationFeeAmount,
       id_productor,
     };
+  }
+
+  private async createTransfersForPedido(id_pedido: bigint, moneda: string) {
+    const pedidoProductores = await this.prisma.pedido_productor.findMany({
+      where: { id_pedido },
+      include: { productores: { select: { stripe_account_id: true, stripe_onboarding_completed: true, id_usuario: true } } },
+    });
+
+    this.logger.log(`[pagos] Iniciando transfers para pedido ${id_pedido}: ${pedidoProductores.length} productor(es)`);
+
+    for (const pp of pedidoProductores) {
+      if (!pp.productores?.stripe_account_id || !pp.productores.stripe_onboarding_completed) {
+        const monto = pp.monto_neto_productor?.toString() || '0';
+        this.logger.warn(
+          `[pagos] Transfer skipped: productor ${pp.id_productor} sin onboarding en pedido ${id_pedido}, monto pendiente: ${monto} ${moneda}`,
+        );
+        try {
+          await this.prisma.notificaciones.create({
+            data: {
+              id_usuario: pp.productores?.id_usuario || '',
+              tipo: 'pago_pendiente_onboarding',
+              titulo: 'Tienes un pago pendiente por transferir',
+              cuerpo: `Tienes un pago de ${monto} ${moneda} en el pedido #${id_pedido} que está pendiente de transferir. Por favor completa tu configuración de Stripe para recibirlo.`,
+              url_accion: '/dashboard/productor/ingresos',
+            },
+          });
+        } catch (err: any) {
+          this.logger.error('[pagos] Failed to create notification for productor', pp.id_productor, ':', err?.message);
+        }
+        continue;
+      }
+
+      const montoNetoCents = pp.monto_neto_productor ? Math.round(Number(pp.monto_neto_productor) * 100) : 0;
+      if (montoNetoCents <= 0) {
+        this.logger.warn('[pagos] skipping transfer for productor with non-positive monto_neto', pp.id_productor);
+        continue;
+      }
+
+      try {
+        const transfer = await this.stripeService.createTransfer({
+          amountCents: montoNetoCents,
+          currency: moneda,
+          destination: pp.productores.stripe_account_id,
+          transferGroup: `pedido-${id_pedido}`,
+          idempotencyKey: `transfer-${id_pedido}-${pp.id_productor}`,
+          metadata: {
+            id_pedido: String(id_pedido),
+            id_productor: String(pp.id_productor),
+          },
+        });
+
+        // Create payout record with transfer_id for traceability and refund support
+        const today = new Date();
+        const payout = await this.prisma.payouts.create({
+          data: {
+            id_productor: pp.id_productor,
+            moneda: moneda.toLowerCase(),
+            monto_bruto: pp.subtotal_bruto ?? pp.monto_neto_productor ?? 0,
+            monto_comision: pp.comision_marketplace,
+            monto_neto: pp.monto_neto_productor ?? 0,
+            estado: 'procesado',
+            proveedor: 'stripe',
+            referencia_externa: transfer.id,
+            periodo_desde: today,
+            periodo_hasta: today,
+          },
+        });
+
+        // Link payout to pedido_productor for traceability
+        await this.prisma.pedido_productor.update({
+          where: { id_pedido_id_productor: { id_pedido, id_productor: pp.id_productor } },
+          data: { id_payout: payout.id_payout },
+        });
+
+        this.logger.log(`[pagos] Transfer exitoso para productor ${pp.id_productor}: ${transfer.id}`);
+      } catch (error: any) {
+        this.logger.error(`[pagos] createTransfer failed for productor ${pp.id_productor}:`, error?.message);
+        const today = new Date();
+        const payoutFallido = await this.prisma.payouts.create({
+          data: {
+            id_productor: pp.id_productor,
+            moneda: moneda.toLowerCase(),
+            monto_bruto: pp.subtotal_bruto ?? pp.monto_neto_productor ?? 0,
+            monto_comision: pp.comision_marketplace,
+            monto_neto: pp.monto_neto_productor ?? 0,
+            estado: 'fallido',
+            proveedor: 'stripe',
+            periodo_desde: today,
+            periodo_hasta: today,
+            intentos: 1,
+            ultimo_error: error?.message?.slice(0, 500),
+            proximo_reintento: new Date(Date.now() + 15 * 60 * 1000),
+          },
+        });
+        await this.prisma.pedido_productor.update({
+          where: { id_pedido_id_productor: { id_pedido, id_productor: pp.id_productor } },
+          data: { id_payout: payoutFallido.id_payout },
+        });
+      }
+    }
+  }
+
+  async reembolsarPago(id_pago: string) {
+    const pago = await this.prisma.pagos.findUnique({
+      where: { id_pago: toBigIntId(id_pago) },
+    });
+    if (!pago) throw new NotFoundException('Pago no encontrado');
+    if (pago.estado === 'reembolsado') throw new BadRequestException('El pago ya fue reembolsado');
+    if (pago.estado !== 'completado') throw new BadRequestException('Solo se pueden reembolsar pagos completados');
+    if (!pago.payment_intent_id) throw new BadRequestException('Sin payment_intent_id');
+
+    const pi = await this.stripeService.retrievePaymentIntent(pago.payment_intent_id);
+    const isDirectCharge = !!(pi.transfer_data?.destination);
+
+    if (isDirectCharge) {
+      // Direct charge: Stripe reverts transfer automatically
+      await this.stripeService.createRefund({
+        paymentIntentId: pago.payment_intent_id,
+        reverseTransfer: true,
+        refundApplicationFee: true,
+      });
+    } else {
+      // Manual transfers: need to revert each transfer individually
+      const rows = await this.prisma.pedido_productor.findMany({
+        where: { id_pedido: pago.id_pedido },
+        include: { payout: { select: { referencia_externa: true, estado: true, intentos: true, ultimo_error: true } } },
+      });
+
+      const missingTransfers = rows.filter((r) => !r.payout?.referencia_externa);
+      if (missingTransfers.length > 0) {
+        const detalles = missingTransfers
+          .map((r) => `Productor ${r.id_productor}: estado=${r.payout?.estado}, intentos=${r.payout?.intentos}, error=${r.payout?.ultimo_error}`)
+          .join('; ');
+        throw new UnprocessableEntityException(
+          `No se pueden revertir las transferencias automáticamente: ${missingTransfers.length} transfer(s) faltante(s). Detalles: ${detalles}. Requiere reconciliación manual.`,
+        );
+      }
+
+      for (const r of rows) {
+        if (r.payout?.referencia_externa) {
+          try {
+            await this.stripeService.createTransferReversal(r.payout.referencia_externa);
+          } catch (err: any) {
+            console.error('[pagos] createTransferReversal failed for transfer', r.payout.referencia_externa, ':', err?.message);
+          }
+        }
+      }
+
+      // After reverting all transfers, refund the payment intent
+      await this.stripeService.createRefund({
+        paymentIntentId: pago.payment_intent_id,
+      });
+    }
+
+    // Update payment and order status
+    await this.prisma.pagos.update({
+      where: { id_pago: pago.id_pago },
+      data: { estado: 'reembolsado' },
+    });
+    await this.prisma.pedidos.update({
+      where: { id_pedido: pago.id_pedido },
+      data: { estado: 'cancelado' },
+    });
+
+    return serializeBigInts({ id_pago: pago.id_pago, estado: 'reembolsado' });
+  }
+
+  @Cron('*/15 * * * *')
+  async retryFailedTransfers() {
+    const MAX_INTENTOS = 5;
+    this.logger.debug('[pagos] Iniciando retry de transfers fallidos');
+
+    const failed = await this.prisma.payouts.findMany({
+      where: {
+        estado: 'fallido',
+        intentos: { lt: MAX_INTENTOS },
+        OR: [{ proximo_reintento: null }, { proximo_reintento: { lte: new Date() } }],
+      },
+      include: {
+        pedido_productor: {
+          take: 1,
+          include: {
+            productores: {
+              select: { stripe_account_id: true, stripe_onboarding_completed: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (failed.length === 0) return;
+
+    this.logger.log(`[pagos] Retrying ${failed.length} fallidos transfer(s)`);
+
+    for (const payout of failed) {
+      const pp = payout.pedido_productor[0];
+      if (!pp?.productores?.stripe_account_id || !pp.productores.stripe_onboarding_completed) {
+        this.logger.warn(`[pagos] Skipping retry para productor ${pp.id_productor}: sin onboarding`);
+        continue;
+      }
+
+      try {
+        const transfer = await this.stripeService.createTransfer({
+          amountCents: Math.round(Number(payout.monto_neto) * 100),
+          currency: payout.moneda,
+          destination: pp.productores.stripe_account_id,
+          transferGroup: `pedido-${pp.id_pedido}`,
+          idempotencyKey: `transfer-${pp.id_pedido}-${pp.id_productor}`,
+          metadata: {
+            id_pedido: String(pp.id_pedido),
+            id_productor: String(pp.id_productor),
+          },
+        });
+
+        await this.prisma.payouts.update({
+          where: { id_payout: payout.id_payout },
+          data: {
+            estado: 'procesado',
+            referencia_externa: transfer.id,
+            procesado_en: new Date(),
+            ultimo_error: null,
+          },
+        });
+
+        this.logger.log(`[pagos] Transfer exitoso en retry para productor ${pp.id_productor}: ${transfer.id}`);
+      } catch (error: any) {
+        const nuevosIntentos = payout.intentos + 1;
+        const backoffMs = Math.min(24 * 60, 15 * Math.pow(2, nuevosIntentos)) * 60_000;
+
+        await this.prisma.payouts.update({
+          where: { id_payout: payout.id_payout },
+          data: {
+            intentos: nuevosIntentos,
+            ultimo_error: error?.message?.slice(0, 500),
+            estado: nuevosIntentos >= MAX_INTENTOS ? 'agotado' : 'fallido',
+            proximo_reintento: new Date(Date.now() + backoffMs),
+          },
+        });
+
+        if (nuevosIntentos >= MAX_INTENTOS) {
+          this.logger.error(
+            `[pagos] Transfer AGOTADO para productor ${pp.id_productor} pedido ${pp.id_pedido}: requiere revisión manual. Error: ${error?.message}`,
+          );
+        } else {
+          this.logger.warn(
+            `[pagos] Retry intento ${nuevosIntentos}/${MAX_INTENTOS} para productor ${pp.id_productor}: ${error?.message}`,
+          );
+        }
+      }
+    }
   }
 }

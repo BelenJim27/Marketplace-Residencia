@@ -28,6 +28,17 @@ export class ConfiguracionService {
     return map;
   }
 
+  async getPayoutRetentionDays(): Promise<number> {
+    try {
+      const config = await this.prisma.configuracion_sistema.findUnique({
+        where: { clave: 'PAYOUT_RETENTION_DAYS' },
+      });
+      return config && config.valor ? parseInt(config.valor, 10) : 3;
+    } catch {
+      return 3;
+    }
+  }
+
   async upsertConfigs(configs: { clave: string; valor: string; tipo?: string }[]) {
     const results = [];
     for (const config of configs) {
@@ -48,6 +59,7 @@ export class ConfiguracionService {
       { clave: 'color_acento', valor: '#10b981', tipo: 'color' },
       { clave: 'idioma_default', valor: 'es', tipo: 'texto' },
       { clave: 'nombre_app', valor: 'Marketplace Residencia', tipo: 'texto' },
+      { clave: 'PAYOUT_RETENTION_DAYS', valor: '3', tipo: 'numero', descripcion: 'Días de retención de pago después de confirmar entrega, antes de enviar al productor' },
     ];
     return this.upsertConfigs(defaults);
   }

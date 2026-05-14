@@ -50,20 +50,20 @@ export const ADMIN_NAV_DATA: NavSection[] = [
     items: [
       {
         title: "Dashboard",
-        url: "/administrador/dashboard",
+        url: "/Administrador/dashboard",
         icon: LayoutDashboard,
       },
       { title: "Perfil", url: "/profile", icon: UserRound },
-      { title: "Usuarios", url: "/administrador/usuarios", icon: Users },
+      { title: "Usuarios", url: "/Administrador/usuarios", icon: Users },
       {
         title: "Auditoría",
-        url: "/administrador/auditoria",
+        url: "/Administrador/auditoria",
         icon: FileBarChart,
       },
-      { title: "Roles y pemisos", url: "/administrador/roles-permisos", icon: UserCog },
+      { title: "Roles y pemisos", url: "/Administrador/roles-permisos", icon: UserCog },
       {
         title: "Productores",
-        url: "/administrador/tienda/productores",
+        url: "/Administrador/tienda/productores",
         icon: Users,
       },
       {
@@ -72,37 +72,37 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         children: [
           {
             title: "Categorías",
-            url: "/administrador/categorias",
+            url: "/Administrador/categorias",
             icon: Layers,
           },
           {
             title: "Productos",
-            url: "/administrador/productos",
+            url: "/Administrador/productos",
             icon: Users,
           },
         ],
       },
-      { title: "Pedidos", url: "/administrador/pedidos", icon: ShoppingCart },
+      { title: "Pedidos", url: "/Administrador/pedidos", icon: ShoppingCart },
 
       {
         title: "Comisiones",
-        url: "/administrador/comisiones",
+        url: "/Administrador/comisiones",
         icon: BadgeDollarSign,
       },
       {
         title: "Payouts",
-        url: "/administrador/payouts",
+        url: "/Administrador/payouts",
         icon: BadgeDollarSign,
       },
 
       {
         title: "Solicitudes Productores",
-        url: "/administrador/solicitudes-productores",
+        url: "/Administrador/solicitudes-productores",
         icon: UserRound,
       },
       {
         title: "Configuración",
-        url: "/administrador/configuracion",
+        url: "/Administrador/configuracion",
         icon: Settings,
       },
     ],
@@ -183,22 +183,20 @@ export function getNavData(isProductor: boolean, isAdmin: boolean = false, tiene
             url: "/dashboard/productor",
             icon: LayoutDashboard,
           },
-          // Lotes solo si es de bebidas
-          ...(tieneLotes ? [{
+          {
             title: "Lotes",
             url: "/dashboard/productor/lotes",
             icon: Layers,
-          }] : []),
+          },
           {
             title: "Inventario",
             icon: Boxes,
             children: [
-              // Categorías solo si es de bebidas
-              ...(tieneLotes ? [{
+              {
                 title: "Categorías",
                 url: "/dashboard/productor/categorias",
                 icon: Layers,
-              }] : []),
+              },
               {
                 title: "Productos",
                 url: "/dashboard/productor/productos",

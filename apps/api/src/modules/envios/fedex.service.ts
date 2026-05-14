@@ -36,7 +36,7 @@ export class FedexService implements ICarrierService {
   private readonly MX_STATE_CODES: Record<string, string> = {
     'aguascalientes': 'AG', 'baja california': 'BC', 'baja california sur': 'BS',
     'campeche': 'CP', 'chiapas': 'CS', 'chihuahua': 'CH',
-    'ciudad de mexico': 'DF', 'cdmx': 'DF', 'distrito federal': 'DF',
+    'ciudad de mexico': 'CMX', 'cdmx': 'CMX', 'distrito federal': 'CMX',
     'coahuila': 'CO', 'colima': 'CL', 'durango': 'DG', 'guanajuato': 'GT',
     'guerrero': 'GR', 'hidalgo': 'HG', 'jalisco': 'JA',
     'mexico': 'ME', 'estado de mexico': 'ME', 'michoacan': 'MI',
@@ -166,12 +166,12 @@ export class FedexService implements ICarrierService {
           },
           documentShipment: false,
           commodities: [{
-            description: 'Export Goods',
+            description: dto.descripcion_contenido ?? 'Mezcal artesanal',
             countryOfManufacture: 'MX',
             quantity: 1,
             quantityUnits: 'PCS',
-            unitPrice: { amount: 10.00, currency: 'USD' },
-            customsValue: { amount: 10.00, currency: 'USD' },
+            unitPrice: { amount: dto.valor_declarado_usd ?? 10.00, currency: 'USD' },
+            customsValue: { amount: dto.valor_declarado_usd ?? 10.00, currency: 'USD' },
             weight: { units: 'KG', value: Number(dto.peso_kg) }
           }]
         };
@@ -397,7 +397,7 @@ export class FedexService implements ICarrierService {
         },
         documentShipment: false,
         commodities: [{
-          description: 'Export Goods',
+          description: envio.contenido_descripcion ?? 'Mezcal artesanal',
           countryOfManufacture: 'MX',
           quantity: 1,
           quantityUnits: 'PCS',

@@ -160,11 +160,12 @@ export default function SolicitarPage() {
         setRegiones(regionesData as Region[]);
         setCategorias(categoriasData as Categoria[]);
 
-        let token = (session as any)?.accessToken || getCookie("token");
+        let token = getCookie("token") || (session as any)?.accessToken;
         if (!token) {
           await new Promise((resolve) => setTimeout(resolve, 300));
-          token = getCookie("token");
+          token = getCookie("token") || (session as any)?.accessToken;
         }
+        console.warn("🔑 Token disponible:", token ? "sí" : "no", token?.substring(0, 20) + "...");
 
         if (token) {
           const userId = (user as any)?.id_usuario || (user as any)?.id;
@@ -199,7 +200,12 @@ export default function SolicitarPage() {
                 setSolicitudActual(solicitud as Solicitud);
               }
             } catch (err: any) {
-              if (!err?.message?.includes("JSON") && !err?.message?.includes("404")) {
+              const isAuthError = err?.message?.includes("401") || 
+                                  err?.message?.includes("Unauthorized") ||
+                                  err?.message?.includes("Token");
+              if (isAuthError) {
+                console.warn("Token inválido o expirado. El usuario puede crear una nueva solicitud.");
+              } else if (!err?.message?.includes("JSON") && !err?.message?.includes("404")) {
                 console.error("Error al obtener solicitud:", err);
               }
             }

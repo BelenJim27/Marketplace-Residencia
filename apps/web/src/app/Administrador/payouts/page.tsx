@@ -1,21 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, AlertCircle, CheckCircle2, X, Search, Play, Eye } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, X, Search, Play, Eye, Undo2 } from "lucide-react";
 import { api, type Payout, type PayoutDetalle } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { formatPrice } from "@/lib/format-number";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
 type Notice = { type: "success" | "error"; message: string };
-const ESTADOS = ["pendiente", "en_proceso", "pagado", "fallido", "cancelado"] as const;
+const ESTADOS = ["pendiente", "en_proceso", "procesado", "pagado", "fallido", "agotado", "cancelado"] as const;
 const ESTADO_BADGE: Record<string, string> = {
-  pendiente: "bg-yellow-100 text-yellow-800",
+  pendiente: "bg-gray-200 text-gray-800",
   en_proceso: "bg-blue-100 text-blue-800",
-  pagado: "bg-green-100 text-green-800",
-  fallido: "bg-red-100 text-red-800",
-  cancelado: "bg-gray-100 text-gray-700",
+  procesado: "bg-green-100 text-green-800",
+  pagado: "bg-emerald-200 text-emerald-800",
+  fallido: "bg-orange-100 text-orange-800",
+  agotado: "bg-red-100 text-red-800",
+  cancelado: "bg-gray-300 text-gray-700",
 };
+
+const ESTADOS_MANUALES = ["pendiente", "en_proceso", "procesado", "pagado", "fallido", "cancelado"] as const;
 
 export default function PayoutsAdminPage() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
@@ -35,6 +39,7 @@ export default function PayoutsAdminPage() {
 
   const [detalleModal, setDetalleModal] = useState<PayoutDetalle | null>(null);
   const [detalleLoading, setDetalleLoading] = useState(false);
+  const [reembolsando, setReembolsando] = useState<string | null>(null);
 
   const token = getCookie("token") ?? "";
 
@@ -107,6 +112,24 @@ export default function PayoutsAdminPage() {
     }
   }
 
+  async function handleReembolsar(p: Payout) {
+    if (!confirm(`¿Estás seguro de que deseas reembolsar el payout #${p.id_payout}? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    setReembolsando(p.id_payout);
+    try {
+      const token = getCookie("token") ?? "";
+      const idPago = p.id_payout;
+      await api.pagos.reembolsar(token, idPago);
+      setNotice({ type: "success", message: `Payout #${p.id_payout} reembolsado exitosamente` });
+      await load();
+    } catch (err) {
+      setNotice({ type: "error", message: err instanceof Error ? err.message : "Error al reembolsar" });
+    } finally {
+      setReembolsando(null);
+    }
+  }
+
   async function openDetalle(p: Payout) {
     setDetalleLoading(true);
     try {
@@ -150,6 +173,35 @@ export default function PayoutsAdminPage() {
           </button>
         </div>
       )}
+
+      {payouts.some((p) => p.estado === "agotado") && (
+        <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-800 dark:bg-red-900/20 dark:text-red-100">
+          <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-medium">Hay payouts agotados que requieren intervención manual</p>
+            <p className="mt-0.5 text-red-700 dark:text-red-300">
+              Estos pagos fallaron después de 5 intentos automáticos. Causas comunes: onboarding incompleto en Stripe, disputas/chargebacks activos, o problemas en la cuenta bancaria. Revisa el diagnóstico en cada payout y contacta al productor.
+            </p>
+          </div>
+          <button
+            onClick={() => setFiltroEstado("agotado")}
+            className="shrink-0 rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/40"
+          >
+            Ver agotados
+          </button>
+        </div>
+      )}
+
+      {/* Información de retención configurable */}
+      <section className="rounded-md border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+        <div className="flex gap-3">
+          <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+          <div className="flex-1 text-sm text-blue-900 dark:text-blue-100">
+            <p className="font-medium">Período de retención activo</p>
+            <p className="mt-1 text-xs">Los pagos se retienen hasta la entrega confirmada + período configurado para proteger contra disputas y chargebacks. Usa la sección de generación para liberar pagos manuales cuando sea necesario.</p>
+          </div>
+        </div>
+      </section>
 
       {/* Generar payouts */}
       <section className="rounded-md border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
@@ -302,6 +354,20 @@ export default function PayoutsAdminPage() {
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right">
+                      {(p.estado === "procesado" || p.estado === "pagado") && (
+                        <button
+                          onClick={() => handleReembolsar(p)}
+                          disabled={reembolsando === p.id_payout}
+                          className="mr-2 inline-flex items-center gap-1 rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100 disabled:opacity-50"
+                        >
+                          {reembolsando === p.id_payout ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            <Undo2 size={12} />
+                          )}
+                          Reembolsar
+                        </button>
+                      )}
                       <button
                         onClick={() => openDetalle(p)}
                         className="mr-2 inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
@@ -339,12 +405,13 @@ export default function PayoutsAdminPage() {
                   onChange={(e) => setEstadoForm((p) => ({ ...p, estado: e.target.value }))}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
                 >
-                  {ESTADOS.map((e) => (
+                  {ESTADOS_MANUALES.map((e) => (
                     <option key={e} value={e}>
                       {e}
                     </option>
                   ))}
                 </select>
+                <p className="mt-1 text-xs text-gray-500">El estado "agotado" se asigna automáticamente tras 5 intentos fallidos.</p>
               </div>
               <div>
                 <label className="mb-1 block text-sm">Referencia externa</label>
@@ -420,16 +487,59 @@ export default function PayoutsAdminPage() {
                 <strong>{Number(detalleModal.monto_neto).toFixed(2)}</strong>
               </div>
               <div>
-                <span className="text-gray-500">Estado:</span> {detalleModal.estado}
+                <span className="text-gray-500">Estado:</span>{" "}
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${ESTADO_BADGE[detalleModal.estado] ?? "bg-gray-100"}`}>
+                  {detalleModal.estado}
+                </span>
               </div>
+              {(detalleModal.estado === "fallido" || detalleModal.estado === "agotado") && (
+                <div className="col-span-2 rounded-md border border-orange-200 bg-orange-50 p-3 dark:border-orange-800 dark:bg-orange-900/20">
+                  <div className="mb-2 text-sm font-medium text-orange-800 dark:text-orange-200">Diagnóstico de error</div>
+                  <div className="space-y-1 text-xs">
+                    <div>
+                      <span className="text-gray-500">Intentos: </span>
+                      <span className="font-medium">{detalleModal.intentos ?? 0}/5</span>
+                    </div>
+                    {detalleModal.ultimo_error && (
+                      <div>
+                        <span className="text-gray-500">Último error: </span>
+                        <span className="font-mono text-red-700 dark:text-red-400">{detalleModal.ultimo_error}</span>
+                      </div>
+                    )}
+                    {detalleModal.proximo_reintento && (
+                      <div>
+                        <span className="text-gray-500">Próximo reintento: </span>
+                        <span className="font-medium">
+                          {new Date(detalleModal.proximo_reintento).toLocaleString("es-MX", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                        {detalleModal.estado === "agotado" && (
+                          <span className="ml-2 text-red-600 dark:text-red-400">(Agotado - requiere intervención)</span>
+                        )}
+                      </div>
+                    )}
+                    {detalleModal.estado === "agotado" && !detalleModal.proximo_reintento && (
+                      <div className="text-red-600 dark:text-red-400">Sin reintentos programados - contacta a soporte</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <h3 className="mb-2 text-sm font-medium">Pedidos incluidos</h3>
+            <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+              <p className="font-medium">Desglose transparente de ingresos:</p>
+              <p className="mt-1">El subtotal bruto incluye: items del producto + IVA prorrateado + envío prorrateado. La comisión se aplica sobre este monto total para garantizar transparencia en el cálculo.</p>
+            </div>
             <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
                   <th className="px-3 py-2 text-left">Pedido</th>
                   <th className="px-3 py-2 text-left">Estado</th>
-                  <th className="px-3 py-2 text-right">Subtotal</th>
+                  <th className="px-3 py-2 text-right">Subtotal Bruto*</th>
                   <th className="px-3 py-2 text-right">Comisión</th>
                   <th className="px-3 py-2 text-right">Neto</th>
                 </tr>
@@ -439,9 +549,9 @@ export default function PayoutsAdminPage() {
                   <tr key={`${pp.id_pedido}-${pp.id_productor}`}>
                     <td className="px-3 py-2">#{pp.id_pedido}</td>
                     <td className="px-3 py-2">{pp.estado}</td>
-                    <td className="px-3 py-2 text-right">{pp.subtotal_bruto ?? "—"}</td>
+                    <td className="px-3 py-2 text-right font-medium">{pp.subtotal_bruto ?? "—"}</td>
                     <td className="px-3 py-2 text-right">{pp.comision_marketplace}</td>
-                    <td className="px-3 py-2 text-right">{pp.monto_neto_productor ?? "—"}</td>
+                    <td className="px-3 py-2 text-right font-medium">{pp.monto_neto_productor ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>

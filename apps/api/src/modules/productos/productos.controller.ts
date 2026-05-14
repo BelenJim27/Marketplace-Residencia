@@ -30,6 +30,11 @@ export class ProductosController {
     );
   }
 
+  @Get('sin-lote/check')
+  findSinLote() {
+    return this.service.findSinLote();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);

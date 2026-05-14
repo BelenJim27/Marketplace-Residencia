@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { StripeService } from '../pagos/stripe.service';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 import { GenerarPayoutsDto, ListPayoutsQueryDto, UpdatePayoutEstadoDto } from './dto/payouts.dto';
 
@@ -8,7 +9,10 @@ const ESTADOS_LIBERADOS_DEFAULT = ['entregado', 'liberado'];
 
 @Injectable()
 export class PayoutsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly stripeService: StripeService,
+  ) {}
 
   async findAll(query: ListPayoutsQueryDto = {}) {
     const where: Prisma.payoutsWhereInput = {};
@@ -37,7 +41,9 @@ export class PayoutsService {
 
   /**
    * Agrupa pedido_productor liberados sin payout dentro del rango y crea un payout
-   * por (productor, moneda). Persiste id_payout en cada pedido_productor incluido.
+   * por (productor, moneda). Para productores con Stripe Connect onboardeado, crea
+   * la transferencia y marca como 'procesado'; para otros, deja como 'pendiente'.
+   * Persiste id_payout en cada pedido_productor incluido.
    */
   async generar(dto: GenerarPayoutsDto) {
     const desde = new Date(dto.desde);
@@ -112,7 +118,71 @@ export class PayoutsService {
       return result;
     });
 
+    // Procesar Stripe transfers fuera de la transacción
+    const payoutIds = creados.map((c) => BigInt(c.id_payout));
+    const payouts = await this.prisma.payouts.findMany({
+      where: { id_payout: { in: payoutIds } },
+      include: { productores: true },
+    });
+
+    for (const payout of payouts) {
+      await this.procesarPayoutTransfer(payout);
+    }
+
     return { creados: creados.length, payouts: creados };
+  }
+
+  private async procesarPayoutTransfer(payout: any) {
+    const productor = payout.productores;
+
+    // Si el productor no tiene Stripe account, dejar como pendiente
+    if (!productor.stripe_account_id || !productor.stripe_onboarding_completed) {
+      return;
+    }
+
+    const amountCents = Math.round(Number(payout.monto_neto) * 100);
+    const transferGroup = `payout-${payout.id_payout}`;
+    const idempotencyKey = `payout-transfer-${payout.id_payout}`;
+
+    try {
+      const transfer = await this.stripeService.createTransfer({
+        amountCents,
+        currency: payout.moneda,
+        destination: productor.stripe_account_id,
+        transferGroup,
+        idempotencyKey,
+        metadata: { id_payout: payout.id_payout.toString(), id_productor: String(payout.id_productor) },
+      });
+
+      // Marcar como procesado
+      await this.prisma.payouts.update({
+        where: { id_payout: payout.id_payout },
+        data: {
+          estado: 'procesado',
+          referencia_externa: transfer.id,
+          procesado_en: new Date(),
+          proveedor: 'stripe',
+        },
+      });
+    } catch (error: any) {
+      // Marcar como fallido y configurar retry
+      const errorMsg = error?.message || 'Unknown error';
+      const proximoReintento = new Date(Date.now() + 15 * 60 * 1000); // +15 min
+
+      await this.prisma.payouts.update({
+        where: { id_payout: payout.id_payout },
+        data: {
+          estado: 'fallido',
+          ultimo_error: errorMsg.substring(0, 500),
+          intentos: 1,
+          proximo_reintento: proximoReintento,
+        },
+      });
+
+      // Log para debugging
+      // eslint-disable-next-line no-console
+      console.error(`[payouts] Stripe transfer failed for payout ${payout.id_payout}: ${errorMsg}`);
+    }
   }
 
   async actualizarEstado(id_payout: string, dto: UpdatePayoutEstadoDto) {
@@ -142,6 +212,18 @@ export class PayoutsService {
       await this.prisma.payouts.findMany({
         where: { id_productor },
         orderBy: { creado_en: 'desc' },
+        include: {
+          pedido_productor: {
+            select: {
+              id_pedido: true,
+              estado: true,
+              subtotal_bruto: true,
+              comision_marketplace: true,
+              monto_neto_productor: true,
+              moneda: true,
+            },
+          },
+        },
       }),
     );
   }
