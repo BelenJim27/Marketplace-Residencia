@@ -2,8 +2,16 @@
 
 import { useState, useEffect } from "react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import { AlertCircle, CheckCircle2, XCircle, FileText, Eye, Loader2, User, Building2, CreditCard } from "lucide-react";
-import Image from "next/image";
+import {
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  Eye,
+  Loader2,
+  User,
+  ShoppingBag,
+} from "lucide-react";
 import { getCookie } from "@/lib/cookies";
 
 interface SolicitudProductor {
@@ -23,6 +31,7 @@ interface SolicitudProductor {
   regiones?: {
     nombre: string;
   };
+  categorias?: { id_categoria: number; nombre: string }[];
 }
 
 export default function SolicitudesProductoresPage() {
@@ -49,18 +58,17 @@ export default function SolicitudesProductoresPage() {
         return;
       }
 
-      const response = await fetch(
-        `/admin/productores/solicitudes`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`/admin/productores/solicitudes`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || errorData.error || `Error ${response.status}: ${response.statusText}`);
+        throw new Error(
+          errorData.message || errorData.error || `Error ${response.status}: ${response.statusText}`
+        );
       }
 
       const data = await response.json();
@@ -78,17 +86,14 @@ export default function SolicitudesProductoresPage() {
       const token = getCookie("token");
       if (!token) return;
 
-      const response = await fetch(
-        `/admin/productores/${id}/revisar`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ estado: "aprobado", motivo_aprobacion: approveReason || null }),
-        }
-      );
+      const response = await fetch(`/admin/productores/${id}/revisar`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ estado: "aprobado", motivo_aprobacion: approveReason || null }),
+      });
 
       if (!response.ok) {
         throw new Error("Error al aprobar solicitud");
@@ -113,17 +118,14 @@ export default function SolicitudesProductoresPage() {
       const token = getCookie("token");
       if (!token) return;
 
-      const response = await fetch(
-        `/admin/productores/${id}/revisar`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ estado: "rechazado", motivo_rechazo: rejectReason }),
-        }
-      );
+      const response = await fetch(`/admin/productores/${id}/revisar`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ estado: "rechazado", motivo_rechazo: rejectReason }),
+      });
 
       if (!response.ok) {
         throw new Error("Error al rechazar solicitud");
@@ -197,6 +199,7 @@ export default function SolicitudesProductoresPage() {
           </div>
         ) : (
           <>
+            {/* ── Pendientes ── */}
             <div className="mb-8">
               <h3 className="mb-4 text-lg font-semibold text-dark dark:text-white flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-yellow-500" />
@@ -220,24 +223,21 @@ export default function SolicitudesProductoresPage() {
                         </div>
                         {getStatusBadge(solicitud.estado)}
                       </div>
-                      <div className="space-y-2 text-sm mb-4">
-                        <p className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                          <User className="h-4 w-4" />
-                          {solicitud.usuarios?.nombre}
-                        </p>
-                        {solicitud.rfc && (
-                          <p className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                            <FileText className="h-4 w-4" />
-                            RFC: {solicitud.rfc}
-                          </p>
-                        )}
-                        {solicitud.razon_social && (
-                          <p className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                            <Building2 className="h-4 w-4" />
-                            {solicitud.razon_social}
-                          </p>
-                        )}
-                      </div>
+
+                      {/* Categorías en la tarjeta */}
+                      {solicitud.categorias && solicitud.categorias.length > 0 && (
+                        <div className="mb-4 flex flex-wrap gap-1">
+                          {solicitud.categorias.map((cat) => (
+                            <span
+                              key={cat.id_categoria}
+                              className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                            >
+                              {cat.nombre}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
                       <button
                         onClick={() => setSelectedSolicitud(solicitud)}
                         className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-opacity-90"
@@ -251,6 +251,7 @@ export default function SolicitudesProductoresPage() {
               )}
             </div>
 
+            {/* ── Procesadas ── */}
             {procesadas.length > 0 && (
               <div>
                 <h3 className="mb-4 text-lg font-semibold text-dark dark:text-white">
@@ -267,7 +268,7 @@ export default function SolicitudesProductoresPage() {
                           Email
                         </th>
                         <th className="pb-3 text-left text-sm font-semibold text-dark dark:text-white">
-                          RFC
+                          Categorías
                         </th>
                         <th className="pb-3 text-left text-sm font-semibold text-dark dark:text-white">
                           Fecha
@@ -290,7 +291,9 @@ export default function SolicitudesProductoresPage() {
                             {solicitud.usuarios?.email}
                           </td>
                           <td className="py-3 text-sm text-gray-500">
-                            {solicitud.rfc || "-"}
+                            {solicitud.categorias && solicitud.categorias.length > 0
+                              ? solicitud.categorias.map((c) => c.nombre).join(", ")
+                              : "-"}
                           </td>
                           <td className="py-3 text-sm text-gray-500">
                             {new Date(solicitud.solicitado_en).toLocaleDateString("es-MX")}
@@ -307,6 +310,7 @@ export default function SolicitudesProductoresPage() {
         )}
       </div>
 
+      {/* ── Modal detalle ── */}
       {selectedSolicitud && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 dark:bg-gray-dark">
@@ -326,6 +330,7 @@ export default function SolicitudesProductoresPage() {
             </div>
 
             <div className="space-y-6">
+              {/* Información del Usuario */}
               <div>
                 <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
                   <User className="h-5 w-5" />
@@ -353,27 +358,31 @@ export default function SolicitudesProductoresPage() {
                 </div>
               </div>
 
+              {/* Categorías a Vender */}
               <div>
                 <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Datos Fiscales
+                  <ShoppingBag className="h-5 w-5" />
+                  Categorías a Vender
                 </h3>
-                <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-1 p-4 dark:bg-dark-2">
-                  <div>
-                    <p className="text-xs text-gray-500">RFC</p>
-                    <p className="text-sm font-medium text-dark dark:text-white">
-                      {selectedSolicitud.rfc || "No proporcionado"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">RazÃ³n Social</p>
-                    <p className="text-sm font-medium text-dark dark:text-white">
-                      {selectedSolicitud.razon_social || "No proporcionada"}
-                    </p>
-                  </div>
+                <div className="rounded-lg bg-gray-1 p-4 dark:bg-dark-2">
+                  {selectedSolicitud.categorias && selectedSolicitud.categorias.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSolicitud.categorias.map((cat) => (
+                        <span
+                          key={cat.id_categoria}
+                          className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary"
+                        >
+                          {cat.nombre}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No especificadas</p>
+                  )}
                 </div>
               </div>
 
+              {/* Estado de Solicitud */}
               <div>
                 <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
                   <FileText className="h-5 w-5" />
@@ -386,7 +395,7 @@ export default function SolicitudesProductoresPage() {
                   </p>
                   {selectedSolicitud.revisado_en && (
                     <>
-                      <p className="text-xs text-gray-500 mt-2">Fecha de resoluciÃ³n</p>
+                      <p className="text-xs text-gray-500 mt-2">Fecha de resolución</p>
                       <p className="text-sm font-medium text-dark dark:text-white">
                         {new Date(selectedSolicitud.revisado_en).toLocaleString("es-MX")}
                       </p>
@@ -436,6 +445,7 @@ export default function SolicitudesProductoresPage() {
         </div>
       )}
 
+      {/* ── Modal Rechazar ── */}
       {rejectModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-6 dark:bg-gray-dark">
@@ -474,6 +484,7 @@ export default function SolicitudesProductoresPage() {
         </div>
       )}
 
+      {/* ── Modal Aprobar ── */}
       {approveModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-6 dark:bg-gray-dark">
@@ -481,7 +492,8 @@ export default function SolicitudesProductoresPage() {
               Aprobar Solicitud
             </h2>
             <p className="text-gray-500 mb-4">
-              ¿Estás seguro de que deseas aprobar esta solicitud de productor? El usuario deberá completar su perfil y subir su certificado antes de poder vender.
+              ¿Estás seguro de que deseas aprobar esta solicitud de productor? El usuario
+              deberá completar su perfil y subir su certificado antes de poder vender.
             </p>
             <textarea
               value={approveReason}

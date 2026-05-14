@@ -171,7 +171,12 @@ export default function ProductoDetallePage() {
     v && typeof v === "object" ? (v.nombre ?? undefined) : (v || undefined);
 
   const region = strFromApi(datosApi.region) || loteData?.sitio;
-  const codigoLote = strFromApi(datosApi.codigo_lote) || loteData?.codigo_lote;
+  const codigoLote =
+    strFromApi(datosApi.codigo_lote) ||
+    strFromApi(datosApi.folio) ||
+    strFromApi(datosApi.uuid) ||
+    loteData?.codigo_lote ||
+    null;
   const sitio = strFromApi(datosApi.sitio) || loteData?.sitio;
   const gradoAlcohol = datosApi.grado_alcohol ? Number(datosApi.grado_alcohol) : loteData?.grado_alcohol;
   const nombreComun = strFromApi(datosApi.nombre_comun) || loteData?.nombre_comun;
@@ -605,7 +610,12 @@ export default function ProductoDetallePage() {
               </div>
               <div className="space-y-1 text-sm text-gray-600">
                 <p>Escanea el código QR para consultar la información oficial de trazabilidad de este lote.</p>
-                {codigoLote && <p className="text-xs text-gray-400">Lote: {codigoLote}</p>}
+                {codigoLote && (
+                  <div className="rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm">
+                    <p className="mb-1 font-semibold text-gray-900">Código de trazabilidad</p>
+                    <p className="break-words">{codigoLote}</p>
+                  </div>
+                )}
                 <a
                   href={urlTrazabilidad}
                   target="_blank"

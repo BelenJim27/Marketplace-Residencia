@@ -37,6 +37,7 @@
     "jsvectormap": "^1.7.0",
     "pg": "^8.20.0",
     "react-i18next": "^17.0.6",
+    "react-qr-code": "^2.0.21",
     "stripe": "^22.1.0"
   },
   "overrides": {

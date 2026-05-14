@@ -11,39 +11,39 @@ export class AdminService {
     private notificaciones: NotificacionesService,
   ) {}
 
-async getStats() {
-  const [
-    totalUsuarios,
-    totalProductores,
-    totalPedidos,
-    totalIngresos,
-    pedidosPendientes,
-    productoresActivos,
-  ] = await Promise.all([
-    this.prisma.usuarios.count({ where: { eliminado_en: null } }),
-    this.prisma.productores.count({ where: { eliminado_en: null } }),
-    this.prisma.pedidos.count({ where: { eliminado_en: null } }),
-    this.prisma.pedidos.aggregate({
-      where: { eliminado_en: null, estado: { in: ['completado', 'enviado'] } },
-      _sum: { total: true },
-    }),
-    this.prisma.pedidos.count({
-      where: { estado: 'pendiente', eliminado_en: null },
-    }),
-    this.prisma.productores.count({
-      where: { eliminado_en: null },
-    }),
-  ]);
+  async getStats() {
+    const [
+      totalUsuarios,
+      totalProductores,
+      totalPedidos,
+      totalIngresos,
+      pedidosPendientes,
+      productoresActivos,
+    ] = await Promise.all([
+      this.prisma.usuarios.count({ where: { eliminado_en: null } }),
+      this.prisma.productores.count({ where: { eliminado_en: null } }),
+      this.prisma.pedidos.count({ where: { eliminado_en: null } }),
+      this.prisma.pedidos.aggregate({
+        where: { eliminado_en: null, estado: { in: ['completado', 'enviado'] } },
+        _sum: { total: true },
+      }),
+      this.prisma.pedidos.count({
+        where: { estado: 'pendiente', eliminado_en: null },
+      }),
+      this.prisma.productores.count({
+        where: { eliminado_en: null },
+      }),
+    ]);
 
-  return {
-    totalUsuarios: Number(totalUsuarios),
-    totalProductores: Number(totalProductores),
-    totalPedidos: Number(totalPedidos),
-    totalIngresos: Number(totalIngresos._sum.total ?? 0),  // ← convierte Decimal/BigInt
-    pedidosPendientes: Number(pedidosPendientes),
-    productoresActivos: Number(productoresActivos),
-  };
-}
+    return {
+      totalUsuarios: Number(totalUsuarios),
+      totalProductores: Number(totalProductores),
+      totalPedidos: Number(totalPedidos),
+      totalIngresos: Number(totalIngresos._sum.total ?? 0),
+      pedidosPendientes: Number(pedidosPendientes),
+      productoresActivos: Number(productoresActivos),
+    };
+  }
 
   async getRecentOrders(limit = 10) {
     return this.prisma.pedidos.findMany({
@@ -95,15 +95,32 @@ async getStats() {
       .slice(0, limit);
   }
 
+  // ── FIX: incluye productor_categoria y mapea a "categorias" ──────────────
   async getSolicitudesPendientes() {
-    return this.prisma.productores.findMany({
-      where: { estado: 'pendiente', eliminado_en: null },
+    const solicitudes = await this.prisma.productores.findMany({
+      where: { eliminado_en: null },
       include: {
-        usuarios: { select: { id_usuario: true, nombre: true, email: true, telefono: true } },
+        usuarios: {
+          select: { id_usuario: true, nombre: true, email: true, telefono: true },
+        },
         regiones: true,
+        productor_categoria: {
+          include: {
+            categorias: {
+              select: { id_categoria: true, nombre: true },
+            },
+          },
+        },
       },
       orderBy: { solicitado_en: 'desc' },
     });
+
+    return serializeBigInts(
+      solicitudes.map((s) => ({
+        ...s,
+        categorias: s.productor_categoria.map((pc) => pc.categorias),
+      })),
+    );
   }
 
   async getAllProductores(estado?: string) {
@@ -189,6 +206,6 @@ async getStats() {
       cuerpo,
     });
 
-return serializeBigInts(actualizado);
+    return serializeBigInts(actualizado);
   }
 }

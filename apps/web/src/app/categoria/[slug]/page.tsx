@@ -9,16 +9,13 @@ import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/format-number";
+import type { ProductItem } from "@/types/producer";
 
-interface Producto {
-  id_producto: bigint;
-  nombre: string;
-  descripcion: string;
-  precio_base: string;
-  imagen_principal_url?: string;
-  producto_imagenes?: { url: string }[];
+// ─── Extiende ProductItem con los campos extra que devuelve la API pública ────
+interface ProductoPublico extends ProductItem {
   categorias?: string[];
   nombre_productor?: string;
+  producto_imagenes?: { url: string }[];
   lotes?: { datos_api?: Record<string, string> };
 }
 
@@ -31,21 +28,27 @@ interface Categoria {
   tipo?: string;
 }
 
-const TIPOS_MEZCAL = ["Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueño", "Cuishe", "Coyote", "Litrea", "Garabatillo", "Anejo"];
-const TIPOS_MAGUEY = ["Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueño", "Cuishe", "Coyote", "Litrea", "Garabatillo"];
+const TIPOS_MEZCAL = [
+  "Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueño",
+  "Cuishe", "Coyote", "Litrea", "Garabatillo", "Anejo",
+];
 
 export default function CategoriaPage() {
   const params = useParams();
   const router = useRouter();
   const { agregarProducto } = useCarrito();
-  const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
+  const {
+    isInWishlist,
+    agregarProducto: agregarWishlist,
+    eliminarProducto: eliminarWishlist,
+  } = useWishlist();
   const { isAuthenticated } = useAuth();
 
   const [categoria, setCategoria] = useState<Categoria | null>(null);
-  const [productos, setProductos] = useState<Producto[]>([]);
+  const [productos, setProductos] = useState<ProductoPublico[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [agregadoId, setAgregadoId] = useState<bigint | null>(null);
+  const [agregadoId, setAgregadoId] = useState<number | null>(null);
 
   // Filtros
   const [tipoMezcalFilter, setTipoMezcalFilter] = useState("");
@@ -62,7 +65,9 @@ export default function CategoriaPage() {
       const decodedSlug = decodeURIComponent(slug as string);
 
       const categoriasData = await api.categorias.getAll();
-      const categoriaFound = (categoriasData as any[]).find((c) => c.nombre === decodedSlug);
+      const categoriaFound = (categoriasData as any[]).find(
+        (c) => c.nombre === decodedSlug,
+      );
 
       if (!categoriaFound) {
         setError("Categoría no encontrada");
@@ -72,12 +77,12 @@ export default function CategoriaPage() {
       setCategoria(categoriaFound);
 
       const productosData = await api.productos.getAll({});
-      const filtrados = (productosData as Producto[]).filter(
+      const filtrados = (productosData as ProductoPublico[]).filter(
         (p) =>
           p.categorias &&
           p.categorias.length > 0 &&
           p.categorias.includes(categoriaFound.nombre) &&
-          p.nombre_productor
+          p.nombre_productor,
       );
       setProductos(filtrados);
     } catch (err) {
@@ -95,21 +100,25 @@ export default function CategoriaPage() {
     let filtered = [...productos];
 
     if (tipoMezcalFilter) {
-      filtered = filtered.filter((p) => p.lotes?.datos_api?.tipo_mezcal === tipoMezcalFilter);
+      filtered = filtered.filter(
+        (p) => p.lotes?.datos_api?.tipo_mezcal === tipoMezcalFilter,
+      );
     }
-
     if (precioMin) {
-      filtered = filtered.filter((p) => Number(p.precio_base) >= Number(precioMin));
+      filtered = filtered.filter(
+        (p) => Number(p.precio_base) >= Number(precioMin),
+      );
     }
-
     if (precioMax) {
-      filtered = filtered.filter((p) => Number(p.precio_base) <= Number(precioMax));
+      filtered = filtered.filter(
+        (p) => Number(p.precio_base) <= Number(precioMax),
+      );
     }
 
     return filtered;
   }, [productos, tipoMezcalFilter, precioMin, precioMax]);
 
-  const toggleWishlist = (producto: Producto) => {
+  const toggleWishlist = (producto: ProductoPublico) => {
     if (!isAuthenticated) {
       router.push("/auth/sign-in?redirect=/cliente/producto");
       return;
@@ -120,8 +129,8 @@ export default function CategoriaPage() {
       agregarWishlist({
         id_producto: producto.id_producto,
         nombre: producto.nombre,
-        precio_base: producto.precio_base,
-        imagen_principal_url: producto.imagen_principal_url,
+        precio_base: String(producto.precio_base ?? "0"),
+        imagen_principal_url: producto.imagen_principal_url ?? undefined,
         producto_imagenes: producto.producto_imagenes,
       });
     }
@@ -151,7 +160,10 @@ export default function CategoriaPage() {
   }
 
   return (
-    <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8" style={{ backgroundColor: "var(--bio-color-fondo, #faf8f4)", minHeight: "100vh" }}>
+    <div
+      className="mx-auto max-w-screen-xl px-4 py-8 md:px-8"
+      style={{ backgroundColor: "var(--bio-color-fondo, #faf8f4)", minHeight: "100vh" }}
+    >
       <button
         onClick={() => router.back()}
         className="mb-6 flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -162,7 +174,10 @@ export default function CategoriaPage() {
       </button>
 
       {/* Header Categoría */}
-      <div className="mb-12 rounded-lg p-8" style={{ backgroundColor: "white", border: "1px solid #e8dcc8" }}>
+      <div
+        className="mb-12 rounded-lg p-8"
+        style={{ backgroundColor: "white", border: "1px solid #e8dcc8" }}
+      >
         <div className="flex gap-8 items-start">
           {categoria.imagen_url && (
             <div className="relative h-40 w-40 flex-shrink-0">
@@ -175,7 +190,13 @@ export default function CategoriaPage() {
             </div>
           )}
           <div className="flex-1">
-            <h1 className="text-4xl font-bold mb-2" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+            <h1
+              className="text-4xl font-bold mb-2"
+              style={{
+                fontFamily: "var(--bio-fuente-titulo, Georgia, serif)",
+                color: "var(--bio-color-titulo, #5c3d1e)",
+              }}
+            >
               {categoria.nombre}
             </h1>
             {categoria.tipo && (
@@ -190,7 +211,9 @@ export default function CategoriaPage() {
                 {categoria.tipo}
               </span>
             )}
-            {categoria.descripcion && <p className="text-gray-700 leading-relaxed">{categoria.descripcion}</p>}
+            {categoria.descripcion && (
+              <p className="text-gray-700 leading-relaxed">{categoria.descripcion}</p>
+            )}
           </div>
         </div>
       </div>
@@ -199,22 +222,36 @@ export default function CategoriaPage() {
       <div className="flex gap-6">
         {/* Sidebar filtros */}
         <aside className="hidden lg:block w-72 shrink-0">
-          <div className="rounded-xl border p-6" style={{ border: "1px solid #e8dcc8", backgroundColor: "white" }}>
+          <div
+            className="rounded-xl border p-6"
+            style={{ border: "1px solid #e8dcc8", backgroundColor: "white" }}
+          >
             <div className="space-y-6">
               {/* Tipo de Mezcal */}
               <div className="space-y-2 border-b pb-4" style={{ borderColor: "#e8dcc8" }}>
-                <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--bio-color-precio, #8b6914)" }}>
+                <h3
+                  className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: "var(--bio-color-precio, #8b6914)" }}
+                >
                   Tipo de Mezcal
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
                   {TIPOS_MEZCAL.map((tipo) => (
                     <button
                       key={tipo}
-                      onClick={() => setTipoMezcalFilter(tipoMezcalFilter === tipo ? "" : tipo)}
+                      onClick={() =>
+                        setTipoMezcalFilter(tipoMezcalFilter === tipo ? "" : tipo)
+                      }
                       className="px-2.5 py-1 rounded-full text-xs transition-colors font-medium"
                       style={{
-                        backgroundColor: tipoMezcalFilter === tipo ? "var(--bio-color-boton, #5c3d1e)" : "#f0ebe0",
-                        color: tipoMezcalFilter === tipo ? "white" : "var(--bio-color-titulo, #5c3d1e)",
+                        backgroundColor:
+                          tipoMezcalFilter === tipo
+                            ? "var(--bio-color-boton, #5c3d1e)"
+                            : "#f0ebe0",
+                        color:
+                          tipoMezcalFilter === tipo
+                            ? "white"
+                            : "var(--bio-color-titulo, #5c3d1e)",
                         border: "1px solid #e8dcc8",
                       }}
                     >
@@ -226,7 +263,10 @@ export default function CategoriaPage() {
 
               {/* Rango de Precio */}
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--bio-color-precio, #8b6914)" }}>
+                <h3
+                  className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: "var(--bio-color-precio, #8b6914)" }}
+                >
                   Rango de Precio (MXN)
                 </h3>
                 <div className="flex gap-2">
@@ -247,7 +287,7 @@ export default function CategoriaPage() {
                 </div>
               </div>
 
-              {/* Clear filters */}
+              {/* Limpiar filtros */}
               {(tipoMezcalFilter || precioMin || precioMax) && (
                 <button
                   onClick={() => {
@@ -267,8 +307,10 @@ export default function CategoriaPage() {
 
         {/* Productos */}
         <div className="flex-1 min-w-0">
-          <p className="mb-5 text-sm text-gray-600" style={{ color: "var(--bio-color-precio, #8b6914)" }}>
-            {productosFiltrados.length} producto{productosFiltrados.length !== 1 ? "s" : ""} encontrado{productosFiltrados.length !== 1 ? "s" : ""}
+          <p className="mb-5 text-sm" style={{ color: "var(--bio-color-precio, #8b6914)" }}>
+            {productosFiltrados.length} producto
+            {productosFiltrados.length !== 1 ? "s" : ""} encontrado
+            {productosFiltrados.length !== 1 ? "s" : ""}
           </p>
 
           {productosFiltrados.length === 0 ? (
@@ -278,20 +320,26 @@ export default function CategoriaPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {productosFiltrados.map((producto) => {
-                const imagenUrl = producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
+                const imagenUrl =
+                  producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
                 const tipoMezcal = producto.lotes?.datos_api?.tipo_mezcal ?? "";
 
                 return (
                   <div
-                    key={String(producto.id_producto)}
+                    key={producto.id_producto}
                     className="group rounded-xl overflow-hidden border hover:shadow-md transition-shadow cursor-pointer"
-                    style={{ borderColor: "#e8dcc8", backgroundColor: "var(--bio-color-fondo, #faf8f4)" }}
+                    style={{
+                      borderColor: "#e8dcc8",
+                      backgroundColor: "var(--bio-color-fondo, #faf8f4)",
+                    }}
                   >
-                    {/* Image */}
+                    {/* Imagen */}
                     <div
                       className="relative overflow-hidden bg-gray-50"
                       style={{ aspectRatio: "1 / 1" }}
-                      onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
+                      onClick={() =>
+                        router.push(`/cliente/producto/${producto.id_producto}`)
+                      }
                     >
                       {imagenUrl ? (
                         <Image
@@ -302,13 +350,19 @@ export default function CategoriaPage() {
                           className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-gray-400 text-sm">Sin imagen</div>
+                        <div className="flex h-full items-center justify-center text-gray-400 text-sm">
+                          Sin imagen
+                        </div>
                       )}
 
                       {tipoMezcal && (
                         <span
                           className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-semibold"
-                          style={{ backgroundColor: "#f0ebe0", color: "var(--bio-color-precio, #8b6914)", border: "1px solid #e8dcc8" }}
+                          style={{
+                            backgroundColor: "#f0ebe0",
+                            color: "var(--bio-color-precio, #8b6914)",
+                            border: "1px solid #e8dcc8",
+                          }}
                         >
                           {tipoMezcal}
                         </span>
@@ -317,47 +371,69 @@ export default function CategoriaPage() {
                       <button
                         className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110"
                         style={{
-                          backgroundColor: isInWishlist(producto.id_producto) ? "#fdf7ee" : "rgba(250,248,244,0.9)",
-                          color: isInWishlist(producto.id_producto) ? "#b07850" : "#c8a97a",
+                          backgroundColor: isInWishlist(producto.id_producto)
+                            ? "#fdf7ee"
+                            : "rgba(250,248,244,0.9)",
+                          color: isInWishlist(producto.id_producto)
+                            ? "#b07850"
+                            : "#c8a97a",
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleWishlist(producto);
                         }}
                       >
-                        <Heart className="h-3.5 w-3.5" fill={isInWishlist(producto.id_producto) ? "currentColor" : "none"} />
+                        <Heart
+                          className="h-3.5 w-3.5"
+                          fill={
+                            isInWishlist(producto.id_producto) ? "currentColor" : "none"
+                          }
+                        />
                       </button>
                     </div>
 
-                    {/* Text Zone */}
+                    {/* Info */}
                     <div className="p-4">
                       <h3
                         className="font-semibold text-sm line-clamp-2 mb-2 leading-snug cursor-pointer hover:opacity-80"
-                        style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
-                        onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
+                        style={{
+                          fontFamily: "var(--bio-fuente-titulo, Georgia, serif)",
+                          color: "var(--bio-color-titulo, #5c3d1e)",
+                        }}
+                        onClick={() =>
+                          router.push(`/cliente/producto/${producto.id_producto}`)
+                        }
                       >
                         {producto.nombre}
                       </h3>
+
                       <div className="flex items-center justify-between mt-2">
                         <span
                           className="font-bold text-base"
-                          style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}
+                          style={{
+                            fontFamily: "var(--bio-fuente-titulo, Georgia, serif)",
+                            color: "var(--bio-color-precio, #8b6914)",
+                          }}
                         >
                           ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })} MXN
                         </span>
                       </div>
+
                       <button
                         className="w-full mt-3 flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-medium text-white transition-all hover:opacity-90 active:scale-95"
                         style={{
-                          backgroundColor: agregadoId === producto.id_producto ? "var(--bio-color-boton-hover, #3d2510)" : "var(--bio-color-boton, #5c3d1e)",
+                          backgroundColor:
+                            agregadoId === producto.id_producto
+                              ? "var(--bio-color-boton-hover, #3d2510)"
+                              : "var(--bio-color-boton, #5c3d1e)",
                         }}
                         disabled={agregadoId === producto.id_producto}
                         onClick={() => {
                           agregarProducto({
                             id_producto: producto.id_producto,
                             nombre: producto.nombre,
-                            precio_base: producto.precio_base,
-                            imagen_principal_url: producto.imagen_principal_url,
+                            precio_base: String(producto.precio_base ?? "0"),
+                            imagen_principal_url: producto.imagen_principal_url ?? undefined,
                             producto_imagenes: producto.producto_imagenes,
                             cantidad: 1,
                           });
@@ -366,7 +442,9 @@ export default function CategoriaPage() {
                         }}
                       >
                         <ShoppingCart className="h-3.5 w-3.5" />
-                        {agregadoId === producto.id_producto ? "¡Agregado!" : "Agregar al carrito"}
+                        {agregadoId === producto.id_producto
+                          ? "¡Agregado!"
+                          : "Agregar al carrito"}
                       </button>
                     </div>
                   </div>

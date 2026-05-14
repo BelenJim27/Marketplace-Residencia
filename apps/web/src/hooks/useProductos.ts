@@ -10,9 +10,25 @@ import {
   resetImagenProductoState,
   appendImagenProducto,
 } from "@/components/Producer/Products/ImagenProducto";
-import type { StoreItem, CategoriaItem, LoteItem, ProductItem, ProducerDetail, FormState, ModalMode } from "@/types/producer";
+import type {
+  StoreItem,
+  CategoriaItem,
+  LoteItem,
+  ProductItem,
+  ProducerDetail,
+  FormState,
+  ModalMode,
+} from "@/types/producer";
 
-export type { StoreItem, CategoriaItem, LoteItem, ProductItem, ProducerDetail, FormState, ModalMode } from "@/types/producer";
+export type {
+  StoreItem,
+  CategoriaItem,
+  LoteItem,
+  ProductItem,
+  ProducerDetail,
+  FormState,
+  ModalMode,
+} from "@/types/producer";
 
 export const EMPTY_FORM: FormState = {
   nombre: "",
@@ -50,7 +66,6 @@ export function useProductos() {
   const [storeFilter, setStoreFilter] = useState("todos");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  // ─── NUEVO ───────────────────────────────────────────────────────────────
   const [unidadFilter, setUnidadFilter] = useState("todos");
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -62,27 +77,32 @@ export function useProductos() {
   const [selectionEnabled, setSelectionEnabled] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
+  // ─── Obtener id_productor del usuario autenticado ─────────────────────────
+  // Ajusta el campo según lo que devuelva tu AuthContext:
+  // user?.id_productor  /  user?.productor?.id_productor  /  user?.productor_id
+  const idProductor: number | null = user?.id_productor ?? null;
+
   const loadData = async () => {
     if (authLoading) return;
 
-    // TEMPORAL: Forzar id_productor para testing
-    const testIdProductor = 2;
-
-    if (!testIdProductor) {
+    if (!idProductor) {
       setError("No se pudo identificar el productor autenticado.");
       setLoading(false);
       return;
     }
+
     setLoading(true);
     setError(null);
+
     try {
-      const [producerData, productsData, storesData, categoriasData, lotesData] = await Promise.all([
-        api.productores.getOne(testIdProductor),
-        api.productos.getMine(token, testIdProductor),
-        api.tiendas.getByProductor(testIdProductor, token),
-        api.categorias.getAll(),
-        api.lotes.getByProductor(testIdProductor),
-      ]);
+      const [producerData, productsData, storesData, categoriasData, lotesData] =
+        await Promise.all([
+          api.productores.getOne(idProductor),
+          api.productos.getMine(token, idProductor),
+          api.tiendas.getByProductor(idProductor, token),
+          api.categorias.getAll(),
+          api.lotes.getByProductor(idProductor),
+        ]);
 
       setProducer(producerData as ProducerDetail);
       setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);
@@ -96,7 +116,9 @@ export function useProductos() {
         })),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible cargar los productos");
+      setError(
+        err instanceof Error ? err.message : "No fue posible cargar los productos",
+      );
     } finally {
       setLoading(false);
     }
@@ -104,7 +126,9 @@ export function useProductos() {
 
   useEffect(() => {
     loadData();
-  }, [authLoading, token]); // Removido user?.id_productor
+  }, [authLoading, idProductor, token]); // ← usa idProductor real, no hardcodeado
+
+  // ─── Memos ────────────────────────────────────────────────────────────────
 
   const storeMap = useMemo(
     () => new Map(stores.map((s) => [s.id_tienda, s.nombre])),
@@ -125,18 +149,24 @@ export function useProductos() {
         (statusFilter === "todos" || status === statusFilter) &&
         (storeFilter === "todos" || String(p.id_tienda) === storeFilter) &&
         (min === null || Number.isNaN(min) || price >= min) &&
-        (max === null || Number.isNaN(max) || price <= max) 
+        (max === null || Number.isNaN(max) || price <= max)
       );
     });
   }, [products, query, storeMap, statusFilter, storeFilter, minPrice, maxPrice, unidadFilter]);
 
   const activeProductsCount = useMemo(
-    () => products.filter((p) => String(p.status ?? "activo").toLowerCase() === "activo").length,
+    () =>
+      products.filter(
+        (p) => String(p.status ?? "activo").toLowerCase() === "activo",
+      ).length,
     [products],
   );
 
   const inactiveProductsCount = useMemo(
-    () => products.filter((p) => String(p.status ?? "activo").toLowerCase() !== "activo").length,
+    () =>
+      products.filter(
+        (p) => String(p.status ?? "activo").toLowerCase() !== "activo",
+      ).length,
     [products],
   );
 
@@ -146,7 +176,10 @@ export function useProductos() {
   );
 
   const allVisibleSelected =
-    visibleProductIds.length > 0 && visibleProductIds.every((id) => selectedIds.includes(id));
+    visibleProductIds.length > 0 &&
+    visibleProductIds.every((id) => selectedIds.includes(id));
+
+  // ─── Filtros ──────────────────────────────────────────────────────────────
 
   const clearFilters = () => {
     setQuery("");
@@ -154,8 +187,10 @@ export function useProductos() {
     setStoreFilter("todos");
     setMinPrice("");
     setMaxPrice("");
-    setUnidadFilter("todos"); // ─── NUEVO
+    setUnidadFilter("todos");
   };
+
+  // ─── Selección ────────────────────────────────────────────────────────────
 
   const toggleSelectionMode = (enabled: boolean) => {
     setSelectionEnabled(enabled);
@@ -176,6 +211,8 @@ export function useProductos() {
     );
   };
 
+  // ─── Modal ────────────────────────────────────────────────────────────────
+
   const openCreate = () => {
     setSelected(null);
     setImagen(resetImagenProductoState(imagen));
@@ -186,7 +223,12 @@ export function useProductos() {
 
   const openEdit = (product: ProductItem) => {
     setSelected(product);
-    setImagen(resetImagenProductoState(imagen, product.imagen_url ?? product.imagen_principal_url ?? null));
+    setImagen(
+      resetImagenProductoState(
+        imagen,
+        product.imagen_url ?? product.imagen_principal_url ?? null,
+      ),
+    );
     setForm({
       nombre: product.nombre,
       descripcion: product.descripcion ?? "",
@@ -208,7 +250,12 @@ export function useProductos() {
 
   const openView = (product: ProductItem) => {
     setSelected(product);
-    setImagen(resetImagenProductoState(imagen, product.imagen_url ?? product.imagen_principal_url ?? null));
+    setImagen(
+      resetImagenProductoState(
+        imagen,
+        product.imagen_url ?? product.imagen_principal_url ?? null,
+      ),
+    );
     setForm({
       nombre: product.nombre,
       descripcion: product.descripcion ?? "",
@@ -232,6 +279,8 @@ export function useProductos() {
     setModalOpen(false);
     setImagen(resetImagenProductoState(imagen));
   };
+
+  // ─── CRUD ─────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -262,21 +311,31 @@ export function useProductos() {
         if (form.stock_inicial) {
           const inv = await api.inventario.getByProducto(selected.id_producto);
           if (inv?.id_inventario) {
-            await api.inventario.update(token, String(inv.id_inventario), { stock: Number(form.stock_inicial) });
+            await api.inventario.update(token, String(inv.id_inventario), {
+              stock: Number(form.stock_inicial),
+            });
           } else {
-            await api.inventario.create(token, { id_producto: Number(selected.id_producto), stock: Number(form.stock_inicial) });
+            await api.inventario.create(token, {
+              id_producto: Number(selected.id_producto),
+              stock: Number(form.stock_inicial),
+            });
           }
         }
       } else {
         const created = await api.productos.create(token, payload);
         if (form.stock_inicial && created?.id_producto) {
-          await api.inventario.create(token, { id_producto: Number(created.id_producto), stock: Number(form.stock_inicial) });
+          await api.inventario.create(token, {
+            id_producto: Number(created.id_producto),
+            stock: Number(form.stock_inicial),
+          });
         }
       }
       closeModal();
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible guardar el producto");
+      setError(
+        err instanceof Error ? err.message : "No fue posible guardar el producto",
+      );
     } finally {
       setSaving(false);
     }
@@ -288,7 +347,9 @@ export function useProductos() {
       await api.productos.delete(token, String(product.id_producto));
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible eliminar el producto");
+      setError(
+        err instanceof Error ? err.message : "No fue posible eliminar el producto",
+      );
     }
   };
 
@@ -296,31 +357,61 @@ export function useProductos() {
     if (selectedIds.length === 0) return;
     if (!confirm(`¿Eliminar ${selectedIds.length} producto(s) seleccionados?`)) return;
     try {
-      await Promise.all(selectedIds.map((id) => api.productos.delete(token, String(id))));
+      await Promise.all(
+        selectedIds.map((id) => api.productos.delete(token, String(id))),
+      );
       setSelectedIds([]);
       setSelectionEnabled(false);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible eliminar los productos seleccionados");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No fue posible eliminar los productos seleccionados",
+      );
     }
   };
 
+  // ─── Return ───────────────────────────────────────────────────────────────
+
   return {
-    loading, saving, error, producer, products, stores, categorias, lotes,
+    loading,
+    saving,
+    error,
+    producer,
+    products,
+    stores,
+    categorias,
+    lotes,
     query, setQuery,
     statusFilter, setStatusFilter,
     storeFilter, setStoreFilter,
     minPrice, setMinPrice,
     maxPrice, setMaxPrice,
-    // ─── NUEVO ───────────────────────────────────────────────────────────
     unidadFilter, setUnidadFilter,
     clearFilters,
-    visibleProducts, activeProductsCount, inactiveProductsCount,
-    storeMap, visibleProductIds, allVisibleSelected,
-    selectionEnabled, selectedIds,
-    toggleSelectionMode, toggleProductSelection, toggleSelectAllVisible,
-    modalOpen, mode, selected, form, setForm, imagen, setImagen,
-    openCreate, openEdit, openView, closeModal,
-    handleSubmit, handleDelete, handleDeleteSelected,
+    visibleProducts,
+    activeProductsCount,
+    inactiveProductsCount,
+    storeMap,
+    visibleProductIds,
+    allVisibleSelected,
+    selectionEnabled,
+    selectedIds,
+    toggleSelectionMode,
+    toggleProductSelection,
+    toggleSelectAllVisible,
+    modalOpen,
+    mode,
+    selected,
+    form, setForm,
+    imagen, setImagen,
+    openCreate,
+    openEdit,
+    openView,
+    closeModal,
+    handleSubmit,
+    handleDelete,
+    handleDeleteSelected,
   };
 }

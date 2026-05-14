@@ -26,7 +26,7 @@ function ProductorLandingContent() {
   }
 
   const requisitos = [
-    {
+    /*{
       titulo: "Identificación Oficial",
       descripcion: "INE o IFE vigente para verificar tu identidad",
       icono: User,
@@ -45,7 +45,7 @@ function ProductorLandingContent() {
       titulo: "Método de Pago",
       descripcion: "Tarjeta de crédito o débito para cobros",
       icono: CreditCard,
-    },
+    }, */
     {
       titulo: "Certificación de Origen",
       descripcion: "Certificado que avale la calidad de tus productos",

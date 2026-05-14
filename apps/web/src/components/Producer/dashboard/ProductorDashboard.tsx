@@ -57,6 +57,8 @@ export function ProductorDashboard() {
   const { categorias, loadingCategorias, tieneLotes } =
     useProductorCategorias(token);
 
+    console.log("categorias del productor:", categorias);
+
   const { data: salesData, isLoading: salesLoading, error: salesError, refetch: retrySales } =
     useVentasData(salesPeriod);
   const { data: productsData, isLoading: productsLoading, error: productsError, refetch: retryProducts } =

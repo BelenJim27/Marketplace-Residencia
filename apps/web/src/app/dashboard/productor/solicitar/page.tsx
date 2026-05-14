@@ -450,8 +450,8 @@ export default function SolicitarPage() {
 
       <div className="mt-6 rounded-xl bg-white p-6 shadow-1 dark:bg-gray-dark sm:p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-dark dark:text-white">Solicitar ser Productor</h1>
-          <p className="mt-1 text-gray-500">Completa el formulario para convertirte en productor en nuestra plataforma.</p>
+          <h1 className="text-2xl fo nt-bold text-dark dark:text-white"></h1>
+          <p className="mt-1 text-gray-500">Completa el proceso para convertirte en productor en nuestra plataforma.</p>
         </div>
 
         {error && (
@@ -463,7 +463,7 @@ export default function SolicitarPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* ── Datos Fiscales ── */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
+          {/* <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
               <Building2 className="h-5 w-5" />
               Datos Fiscales
@@ -482,10 +482,10 @@ export default function SolicitarPage() {
                   placeholder="XAXX010101000" />
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* ── Dirección Fiscal ── */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
+          {/* <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
               <MapPin className="h-5 w-5" />
               Dirección Fiscal
@@ -516,10 +516,10 @@ export default function SolicitarPage() {
                   placeholder="CDMX" />
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* ── Lugar de Producción ── */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
+          {/*  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
               <MapPin className="h-5 w-5" />
               Lugar de Producción
@@ -556,7 +556,7 @@ export default function SolicitarPage() {
                   placeholder="Ej: Cerca del río, zona de ley seca" />
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* ── Categorías de Productos (jerárquico) ── */}
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
@@ -603,36 +603,40 @@ export default function SolicitarPage() {
                     return (
                       <div key={cat.id_categoria} className="overflow-hidden rounded-xl border-2 border-gray-200 dark:border-dark-3">
                         {/* Cabecera del acordeón */}
-                        <button
-                          type="button"
-                          onClick={() => toggleExpandida(cat.id_categoria)}
-                          className={`flex w-full items-center justify-between px-4 py-3 text-left transition-colors ${
-                            algunaHijaSeleccionada
-                              ? "bg-primary/10 dark:bg-primary/20"
-                              : "bg-white dark:bg-dark"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
+                        <div className={`flex w-full items-center justify-between px-4 py-3 text-left transition-colors ${algunaHijaSeleccionada
+                            ? "bg-primary/10 dark:bg-primary/20"
+                            : "bg-white dark:bg-dark"
+                          }`}>
+                          {/* Click en el contenido selecciona la categoría padre */}
+                          <button
+                            type="button"
+                            onClick={() => handleCategoriaToggle(cat.id_categoria)}
+                            className="flex items-center gap-3"
+                          >
+                            <span className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all ${formData.categorias_ids.includes(cat.id_categoria) ? "border-primary bg-primary" : "border-gray-300 dark:border-dark-3"
+                              }`}>
+                              {formData.categorias_ids.includes(cat.id_categoria) && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                            </span>
                             <span className="text-2xl leading-none">{emoji}</span>
                             <span className={`font-medium ${algunaHijaSeleccionada ? "text-primary" : "text-dark dark:text-white"}`}>
                               {cat.nombre}
                             </span>
-                            {algunaHijaSeleccionada && (
-                              <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-white">
-                                {hijas.filter((h) => formData.categorias_ids.includes(h.id_categoria)).length}/{hijas.length}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
+                          </button>
+
+                          {/* Click en la flecha expande/colapsa */}
+                          <button
+                            type="button"
+                            onClick={() => toggleExpandida(cat.id_categoria)}
+                            className="flex items-center gap-2"
+                          >
                             <span className="text-xs text-gray-400">{hijas.length} tipos</span>
                             {expandida
                               ? <ChevronUp className="h-4 w-4 text-gray-400" />
                               : <ChevronDown className="h-4 w-4 text-gray-400" />
                             }
-                          </div>
-                        </button>
-
-                        {/* Subcategorías expandibles */}
+                          </button>
+                        </div>
+                        {/* Subcategorías expandibles 
                         {expandida && (
                           <div className="border-t border-gray-200 bg-gray-50 p-3 dark:border-dark-3 dark:bg-dark-2">
                             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -664,7 +668,7 @@ export default function SolicitarPage() {
                               })}
                             </div>
                           </div>
-                        )}
+                        )} */}
                       </div>
                     );
                   }
@@ -676,15 +680,13 @@ export default function SolicitarPage() {
                       key={cat.id_categoria}
                       type="button"
                       onClick={() => handleCategoriaToggle(cat.id_categoria)}
-                      className={`relative flex w-full items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition-all duration-150 ${
-                        selected
+                      className={`relative flex w-full items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition-all duration-150 ${selected
                           ? "border-primary bg-primary/10 dark:bg-primary/20"
                           : "border-gray-200 bg-white hover:border-primary/40 dark:border-dark-3 dark:bg-dark"
-                      }`}
+                        }`}
                     >
-                      <span className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all ${
-                        selected ? "border-primary bg-primary" : "border-gray-300 dark:border-dark-3"
-                      }`}>
+                      <span className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all ${selected ? "border-primary bg-primary" : "border-gray-300 dark:border-dark-3"
+                        }`}>
                         {selected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                       </span>
                       <span className="text-2xl leading-none">{emoji}</span>
@@ -707,7 +709,7 @@ export default function SolicitarPage() {
             </div>
           </div>
 
-          {/* ── Datos Bancarios ── */}
+          {/* ── Datos Bancarios ── 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-2">
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-dark dark:text-white">
               <CreditCard className="h-5 w-5" />
@@ -720,9 +722,9 @@ export default function SolicitarPage() {
                 placeholder="123456789012345678" />
               <p className="mt-1 text-xs text-gray-400">Estos datos se encriptan y solo se usan para procesar tus pagos</p>
             </div>
-          </div>
+          </div> */}
 
-          {/* ── Región ── */}
+          {/* ── Región ── 
           <div>
             <label className="mb-2 block text-sm font-medium text-dark dark:text-white">Región *</label>
             <select
@@ -739,7 +741,7 @@ export default function SolicitarPage() {
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
 
           {/* ── Certificado ── */}
           <div>

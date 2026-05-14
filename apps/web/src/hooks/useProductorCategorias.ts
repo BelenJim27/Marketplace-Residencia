@@ -24,7 +24,9 @@ export function useProductorCategorias(token: string) {
         if (cancelled) return;
         setCategorias(Array.isArray(data?.categorias) ? data.categorias : []);
       })
-      .catch(() => {})
+       .catch((err) => {
+    console.error("error mi-solicitud:", err); 
+  })
       .finally(() => { if (!cancelled) setLoadingCategorias(false); });
 
     return () => { cancelled = true; };
