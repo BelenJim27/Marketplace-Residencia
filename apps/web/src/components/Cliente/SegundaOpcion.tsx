@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/context/LocaleContext";
 import { useLandingStats } from "@/hooks/useLandingStats";
+import { useMasVendidos } from "@/hooks/useMasVendidos";
 
 // ─── HOOK: detecta dark mode ──────────────────────────────────────────────────
 function useDarkMode(): boolean {
@@ -43,7 +44,6 @@ const TEXT_COLORS = {
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface Producto {
-  id: number;
   nombre: string;
   subtitulo: string;
   imagen: string;
@@ -57,10 +57,9 @@ interface Slide {
   circulos: { imagen: string; etiqueta?: string }[];
 }
 
-// ─── DATOS ────────────────────────────────────────────────────────────────────
-const PRODUCTOS: Producto[] = [
+// ─── DATOS FALLBACK ────────────────────────────────────────────────────────────
+const PRODUCTOS_FALLBACK: Producto[] = [
   {
-    id: 1,
     nombre: "Tobalá",
     subtitulo: "La expresión más pura de la naturaleza, custodiada por manos expertas que entienden el tiempo del agave.",
     imagen: "/fotos/28.1.png",
@@ -76,7 +75,6 @@ const PRODUCTOS: Producto[] = [
     ],
   },
   {
-    id: 2,
     nombre: "Espadín",
     subtitulo: "El alma del mezcal oaxaqueño, destilado con dedicación generación tras generación.",
     imagen: "/fotos/29.1.png",
@@ -92,7 +90,6 @@ const PRODUCTOS: Producto[] = [
     ],
   },
   {
-    id: 3,
     nombre: "Madrecuixe",
     subtitulo: "Un mezcal silvestre de carácter indomable, con la fiereza del agave en su estado más puro.",
     imagen: "/fotos/30.1.png",
@@ -211,6 +208,10 @@ export default function LandingPageOaxaca() {
   const C = isDark ? TEXT_COLORS.dark : TEXT_COLORS.light;
   const winWidth = useWindowWidth();
 
+  // ─── Más vendidos ─────────────────────────────────────────────────────────
+  const { productos: masVendidos, loading: loadingVendidos } = useMasVendidos(3);
+  const productosCarrusel: Producto[] = masVendidos.length > 0 ? masVendidos : PRODUCTOS_FALLBACK;
+
   // Breakpoints
   const isMobile = winWidth < 640;
   const isTablet = winWidth >= 640 && winWidth < 1024;
@@ -229,7 +230,7 @@ export default function LandingPageOaxaca() {
   const [statsVisible, setStatsVisible] = useState(false);
   const statsRef = useRef<HTMLDivElement | null>(null);
 
-  const producto = PRODUCTOS[prodActual];
+  const producto = productosCarrusel[prodActual] ?? productosCarrusel[0];
   const slide = SLIDES[slideActual];
 
   const startProdProgress = () => {
@@ -250,7 +251,7 @@ export default function LandingPageOaxaca() {
   const handleProdGo = (idx: number) => {
     setProdVisible(false);
     setTimeout(() => {
-      setProdActual((idx + PRODUCTOS.length) % PRODUCTOS.length);
+      setProdActual((idx + productosCarrusel.length) % productosCarrusel.length);
       setProdVisible(true);
     }, 250);
     if (prodTimerRef.current) clearInterval(prodTimerRef.current);
@@ -258,11 +259,16 @@ export default function LandingPageOaxaca() {
     prodTimerRef.current = setInterval(() => handleProdGo(idx + 1), PROD_INTERVAL);
   };
 
+  // Reinicia el índice si productosCarrusel cambia (cuando carga la API)
+  useEffect(() => {
+    setProdActual(0);
+  }, [masVendidos]);
+
   useEffect(() => {
     startProdProgress();
     prodTimerRef.current = setInterval(() => {
       setProdActual((prev) => {
-        const next = (prev + 1) % PRODUCTOS.length;
+        const next = (prev + 1) % productosCarrusel.length;
         setProdVisible(false);
         setTimeout(() => setProdVisible(true), 250);
         return next;
@@ -270,7 +276,7 @@ export default function LandingPageOaxaca() {
       startProdProgress();
     }, PROD_INTERVAL);
     return () => { if (prodTimerRef.current) clearInterval(prodTimerRef.current); };
-  }, []);
+  }, [productosCarrusel.length]);
 
   const startSlideProgress = () => {
     if (slideProgressRef.current) {
@@ -481,7 +487,7 @@ export default function LandingPageOaxaca() {
       </div>
 
       {/* ══════════════════════════════════════════════════
-          SECCIÓN 3 — CARRUSEL PRODUCTOS
+          SECCIÓN 3 — CARRUSEL PRODUCTOS MÁS VENDIDOS
       ══════════════════════════════════════════════════ */}
       <div
         style={{
@@ -493,155 +499,218 @@ export default function LandingPageOaxaca() {
         onMouseEnter={() => setSectionHover(true)}
         onMouseLeave={() => setSectionHover(false)}
       >
-        {/* Título */}
-        <div style={{
-          textAlign: "center", marginBottom: isMobile ? "24px" : "40px",
-          opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s",
-        }}>
-          <h2 style={{
-            fontFamily: "Georgia, serif",
-            fontSize: isMobile ? "28px" : isTablet ? "32px" : "38px",
-            fontWeight: 700, color: C.dark, margin: "0 0 10px",
+        {/* Badge "más vendidos" */}
+        {!loadingVendidos && masVendidos.length > 0 && (
+          <div style={{
+            display: "flex", justifyContent: "center", marginBottom: "12px",
           }}>
-            {t(producto.nombre)}
-          </h2>
-          <p style={{
-            fontSize: isMobile ? "13px" : "15px",
-            fontStyle: "italic", lineHeight: 1.6,
-            fontFamily: "Georgia, serif", color: C.mid,
-            maxWidth: isMobile ? "280px" : "500px", margin: "0 auto",
-          }}>
-            &ldquo;{t(producto.subtitulo)}&rdquo;
-          </p>
-        </div>
-
-        {/* Layout: móvil = columna, desktop = 3 columnas */}
-        {isMobile ? (
-          /* ── MÓVIL: botella + notas apilados ── */
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "28px" }}>
-            {/* Botella */}
-            <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <div style={{
-                position: "absolute", width: "220px", height: "220px", borderRadius: "50%",
-                background: "rgba(26,93,59,0.06)", border: "1px solid rgba(200,169,122,0.2)",
-              }} />
-              <div style={{
-                position: "relative", zIndex: 10,
-                width: "200px", height: "200px", borderRadius: "50%", overflow: "hidden",
-                boxShadow: "0 12px 48px rgba(139,69,19,0.25)",
-                opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s",
-              }}>
-                <img src={producto.imagen} alt={t(producto.nombre)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              </div>
-            </div>
-
-            {/* Notas de cata en móvil */}
-            <div style={{
-              width: "100%", maxWidth: "320px",
-              background: "var(--land-bg-white, #fff)",
-              borderRadius: "12px", padding: "20px",
-              border: "1px solid var(--land-border, #E5E5E1)",
-              display: "flex", flexDirection: "column", gap: "14px",
-              opacity: prodVisible ? 1 : 0, transition: "opacity 0.35s",
+            <span style={{
+              fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em",
+              textTransform: "uppercase", color: "#C8A97A",
+              background: "rgba(200,169,122,0.12)",
+              border: "1px solid rgba(200,169,122,0.3)",
+              borderRadius: "999px", padding: "4px 14px",
             }}>
-              <p style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#1A5D3B", margin: 0 }}>
-                {t("Notas de cata")}
-              </p>
-              {([
-                ["Vista", producto.notas.vista],
-                ["Nariz", producto.notas.nariz],
-                ["Boca", producto.notas.boca],
-              ] as [string, string][]).map(([key, val]) => (
-                <div key={key}>
-                  <span style={{ fontWeight: 700, color: "#C8A97A", fontSize: "13px" }}>{t(key)}: </span>
-                  <span style={{ fontSize: "13px", color: C.dark }}>{t(val)}</span>
-                </div>
-              ))}
-            </div>
+              {t("⭐ Más vendidos")}
+            </span>
+          </div>
+        )}
+
+        {/* Skeleton mientras carga */}
+        {loadingVendidos ? (
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center", gap: "16px",
+            marginBottom: "40px",
+          }}>
+            <div style={{
+              width: isMobile ? "160px" : "200px",
+              height: "24px", borderRadius: "6px",
+              background: "rgba(26,93,59,0.08)",
+              animation: "pulse 1.5s ease-in-out infinite",
+            }} />
+            <div style={{
+              width: isMobile ? "220px" : "320px",
+              height: "16px", borderRadius: "6px",
+              background: "rgba(26,93,59,0.05)",
+              animation: "pulse 1.5s ease-in-out infinite",
+            }} />
+            <div style={{
+              width: isMobile ? "160px" : "220px",
+              height: isMobile ? "160px" : "220px",
+              borderRadius: "50%",
+              background: "rgba(26,93,59,0.06)",
+              animation: "pulse 1.5s ease-in-out infinite",
+            }} />
+            <style>{`
+              @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.4; }
+              }
+            `}</style>
           </div>
         ) : (
-          /* ── TABLET / DESKTOP: 3 columnas ── */
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: isTablet ? "auto auto" : "1fr auto 1fr",
-            gap: isTablet ? "24px" : "32px",
-            alignItems: "center",
-            maxWidth: "1000px", margin: "0 auto",
-            justifyContent: isTablet ? "center" : "initial",
-          }}>
-            {/* Anotaciones izquierda — ocultas en tablet */}
-            {!isTablet && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "28px", alignItems: "flex-end", opacity: prodVisible ? 1 : 0, transition: "opacity 0.35s" }}>
-                {producto.anotaciones.map((a, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", maxWidth: "260px" }}>
-                    <p style={{
-                      fontSize: "13px", fontFamily: "Georgia, serif", fontStyle: "italic",
-                      color: C.annotation, lineHeight: 1.5, margin: 0, textAlign: "right",
-                      opacity: prodVisible ? 1 : 0, transition: `opacity 0.4s ease ${i * 0.1}s`,
-                    }}>
-                      {t(a.texto)}
-                    </p>
-                    <svg width="48" height="20" viewBox="0 0 48 20" fill="none" style={{ flexShrink: 0 }}>
-                      <path d="M2 10 Q24 2 46 10" stroke="#C8A97A" strokeWidth="1.5" fill="none" strokeDasharray="3 2" />
-                      <polyline points="40,6 46,10 40,14" fill="none" stroke="#C8A97A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+          <>
+            {/* Título */}
+            <div style={{
+              textAlign: "center", marginBottom: isMobile ? "24px" : "40px",
+              opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s",
+            }}>
+              <h2 style={{
+                fontFamily: "Georgia, serif",
+                fontSize: isMobile ? "28px" : isTablet ? "32px" : "38px",
+                fontWeight: 700, color: C.dark, margin: "0 0 10px",
+              }}>
+                {t(producto.nombre)}
+              </h2>
+              <p style={{
+                fontSize: isMobile ? "13px" : "15px",
+                fontStyle: "italic", lineHeight: 1.6,
+                fontFamily: "Georgia, serif", color: C.mid,
+                maxWidth: isMobile ? "280px" : "500px", margin: "0 auto",
+              }}>
+                &ldquo;{t(producto.subtitulo)}&rdquo;
+              </p>
+            </div>
+
+            {/* Layout: móvil = columna, desktop = 3 columnas */}
+            {isMobile ? (
+              /* ── MÓVIL ── */
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "28px" }}>
+                {/* Botella */}
+                <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{
+                    position: "absolute", width: "220px", height: "220px", borderRadius: "50%",
+                    background: "rgba(26,93,59,0.06)", border: "1px solid rgba(200,169,122,0.2)",
+                  }} />
+                  <div style={{
+                    position: "relative", zIndex: 10,
+                    width: "200px", height: "200px", borderRadius: "50%", overflow: "hidden",
+                    boxShadow: "0 12px 48px rgba(139,69,19,0.25)",
+                    opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s",
+                  }}>
+                    <img
+                      src={producto.imagen}
+                      alt={t(producto.nombre)}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/fotos/28.1.png"; }}
+                    />
                   </div>
-                ))}
+                </div>
+
+                {/* Notas de cata móvil */}
+                <div style={{
+                  width: "100%", maxWidth: "320px",
+                  background: "var(--land-bg-white, #fff)",
+                  borderRadius: "12px", padding: "20px",
+                  border: "1px solid var(--land-border, #E5E5E1)",
+                  display: "flex", flexDirection: "column", gap: "14px",
+                  opacity: prodVisible ? 1 : 0, transition: "opacity 0.35s",
+                }}>
+                  <p style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#1A5D3B", margin: 0 }}>
+                    {t("Notas de cata")}
+                  </p>
+                  {([
+                    ["Vista", producto.notas.vista],
+                    ["Nariz", producto.notas.nariz],
+                    ["Boca", producto.notas.boca],
+                  ] as [string, string][]).map(([key, val]) => (
+                    <div key={key}>
+                      <span style={{ fontWeight: 700, color: "#C8A97A", fontSize: "13px" }}>{t(key)}: </span>
+                      <span style={{ fontSize: "13px", color: C.dark }}>{t(val)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* ── TABLET / DESKTOP ── */
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: isTablet ? "auto auto" : "1fr auto 1fr",
+                gap: isTablet ? "24px" : "32px",
+                alignItems: "center",
+                maxWidth: "1000px", margin: "0 auto",
+                justifyContent: isTablet ? "center" : "initial",
+              }}>
+                {/* Anotaciones izquierda */}
+                {!isTablet && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "28px", alignItems: "flex-end", opacity: prodVisible ? 1 : 0, transition: "opacity 0.35s" }}>
+                    {producto.anotaciones.map((a, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", maxWidth: "260px" }}>
+                        <p style={{
+                          fontSize: "13px", fontFamily: "Georgia, serif", fontStyle: "italic",
+                          color: C.annotation, lineHeight: 1.5, margin: 0, textAlign: "right",
+                          opacity: prodVisible ? 1 : 0, transition: `opacity 0.4s ease ${i * 0.1}s`,
+                        }}>
+                          {t(a.texto)}
+                        </p>
+                        <svg width="48" height="20" viewBox="0 0 48 20" fill="none" style={{ flexShrink: 0 }}>
+                          <path d="M2 10 Q24 2 46 10" stroke="#C8A97A" strokeWidth="1.5" fill="none" strokeDasharray="3 2" />
+                          <polyline points="40,6 46,10 40,14" fill="none" stroke="#C8A97A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Botella central */}
+                <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <div style={{
+                    position: "absolute",
+                    width: isTablet ? "240px" : "290px",
+                    height: isTablet ? "240px" : "290px",
+                    borderRadius: "50%",
+                    background: "rgba(26,93,59,0.06)", border: "1px solid rgba(200,169,122,0.2)",
+                  }} />
+                  <div style={{
+                    position: "relative", zIndex: 10,
+                    width: isTablet ? "220px" : "260px",
+                    height: isTablet ? "220px" : "260px",
+                    borderRadius: "50%", overflow: "hidden",
+                    boxShadow: "0 12px 48px rgba(139,69,19,0.25)",
+                    opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s",
+                  }}>
+                    <img
+                      src={producto.imagen}
+                      alt={t(producto.nombre)}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/fotos/28.1.png"; }}
+                    />
+                  </div>
+                </div>
+
+                {/* Notas de cata derecha */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px", alignItems: "flex-start", opacity: prodVisible ? 1 : 0, transition: "opacity 0.35s" }}>
+                  <p style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#1A5D3B", margin: 0 }}>
+                    {t("Notas de cata")}
+                  </p>
+                  {([
+                    ["Vista", producto.notas.vista],
+                    ["Nariz", producto.notas.nariz],
+                    ["Boca", producto.notas.boca],
+                  ] as [string, string][]).map(([key, val], i) => (
+                    <div key={key} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <svg width="48" height="20" viewBox="0 0 48 20" fill="none" style={{ flexShrink: 0 }}>
+                        <path d="M46 10 Q24 2 2 10" stroke="#C8A97A" strokeWidth="1.5" fill="none" strokeDasharray="3 2" />
+                        <polyline points="8,6 2,10 8,14" fill="none" stroke="#C8A97A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <p style={{
+                        fontSize: "14px", color: C.dark, margin: 0, lineHeight: 1.4,
+                        opacity: prodVisible ? 1 : 0, transition: `opacity 0.4s ease ${i * 0.1}s`,
+                      }}>
+                        <span style={{ fontWeight: 700, color: "#C8A97A" }}>{t(key)}: </span>{t(val)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-
-            {/* Botella central */}
-            <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <div style={{
-                position: "absolute",
-                width: isTablet ? "240px" : "290px",
-                height: isTablet ? "240px" : "290px",
-                borderRadius: "50%",
-                background: "rgba(26,93,59,0.06)", border: "1px solid rgba(200,169,122,0.2)",
-              }} />
-              <div style={{
-                position: "relative", zIndex: 10,
-                width: isTablet ? "220px" : "260px",
-                height: isTablet ? "220px" : "260px",
-                borderRadius: "50%", overflow: "hidden",
-                boxShadow: "0 12px 48px rgba(139,69,19,0.25)",
-                opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s",
-              }}>
-                <img src={producto.imagen} alt={t(producto.nombre)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              </div>
-            </div>
-
-            {/* Notas de cata derecha */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px", alignItems: "flex-start", opacity: prodVisible ? 1 : 0, transition: "opacity 0.35s" }}>
-              <p style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#1A5D3B", margin: 0 }}>
-                {t("Notas de cata")}
-              </p>
-              {([
-                ["Vista", producto.notas.vista],
-                ["Nariz", producto.notas.nariz],
-                ["Boca", producto.notas.boca],
-              ] as [string, string][]).map(([key, val], i) => (
-                <div key={key} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <svg width="48" height="20" viewBox="0 0 48 20" fill="none" style={{ flexShrink: 0 }}>
-                    <path d="M46 10 Q24 2 2 10" stroke="#C8A97A" strokeWidth="1.5" fill="none" strokeDasharray="3 2" />
-                    <polyline points="8,6 2,10 8,14" fill="none" stroke="#C8A97A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <p style={{
-                    fontSize: "14px", color: C.dark, margin: 0, lineHeight: 1.4,
-                    opacity: prodVisible ? 1 : 0, transition: `opacity 0.4s ease ${i * 0.1}s`,
-                  }}>
-                    <span style={{ fontWeight: 700, color: "#C8A97A" }}>{t(key)}: </span>{t(val)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+          </>
         )}
 
         {/* Dots + progreso */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", marginTop: isMobile ? "28px" : "40px" }}>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            {PRODUCTOS.map((_, i) => (
+            {productosCarrusel.map((_, i) => (
               <button key={i} onClick={() => handleProdGo(i)} style={{
                 height: "6px", borderRadius: "999px", border: "none", cursor: "pointer",
                 width: i === prodActual ? "20px" : "6px",
@@ -655,7 +724,7 @@ export default function LandingPageOaxaca() {
           </div>
         </div>
 
-        {/* Flechas nav — en móvil siempre visibles, en desktop solo en hover */}
+        {/* Flechas nav */}
         {(["left", "right"] as const).map((dir) => (
           <button key={dir} onClick={() => handleProdGo(dir === "left" ? prodActual - 1 : prodActual + 1)} style={{
             position: "absolute", top: "50%", transform: "translateY(-50%)",
