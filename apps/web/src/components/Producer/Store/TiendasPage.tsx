@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
@@ -105,14 +106,25 @@ export function TiendasPage() {
           <p className="text-sm text-gray-500">Administra tus puntos de venta y catálogo asociado.</p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setActiveModal("create")}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 font-medium text-white transition hover:bg-opacity-90"
-        >
-          <Plus size={18} />
-          Nueva Tienda
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {stores.length > 0 && (
+            <Link
+              href="/dashboard/productor/tienda/editar"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-stroke bg-transparent px-5 py-3 font-medium text-primary transition hover:bg-primary hover:text-white dark:border-dark-3"
+            >
+              <Pencil size={18} />
+              Editar Tienda
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={() => setActiveModal("create")}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 font-medium text-white transition hover:bg-opacity-90"
+          >
+            <Plus size={18} />
+            Nueva Tienda
+          </button>
+        </div>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">

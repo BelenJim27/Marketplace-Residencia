@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsInt, IsOptional, IsString, MaxLength, Min, IsNumber } from 'class-validator';
 
 export class CreateAuditoriaDto {
   @IsOptional() @IsString() id_usuario?: string;
@@ -12,3 +12,33 @@ export class CreateAuditoriaDto {
   @IsOptional() @IsString() ip_origen?: string;
 }
 export class UpdateAuditoriaDto extends PartialType(CreateAuditoriaDto) {}
+
+export class ListAuditoriaQueryDto {
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Type(() => Number)
+  pagina?: number = 1;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Type(() => Number)
+  limite?: number = 50;
+
+  @IsOptional()
+  @IsString()
+  fecha_inicio?: string;
+
+  @IsOptional()
+  @IsString()
+  fecha_fin?: string;
+
+  @IsOptional()
+  @IsString()
+  id_usuario?: string;
+
+  @IsOptional()
+  @IsString()
+  tabla_afectada?: string;
+}

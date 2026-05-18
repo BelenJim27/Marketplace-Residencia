@@ -974,30 +974,46 @@ export class PedidosService {
       razon: string;
     }> = [];
 
+    const productIds = dto.items.map(i => BigInt(i.id_producto));
+
+    const productos = await this.prisma.productos.findMany({
+      where: { id_producto: { in: productIds }, eliminado_en: null },
+      select: {
+        id_producto: true,
+        nombre: true,
+        categorias_productos: { select: { id_categoria: true } },
+      },
+    });
+
+    const categoriaIds = [
+      ...new Set(
+        productos.flatMap(p => p.categorias_productos.map(c => c.id_categoria))
+      ),
+    ];
+
+    const restricciones = await this.prisma.restricciones_envio_categoria.findMany({
+      where: {
+        pais_iso2: "US",
+        estado_codigo: dto.estado_codigo,
+        id_categoria: { in: categoriaIds },
+      },
+      select: { id_categoria: true, permitido: true, notas: true },
+    });
+
+    const restriccionesMap = new Map(
+      restricciones.map(r => [r.id_categoria, r])
+    );
+    const productoMap = new Map(
+      productos.map(p => [Number(p.id_producto), p])
+    );
+
     for (const item of dto.items) {
-      const producto = await this.prisma.productos.findFirst({
-        where: { id_producto: BigInt(item.id_producto), eliminado_en: null },
-        select: {
-          nombre: true,
-          categorias_productos: { select: { id_categoria: true } },
-        },
-      });
+      const producto = productoMap.get(item.id_producto);
       if (!producto) continue;
 
       let bloqueado = false;
       for (const { id_categoria } of producto.categorias_productos) {
-        const restriccion =
-          await this.prisma.restricciones_envio_categoria.findUnique({
-            where: {
-              pais_iso2_estado_codigo_id_categoria: {
-                pais_iso2: "US",
-                estado_codigo: dto.estado_codigo,
-                id_categoria,
-              },
-            },
-            select: { permitido: true, notas: true },
-          });
-
+        const restriccion = restriccionesMap.get(id_categoria);
         if (restriccion && !restriccion.permitido) {
           items_bloqueados.push({
             id_producto: item.id_producto,

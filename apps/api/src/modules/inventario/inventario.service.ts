@@ -21,48 +21,42 @@ export class InventarioService {
       include: {
         productos: {
           include: {
-            lotes: true,
+            lotes: {
+              include: {
+                productores: {
+                  include: { usuarios: { select: { id_usuario: true, nombre: true } } },
+                },
+                regiones: true,
+              },
+            },
           },
         },
       },
     });
 
-    const items = await Promise.all(
-      inventarios.map(async (inv) => {
-        let nombre_producto = inv.productos?.nombre || "Sin nombre";
-        let productor = "Sin productor";
-        let region = "Sin región";
+    const items = inventarios.map((inv) => {
+      let nombre_producto = inv.productos?.nombre || "Sin nombre";
+      let productor = "Sin productor";
+      let region = "Sin región";
 
-        if (inv.productos?.id_lote) {
-          const lote = await this.prisma.lotes.findUnique({
-            where: { id_lote: inv.productos.id_lote },
-            include: { regiones: true },
-          });
-          if (lote) {
-            const prod = await this.prisma.productores.findFirst({
-              where: { id_productor: lote.id_productor },
-            });
-            if (prod) {
-              const usuario = await this.prisma.usuarios.findUnique({
-                where: { id_usuario: prod.id_usuario },
-              });
-              productor = usuario?.nombre || "Sin productor";
-            }
-            region = lote.regiones?.nombre || "Sin región";
-          }
+      if (inv.productos?.lotes) {
+        const lote = inv.productos.lotes;
+        if (lote) {
+          productor = lote.productores?.usuarios?.nombre || "Sin productor";
+          region = lote.regiones?.nombre || "Sin región";
         }
+      }
 
-        return {
-          id_producto: String(inv.id_producto),
-          nombre_producto,
-          productor,
-          region,
-          stock: inv.stock,
-          status: inv.productos?.status || "inactivo",
-          imagen: inv.productos?.imagen_principal_url || null,
-        };
-      }),
-    );
+      return {
+        id_producto: String(inv.id_producto),
+        nombre_producto,
+        productor,
+        region,
+        stock: inv.stock,
+        status: inv.productos?.status || "inactivo",
+        imagen: inv.productos?.imagen_principal_url || null,
+      };
+    });
 
     const uniqueProductors = new Set(
       items.filter((i) => i.productor !== "Sin productor").map((i) => i.productor),

@@ -314,6 +314,8 @@ model lotes {
   productores       productores      @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
   regiones          regiones?        @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
   productos         productos[]
+
+  @@index([codigo_lote], map: "idx_lotes_codigo")
 }
 
 model ListaDeseosItem {
@@ -418,19 +420,6 @@ model pagos {
   @@index([id_pedido], map: "idx_pagos_pedido")
 }
 
-model password_reset_tokens {
-  id_token     BigInt   @id @default(autoincrement())
-  id_usuario   String   @db.Uuid
-  token_hash   String   @unique @db.VarChar(255)
-  expira_en    DateTime @default(dbgenerated("(now() + '00:30:00'::interval)")) @db.Timestamptz(6)
-  usado        Boolean  @default(false)
-  ip_solicitud String?  @db.VarChar(45)
-  creado_en    DateTime @default(now()) @db.Timestamptz(6)
-  usuarios     usuarios @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([id_usuario], map: "idx_prt_usuario")
-}
-
 model pedidos {
   id_pedido                      BigInt                   @id @default(autoincrement())
   id_usuario                     String                   @db.Uuid
@@ -467,6 +456,8 @@ model pedidos {
 
   @@index([estado], map: "idx_pedidos_estado")
   @@index([id_usuario], map: "idx_pedidos_usuario")
+  @@index([eliminado_en, fecha_creacion(sort: Desc)], map: "idx_pedidos_soft_fecha")
+  @@index([eliminado_en, estado, fecha_creacion(sort: Desc)], map: "idx_pedidos_soft_estado_fecha")
 }
 
 model permisos {
@@ -531,6 +522,7 @@ model productores {
   usuarios                    usuarios              @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
   revisor                     usuarios?             @relation("RevisorProductor", fields: [revisado_por], references: [id_usuario], onUpdate: NoAction)
   tiendas                     tiendas[]
+  @@index([estado], map: "idx_productores_estado")
 }
 
 model productos {
@@ -578,6 +570,7 @@ model productos {
   @@index([status], map: "idx_productos_status")
   @@index([id_tienda], map: "idx_productos_tienda")
   @@index([traducciones], map: "idx_productos_traducciones", type: Gin)
+  @@index([id_tienda, status, eliminado_en], map: "idx_productos_tienda_status")
 }
 
 model refresh_tokens {
@@ -702,6 +695,7 @@ model tiendas {
   tiendas_traducciones tiendas_traducciones[]
 
   @@index([id_productor], map: "idx_tiendas_productor")
+  @@index([nombre], map: "idx_tiendas_nombre")
 }
 
 model transportistas {
@@ -759,7 +753,6 @@ model usuarios {
   movimientos_inventario                        movimientos_inventario[]
   notificaciones                                notificaciones[]
   oauth_cuentas                                 oauth_cuentas[]
-  password_reset_tokens                         password_reset_tokens[]
   pedidos                                       pedidos[]
   productores                                   productores?
   productores_revisados                         productores[]            @relation("RevisorProductor")
@@ -806,6 +799,7 @@ model pedido_productor {
   @@index([id_pedido], map: "idx_pedido_prod_pedido")
   @@index([id_productor], map: "idx_pedido_prod_productor")
   @@index([id_payout], map: "idx_pedido_prod_payout")
+  @@index([actualizado_en], map: "idx_pedido_productor_actualizado")
 }
 
 model paises {
@@ -906,6 +900,7 @@ model payouts {
   pedido_productor   pedido_productor[]
 
   @@index([id_productor, estado], map: "idx_payouts_productor_estado")
+  @@index([estado, proximo_reintento], map: "idx_payouts_retry")
 }
 
 model productos_traducciones {
