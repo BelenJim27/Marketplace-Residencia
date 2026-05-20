@@ -31,6 +31,7 @@
     "@cloudflare/next-on-pages": "^1.13.16",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/config": "^4.0.4",
+    "@nestjs/swagger": "^11.4.3",
     "@prisma/client": "^5.22.0",
     "axios": "^1.15.2",
     "i18next": "^26.0.8",
@@ -38,7 +39,8 @@
     "pg": "^8.20.0",
     "react-i18next": "^17.0.6",
     "react-qr-code": "^2.0.21",
-    "stripe": "^22.1.0"
+    "stripe": "^22.1.0",
+    "swagger-ui-express": "^5.0.1"
   },
   "overrides": {
     "rxjs": "^7.8.1"

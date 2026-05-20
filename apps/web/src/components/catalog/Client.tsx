@@ -21,7 +21,7 @@ interface Producto {
   producto_imagenes?: { url: string }[];
   categorias?: string[];
   nombre_productor?: string | null;
-  nombre_tienda?: string | null; // campo plano que ya manda el backend
+  nombre_tienda?: string | null;
   lotes?: {
     datos_api?: Record<string, string>;
     productores?: { biografia?: string };
@@ -64,15 +64,28 @@ const TIPOS_MAGUEY = ["Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueñ
 const TIPOS_DESTILACION = ["Alambique", "Artefacto", "Cambio"];
 const TIPOS_MOLIENDA = ["Tahona", "Molino de piedra", "Molino mecánico", "Manual"];
 
-const ETIQUETAS_FILTRO: Record<keyof Filtros, string> = {
-  busqueda: "Búsqueda",
-  tipo_mezcal: "Tipo",
-  maguey: "Maguey",
-  precio_min: "Precio mín",
-  precio_max: "Precio máx",
-  destilacion: "Destilación",
-  molienda: "Molienda",
-  maestro_mezcalero: "Maestro",
+// PALETA DE COLORES REFINADA
+const COLORS = {
+  cream: "#faf8f5",
+  champagne: "#f4f1ed",
+  taupe: "#a89f94",
+  mahogany: "#5c3d1e",
+  darkChocolate: "#3d2817",
+  gold: "#8b7355",
+  accent: "#b8956a",
+  softBorder: "#e8dcc8",
+  text: {
+    primary: "#2d2520",
+    secondary: "#6b6460",
+    muted: "#9a9390",
+  }
+};
+
+const STYLES = {
+  typography: {
+    serif: "Georgia, 'Times New Roman', serif",
+    sans: "'Segoe UI', Trebuchet MS, sans-serif",
+  }
 };
 
 function FilterSection({
@@ -86,26 +99,26 @@ function FilterSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-t" style={{ borderColor: "var(--bio-sidebar-border, #e8dcc8)" }}>
+    <div style={{ borderTop: `1px solid ${COLORS.softBorder}` }}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70"
+        className="flex w-full items-center justify-between py-4 text-left transition-opacity hover:opacity-70"
       >
         <span
-          className="text-[11px] font-bold uppercase tracking-[0.12em]"
-          style={{ color: "var(--bio-color-precio, #8b6914)" }}
+          className="text-[11px] font-medium uppercase tracking-[0.15em] letter-spacing"
+          style={{ color: COLORS.text.secondary, fontFamily: STYLES.typography.sans }}
         >
           {title}
         </span>
         <ChevronDown
-          className="h-3.5 w-3.5 transition-transform duration-200"
+          className="h-3.5 w-3.5 transition-transform duration-300"
           style={{
-            color: "var(--bio-color-precio, #8b6914)",
+            color: COLORS.text.secondary,
             transform: open ? "rotate(180deg)" : "rotate(0deg)",
           }}
         />
       </button>
-      {open && <div className="pb-4">{children}</div>}
+      {open && <div className="pb-5 space-y-2">{children}</div>}
     </div>
   );
 }
@@ -122,16 +135,26 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      className="relative px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 hover:opacity-90"
+      className="px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200"
       style={{
-        backgroundColor: active
-          ? "var(--bio-color-boton, #5c3d1e)"
-          : "var(--bio-chip-bg, rgba(92,61,30,0.07))",
-        color: active ? "#fff" : "var(--bio-color-titulo, #5c3d1e)",
-        border: active
-          ? "1px solid transparent"
-          : "1px solid var(--bio-sidebar-border, #e8dcc8)",
-        boxShadow: active ? "0 1px 4px rgba(92,61,30,0.25)" : "none",
+        backgroundColor: active ? COLORS.mahogany : COLORS.champagne,
+        color: active ? "white" : COLORS.text.primary,
+        border: `1px solid ${active ? COLORS.mahogany : COLORS.softBorder}`,
+        fontFamily: STYLES.typography.sans,
+        cursor: "pointer",
+        opacity: active ? 1 : 0.8,
+      }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          (e.target as HTMLButtonElement).style.backgroundColor = COLORS.champagne;
+          (e.target as HTMLButtonElement).style.borderColor = COLORS.taupe;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          (e.target as HTMLButtonElement).style.backgroundColor = COLORS.champagne;
+          (e.target as HTMLButtonElement).style.borderColor = COLORS.softBorder;
+        }
       }}
     >
       {label}
@@ -275,7 +298,6 @@ export default function ProductCatalogClient() {
     handleFiltroChange("precio_max", precioMaxLocal);
   };
 
-  // Usa el campo plano que ya manda el backend, con fallback a la relación anidada
   const getNombreProductor = (producto: Producto): string | null => {
     if (producto.nombre_productor) return producto.nombre_productor;
     const u = producto.tiendas?.productores?.usuarios;
@@ -289,41 +311,42 @@ export default function ProductCatalogClient() {
 
   // ─── SIDEBAR CONTENT ───────────────────────────────────────────────
   const SidebarContent = () => (
-    <div className="space-y-0">
-      <div className="pb-4 mb-1">
-        <div className="flex items-center justify-between">
+    <div>
+      <div className="pb-6 mb-2">
+        <div className="flex items-center justify-between mb-4">
           <h2
-            className="text-base font-bold tracking-wide"
-            style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+            className="text-lg font-medium"
+            style={{ fontFamily: STYLES.typography.serif, color: COLORS.text.primary }}
           >
-            Filtros
+            Refine
           </h2>
           {cantidadFiltros > 0 && (
             <button
               onClick={limpiarTodo}
-              className="text-xs font-medium underline underline-offset-2 transition-opacity hover:opacity-60"
-              style={{ color: "var(--bio-color-precio, #8b6914)" }}
+              className="text-xs font-medium transition-opacity hover:opacity-60"
+              style={{ color: COLORS.text.secondary, fontFamily: STYLES.typography.sans }}
             >
-              Limpiar todo
+              Clear all
             </button>
           )}
         </div>
 
-        <div className="relative mt-3">
+        <div className="relative">
           <Search
-            className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
-            style={{ color: "var(--bio-color-precio, #8b6914)" }}
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+            style={{ color: COLORS.text.muted }}
           />
           <input
             type="text"
-            placeholder="Buscar productos..."
+            placeholder="Search products..."
             value={filtrosPendientes.busqueda}
             onChange={(e) => handleBusquedaChange(e.target.value)}
-            className="w-full rounded-lg py-2.5 pl-9 pr-4 text-sm outline-none transition-all"
+            className="w-full rounded-lg py-3 pl-10 pr-4 text-sm outline-none transition-all"
             style={{
-              backgroundColor: "var(--bio-chip-bg, rgba(92,61,30,0.06))",
-              border: "1px solid var(--bio-sidebar-border, #e8dcc8)",
-              color: "var(--bio-color-titulo, #5c3d1e)",
+              backgroundColor: COLORS.champagne,
+              border: `1px solid ${COLORS.softBorder}`,
+              color: COLORS.text.primary,
+              fontFamily: STYLES.typography.sans,
             }}
           />
           {filtrosPendientes.busqueda && (
@@ -331,14 +354,14 @@ export default function ProductCatalogClient() {
               onClick={() => handleBusquedaChange("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100"
             >
-              <X className="h-3.5 w-3.5" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }} />
+              <X className="h-4 w-4" style={{ color: COLORS.text.secondary }} />
             </button>
           )}
         </div>
       </div>
 
       <FilterSection title="Maguey">
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {TIPOS_MAGUEY.map((m) => (
             <FilterChip
               key={m}
@@ -350,8 +373,8 @@ export default function ProductCatalogClient() {
         </div>
       </FilterSection>
 
-      <FilterSection title="Destilación">
-        <div className="flex flex-wrap gap-1.5">
+      <FilterSection title="Distillation">
+        <div className="flex flex-wrap gap-2">
           {TIPOS_DESTILACION.map((d) => (
             <FilterChip
               key={d}
@@ -363,8 +386,8 @@ export default function ProductCatalogClient() {
         </div>
       </FilterSection>
 
-      <FilterSection title="Molienda">
-        <div className="flex flex-wrap gap-1.5">
+      <FilterSection title="Grinding">
+        <div className="flex flex-wrap gap-2">
           {TIPOS_MOLIENDA.map((m) => (
             <FilterChip
               key={m}
@@ -376,73 +399,76 @@ export default function ProductCatalogClient() {
         </div>
       </FilterSection>
 
-      <FilterSection title="Rango de Precio (MXN)">
-        <div className="space-y-2">
-          <div className="flex gap-2">
+      <FilterSection title="Price range (MXN)">
+        <div className="space-y-3">
+          <div className="flex gap-3">
             <div className="relative flex-1">
               <span
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium"
-                style={{ color: "var(--bio-color-precio, #8b6914)" }}
+                style={{ color: COLORS.text.secondary, fontFamily: STYLES.typography.sans }}
               >
                 $
               </span>
               <input
                 type="number"
                 min="0"
-                placeholder="Mín"
+                placeholder="Min"
                 value={precioMinLocal}
                 onChange={(e) => setPrecioMinLocal(e.target.value)}
-                className="w-full rounded-lg py-2 pl-6 pr-2 text-sm outline-none"
+                className="w-full rounded-lg py-3 pl-7 pr-2 text-sm outline-none"
                 style={{
-                  backgroundColor: "var(--bio-chip-bg, rgba(92,61,30,0.06))",
-                  border: "1px solid var(--bio-sidebar-border, #e8dcc8)",
-                  color: "var(--bio-color-titulo, #5c3d1e)",
+                  backgroundColor: COLORS.champagne,
+                  border: `1px solid ${COLORS.softBorder}`,
+                  color: COLORS.text.primary,
+                  fontFamily: STYLES.typography.sans,
                 }}
               />
             </div>
             <div className="relative flex-1">
               <span
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium"
-                style={{ color: "var(--bio-color-precio, #8b6914)" }}
+                style={{ color: COLORS.text.secondary, fontFamily: STYLES.typography.sans }}
               >
                 $
               </span>
               <input
                 type="number"
                 min="0"
-                placeholder="Máx"
+                placeholder="Max"
                 value={precioMaxLocal}
                 onChange={(e) => setPrecioMaxLocal(e.target.value)}
-                className="w-full rounded-lg py-2 pl-6 pr-2 text-sm outline-none"
+                className="w-full rounded-lg py-3 pl-7 pr-2 text-sm outline-none"
                 style={{
-                  backgroundColor: "var(--bio-chip-bg, rgba(92,61,30,0.06))",
-                  border: "1px solid var(--bio-sidebar-border, #e8dcc8)",
-                  color: "var(--bio-color-titulo, #5c3d1e)",
+                  backgroundColor: COLORS.champagne,
+                  border: `1px solid ${COLORS.softBorder}`,
+                  color: COLORS.text.primary,
+                  fontFamily: STYLES.typography.sans,
                 }}
               />
             </div>
           </div>
           <button
             onClick={handleAplicarPrecio}
-            className="w-full rounded-lg py-2 text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-95"
-            style={{ backgroundColor: "var(--bio-color-boton, #5c3d1e)" }}
+            className="w-full rounded-lg py-3 text-xs font-medium text-white transition-all hover:opacity-90 active:scale-95"
+            style={{ backgroundColor: COLORS.mahogany, fontFamily: STYLES.typography.sans }}
           >
-            Aplicar
+            Apply
           </button>
         </div>
       </FilterSection>
 
-      <FilterSection title="Maestro Mezcalero" defaultOpen={false}>
+      <FilterSection title="Mezcal Master" defaultOpen={false}>
         <input
           type="text"
-          placeholder="Nombre del maestro..."
+          placeholder="Master name..."
           value={filtrosPendientes.maestro_mezcalero}
           onChange={(e) => handleFiltroChange("maestro_mezcalero", e.target.value)}
-          className="w-full rounded-lg py-2.5 px-3 text-sm outline-none"
+          className="w-full rounded-lg py-3 px-3 text-sm outline-none"
           style={{
-            backgroundColor: "var(--bio-chip-bg, rgba(92,61,30,0.06))",
-            border: "1px solid var(--bio-sidebar-border, #e8dcc8)",
-            color: "var(--bio-color-titulo, #5c3d1e)",
+            backgroundColor: COLORS.champagne,
+            border: `1px solid ${COLORS.softBorder}`,
+            color: COLORS.text.primary,
+            fontFamily: STYLES.typography.sans,
           }}
         />
       </FilterSection>
@@ -450,15 +476,14 @@ export default function ProductCatalogClient() {
   );
 
   return (
-    <div className="flex gap-6">
+    <div className="flex gap-8" style={{ backgroundColor: COLORS.cream }}>
       {/* ─── SIDEBAR (desktop only) ─── */}
-      <aside className="hidden lg:block w-64 shrink-0">
+      <aside className="hidden lg:block w-72 shrink-0 pt-8">
         <div
-          className="rounded-2xl p-5 sticky top-24"
+          className="rounded-xl p-6 sticky top-28"
           style={{
-            backgroundColor: "var(--bio-color-fondo, #faf8f4)",
-            border: "1px solid var(--bio-sidebar-border, #e8dcc8)",
-            boxShadow: "0 1px 6px rgba(92,61,30,0.06)",
+            backgroundColor: "white",
+            border: `1px solid ${COLORS.softBorder}`,
           }}
         >
           <SidebarContent />
@@ -466,21 +491,22 @@ export default function ProductCatalogClient() {
       </aside>
 
       {/* ─── MAIN CONTENT ─── */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 py-8 pr-8">
 
         {/* Mobile filter button */}
-        <div className="lg:hidden mb-4 flex gap-2">
+        <div className="lg:hidden mb-6 flex gap-2">
           <button
             onClick={() => setShowMobileFilters(true)}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all"
+            className="flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-all"
             style={{
-              backgroundColor: cantidadFiltros > 0 ? "var(--bio-color-boton, #5c3d1e)" : "var(--bio-chip-bg, rgba(92,61,30,0.07))",
-              color: cantidadFiltros > 0 ? "white" : "var(--bio-color-titulo, #5c3d1e)",
-              border: "1px solid var(--bio-sidebar-border, #e8dcc8)",
+              backgroundColor: cantidadFiltros > 0 ? COLORS.mahogany : "white",
+              color: cantidadFiltros > 0 ? "white" : COLORS.text.primary,
+              border: `1px solid ${COLORS.softBorder}`,
+              fontFamily: STYLES.typography.sans,
             }}
           >
             <SlidersHorizontal className="h-4 w-4" />
-            Filtros
+            Filters
             {cantidadFiltros > 0 && (
               <span
                 className="inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold"
@@ -494,14 +520,15 @@ export default function ProductCatalogClient() {
 
         {/* Active filter pills */}
         {(filtros.busqueda || cantidadFiltros > 0) && (
-          <div className="flex flex-wrap items-center gap-2 mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-7">
             {filtros.busqueda && (
               <span
-                className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
+                className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium"
                 style={{
-                  background: "var(--bio-chip-bg, rgba(92,61,30,0.07))",
-                  color: "var(--bio-color-titulo, #5c3d1e)",
-                  border: "1px solid var(--bio-sidebar-border, #e8dcc8)",
+                  background: COLORS.champagne,
+                  color: COLORS.text.primary,
+                  border: `1px solid ${COLORS.softBorder}`,
+                  fontFamily: STYLES.typography.sans,
                 }}
               >
                 "{filtros.busqueda}"
@@ -513,11 +540,12 @@ export default function ProductCatalogClient() {
             {filtrosActivos.map((campo) => (
               <span
                 key={campo}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
+                className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium"
                 style={{
-                  background: "var(--bio-chip-bg, rgba(92,61,30,0.07))",
-                  color: "var(--bio-color-titulo, #5c3d1e)",
-                  border: "1px solid var(--bio-sidebar-border, #e8dcc8)",
+                  background: COLORS.champagne,
+                  color: COLORS.text.primary,
+                  border: `1px solid ${COLORS.softBorder}`,
+                  fontFamily: STYLES.typography.sans,
                 }}
               >
                 {campo.startsWith("precio")
@@ -528,75 +556,69 @@ export default function ProductCatalogClient() {
                 </button>
               </span>
             ))}
-            <button
-              onClick={limpiarTodo}
-              className="text-xs underline underline-offset-2 hover:opacity-60"
-              style={{ color: "var(--bio-color-precio, #8b6914)" }}
-            >
-              Limpiar todo
-            </button>
           </div>
         )}
 
         {/* Header: Count + Sort */}
-        <div className="flex items-center justify-between mb-5">
-          <p className="text-sm font-medium" style={{ color: "var(--bio-color-precio, #8b6914)" }}>
-            {productosMostrados.length} producto{productosMostrados.length !== 1 ? "s" : ""} encontrado{productosMostrados.length !== 1 ? "s" : ""}
+        <div className="flex items-center justify-between mb-8">
+          <p className="text-sm font-medium" style={{ color: COLORS.text.secondary, fontFamily: STYLES.typography.sans }}>
+            {productosMostrados.length} product{productosMostrados.length !== 1 ? "s" : ""} found
           </p>
           <select
             value={ordenar}
             onChange={(e) => setOrdenar(e.target.value as typeof ordenar)}
-            className="text-sm rounded-xl border py-1.5 px-3 focus:outline-none"
+            className="text-sm rounded-lg border py-2 px-3 focus:outline-none"
             style={{
-              borderColor: "var(--bio-sidebar-border, #e8dcc8)",
-              backgroundColor: "var(--bio-color-fondo, #faf8f4)",
-              color: "var(--bio-color-titulo, #5c3d1e)",
+              borderColor: COLORS.softBorder,
+              backgroundColor: "white",
+              color: COLORS.text.primary,
+              fontFamily: STYLES.typography.sans,
             }}
           >
             <option value="popular">Popular</option>
-            <option value="precio_asc">Precio: menor a mayor</option>
-            <option value="precio_desc">Precio: mayor a menor</option>
-            <option value="nombre_az">Nombre A–Z</option>
+            <option value="precio_asc">Price: low to high</option>
+            <option value="precio_desc">Price: high to low</option>
+            <option value="nombre_az">Name A–Z</option>
           </select>
         </div>
 
         {/* Product Grid */}
         {loading ? (
           <div className="flex min-h-[400px] items-center justify-center">
-            <div className="flex flex-col items-center gap-3" style={{ color: "var(--bio-color-precio, #8b6914)" }}>
+            <div className="flex flex-col items-center gap-3" style={{ color: COLORS.text.secondary }}>
               <svg className="h-8 w-8 animate-spin" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
-              <span className="text-sm">Cargando productos...</span>
+              <span className="text-sm" style={{ fontFamily: STYLES.typography.sans }}>Loading products...</span>
             </div>
           </div>
         ) : error ? (
           <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
-            <p className="text-red-500">Error: {error}</p>
+            <p style={{ color: "#d32f2f" }}>Error: {error}</p>
             <button
               onClick={() => fetchProductos(filtros)}
               className="rounded-lg px-4 py-2 text-sm text-white hover:opacity-90"
-              style={{ backgroundColor: "var(--bio-color-boton, #5c3d1e)" }}
+              style={{ backgroundColor: COLORS.mahogany, fontFamily: STYLES.typography.sans }}
             >
-              Reintentar
+              Retry
             </button>
           </div>
         ) : productosMostrados.length === 0 ? (
-          <div className="flex min-h-[400px] flex-col items-center justify-center gap-3 text-gray-500">
-            <p>No hay productos que coincidan con los filtros.</p>
+          <div className="flex min-h-[400px] flex-col items-center justify-center gap-3 text-center">
+            <p style={{ color: COLORS.text.secondary, fontFamily: STYLES.typography.sans }}>No products match your filters.</p>
             {(cantidadFiltros > 0 || filtros.busqueda) && (
               <button
                 onClick={limpiarTodo}
                 className="text-sm font-medium hover:opacity-90"
-                style={{ color: "var(--bio-color-boton, #5c3d1e)" }}
+                style={{ color: COLORS.mahogany, fontFamily: STYLES.typography.sans }}
               >
-                Limpiar filtros
+                Clear filters
               </button>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {productosMostrados.map((producto) => {
               const imagenUrl = producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
               const tipoMezcal = producto.lotes?.datos_api?.tipo_mezcal ?? "";
@@ -607,16 +629,23 @@ export default function ProductCatalogClient() {
               return (
                 <div
                   key={String(producto.id_producto)}
-                  className="group rounded-xl overflow-hidden border hover:shadow-md transition-shadow cursor-pointer"
+                  className="group rounded-xl overflow-hidden border transition-all duration-300 hover:border-opacity-100 cursor-pointer flex flex-col h-full"
                   style={{
-                    borderColor: "var(--bio-sidebar-border, #e8dcc8)",
-                    backgroundColor: "var(--bio-color-fondo, #faf8f4)",
+                    borderColor: COLORS.softBorder,
+                    backgroundColor: "white",
+                    borderWidth: "1px",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px rgba(92, 61, 30, 0.08)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.boxShadow = "none";
                   }}
                 >
                   {/* ─── IMAGEN ─── */}
                   <div
-                    className="relative overflow-hidden bg-gray-50 dark:bg-slate-800"
-                    style={{ aspectRatio: "1 / 1" }}
+                    className="relative overflow-hidden"
+                    style={{ aspectRatio: "1 / 1", backgroundColor: COLORS.champagne }}
                     onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
                   >
                     {imagenUrl ? (
@@ -625,21 +654,22 @@ export default function ProductCatalogClient() {
                         alt={producto.nombre}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+                        className="object-contain p-5 group-hover:scale-110 transition-transform duration-500"
                       />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-gray-400 text-sm">
-                        Sin imagen
+                      <div className="flex h-full items-center justify-center text-sm" style={{ color: COLORS.text.muted }}>
+                        No image
                       </div>
                     )}
 
                     {tipoMezcal && (
                       <span
-                        className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-semibold"
+                        className="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-medium"
                         style={{
-                          backgroundColor: "var(--bio-chip-bg, rgba(92,61,30,0.07))",
-                          color: "var(--bio-color-precio, #8b6914)",
-                          border: "1px solid var(--bio-sidebar-border, #e8dcc8)",
+                          backgroundColor: COLORS.champagne,
+                          color: COLORS.accent,
+                          border: `1px solid ${COLORS.softBorder}`,
+                          fontFamily: STYLES.typography.sans,
                         }}
                       >
                         {tipoMezcal}
@@ -647,10 +677,10 @@ export default function ProductCatalogClient() {
                     )}
 
                     <button
-                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110"
+                      className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full shadow-sm transition-all hover:scale-110"
                       style={{
-                        backgroundColor: isInWishlist(producto.id_producto) ? "#fdf7ee" : "rgba(250,248,244,0.9)",
-                        color: isInWishlist(producto.id_producto) ? "#b07850" : "#c8a97a",
+                        backgroundColor: isInWishlist(producto.id_producto) ? COLORS.champagne : "white",
+                        color: isInWishlist(producto.id_producto) ? COLORS.accent : COLORS.taupe,
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -658,47 +688,47 @@ export default function ProductCatalogClient() {
                       }}
                     >
                       <Heart
-                        className="h-3.5 w-3.5"
+                        className="h-4 w-4"
                         fill={isInWishlist(producto.id_producto) ? "currentColor" : "none"}
                       />
                     </button>
                   </div>
 
                   {/* ─── INFO ─── */}
-                  <div className="p-4">
+                  <div className="p-5 flex-1 flex flex-col">
                     {/* Maguey / subtítulo */}
                     {subtitulo && (
-                      <p className="text-xs uppercase tracking-wide mb-0.5" style={{ color: "#b07850" }}>
+                      <p className="text-xs uppercase tracking-wider mb-2" style={{ color: COLORS.accent, fontFamily: STYLES.typography.sans }}>
                         {subtitulo}
                       </p>
                     )}
 
                     {/* ─── PRODUCTOR Y TIENDA ─── */}
                     {(nombreProductor || nombreTienda) && (
-                      <div className="flex flex-col gap-0.5 mb-2">
+                      <div className="flex flex-col gap-1.5 mb-3">
                         {nombreProductor && (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             <User
-                              className="h-3 w-3 shrink-0"
-                              style={{ color: "var(--bio-color-precio, #8b6914)", opacity: 0.7 }}
+                              className="h-3.5 w-3.5 shrink-0"
+                              style={{ color: COLORS.text.secondary, opacity: 0.75 }}
                             />
                             <span
                               className="text-xs truncate"
-                              style={{ color: "var(--bio-color-precio, #8b6914)", opacity: 0.85 }}
+                              style={{ color: COLORS.text.secondary, fontFamily: STYLES.typography.sans }}
                             >
                               {nombreProductor}
                             </span>
                           </div>
                         )}
                         {nombreTienda && (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             <Store
-                              className="h-3 w-3 shrink-0"
-                              style={{ color: "var(--bio-color-titulo, #5c3d1e)", opacity: 0.55 }}
+                              className="h-3.5 w-3.5 shrink-0"
+                              style={{ color: COLORS.text.muted, opacity: 0.7 }}
                             />
                             <span
                               className="text-xs truncate"
-                              style={{ color: "var(--bio-color-titulo, #5c3d1e)", opacity: 0.65 }}
+                              style={{ color: COLORS.text.secondary, fontFamily: STYLES.typography.sans }}
                             >
                               {nombreTienda}
                             </span>
@@ -709,21 +739,20 @@ export default function ProductCatalogClient() {
 
                     {/* Nombre del producto */}
                     <h3
-                      className="font-semibold text-sm line-clamp-2 mb-2 leading-snug cursor-pointer hover:opacity-80"
-
-                      style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+                      className="font-medium text-sm line-clamp-2 mb-3 leading-snug cursor-pointer hover:opacity-80 flex-1"
+                      style={{ fontFamily: STYLES.typography.serif, color: COLORS.text.primary }}
                       onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
                     >
                       {producto.nombre}
                     </h3>
 
                     {/* Precio */}
-                    <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center justify-between mb-4 pt-2" style={{ borderTop: `1px solid ${COLORS.softBorder}` }}>
                       <span
-                        className="font-bold text-base"
+                        className="font-semibold text-base"
                         style={{
-                          fontFamily: "var(--bio-fuente-titulo, Georgia, serif)",
-                          color: "var(--bio-color-precio, #8b6914)",
+                          fontFamily: STYLES.typography.sans,
+                          color: COLORS.accent,
                         }}
                       >
                         ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })} MXN
@@ -732,12 +761,13 @@ export default function ProductCatalogClient() {
 
                     {/* Botón agregar al carrito */}
                     <button
-                      className="w-full mt-3 flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-medium text-white transition-all hover:opacity-90 active:scale-95"
+                      className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-medium text-white transition-all hover:opacity-90 active:scale-95"
                       style={{
                         backgroundColor:
                           agregadoId === producto.id_producto
-                            ? "var(--bio-color-boton-hover, #3d2510)"
-                            : "var(--bio-color-boton, #5c3d1e)",
+                            ? COLORS.darkChocolate
+                            : COLORS.mahogany,
+                        fontFamily: STYLES.typography.sans,
                       }}
                       disabled={agregadoId === producto.id_producto}
                       onClick={(e) => {
@@ -754,8 +784,8 @@ export default function ProductCatalogClient() {
                         setTimeout(() => setAgregadoId(null), 1500);
                       }}
                     >
-                      <ShoppingCart className="h-3.5 w-3.5" />
-                      {agregadoId === producto.id_producto ? "¡Agregado!" : "Agregar al carrito"}
+                      <ShoppingCart className="h-4 w-4" />
+                      {agregadoId === producto.id_producto ? "Added!" : "Add to cart"}
                     </button>
                   </div>
                 </div>
@@ -769,31 +799,31 @@ export default function ProductCatalogClient() {
       {showMobileFilters && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/40"
+            className="fixed inset-0 z-40 bg-black/25"
             onClick={() => setShowMobileFilters(false)}
           />
           <div
             className="fixed inset-y-0 left-0 z-50 w-80 overflow-y-auto shadow-xl"
-            style={{ backgroundColor: "var(--bio-color-fondo, #faf8f4)" }}
+            style={{ backgroundColor: "white" }}
           >
             <div
-              className="flex items-center justify-between p-4 border-b"
-              style={{ borderColor: "var(--bio-sidebar-border, #e8dcc8)" }}
+              className="flex items-center justify-between p-5 border-b"
+              style={{ borderColor: COLORS.softBorder }}
             >
               <span
-                className="font-semibold"
+                className="font-medium text-lg"
                 style={{
-                  fontFamily: "var(--bio-fuente-titulo, Georgia, serif)",
-                  color: "var(--bio-color-titulo, #5c3d1e)",
+                  fontFamily: STYLES.typography.serif,
+                  color: COLORS.text.primary,
                 }}
               >
-                Filtros
+                Refine
               </span>
               <button onClick={() => setShowMobileFilters(false)}>
-                <X className="h-5 w-5" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }} />
+                <X className="h-5 w-5" style={{ color: COLORS.text.secondary }} />
               </button>
             </div>
-            <div className="p-4">
+            <div className="p-5">
               <SidebarContent />
             </div>
           </div>
