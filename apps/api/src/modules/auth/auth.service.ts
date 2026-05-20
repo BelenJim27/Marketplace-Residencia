@@ -4,6 +4,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual, scrypt } from 'cr
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 import {
@@ -57,6 +58,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly notificaciones: NotificacionesService,
   ) {}
 
   async register(dto: RegisterAuthDto): Promise<AuthResponseDto> {
@@ -99,6 +101,13 @@ export class AuthService {
       } catch (emailError) {
         console.error('Error sending welcome email:', emailError);
       }
+
+      this.notificaciones.notifyAdmins(
+        'nuevo_usuario',
+        'Nuevo usuario registrado',
+        `${user.nombre} (${user.email}) se ha registrado en la plataforma.`,
+        '/Administrador/usuarios',
+      ).catch(() => {});
 
       await this.logAuthEvent('register', user.id_usuario, { email: user.email });
 

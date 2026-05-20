@@ -133,6 +133,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user.id_productor != null && user.id_productor !== 0) return;
     if (productorResolved) return;
 
+    // Los admins no necesitan resolver perfil de productor
+    const isAdminRole = user?.roles?.some((r) => ["ADMIN", "administrador", "admin"].includes(r));
+    if (isAdminRole) {
+      setProductorResolved(true);
+      return;
+    }
+
     let cancelled = false;
 
     const resolveProductor = async () => {

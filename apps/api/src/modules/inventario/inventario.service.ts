@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
+import { NotificacionesService } from "../notificaciones/notificaciones.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
 import {
   CreateInventarioDto,
@@ -10,7 +11,10 @@ import {
 
 @Injectable()
 export class InventarioService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificaciones: NotificacionesService,
+  ) {}
 
   async listInventario() {
     const inventarios = await this.prisma.inventario.findMany({
@@ -101,16 +105,56 @@ export class InventarioService {
     );
   }
   async updateInventario(id: string, dto: UpdateInventarioDto) {
-    return serializeBigInts(
-      await this.prisma.inventario.update({
-        where: { id_inventario: toBigIntId(id) },
-        data: {
-          id_producto: dto.id_producto,
-          stock: dto.stock,
-          stock_minimo: dto.stock_minimo,
+    const current = await this.prisma.inventario.findUnique({
+      where: { id_inventario: toBigIntId(id) },
+    });
+    if (!current) throw new NotFoundException("Inventario no encontrado");
+
+    const updated = await this.prisma.inventario.update({
+      where: { id_inventario: toBigIntId(id) },
+      data: {
+        id_producto: dto.id_producto,
+        stock: dto.stock,
+        stock_minimo: dto.stock_minimo,
+      },
+    });
+
+    const nuevoStock = dto.stock ?? current.stock;
+    const minimo = dto.stock_minimo ?? current.stock_minimo;
+
+    if (dto.stock !== undefined && nuevoStock <= minimo) {
+      this.notifyProductorStockBajo(current.id_producto, nuevoStock).catch(() => {});
+    }
+
+    return serializeBigInts(updated);
+  }
+
+  private async notifyProductorStockBajo(id_producto: bigint, stock: number) {
+    const producto = await this.prisma.productos.findUnique({
+      where: { id_producto },
+      select: {
+        nombre: true,
+        tiendas: {
+          select: {
+            productores: { select: { id_usuario: true } },
+          },
         },
-      }),
-    );
+      },
+    });
+    if (!producto?.tiendas?.productores?.id_usuario) return;
+
+    const id_usuario = producto.tiendas.productores.id_usuario;
+    const mensaje = stock === 0
+      ? `Tu producto "${producto.nombre}" se quedó sin existencias.`
+      : `Tu producto "${producto.nombre}" tiene stock bajo (${stock} unidades restantes).`;
+
+    await this.notificaciones.create({
+      id_usuario,
+      tipo: stock === 0 ? 'sin_existencias' : 'stock_bajo',
+      titulo: stock === 0 ? 'Sin existencias' : 'Stock bajo',
+      cuerpo: mensaje,
+      url_accion: '/dashboard/productor/productos',
+    });
   }
   async removeInventario(id: string) {
     await this.prisma.inventario.delete({

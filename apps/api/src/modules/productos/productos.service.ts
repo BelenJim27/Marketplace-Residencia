@@ -75,6 +75,7 @@ function mapProductoResponse<
       ...item,
       imagen_url: item.imagen_principal_url ?? null,
       stock: getProductoStock(item.inventario),
+      stock_minimo: item.inventario?.[0]?.stock_minimo ?? 0,
       nombre_productor:
         buildNombreCompleto(item.lotes?.productores?.usuarios) ??
         buildNombreCompleto(item.tiendas?.productores?.usuarios) ??
@@ -91,6 +92,7 @@ function mapProductoResponse<
     ...data,
     imagen_url: data.imagen_principal_url ?? null,
     stock: getProductoStock(data.inventario),
+    stock_minimo: data.inventario?.[0]?.stock_minimo ?? 0,
     nombre_productor:
       buildNombreCompleto(data.lotes?.productores?.usuarios) ??
       buildNombreCompleto(data.tiendas?.productores?.usuarios) ??
@@ -482,6 +484,7 @@ const productoInclude = {
   inventario: {
     select: {
       stock: true,
+      stock_minimo: true,
     },
   },
   producto_imagenes: {

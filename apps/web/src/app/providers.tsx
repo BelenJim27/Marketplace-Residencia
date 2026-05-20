@@ -8,6 +8,7 @@ import { ConfigProvider } from "@/context/ConfigContext";
 import { LocaleProvider } from "@/context/LocaleContext"; // ← agrega este import
 import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
+import { Toaster } from "sonner";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -20,6 +21,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 <SidebarProvider>
                   <LocaleProvider> {/* ← agrega este */}
                     {children}
+                    <Toaster position="top-right" richColors closeButton />
                   </LocaleProvider> {/* ← y este */}
                 </SidebarProvider>
               </ConfigProvider>

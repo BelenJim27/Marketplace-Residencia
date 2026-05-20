@@ -9,10 +9,12 @@ import { MenuIcon, CloseIcon } from "./icons";
 import { Notification } from "./notification";
 import { ThemeToggleSwitch } from "./theme-toggle";
 import { UserInfo } from "./user-info";
+import { useNotificationPoller } from "@/hooks/useNotificationPoller";
 
 export function Header() {
   const { toggleSidebar, isOpen, isMobile } = useSidebarContext();
   const { isAdmin, isProductor, isAuthenticated } = useAuth();
+  useNotificationPoller();
 
   const isClient = isAuthenticated && !isAdmin && !isProductor;
   const showLogo = isClient;

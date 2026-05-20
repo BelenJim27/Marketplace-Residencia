@@ -306,6 +306,19 @@ function DireccionStep({
   gpsLoading,
   gpsError,
 }: any) {
+  const [formErrors, setFormErrors] = useState<{ telefono?: string; cp?: string }>({});
+
+  const handleGuardar = () => {
+    const errors: { telefono?: string; cp?: string } = {};
+    const tel = (nuevaDireccion.telefono ?? "").replace(/\D/g, "");
+    if (tel && tel.length !== 10) errors.telefono = "El teléfono debe tener 10 dígitos";
+    const cp = nuevaDireccion.codigo_postal ?? "";
+    if (!nuevaDireccion.es_internacional && cp && !/^\d{5}$/.test(cp)) errors.cp = "El código postal debe tener 5 dígitos";
+    if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
+    setFormErrors({});
+    guardarNuevaDireccion();
+  };
+
   return (
     <div>
       <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Dirección de envío</h2>
@@ -398,10 +411,16 @@ function DireccionStep({
             <input
               type="tel"
               value={nuevaDireccion.telefono || ""}
-              onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, telefono: e.target.value }))}
-              placeholder="Ej. +52 951 000 0000"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                setNuevaDireccion((p: any) => ({ ...p, telefono: val }));
+                setFormErrors((prev) => ({ ...prev, telefono: undefined }));
+              }}
+              placeholder="10 dígitos, ej. 9511234567"
+              maxLength={10}
+              className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.telefono ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
             />
+            {formErrors.telefono && <p className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
           </div>
 
           <div>
@@ -432,7 +451,24 @@ function DireccionStep({
 
           <Field label="Ciudad *" value={nuevaDireccion.ciudad || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, ciudad: v }))} placeholder="Ej. Oaxaca de Juárez" />
           <Field label="Estado / Provincia *" value={nuevaDireccion.estado || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, estado: v }))} placeholder="Ej. Oaxaca" />
-          <Field label="Código Postal *" value={nuevaDireccion.codigo_postal || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, codigo_postal: v }))} placeholder="Ej. 68000" />
+          <div>
+            <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Código Postal *</label>
+            <input
+              type="text"
+              value={nuevaDireccion.codigo_postal || ""}
+              onChange={(e) => {
+                const val = nuevaDireccion.es_internacional
+                  ? e.target.value
+                  : e.target.value.replace(/\D/g, "").slice(0, 5);
+                setNuevaDireccion((p: any) => ({ ...p, codigo_postal: val }));
+                setFormErrors((prev) => ({ ...prev, cp: undefined }));
+              }}
+              placeholder={nuevaDireccion.es_internacional ? "Código postal" : "5 dígitos, ej. 68000"}
+              maxLength={nuevaDireccion.es_internacional ? 20 : 5}
+              className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.cp ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
+            />
+            {formErrors.cp && <p className="mt-1 text-xs text-red-500">{formErrors.cp}</p>}
+          </div>
           <Field label="Referencia" value={nuevaDireccion.referencia || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, referencia: v }))} placeholder="Ej. Casa color azul, frente al parque" />
 
           <div className="grid grid-cols-2 gap-4">
@@ -465,7 +501,7 @@ function DireccionStep({
           </div>
           <div className="flex gap-3">
             <button
-              onClick={guardarNuevaDireccion}
+              onClick={handleGuardar}
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
             >
               Guardar dirección

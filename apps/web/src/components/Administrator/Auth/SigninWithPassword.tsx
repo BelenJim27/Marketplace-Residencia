@@ -1,6 +1,6 @@
 "use client";
 
-import { EmailIcon, PasswordIcon } from "@/assets/icons";
+import { EmailIcon } from "@/assets/icons";
 import Link from "next/link";
 import React, { useState } from "react";
 import InputGroup from "../../FormElements/InputGroup";
@@ -8,6 +8,7 @@ import { Checkbox } from "../../FormElements/checkbox";
 import { api } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function SigninWithPassword({ isVenderFlow = false }: { isVenderFlow?: boolean }) {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setData({
@@ -104,16 +106,28 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
         icon={<EmailIcon />}
       />
 
-      <InputGroup
-        type="password"
-        label="Contraseña"
-        className="mb-5 [&_input]:py-[15px]"
-        placeholder="Ingresa tu contraseña"
-        name="password"
-        handleChange={handleChange}
-        value={data.password}
-        icon={<PasswordIcon />}
-      />
+      <div className="mb-5">
+        <label className="text-body-sm font-medium text-dark dark:text-white">
+          Contraseña
+        </label>
+        <div className="relative mt-3">
+          <input
+            type={showPassword ? "text" : "password"}
+            name="password"
+            placeholder="Ingresa tu contraseña"
+            value={data.password}
+            onChange={handleChange}
+            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5.5 py-[15px] pr-12 text-dark outline-none transition focus:border-primary placeholder:text-dark-6 dark:border-dark-3 dark:bg-dark-2 dark:text-white dark:focus:border-primary"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+      </div>
 
       <div className="mb-6 flex items-center justify-between gap-2 py-2 font-medium">
         <Checkbox

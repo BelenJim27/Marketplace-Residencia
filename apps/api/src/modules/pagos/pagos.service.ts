@@ -206,6 +206,32 @@ export class PagosService {
           console.error('[pagos] sendOrderConfirmationEmail failed:', err?.message);
         }
       }
+
+      // Notificar a cada productor involucrado en el pedido
+      try {
+        const pedidoProductores = await this.prisma.pedido_productor.findMany({
+          where: { id_pedido: pago.id_pedido },
+          include: { productores: { select: { id_usuario: true } } },
+        });
+        await Promise.all(
+          pedidoProductores
+            .filter((pp) => pp.productores?.id_usuario)
+            .map((pp) =>
+              this.prisma.notificaciones.create({
+                data: {
+                  id_usuario: pp.productores!.id_usuario,
+                  tipo: 'pedido_pagado',
+                  titulo: 'Nuevo pedido recibido',
+                  cuerpo: `Tienes un nuevo pedido #${pago.id_pedido} confirmado. Prepara el envío de tus productos.`,
+                  url_accion: '/dashboard/productor/pedidos',
+                  leido: false,
+                },
+              })
+            )
+        );
+      } catch (err: any) {
+        this.logger.error('[pagos] Failed to create pedido_pagado notifications:', err?.message);
+      }
     } else if (estado === 'fallido') {
       await this.prisma.pedidos.update({
         where: { id_pedido: pago.id_pedido },

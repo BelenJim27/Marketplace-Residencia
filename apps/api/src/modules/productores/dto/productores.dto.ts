@@ -40,6 +40,8 @@ export class SolicitarProductorDto {
   @IsOptional() @ValidateNested() @Type(() => DireccionFiscalDto) direccion_fiscal?: DireccionFiscalDto;
   @IsOptional() @ValidateNested() @Type(() => DireccionProduccionDto) direccion_produccion?: DireccionProduccionDto;
   @IsOptional() @IsString() datos_bancarios?: string;
+  @IsOptional() @IsString() @MaxLength(150) asociacion?: string;
+  @IsOptional() @IsString() @MaxLength(150) nombre_marca?: string;
   @IsOptional()
   @IsArray()
   @IsInt({ each: true })

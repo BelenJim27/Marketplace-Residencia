@@ -85,8 +85,12 @@ export default function ClientePerfilPage() {
     nombre: "", apellido_paterno: "", apellido_materno: "",
     email: "", telefono: "",
   });
+  const [telefonoError, setTelefonoError] = useState<string | null>(null);
 
   const [pwForm, setPwForm] = useState({ actual: "", nueva: "", confirmar: "" });
+  const [showPwActual, setShowPwActual] = useState(false);
+  const [showPwNueva, setShowPwNueva] = useState(false);
+  const [showPwConfirmar, setShowPwConfirmar] = useState(false);
   const [prefs, setPrefs] = useState({ idioma: "es", notificaciones: true, moneda: "MXN" });
 
   const cargarPerfil = useCallback(async () => {
@@ -130,8 +134,18 @@ export default function ClientePerfilPage() {
     setTimeout(() => setMsg(null), 3500);
   };
 
+  const validateTelefono = (tel: string) => {
+    if (!tel) return null;
+    const digits = tel.replace(/\D/g, "");
+    if (digits.length !== 10) return "El teléfono debe tener 10 dígitos";
+    return null;
+  };
+
   const handleSavePerfil = async () => {
     if (!user) return;
+    const telErr = validateTelefono(form.telefono);
+    if (telErr) { setTelefonoError(telErr); return; }
+    setTelefonoError(null);
     setSavingProfile(true);
     try {
       const token = getCookie("token");
@@ -271,18 +285,37 @@ export default function ClientePerfilPage() {
                   { label: t("Nombre"), key: "nombre" as const, placeholder: "María" },
                   { label: t("Apellido Paterno"), key: "apellido_paterno" as const, placeholder: "García" },
                   { label: t("Apellido Materno"), key: "apellido_materno" as const, placeholder: "López" },
-                  { label: t("Teléfono"), key: "telefono" as const, placeholder: "+52..." },
                 ].map((item) => (
                   <div key={item.key}>
                     <label style={{ fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" }}>{item.label}</label>
-                    <input 
-                      value={form[item.key]} 
-                      onChange={(e) => setForm({ ...form, [item.key]: e.target.value })} 
+                    <input
+                      value={form[item.key]}
+                      onChange={(e) => setForm({ ...form, [item.key]: e.target.value })}
                       style={inputStyle}
                       placeholder={item.placeholder}
                     />
                   </div>
                 ))}
+                <div>
+                  <label style={{ fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" }}>{t("Teléfono")}</label>
+                  <input
+                    type="tel"
+                    value={form.telefono}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^\d]/g, "").slice(0, 10);
+                      setForm({ ...form, telefono: val });
+                      setTelefonoError(null);
+                    }}
+                    style={{ ...inputStyle, borderColor: telefonoError ? "#f87171" : undefined }}
+                    placeholder="10 dígitos, ej. 9511234567"
+                    maxLength={10}
+                  />
+                  {telefonoError && (
+                    <p style={{ fontSize: "11px", color: "#ef4444", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                      <AlertCircle size={11} /> {telefonoError}
+                    </p>
+                  )}
+                </div>
                 <div style={{gridColumn: "span 2"}}>
                     <label style={{ fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" }}>{t("Correo electrónico")}</label>
                     <input value={form.email} disabled style={{...inputStyle, opacity: 0.6, cursor: "not-allowed"}} />
@@ -302,9 +335,42 @@ export default function ClientePerfilPage() {
               <h2 style={{ fontSize: "18px", color: colors.textMain, marginBottom: "10px" }}>{t("Seguridad")}</h2>
               <p style={{fontSize: "14px", color: colors.textSub, marginBottom: "24px"}}>{t("Tu nueva contraseña debe tener al menos 8 caracteres")}</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "400px" }}>
-                <input type="password" placeholder={t("Contraseña actual")} style={inputStyle} />
-                <input type="password" placeholder={t("Nueva contraseña")} value={pwForm.nueva} onChange={(e) => setPwForm({...pwForm, nueva: e.target.value})} style={inputStyle} />
-                <input type="password" placeholder={t("Confirmar")} value={pwForm.confirmar} onChange={(e) => setPwForm({...pwForm, confirmar: e.target.value})} style={inputStyle} />
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPwActual ? "text" : "password"}
+                    placeholder={t("Contraseña actual")}
+                    value={pwForm.actual}
+                    onChange={(e) => setPwForm({...pwForm, actual: e.target.value})}
+                    style={{ ...inputStyle, paddingRight: "44px" }}
+                  />
+                  <button type="button" onClick={() => setShowPwActual(!showPwActual)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: colors.textSub, display: "flex", alignItems: "center" }}>
+                    {showPwActual ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPwNueva ? "text" : "password"}
+                    placeholder={t("Nueva contraseña")}
+                    value={pwForm.nueva}
+                    onChange={(e) => setPwForm({...pwForm, nueva: e.target.value})}
+                    style={{ ...inputStyle, paddingRight: "44px" }}
+                  />
+                  <button type="button" onClick={() => setShowPwNueva(!showPwNueva)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: colors.textSub, display: "flex", alignItems: "center" }}>
+                    {showPwNueva ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPwConfirmar ? "text" : "password"}
+                    placeholder={t("Confirmar")}
+                    value={pwForm.confirmar}
+                    onChange={(e) => setPwForm({...pwForm, confirmar: e.target.value})}
+                    style={{ ...inputStyle, paddingRight: "44px" }}
+                  />
+                  <button type="button" onClick={() => setShowPwConfirmar(!showPwConfirmar)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: colors.textSub, display: "flex", alignItems: "center" }}>
+                    {showPwConfirmar ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <div style={{display: "flex", justifyContent: "flex-end", marginTop: "24px"}}>
                 <button onClick={handleSavePassword} disabled={savingPassword} style={{ background: savingPassword ? "#A7C5B1" : "#1A5D3B", color: "#fff", padding: "10px 24px", borderRadius: "8px", border: "none", cursor: savingPassword ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "14px", display: "inline-flex", gap: "8px", alignItems: "center" }}>

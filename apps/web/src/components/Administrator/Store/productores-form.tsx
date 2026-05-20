@@ -18,6 +18,8 @@ export type ProductorAdmin = {
   otras_caracteristicas?: string;
   foto_url?: string;
   tienda?: string | null;
+  asociacion?: string | null;
+  marca?: string | null;
 };
 
 type ProductorFormProps = {

@@ -25,10 +25,12 @@ export function SignUpForm() {
     apellido_paterno: "",
     apellido_materno: "",
     email: "",
+    telefono: "",
     password: "",
     confirmarPassword: "",
     wantToSell: wantToSellDefault,
   });
+  const [telefonoError, setTelefonoError] = useState<string | null>(null);
 
   // --- Validaciones de Password ---
   const passwordValidations = useMemo(() => {
@@ -69,6 +71,12 @@ export function SignUpForm() {
     e.preventDefault();
     setError(null);
 
+    if (formData.telefono && formData.telefono.replace(/\D/g, "").length !== 10) {
+      setTelefonoError("El teléfono debe tener 10 dígitos");
+      return;
+    }
+    setTelefonoError(null);
+
     if (!allPasswordValid) {
       setError("La contraseña no cumple con los requisitos");
       return;
@@ -88,6 +96,7 @@ export function SignUpForm() {
         nombre: formData.nombre,
         apellido_paterno: formData.apellido_paterno,
         apellido_materno: formData.apellido_materno,
+        ...(formData.telefono ? { telefono: formData.telefono } : {}),
       })) as any;
 
       const usuario = result.user ?? {};
@@ -209,6 +218,30 @@ export function SignUpForm() {
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           />
+        </div>
+
+        {/* TELÉFONO */}
+        <div>
+          <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
+            Teléfono <span className="text-gray-400 font-normal">(opcional)</span>
+          </label>
+          <input
+            type="tel"
+            className={`w-full rounded-lg border bg-white p-3 outline-none dark:bg-gray-dark ${
+              telefonoError ? "border-red-400" : "border-green-200 focus:border-green-400"
+            }`}
+            placeholder="10 dígitos, ej. 9511234567"
+            value={formData.telefono}
+            maxLength={10}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+              setFormData({ ...formData, telefono: val });
+              setTelefonoError(null);
+            }}
+          />
+          {telefonoError && (
+            <p className="mt-1 text-[11px] text-red-500">{telefonoError}</p>
+          )}
         </div>
 
         {/* CONTRASEÑA */}

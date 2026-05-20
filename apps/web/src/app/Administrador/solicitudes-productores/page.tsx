@@ -23,6 +23,7 @@ interface SolicitudProductor {
   motivo_rechazo?: string;
   solicitado_en: string;
   revisado_en?: string;
+  asociacion?: string;
   usuarios: {
     nombre: string;
     email: string;
@@ -224,6 +225,15 @@ export default function SolicitudesProductoresPage() {
                         {getStatusBadge(solicitud.estado)}
                       </div>
 
+                      {/* Asociación en la tarjeta */}
+                      {solicitud.asociacion && (
+                        <div className="mb-2">
+                          <span className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                            🏛 {solicitud.asociacion}
+                          </span>
+                        </div>
+                      )}
+
                       {/* Categorías en la tarjeta */}
                       {solicitud.categorias && solicitud.categorias.length > 0 && (
                         <div className="mb-4 flex flex-wrap gap-1">
@@ -357,6 +367,21 @@ export default function SolicitudesProductoresPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Asociación */}
+              {selectedSolicitud.asociacion && (
+                <div>
+                  <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Asociación
+                  </h3>
+                  <div className="rounded-lg bg-gray-1 p-4 dark:bg-dark-2">
+                    <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                      🏛 {selectedSolicitud.asociacion}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Categorías a Vender */}
               <div>

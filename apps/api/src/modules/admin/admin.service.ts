@@ -123,19 +123,38 @@ export class AdminService {
     );
   }
 
-  async getAllProductores(estado?: string) {
+  async getAllProductores(filters?: {
+    estado?: string;
+    asociacion?: string;
+    marca?: string;
+    id_categoria?: number;
+  }) {
     const where: any = { eliminado_en: null };
-    if (estado) {
-      where.estado = estado;
+    if (filters?.estado) where.estado = filters.estado;
+    if (filters?.asociacion) where.asociacion = filters.asociacion;
+    if (filters?.marca) {
+      where.tiendas = { some: { nombre: { contains: filters.marca, mode: 'insensitive' }, eliminado_en: null } };
     }
-    return this.prisma.productores.findMany({
+    if (filters?.id_categoria) {
+      where.productor_categoria = { some: { id_categoria: filters.id_categoria } };
+    }
+
+    const rows = await this.prisma.productores.findMany({
       where,
       include: {
-        usuarios: { select: { id_usuario: true, nombre: true, email: true, telefono: true } },
+        usuarios: { select: { id_usuario: true, nombre: true, email: true, telefono: true, apellido_paterno: true, apellido_materno: true } },
         regiones: true,
+        tiendas: { where: { eliminado_en: null }, select: { id_tienda: true, nombre: true, status: true } },
+        productor_categoria: { include: { categorias: { select: { id_categoria: true, nombre: true } } } },
       },
       orderBy: { solicitado_en: 'desc' },
     });
+
+    return serializeBigInts(rows.map((r) => ({
+      ...r,
+      categorias: r.productor_categoria.map((pc) => pc.categorias),
+      marca: r.tiendas?.[0]?.nombre ?? null,
+    })));
   }
 
   async revisarSolicitud(id_productor: number, dto: RevisarSolicitudDto, revisor_id: string) {
@@ -172,10 +191,11 @@ export class AdminService {
       });
 
       if (!existingTienda) {
+        const nombreTienda = productor.nombre_marca || `${usuario.nombre}'s Store`;
         await this.prisma.tiendas.create({
           data: {
             id_productor,
-            nombre: `${usuario.nombre}'s Store`,
+            nombre: nombreTienda,
             descripcion: `Tienda de ${usuario.nombre}`,
             pais_operacion: 'MX',
             status: 'activa',

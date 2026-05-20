@@ -38,112 +38,32 @@ function useWindowWidth(): number {
 
 // ─── COLORES DE TEXTO según el modo ──────────────────────────────────────────
 const TEXT_COLORS = {
-  light: { dark: "#0F1A12", mid: "#3A4D3E", italic: "#2a0f02", annotation: "#3d1800" },
+  light: { dark: "#1F3A2E", mid: "#3D6B3F", italic: "#2a0f02", annotation: "#3d1800" },
   dark:  { dark: "#FFFFFF", mid: "#D8E8D8", italic: "#F0C84A", annotation: "#F0C84A" },
 };
 
+const PALETTE = {
+  light: {
+    bgBase:      "#F4F0E3",
+    bgAccent:    "#2E4A33",
+    heading:     "#1F3A2E",
+    body:        "rgba(31,58,46,0.8)",
+    pullQuote:   "#3D6B3F",
+    skeletonBg:  "rgba(31,58,46,0.08)",
+    ctaBtnBg:    "#1F3A2E",
+  },
+  dark: {
+    bgBase:      "#0D1A10",
+    bgAccent:    "#162218",
+    heading:     "#F4F0E3",
+    body:        "rgba(244,240,227,0.82)",
+    pullQuote:   "#A8C26B",
+    skeletonBg:  "rgba(244,240,227,0.08)",
+    ctaBtnBg:    "#2E4A33",
+  },
+};
+
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
-interface Producto {
-  nombre: string;
-  subtitulo: string;
-  imagen: string;
-  notas: { vista: string; nariz: string; boca: string };
-  anotaciones: { texto: string; posicion: string }[];
-}
-
-interface Slide {
-  id: number;
-  imagen: string;
-  circulos: { imagen: string; etiqueta?: string }[];
-}
-
-// ─── DATOS FALLBACK ────────────────────────────────────────────────────────────
-const PRODUCTOS_FALLBACK: Producto[] = [
-  {
-    nombre: "Tobalá",
-    subtitulo: "La expresión más pura de la naturaleza, custodiada por manos expertas que entienden el tiempo del agave.",
-    imagen: "/fotos/28.1.png",
-    notas: {
-      vista: "Cristalino y brillante",
-      nariz: "Herbal, notas de tierra y frutas dulces.",
-      boca: "Cuerpo sedoso, ahumado sutil y final cítrico.",
-    },
-    anotaciones: [
-      { texto: "Su transparencia total simboliza la honestidad y pureza del destilado.", posicion: "top-6 left-0" },
-      { texto: "Una mujer naciendo del maguey personifica la unión sagrada entre mujer y tierra.", posicion: "top-6 right-0 text-right" },
-      { texto: "Los tonos verdes y agaves representan el respeto al ciclo biológico.", posicion: "bottom-6 left-0" },
-    ],
-  },
-  {
-    nombre: "Espadín",
-    subtitulo: "El alma del mezcal oaxaqueño, destilado con dedicación generación tras generación.",
-    imagen: "/fotos/29.1.png",
-    notas: {
-      vista: "Dorado tenue con reflejos plateados",
-      nariz: "Ahumado intenso, cítrico y mineral.",
-      boca: "Robusto, especiado y largo retrogusto.",
-    },
-    anotaciones: [
-      { texto: "El agave espadín es el más cultivado en Oaxaca, base de la cultura mezcalera.", posicion: "top-6 left-0" },
-      { texto: "Cada piña tarda entre 7 y 10 años en madurar antes de ser cosechada.", posicion: "top-6 right-0 text-right" },
-      { texto: "El tostado en horno cónico de tierra le otorga su carácter ahumado único.", posicion: "bottom-6 left-0" },
-    ],
-  },
-  {
-    nombre: "Madrecuixe",
-    subtitulo: "Un mezcal silvestre de carácter indomable, con la fiereza del agave en su estado más puro.",
-    imagen: "/fotos/30.1.png",
-    notas: {
-      vista: "Transparente con destellos verdes",
-      nariz: "Vegetal, herbal y notas de maguey fresco.",
-      boca: "Seco, mineral y persistente con final floral.",
-    },
-    anotaciones: [
-      { texto: "El madrecuixe silvestre tarda hasta 15 años en madurar en las montañas oaxaqueñas.", posicion: "top-6 left-0" },
-      { texto: "Su cosecha es manual y selectiva, respetando la regeneración natural del agave.", posicion: "top-6 right-0 text-right" },
-      { texto: "Producción limitada que refleja el compromiso con la sustentabilidad y la tradición.", posicion: "bottom-6 left-0" },
-    ],
-  },
-];
-
-const SLIDES: Slide[] = [
-  {
-    id: 1,
-    imagen: "/fotos/28.1.png",
-    circulos: [
-      { imagen: "/fotos/5.jpg" },
-      { imagen: "/fotos/20.jpeg", etiqueta: "Maestro mezcalero" },
-      { imagen: "/fotos/22.jpeg" },
-    ],
-  },
-  {
-    id: 2,
-    imagen: "/fotos/29.1.png",
-    circulos: [
-      { imagen: "/fotos/15.jpg" },
-      { imagen: "/fotos/24.jpeg" },
-      { imagen: "/fotos/22.jpeg" },
-    ],
-  },
-  {
-    id: 3,
-    imagen: "/fotos/30.1.png",
-    circulos: [
-      { imagen: "/fotos/16.jpg" },
-      { imagen: "/fotos/22.jpeg" },
-      { imagen: "/fotos/20.jpeg" },
-    ],
-  },
-  {
-    id: 4,
-    imagen: "/fotos/31.1.png",
-    circulos: [
-      { imagen: "/fotos/22.jpeg" },
-      { imagen: "/fotos/20.jpeg" },
-      { imagen: "/fotos/15.jpg" },
-    ],
-  },
-];
 
 const STATS_CONFIG = [
   {
@@ -189,15 +109,21 @@ const STATS_CONFIG = [
   },
 ];
 
-const SOBRE_TEXTOS = [
-  "Descubre el auténtico sabor del mezcal, un destilado artesanal nacido del corazón del agave.",
-  "Elaborado con procesos tradicionales que respetan la tierra y el tiempo, cada botella guarda carácter y tradición.",
-  "Sus notas ahumadas y matices únicos lo convierten en una experiencia inigualable.",
-  "Perfecto para celebrar, compartir y disfrutar momentos especiales.",
+
+const BOTTLE_CARDS = [
+  { imagen: "/fotos/28.1.png", nombre: "Tobalá",      tipo: "Agave silvestre" },
+  { imagen: "/fotos/29.1.png", nombre: "Espadín",     tipo: "Agave cultivado" },
+  { imagen: "/fotos/30.1.png", nombre: "Madrecuixe",  tipo: "Agave silvestre" },
+  { imagen: "/fotos/31.1.png", nombre: "Tepeztate",   tipo: "Agave silvestre" },
 ];
 
-const PROD_INTERVAL = 30000;
-const SLIDE_INTERVAL = 5000;
+const TRAZA_STEPS = [
+  { paso: "01", titulo: "Recolección", desc: "Agave silvestre cosechado a mano en su punto óptimo de madurez, respetando el ciclo natural.", fecha: "12 MAR 2024", done: true },
+  { paso: "02", titulo: "Cocción", desc: "Las piñas se cuecen en horno cónico de tierra durante 4 días bajo piedras volcánicas.", fecha: "18 MAR 2024", done: true },
+  { paso: "03", titulo: "Molienda", desc: "Machacado con tahona de piedra jalada por animal. Sin atajos industriales.", fecha: "22 MAR 2024", done: true },
+  { paso: "04", titulo: "Fermentación", desc: "Fermentación natural en tinas de madera durante 8 días con levaduras silvestres.", fecha: "26 MAR 2024", done: true },
+  { paso: "05", titulo: "Destilación", desc: "Doble destilación en alambique de cobre por manos artesanas. Ajuste a 47° alc.", fecha: "03 ABR 2024", done: true },
+];
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function LandingPageOaxaca() {
@@ -206,115 +132,18 @@ export default function LandingPageOaxaca() {
   const { stats: landingStats, loading: statsLoading } = useLandingStats();
   const isDark = useDarkMode();
   const C = isDark ? TEXT_COLORS.dark : TEXT_COLORS.light;
+  const P = isDark ? PALETTE.dark : PALETTE.light;
   const winWidth = useWindowWidth();
 
   // ─── Más vendidos ─────────────────────────────────────────────────────────
-  const { productos: masVendidos, loading: loadingVendidos } = useMasVendidos(3);
-  const productosCarrusel: Producto[] = masVendidos.length > 0 ? masVendidos : PRODUCTOS_FALLBACK;
+  const { productos: masVendidos, loading: loadingVendidos } = useMasVendidos(5);
 
   // Breakpoints
   const isMobile = winWidth < 640;
   const isTablet = winWidth >= 640 && winWidth < 1024;
 
-  const [prodActual, setProdActual] = useState(0);
-  const [prodVisible, setProdVisible] = useState(true);
-  const [sectionHover, setSectionHover] = useState(false);
-  const prodProgressRef = useRef<HTMLDivElement | null>(null);
-  const prodTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const [slideActual, setSlideActual] = useState(0);
-  const [slideVisible, setSlideVisible] = useState(true);
-  const slideProgressRef = useRef<HTMLDivElement | null>(null);
-  const slideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const [statsVisible, setStatsVisible] = useState(false);
   const statsRef = useRef<HTMLDivElement | null>(null);
-
-  const producto = productosCarrusel[prodActual] ?? productosCarrusel[0];
-  const slide = SLIDES[slideActual];
-
-  const startProdProgress = () => {
-    if (prodProgressRef.current) {
-      prodProgressRef.current.style.transition = "none";
-      prodProgressRef.current.style.width = "0%";
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (prodProgressRef.current) {
-            prodProgressRef.current.style.transition = `width ${PROD_INTERVAL}ms linear`;
-            prodProgressRef.current.style.width = "100%";
-          }
-        });
-      });
-    }
-  };
-
-  const handleProdGo = (idx: number) => {
-    setProdVisible(false);
-    setTimeout(() => {
-      setProdActual((idx + productosCarrusel.length) % productosCarrusel.length);
-      setProdVisible(true);
-    }, 250);
-    if (prodTimerRef.current) clearInterval(prodTimerRef.current);
-    startProdProgress();
-    prodTimerRef.current = setInterval(() => handleProdGo(idx + 1), PROD_INTERVAL);
-  };
-
-  // Reinicia el índice si productosCarrusel cambia (cuando carga la API)
-  useEffect(() => {
-    setProdActual(0);
-  }, [masVendidos]);
-
-  useEffect(() => {
-    startProdProgress();
-    prodTimerRef.current = setInterval(() => {
-      setProdActual((prev) => {
-        const next = (prev + 1) % productosCarrusel.length;
-        setProdVisible(false);
-        setTimeout(() => setProdVisible(true), 250);
-        return next;
-      });
-      startProdProgress();
-    }, PROD_INTERVAL);
-    return () => { if (prodTimerRef.current) clearInterval(prodTimerRef.current); };
-  }, [productosCarrusel.length]);
-
-  const startSlideProgress = () => {
-    if (slideProgressRef.current) {
-      slideProgressRef.current.style.transition = "none";
-      slideProgressRef.current.style.width = "0%";
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (slideProgressRef.current) {
-            slideProgressRef.current.style.transition = `width ${SLIDE_INTERVAL}ms linear`;
-            slideProgressRef.current.style.width = "100%";
-          }
-        });
-      });
-    }
-  };
-
-  const handleSlideGo = (idx: number) => {
-    const next = (idx + SLIDES.length) % SLIDES.length;
-    setSlideVisible(false);
-    setTimeout(() => { setSlideActual(next); setSlideVisible(true); }, 300);
-    if (slideTimerRef.current) clearInterval(slideTimerRef.current);
-    startSlideProgress();
-    slideTimerRef.current = setInterval(() => handleSlideGo(next + 1), SLIDE_INTERVAL);
-  };
-
-  useEffect(() => {
-    startSlideProgress();
-    slideTimerRef.current = setInterval(() => {
-      setSlideActual((prev) => {
-        const next = (prev + 1) % SLIDES.length;
-        setSlideVisible(false);
-        setTimeout(() => setSlideVisible(true), 300);
-        return next;
-      });
-      startSlideProgress();
-    }, SLIDE_INTERVAL);
-    return () => { if (slideTimerRef.current) clearInterval(slideTimerRef.current); };
-  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -330,7 +159,7 @@ export default function LandingPageOaxaca() {
     <main
       className="font-sans"
       style={{
-        background: "var(--land-bg-primary, #F9F8F4)",
+        background: P.bgBase,
         color: C.dark,
         overflowY: "auto",
       }}
@@ -341,586 +170,372 @@ export default function LandingPageOaxaca() {
       ══════════════════════════════════════════════════ */}
       <div style={{
         position: "relative",
-        height: isMobile ? "100svh" : "65vh",
-        minHeight: isMobile ? "560px" : "420px",
+        height: isMobile ? "100svh" : "72vh",
+        minHeight: isMobile ? "580px" : "480px",
         overflow: "hidden",
       }}>
         <video
-          src="/fotos/25.mp4"
+          src="/fotos/videohero.mp4"
           autoPlay muted loop playsInline
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
         />
+        {/* Franja decorativa lateral */}
         <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(to top, rgba(20,8,2,0.93) 38%, rgba(20,8,2,0.25) 100%)",
+          position: "absolute", top: 0, left: 0, bottom: 0, width: "3px",
+          background: "linear-gradient(to bottom, transparent, #C97A3E 40%, #C97A3E 60%, transparent)",
         }} />
+
         <div style={{
           position: "relative", zIndex: 10, color: "#fff",
           height: "100%", display: "flex", flexDirection: "column",
           justifyContent: "flex-end",
-          padding: isMobile ? "32px 24px" : isTablet ? "40px 36px" : "48px 56px",
-          maxWidth: isMobile ? "100%" : "600px",
+          padding: isMobile ? "32px 28px" : isTablet ? "44px 44px" : "56px 72px",
+          maxWidth: isMobile ? "100%" : "700px",
         }}>
-          <span style={{
-            fontSize: "11px", letterSpacing: "0.22em", textTransform: "uppercase",
-            color: "#C8A97A", marginBottom: "12px",
-          }}>
-            {t("Trazabilidad · Origen · Identidad")}
-          </span>
+          {/* Eyebrow */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+            <div style={{ width: "28px", height: "1px", background: "#C97A3E" }} />
+            <span style={{
+              fontSize: "13px", letterSpacing: "0.25em", textTransform: "uppercase",
+              color: "#A8C26B", fontWeight: 700,
+              textShadow: "0 1px 8px rgba(0,0,0,0.9)",
+            }}>
+              {t("Trazabilidad · Origen · Identidad")}
+            </span>
+          </div>
+
           <h1 style={{
-            fontFamily: "Georgia, serif",
-            fontSize: isMobile ? "32px" : isTablet ? "38px" : "46px",
-            fontWeight: 700, lineHeight: 1.2,
-            margin: "0 0 12px", color: "#fff",
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: isMobile ? "36px" : isTablet ? "44px" : "56px",
+            fontWeight: 700, lineHeight: 1.15,
+            margin: "0 0 16px", color: "#ffffff",
+            letterSpacing: "-0.01em",
+            textShadow: "0 2px 16px rgba(0,0,0,0.85)",
           }}>
-            {t("Oaxaca auténtico,")}<br />{t("trazable y justo")}
+            {t("Oaxaca auténtico,")}<br />
+            <span style={{ color: "#A8C26B", textShadow: "0 2px 16px rgba(0,0,0,0.85)" }}>{t("trazable y justo")}</span>
           </h1>
+
           <p style={{
             fontSize: isMobile ? "14px" : "15px",
-            lineHeight: 1.7, opacity: 0.85,
-            maxWidth: "360px", margin: "0 0 18px", color: "#fff",
+            lineHeight: 1.75, color: "rgba(255,255,255,0.95)",
+            maxWidth: "420px", margin: "0 0 24px",
+            fontFamily: "'DM Sans', sans-serif",
+            textShadow: "0 1px 10px rgba(0,0,0,0.8)",
           }}>
             {t("Conectamos el origen, la tradición y el talento de nuestras comunidades con el mundo.")}
           </p>
-          <div style={{
-            display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "20px",
-          }}>
+
+          {/* Badges */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "28px" }}>
             {[
               { icon: "✓", label: "Trazabilidad completa" },
               { icon: "⚖", label: "Comercio justo" },
               { icon: "🛡", label: "Protección cultural" },
             ].map((p) => (
               <div key={p.label} style={{
-                display: "flex", alignItems: "center", gap: "5px",
-                fontSize: "12px", borderRadius: "999px",
-                padding: isMobile ? "4px 10px" : "5px 14px",
-                background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)",
-                color: "#fff",
+                display: "flex", alignItems: "center", gap: "6px",
+                fontSize: "13px", fontWeight: 500, borderRadius: "999px",
+                padding: "5px 14px",
+                background: "rgba(201,122,62,0.15)",
+                border: "1px solid rgba(201,122,62,0.4)",
+                color: "#ffffff",
+                letterSpacing: "0.02em",
+                textShadow: "0 1px 6px rgba(0,0,0,0.7)",
               }}>
                 <span>{p.icon}</span><span>{t(p.label)}</span>
               </div>
             ))}
           </div>
-          <button
-            onClick={() => router.push("/Cliente/producto")}
-            style={{
-              display: "flex", alignItems: "center", gap: "8px",
-              fontSize: "15px", fontWeight: 600,
-              padding: isMobile ? "12px 20px" : "13px 24px",
-              borderRadius: "8px", background: "#C8A97A", color: "#1A241E",
-              border: "none", cursor: "pointer", width: "fit-content",
-            }}
-          >
-            {t("Explorar productos")}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-            </svg>
-          </button>
+
+          {/* CTA */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
+            <button
+              onClick={() => router.push("/producto")}
+              style={{
+                display: "flex", alignItems: "center", gap: "8px",
+                fontSize: "14px", fontWeight: 600,
+                padding: isMobile ? "12px 22px" : "14px 28px",
+                borderRadius: "6px",
+                background: "#C97A3E", color: "#1F3A2E",
+                border: "none", cursor: "pointer",
+                letterSpacing: "0.03em",
+              }}
+            >
+              {t("Explorar productos")}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+              </svg>
+            </button>
+            <button
+              onClick={() => router.push("/dashboard/productor/solicitar")}
+              style={{
+                display: "flex", alignItems: "center", gap: "8px",
+                fontSize: "14px", fontWeight: 600,
+                padding: isMobile ? "12px 22px" : "14px 28px",
+                borderRadius: "6px",
+                background: "transparent", color: "#C5CFB0",
+                border: "1px solid rgba(197,207,176,0.35)", cursor: "pointer",
+                letterSpacing: "0.03em",
+              }}
+            >
+              {t("Ser productor")}
+            </button>
+          </div>
         </div>
+      </div>
+
+      {/* ─── Ticker strip ─────────────────────────────────────────── */}
+      <div style={{
+        background: "#C97A3E", overflow: "hidden",
+        height: "36px", display: "flex", alignItems: "center",
+      }}>
+        <div style={{
+          display: "flex", gap: "0",
+          animation: "ticker 28s linear infinite",
+          whiteSpace: "nowrap",
+        }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <span key={i} style={{
+              fontSize: "13px", fontWeight: 700, letterSpacing: "0.2em",
+              textTransform: "uppercase", color: "#1F3A2E", padding: "0 28px",
+            }}>
+              {t("Mezcal artesanal")} &nbsp;·&nbsp; {t("Trazabilidad completa")} &nbsp;·&nbsp; {t("Comercio justo")} &nbsp;·&nbsp; {t("Oaxaca, México")}
+            </span>
+          ))}
+        </div>
+        <style>{`
+          @keyframes ticker {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+          }
+        `}</style>
       </div>
 
       {/* ══════════════════════════════════════════════════
           SECCIÓN 2 — SOBRE EL MEZCAL
       ══════════════════════════════════════════════════ */}
       <div style={{
-        background: "var(--land-bg-white, #fff)",
-        borderTop: "1px solid var(--land-border, #E5E5E1)",
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "1fr 1.3fr",
-        minHeight: isMobile ? "auto" : "320px",
+        background: P.bgBase,
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        alignItems: isMobile ? "stretch" : "center",
+        justifyContent: "space-between",
+        gap: isMobile ? "0" : "48px",
+        padding: isMobile ? "48px 28px" : isTablet ? "48px 40px" : "48px 64px",
       }}>
-        {/* Texto */}
+        {/* ── Panel texto ── */}
         <div style={{
-          display: "flex", flexDirection: "column", justifyContent: "center",
-          padding: isMobile ? "32px 24px" : isTablet ? "36px 32px" : "40px 48px",
-          gap: "14px",
-          borderRight: isMobile ? "none" : "1px solid var(--land-border, #E5E5E1)",
-          borderBottom: isMobile ? "1px solid var(--land-border, #E5E5E1)" : "none",
+          display: "flex", flexDirection: "column",
+          flex: isMobile ? "none" : "0 0 auto",
+          maxWidth: isMobile ? "100%" : "420px",
+          gap: "22px",
         }}>
-          <div style={{ height: "2px", width: "32px", background: "#C8A97A", borderRadius: "2px" }} />
-          <p style={{
-            fontFamily: "Georgia, serif", fontSize: isMobile ? "15px" : "16px",
-            fontStyle: "italic", lineHeight: 1.75, color: C.italic, margin: 0,
-          }}>
-            {t("Descubre el auténtico sabor del mezcal, un destilado artesanal nacido del corazón del agave.")}
-          </p>
-          {SOBRE_TEXTOS.slice(1).map((texto, i) => (
-            <p key={i} style={{ fontSize: "14px", lineHeight: 1.65, color: C.mid, margin: 0 }}>
-              {t(texto)}
-            </p>
-          ))}
-          <p style={{
-            fontFamily: "Georgia, serif", fontSize: "13px", fontStyle: "italic",
-            color: "#C8A97A", paddingTop: "12px",
-            borderTop: "1px solid var(--land-border, #E5E5E1)", margin: 0,
-          }}>
-            &ldquo;El alma de Oaxaca en cada gota&rdquo;
-          </p>
-        </div>
-
-        {/* Collage fotos */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
-          gridTemplateRows: isMobile ? "180px 120px" : "1fr 1fr",
-          gap: "6px",
-          padding: "16px",
-          alignItems: "stretch",
-          minHeight: isMobile ? "300px" : "auto",
-        }}>
-          <div style={{ gridColumn: "1/2", gridRow: "1/3", borderRadius: "10px", overflow: "hidden" }}>
-            <img src="/fotos/22.jpeg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          </div>
-          <div style={{ gridColumn: "2/3", gridRow: "1/2", borderRadius: "10px", overflow: "hidden" }}>
-            <img src="/fotos/24.jpeg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          </div>
-          <div style={{ gridColumn: "3/4", gridRow: "1/2", borderRadius: "10px", overflow: "hidden" }}>
-            <img src="/fotos/16.jpg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          </div>
-          <div style={{ gridColumn: "2/3", gridRow: "2/3", borderRadius: "10px", overflow: "hidden" }}>
-            <img src="/fotos/20.jpeg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          </div>
-          <div style={{ gridColumn: "3/4", gridRow: "2/3", borderRadius: "10px", overflow: "hidden" }}>
-            <img src="/fotos/15.jpg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          </div>
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════
-          SECCIÓN 3 — CARRUSEL PRODUCTOS MÁS VENDIDOS
-      ══════════════════════════════════════════════════ */}
-      <div
-        style={{
-          background: "var(--land-bg-primary, #F9F8F4)",
-          borderTop: "1px solid var(--land-border, #E5E5E1)",
-          padding: isMobile ? "36px 20px 32px" : "56px 40px 48px",
-          position: "relative", overflow: "hidden",
-        }}
-        onMouseEnter={() => setSectionHover(true)}
-        onMouseLeave={() => setSectionHover(false)}
-      >
-        {/* Badge "más vendidos" */}
-        {!loadingVendidos && masVendidos.length > 0 && (
-          <div style={{
-            display: "flex", justifyContent: "center", marginBottom: "12px",
-          }}>
-            <span style={{
-              fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em",
-              textTransform: "uppercase", color: "#C8A97A",
-              background: "rgba(200,169,122,0.12)",
-              border: "1px solid rgba(200,169,122,0.3)",
-              borderRadius: "999px", padding: "4px 14px",
-            }}>
-              {t("⭐ Más vendidos")}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ width: "32px", height: "2px", background: "#C97A3E", borderRadius: "1px" }} />
+            <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.24em", textTransform: "uppercase", color: "#C97A3E" }}>
+              {t("Nuestra historia")}
             </span>
           </div>
-        )}
 
-        {/* Skeleton mientras carga */}
-        {loadingVendidos ? (
-          <div style={{
-            display: "flex", flexDirection: "column", alignItems: "center", gap: "16px",
-            marginBottom: "40px",
+          <h2 style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: isMobile ? "32px" : isTablet ? "38px" : "46px",
+            fontWeight: 700, lineHeight: 1.15,
+            color: P.heading, margin: 0,
           }}>
-            <div style={{
-              width: isMobile ? "160px" : "200px",
-              height: "24px", borderRadius: "6px",
-              background: "rgba(26,93,59,0.08)",
-              animation: "pulse 1.5s ease-in-out infinite",
-            }} />
-            <div style={{
-              width: isMobile ? "220px" : "320px",
-              height: "16px", borderRadius: "6px",
-              background: "rgba(26,93,59,0.05)",
-              animation: "pulse 1.5s ease-in-out infinite",
-            }} />
-            <div style={{
-              width: isMobile ? "160px" : "220px",
-              height: isMobile ? "160px" : "220px",
-              borderRadius: "50%",
-              background: "rgba(26,93,59,0.06)",
-              animation: "pulse 1.5s ease-in-out infinite",
-            }} />
-            <style>{`
-              @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.4; }
-              }
-            `}</style>
+            {t("El alma del")} <em style={{ color: "#C97A3E" }}>{t("agave")}</em>
+          </h2>
+
+          {/* Pull-quote */}
+          <div style={{ borderLeft: "3px solid #C97A3E", paddingLeft: "20px" }}>
+            <p style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: isMobile ? "15px" : "17px",
+              fontStyle: "italic", lineHeight: 1.8,
+              color: P.pullQuote, margin: 0,
+            }}>
+              &ldquo;{t("Descubre el auténtico sabor del mezcal, un destilado artesanal nacido del corazón del agave.")}&rdquo;
+            </p>
+          </div>
+
+          <p style={{ fontSize: "15px", lineHeight: 1.85, color: P.body, margin: 0 }}>
+            {t("Elaborado con procesos tradicionales que respetan la tierra y el tiempo, cada botella guarda carácter y tradición. Sus notas ahumadas y matices únicos lo convierten en una experiencia inigualable.")}
+          </p>
+
+          <div style={{
+            display: "flex", alignItems: "center", gap: "12px",
+            paddingTop: "20px", borderTop: "1px solid rgba(201,122,62,0.2)",
+          }}>
+            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#C97A3E", flexShrink: 0 }} />
+            <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "14px", fontStyle: "italic", color: "#C97A3E" }}>
+              &ldquo;{t("El alma de Oaxaca en cada gota")}&rdquo;
+            </span>
+          </div>
+        </div>
+
+        {/* ── Panel fotos — 5 imágenes ── */}
+        {isMobile ? (
+          /* MÓVIL: 2 columnas, 3 filas */
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+            {/* 16.jpg — fila 1 completa */}
+            <div style={{ gridColumn: "1/3", height: "150px", overflow: "hidden", borderRadius: "10px" }}>
+              <img src="/fotos/16.jpg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            </div>
+            {/* 24.jpeg */}
+            <div style={{ height: "120px", overflow: "hidden", borderRadius: "10px" }}>
+              <img src="/fotos/24.jpeg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            </div>
+            {/* 5.jpg */}
+            <div style={{ height: "120px", overflow: "hidden", borderRadius: "10px" }}>
+              <img src="/fotos/5.jpg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            </div>
+            {/* 22.jpeg */}
+            <div style={{ height: "150px", overflow: "hidden", borderRadius: "10px", position: "relative" }}>
+              <img src="/fotos/22.jpeg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(31,58,46,0.5) 20%, transparent 55%)" }} />
+              <span style={{ position: "absolute", bottom: "10px", left: "10px", fontSize: "12px", color: "#F4F0E3", fontWeight: 600, letterSpacing: "0.06em" }}>
+                {t("Proceso artesanal")}
+              </span>
+            </div>
+            {/* 20.jpeg */}
+            <div style={{ height: "150px", overflow: "hidden", borderRadius: "10px", position: "relative" }}>
+              <img src="/fotos/20.jpeg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "3px", background: "#C97A3E" }} />
+            </div>
           </div>
         ) : (
-          <>
-            {/* Título */}
-            <div style={{
-              textAlign: "center", marginBottom: isMobile ? "24px" : "40px",
-              opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s",
-            }}>
-              <h2 style={{
-                fontFamily: "Georgia, serif",
-                fontSize: isMobile ? "28px" : isTablet ? "32px" : "38px",
-                fontWeight: 700, color: C.dark, margin: "0 0 10px",
-              }}>
-                {t(producto.nombre)}
-              </h2>
-              <p style={{
-                fontSize: isMobile ? "13px" : "15px",
-                fontStyle: "italic", lineHeight: 1.6,
-                fontFamily: "Georgia, serif", color: C.mid,
-                maxWidth: isMobile ? "280px" : "500px", margin: "0 auto",
-              }}>
-                &ldquo;{t(producto.subtitulo)}&rdquo;
-              </p>
+          /* DESKTOP: 3fr izquierda + 2fr derecha, total 330px alto */
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "3fr 2fr",
+            gap: "10px",
+            height: "330px",
+            maxWidth: "576px",
+            width: "100%",
+          }}>
+
+            {/* ── Izquierda: fila top 110px + 5.jpg 210px ── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "10px", height: "110px" }}>
+                <div style={{ overflow: "hidden", borderRadius: "12px" }}>
+                  <img src="/fotos/16.jpg" alt="Paisaje"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </div>
+                <div style={{ overflow: "hidden", borderRadius: "12px" }}>
+                  <img src="/fotos/24.jpeg" alt="Piñas"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </div>
+              </div>
+              <div style={{ height: "210px", overflow: "hidden", borderRadius: "12px" }}>
+                <img src="/fotos/5.jpg" alt="Valle"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              </div>
             </div>
 
-            {/* Layout: móvil = columna, desktop = 3 columnas */}
-            {isMobile ? (
-              /* ── MÓVIL ── */
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "28px" }}>
-                {/* Botella */}
-                <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <div style={{
-                    position: "absolute", width: "220px", height: "220px", borderRadius: "50%",
-                    background: "rgba(26,93,59,0.06)", border: "1px solid rgba(200,169,122,0.2)",
-                  }} />
-                  <div style={{
-                    position: "relative", zIndex: 10,
-                    width: "200px", height: "200px", borderRadius: "50%", overflow: "hidden",
-                    boxShadow: "0 12px 48px rgba(139,69,19,0.25)",
-                    opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s",
-                  }}>
-                    <img
-                      src={producto.imagen}
-                      alt={t(producto.nombre)}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      onError={(e) => { (e.target as HTMLImageElement).src = "/fotos/28.1.png"; }}
-                    />
-                  </div>
-                </div>
-
-                {/* Notas de cata móvil */}
+            {/* ── Derecha: 22.jpeg 220px + 20.jpeg 100px ── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ height: "220px", overflow: "hidden", borderRadius: "12px", position: "relative" }}>
+                <img src="/fotos/22.jpeg" alt="Proceso artesanal"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 <div style={{
-                  width: "100%", maxWidth: "320px",
-                  background: "var(--land-bg-white, #fff)",
-                  borderRadius: "12px", padding: "20px",
-                  border: "1px solid var(--land-border, #E5E5E1)",
-                  display: "flex", flexDirection: "column", gap: "14px",
-                  opacity: prodVisible ? 1 : 0, transition: "opacity 0.35s",
-                }}>
-                  <p style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#1A5D3B", margin: 0 }}>
-                    {t("Notas de cata")}
-                  </p>
-                  {([
-                    ["Vista", producto.notas.vista],
-                    ["Nariz", producto.notas.nariz],
-                    ["Boca", producto.notas.boca],
-                  ] as [string, string][]).map(([key, val]) => (
-                    <div key={key}>
-                      <span style={{ fontWeight: 700, color: "#C8A97A", fontSize: "13px" }}>{t(key)}: </span>
-                      <span style={{ fontSize: "13px", color: C.dark }}>{t(val)}</span>
-                    </div>
-                  ))}
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(to top, rgba(31,58,46,0.55) 20%, transparent 50%)",
+                }} />
+                <div style={{ position: "absolute", bottom: "12px", left: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#C97A3E", flexShrink: 0 }} />
+                  <span style={{ fontSize: "12px", color: "#F4F0E3", fontWeight: 600, letterSpacing: "0.07em", textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
+                    {t("Proceso artesanal")}
+                  </span>
                 </div>
               </div>
-            ) : (
-              /* ── TABLET / DESKTOP ── */
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: isTablet ? "auto auto" : "1fr auto 1fr",
-                gap: isTablet ? "24px" : "32px",
-                alignItems: "center",
-                maxWidth: "1000px", margin: "0 auto",
-                justifyContent: isTablet ? "center" : "initial",
-              }}>
-                {/* Anotaciones izquierda */}
-                {!isTablet && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "28px", alignItems: "flex-end", opacity: prodVisible ? 1 : 0, transition: "opacity 0.35s" }}>
-                    {producto.anotaciones.map((a, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", maxWidth: "260px" }}>
-                        <p style={{
-                          fontSize: "13px", fontFamily: "Georgia, serif", fontStyle: "italic",
-                          color: C.annotation, lineHeight: 1.5, margin: 0, textAlign: "right",
-                          opacity: prodVisible ? 1 : 0, transition: `opacity 0.4s ease ${i * 0.1}s`,
-                        }}>
-                          {t(a.texto)}
-                        </p>
-                        <svg width="48" height="20" viewBox="0 0 48 20" fill="none" style={{ flexShrink: 0 }}>
-                          <path d="M2 10 Q24 2 46 10" stroke="#C8A97A" strokeWidth="1.5" fill="none" strokeDasharray="3 2" />
-                          <polyline points="40,6 46,10 40,14" fill="none" stroke="#C8A97A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Botella central */}
-                <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <div style={{
-                    position: "absolute",
-                    width: isTablet ? "240px" : "290px",
-                    height: isTablet ? "240px" : "290px",
-                    borderRadius: "50%",
-                    background: "rgba(26,93,59,0.06)", border: "1px solid rgba(200,169,122,0.2)",
-                  }} />
-                  <div style={{
-                    position: "relative", zIndex: 10,
-                    width: isTablet ? "220px" : "260px",
-                    height: isTablet ? "220px" : "260px",
-                    borderRadius: "50%", overflow: "hidden",
-                    boxShadow: "0 12px 48px rgba(139,69,19,0.25)",
-                    opacity: prodVisible ? 1 : 0, transition: "opacity 0.3s",
-                  }}>
-                    <img
-                      src={producto.imagen}
-                      alt={t(producto.nombre)}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      onError={(e) => { (e.target as HTMLImageElement).src = "/fotos/28.1.png"; }}
-                    />
-                  </div>
-                </div>
-
-                {/* Notas de cata derecha */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px", alignItems: "flex-start", opacity: prodVisible ? 1 : 0, transition: "opacity 0.35s" }}>
-                  <p style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#1A5D3B", margin: 0 }}>
-                    {t("Notas de cata")}
-                  </p>
-                  {([
-                    ["Vista", producto.notas.vista],
-                    ["Nariz", producto.notas.nariz],
-                    ["Boca", producto.notas.boca],
-                  ] as [string, string][]).map(([key, val], i) => (
-                    <div key={key} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <svg width="48" height="20" viewBox="0 0 48 20" fill="none" style={{ flexShrink: 0 }}>
-                        <path d="M46 10 Q24 2 2 10" stroke="#C8A97A" strokeWidth="1.5" fill="none" strokeDasharray="3 2" />
-                        <polyline points="8,6 2,10 8,14" fill="none" stroke="#C8A97A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <p style={{
-                        fontSize: "14px", color: C.dark, margin: 0, lineHeight: 1.4,
-                        opacity: prodVisible ? 1 : 0, transition: `opacity 0.4s ease ${i * 0.1}s`,
-                      }}>
-                        <span style={{ fontWeight: 700, color: "#C8A97A" }}>{t(key)}: </span>{t(val)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+              <div style={{ height: "100px", overflow: "hidden", borderRadius: "12px", position: "relative" }}>
+                <img src="/fotos/20.jpeg" alt="Piñas con humo"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "3px", background: "#C97A3E" }} />
               </div>
-            )}
-          </>
+            </div>
+
+          </div>
         )}
-
-        {/* Dots + progreso */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", marginTop: isMobile ? "28px" : "40px" }}>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            {productosCarrusel.map((_, i) => (
-              <button key={i} onClick={() => handleProdGo(i)} style={{
-                height: "6px", borderRadius: "999px", border: "none", cursor: "pointer",
-                width: i === prodActual ? "20px" : "6px",
-                background: i === prodActual ? "#1A5D3B" : "rgba(26,93,59,0.35)",
-                transition: "all 0.3s",
-              }} />
-            ))}
-          </div>
-          <div style={{ height: "2px", borderRadius: "999px", overflow: "hidden", background: "rgba(26,93,59,0.15)", width: "200px" }}>
-            <div ref={prodProgressRef} style={{ height: "100%", background: "#1A5D3B", width: "0%" }} />
-          </div>
-        </div>
-
-        {/* Flechas nav */}
-        {(["left", "right"] as const).map((dir) => (
-          <button key={dir} onClick={() => handleProdGo(dir === "left" ? prodActual - 1 : prodActual + 1)} style={{
-            position: "absolute", top: "50%", transform: "translateY(-50%)",
-            [dir]: isMobile ? "8px" : "16px", zIndex: 20,
-            width: isMobile ? "32px" : "36px", height: isMobile ? "32px" : "36px",
-            borderRadius: "50%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "rgba(26,93,59,0.15)", border: "1px solid #1A5D3B",
-            color: "#1A5D3B", cursor: "pointer",
-            opacity: isMobile ? 1 : sectionHover ? 1 : 0,
-            transition: "opacity 0.2s",
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              {dir === "left" ? <polyline points="15 18 9 12 15 6" /> : <polyline points="9 6 15 12 9 18" />}
-            </svg>
-          </button>
-        ))}
       </div>
 
       {/* ══════════════════════════════════════════════════
-          BLOQUE 2 — CONOCE MÁS
-      ══════════════════════════════════════════════════ */}
-      <div style={{
-        background: "var(--land-bg-white, #fff)",
-        borderTop: "1px solid var(--land-border, #E5E5E1)",
-        marginTop: "10px", padding: isMobile ? "32px 20px" : "48px 28px",
-        display: "flex", flexDirection: "column", alignItems: "center",
-      }}>
-        <p style={{
-          fontSize: "12px", fontWeight: 700, letterSpacing: "0.18em",
-          textTransform: "uppercase", color: "#C8A97A",
-          marginBottom: isMobile ? "20px" : "28px", textAlign: "center",
-        }}>
-          {t("Conoce más de nuestros productos")}
-        </p>
-
-        <div style={{
-          display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          gap: isMobile ? "24px" : "36px",
-          alignItems: "center", justifyContent: "center",
-          width: "100%", maxWidth: "960px",
-        }}>
-          {/* Imagen principal del slide */}
-          <div style={{
-            position: "relative", borderRadius: "16px", overflow: "hidden", flexShrink: 0,
-            width: isMobile ? "100%" : "260px",
-            maxWidth: isMobile ? "340px" : "260px",
-            height: isMobile ? "220px" : "260px",
-            boxShadow: "0 4px 24px rgba(200,100,20,0.25)",
-          }}>
-            <img
-              src={slide.imagen}
-              alt={`Slide ${slideActual + 1}`}
-              style={{ width: "100%", height: "100%", objectFit: "cover", opacity: slideVisible ? 1 : 0, transition: "opacity 0.3s" }}
-            />
-            <button onClick={() => handleSlideGo(slideActual - 1)} style={{
-              position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)",
-              width: "26px", height: "26px", borderRadius: "50%", border: "none", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(26,36,30,0.7)", color: "#fff",
-            }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="15 18 9 12 15 6" /></svg>
-            </button>
-            <button onClick={() => handleSlideGo(slideActual + 1)} style={{
-              position: "absolute", right: "6px", top: "50%", transform: "translateY(-50%)",
-              width: "26px", height: "26px", borderRadius: "50%", border: "none", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(26,36,30,0.7)", color: "#fff",
-            }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="9 6 15 12 9 18" /></svg>
-            </button>
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "3px", background: "rgba(200,169,122,0.2)" }}>
-              <div ref={slideProgressRef} style={{ height: "100%", background: "#C8A97A", width: "0%" }} />
-            </div>
-          </div>
-
-          {/* Círculos */}
-          <div style={{
-            display: "flex",
-            gap: isMobile ? "16px" : "28px",
-            justifyContent: "center",
-            flex: 1,
-            flexWrap: isMobile ? "wrap" : "nowrap",
-          }}>
-            {slide.circulos.map((item, i) => (
-              <div key={`${slideActual}-${i}`} style={{
-                display: "flex", flexDirection: "column", alignItems: "center", gap: "10px",
-                opacity: slideVisible ? 1 : 0, transition: `opacity 0.35s ease ${i * 0.07}s`,
-              }}>
-                <div style={{
-                  width: isMobile ? "100px" : "130px",
-                  height: isMobile ? "100px" : "130px",
-                  borderRadius: "50%", overflow: "hidden",
-                  border: "2px solid rgba(200,169,122,0.5)",
-                  boxShadow: "0 2px 16px rgba(200,100,20,0.2)",
-                }}>
-                  <img src={item.imagen} alt={item.etiqueta ?? `Imagen ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
-                {item.etiqueta && (
-                  <p style={{
-                    fontSize: "12px", fontStyle: "italic", textAlign: "center",
-                    fontFamily: "Georgia, serif", color: C.mid,
-                    maxWidth: "90px", margin: 0,
-                  }}>
-                    {t(item.etiqueta)}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "24px", marginTop: "24px", flexWrap: "wrap", justifyContent: "center" }}>
-          <div style={{ display: "flex", gap: "6px" }}>
-            {SLIDES.map((_, i) => (
-              <button key={i} onClick={() => handleSlideGo(i)} style={{
-                height: "6px", borderRadius: "999px", border: "none", cursor: "pointer",
-                width: i === slideActual ? "16px" : "6px",
-                background: i === slideActual ? "#C8A97A" : "rgba(200,169,122,0.35)",
-                transition: "all 0.3s",
-              }} />
-            ))}
-          </div>
-          <button onClick={() => router.push("/Cliente/producto")} style={{
-            fontSize: "14px", fontWeight: 600, padding: "9px 22px", borderRadius: "999px",
-            background: "#1A5D3B", color: "#fff", border: "none", cursor: "pointer",
-          }}>
-            {t("Ver más")}
-          </button>
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════
-          BLOQUE 3 — STATS
+          BLOQUE 3 — STATS (oscuro)
       ══════════════════════════════════════════════════ */}
       <div ref={statsRef} style={{
-        background: "var(--land-bg-primary, #F9F8F4)",
-        borderTop: "1px solid var(--land-border, #E5E5E1)",
-        marginTop: "10px", padding: isMobile ? "36px 20px" : "48px 28px",
+        background: P.bgAccent,
+        padding: isMobile ? "48px 24px" : "72px 40px",
         display: "flex", flexDirection: "column", alignItems: "center",
       }}>
-        <div style={{ textAlign: "center", marginBottom: isMobile ? "24px" : "32px" }}>
-          <p style={{
-            fontSize: isMobile ? "18px" : "22px",
-            fontWeight: 700, color: C.dark, fontFamily: "Georgia, serif",
-            margin: 0, marginBottom: "10px",
+        {/* Eyebrow + título */}
+        <div style={{ textAlign: "center", marginBottom: isMobile ? "32px" : "48px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "12px" }}>
+            <div style={{ width: "24px", height: "1px", background: "#C97A3E" }} />
+            <span style={{
+              fontSize: "13px", fontWeight: 700, letterSpacing: "0.22em",
+              textTransform: "uppercase", color: "#C97A3E",
+            }}>
+              {t("Nuestro impacto")}
+            </span>
+            <div style={{ width: "24px", height: "1px", background: "#C97A3E" }} />
+          </div>
+          <h2 style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: isMobile ? "24px" : "32px",
+            fontWeight: 700, color: "#F4F0E3",
+            margin: "0 0 10px", lineHeight: 1.2,
           }}>
             {t("Impacto que construimos juntos")}
-          </p>
+          </h2>
           <p style={{
             fontSize: isMobile ? "13px" : "15px",
-            color: C.mid, fontStyle: "italic", fontFamily: "Georgia, serif", margin: 0,
+            color: "rgba(244,240,227,0.9)", fontStyle: "italic",
+            fontFamily: "'Playfair Display', Georgia, serif", margin: 0,
           }}>
             {t("Cada compra transforma vidas y preserva nuestra herencia cultural.")}
           </p>
         </div>
 
+        {/* Cards */}
         <div style={{
           display: "grid",
           gridTemplateColumns: isMobile ? "1fr 1fr" : isTablet ? "1fr 1fr" : "repeat(4, 1fr)",
-          gap: isMobile ? "10px" : "14px",
+          gap: isMobile ? "12px" : "16px",
           width: "100%",
-          maxWidth: "860px",
+          maxWidth: "960px",
         }}>
           {STATS_CONFIG.map((stat, i) => {
             const valor = landingStats ? String(landingStats[stat.key] ?? "—") : "…";
             return (
               <div key={i} style={{
                 display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
-                gap: "12px", padding: isMobile ? "16px 12px" : "22px 16px",
-                borderRadius: "14px",
-                background: "var(--land-stat-bg, #fff)",
-                border: "1px solid var(--land-stat-border, #E5E5E1)",
-                color: C.dark,
+                gap: "14px", padding: isMobile ? "20px 14px" : "28px 20px",
+                borderRadius: "16px",
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(244,240,227,0.25)",
                 opacity: statsVisible ? 1 : 0,
-                transform: statsVisible ? "translateY(0)" : "translateY(20px)",
-                transition: `opacity 0.45s ease ${i * 70}ms, transform 0.45s ease ${i * 70}ms`,
+                transform: statsVisible ? "translateY(0)" : "translateY(24px)",
+                transition: `opacity 0.5s ease ${i * 80}ms, transform 0.5s ease ${i * 80}ms`,
               }}>
                 <div style={{
-                  padding: "10px", borderRadius: "12px",
-                  background: "rgba(26,93,59,0.1)",
+                  width: "52px", height: "52px", borderRadius: "50%",
+                  border: "1px solid rgba(244,240,227,0.35)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#1A5D3B",
+                  color: "#F4F0E3",
                 }}>
                   {stat.icon}
                 </div>
                 <div>
                   <p style={{
-                    fontSize: isMobile ? "22px" : "26px",
-                    fontWeight: 700, color: C.dark, fontFamily: "Georgia, serif",
+                    fontSize: isMobile ? "28px" : "34px",
+                    fontWeight: 700, color: "#C97A3E",
+                    fontFamily: "'Playfair Display', Georgia, serif",
                     margin: 0, lineHeight: 1.1,
                   }}>
                     {statsLoading ? "…" : valor}
                   </p>
-                  <p style={{ fontSize: "12px", lineHeight: 1.4, color: C.mid, margin: 0, marginTop: "5px" }}>
+                  <p style={{ fontSize: "14px", lineHeight: 1.5, color: "rgba(244,240,227,0.9)", margin: 0, marginTop: "6px" }}>
                     {t(stat.label)}
                   </p>
                 </div>
@@ -929,6 +544,263 @@ export default function LandingPageOaxaca() {
           })}
         </div>
       </div>
-    </main>
+
+      {/* ══════════════════════════════════════════════════
+          TRAZABILIDAD — timeline
+      ══════════════════════════════════════════════════ */}
+      <div style={{ background: P.bgAccent, padding: isMobile ? "48px 20px" : "72px 40px" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+          {/* Header */}
+          <div style={{ textAlign: "center", marginBottom: isMobile ? "32px" : "48px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "12px" }}>
+              <div style={{ width: "24px", height: "1px", background: "#C97A3E" }} />
+              <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#C97A3E" }}>
+                {t("Cada botella, una historia")}
+              </span>
+              <div style={{ width: "24px", height: "1px", background: "#C97A3E" }} />
+            </div>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: isMobile ? "24px" : "32px", fontWeight: 700, color: "#F4F0E3", margin: "0 0 12px", lineHeight: 1.2 }}>
+              {t("Escanea, descubre,")} <em style={{ color: "#F4D5A8" }}>{t("confía")}</em>
+            </h2>
+            <p style={{ fontSize: "15px", color: "rgba(244,240,227,0.9)", lineHeight: 1.7, maxWidth: "500px", margin: "0 auto" }}>
+              {t("Cada producto trae un código QR único. Verás el productor, la comunidad, el lote y cuánto del precio vuelve al artesano.")}
+            </p>
+          </div>
+
+          {/* Layout: imagen + timeline */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "320px 1fr",
+            gap: isMobile ? "32px" : "56px",
+            alignItems: "start",
+          }}>
+            {/* Botella card */}
+            <div style={{ borderRadius: "16px", overflow: "hidden", position: "relative" }}>
+              <img src="/fotos/28.1.png" alt="Tobalá" style={{ width: "100%", height: isMobile ? "240px" : "360px", objectFit: "cover", display: "block" }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(31,58,46,0.88) 30%, transparent 60%)" }} />
+              <div style={{ position: "absolute", bottom: "16px", left: "16px", right: "16px" }}>
+                <p style={{ fontSize: "12px", color: "#C97A3E", letterSpacing: "0.12em", textTransform: "uppercase", margin: "0 0 2px" }}>LOTE · TBL-2024-0073</p>
+                <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "20px", fontWeight: 700, color: "#F4F0E3", margin: "0 0 2px" }}>Tobalá Cerro Quiniño</p>
+                <p style={{ fontSize: "13px", color: "rgba(244,240,227,0.85)", margin: 0 }}>750ml · 47° alc · Botella 73 de 400</p>
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+              {TRAZA_STEPS.map((step, i) => (
+                <div key={i} style={{ display: "flex", gap: "16px", paddingBottom: i < TRAZA_STEPS.length - 1 ? "24px" : "0" }}>
+                  {/* Línea + dot */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0" }}>
+                    <div style={{
+                      width: "36px", height: "36px", borderRadius: "50%", flexShrink: 0,
+                      background: step.done ? "#C97A3E" : "rgba(201,122,62,0.15)",
+                      border: step.done ? "none" : "1px solid rgba(201,122,62,0.4)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {step.done ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1F3A2E" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      ) : (
+                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#C97A3E", boxShadow: "0 0 8px #C97A3E" }} />
+                      )}
+                    </div>
+                    {i < TRAZA_STEPS.length - 1 && (
+                      <div style={{ width: "1px", flex: 1, background: step.done ? "rgba(201,122,62,0.4)" : "rgba(201,122,62,0.15)", minHeight: "24px" }} />
+                    )}
+                  </div>
+                  {/* Info */}
+                  <div style={{ paddingTop: "4px", flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
+                      <div>
+                        <span style={{ fontSize: "12px", color: "#C97A3E", fontWeight: 700, letterSpacing: "0.1em" }}>PASO {step.paso}</span>
+                        {!step.done && <span style={{ marginLeft: "8px", fontSize: "12px", color: "#C97A3E", fontWeight: 700, letterSpacing: "0.08em" }}>· ACTUAL</span>}
+                      </div>
+                      <span style={{ fontSize: "13px", color: "rgba(244,240,227,0.75)", letterSpacing: "0.05em" }}>{step.fecha}</span>
+                    </div>
+                    <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "15px", fontWeight: 600, color: "#F4F0E3", margin: "0 0 3px" }}>{t(step.titulo)}</p>
+                    <p style={{ fontSize: "14px", color: "rgba(244,240,227,0.85)", lineHeight: 1.5, margin: 0 }}>{t(step.desc)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div style={{ display: "flex", justifyContent: "center", marginTop: isMobile ? "32px" : "48px" }}>
+            <button onClick={() => router.push("/producto")} style={{
+              display: "flex", alignItems: "center", gap: "8px",
+              fontSize: "14px", fontWeight: 600, padding: "13px 28px", borderRadius: "6px",
+              background: "#C97A3E", color: "#1F3A2E",
+              border: "none", cursor: "pointer", letterSpacing: "0.03em",
+            }}>
+              {t("Ver trazabilidad por botella")}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════
+          SECCIÓN PRODUCTOS DESTACADOS
+      ══════════════════════════════════════════════════ */}
+      <div style={{ background: P.bgBase, padding: isMobile ? "48px 20px" : "72px 48px" }}>
+        <style>{`
+          .categorias-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+          }
+          @media (max-width: 1023px) {
+            .categorias-grid { grid-template-columns: repeat(2, 1fr); }
+          }
+          @media (max-width: 639px) {
+            .categorias-grid { grid-template-columns: 1fr; }
+          }
+          .categoria-card {
+            position: relative;
+            height: 380px;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+          }
+          .categoria-card img {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+          }
+          .categoria-card:hover img { transform: scale(1.1); }
+          .card-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.28) 50%, transparent 100%);
+            pointer-events: none;
+          }
+          .card-content {
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 100%;
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            box-sizing: border-box;
+          }
+          .card-count {
+            display: block;
+            color: #A8C26B;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+          }
+          .card-title {
+            color: #ffffff;
+            font-size: 26px;
+            font-family: 'Playfair Display', Georgia, serif;
+            font-weight: 700;
+            margin: 0;
+            line-height: 1.2;
+          }
+          .card-btn {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.3);
+            background-color: rgba(255,255,255,0.1);
+            backdrop-filter: blur(4px);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+          }
+          .categoria-card:hover .card-btn { background-color: rgba(255,255,255,0.3); }
+        `}</style>
+
+        {/* Encabezado */}
+        <div style={{ textAlign: "center", marginBottom: isMobile ? "32px" : "48px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "10px" }}>
+            <div style={{ width: "24px", height: "1px", background: "#C97A3E" }} />
+            <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#C97A3E" }}>
+              {t("Explora")}
+            </span>
+            <div style={{ width: "24px", height: "1px", background: "#C97A3E" }} />
+          </div>
+          <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: isMobile ? "24px" : "32px", fontWeight: 700, color: P.heading, margin: "0 0 10px", lineHeight: 1.2 }}>
+            {t("Productos destacados")}
+          </h2>
+          <p style={{ fontSize: "15px", color: P.body, lineHeight: 1.6, maxWidth: "480px", margin: "0 auto" }}>
+            {t("Descubre nuestra selección de mezcales, cada uno con su propia historia.")}
+          </p>
+        </div>
+
+        {loadingVendidos ? (
+          <div className="categorias-grid">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} style={{ height: "380px", borderRadius: "16px", background: P.skeletonBg, animation: "pulse 1.5s ease-in-out infinite", animationDelay: `${i * 0.1}s` }} />
+            ))}
+          </div>
+        ) : (
+          <div className="categorias-grid">
+            {Array.from({ length: 4 }, (_, i) => {
+              const prod = masVendidos[i];
+              const fb   = BOTTLE_CARDS[i];
+              return (
+                <div
+                  key={i}
+                  className="categoria-card"
+                  onClick={() => router.push("/producto")}
+                >
+                  <img
+                    src={prod?.imagen || fb.imagen}
+                    alt={prod?.nombre ?? fb.nombre}
+                    onError={(e) => { const img = e.target as HTMLImageElement; if (!img.dataset.err) { img.dataset.err = "1"; img.src = fb.imagen; } }}
+                  />
+                  <div className="card-overlay" />
+                  <div className="card-content">
+                    <div>
+                      <span className="card-count">{fb.tipo}</span>
+                      <h3 className="card-title">{prod?.nombre ?? fb.nombre}</h3>
+                    </div>
+                    <button className="card-btn" aria-label="Ver productos">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* CTA */}
+        <div style={{ display: "flex", justifyContent: "center", marginTop: "40px" }}>
+          <button
+            onClick={() => router.push("/producto")}
+            style={{
+              display: "flex", alignItems: "center", gap: "8px",
+              fontSize: "14px", fontWeight: 600, padding: "13px 32px",
+              borderRadius: "6px", background: P.ctaBtnBg, color: "#F4F0E3",
+              border: "none", cursor: "pointer", letterSpacing: "0.03em",
+            }}
+          >
+            {t("Ver todos los productos")}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+
+          </main>
   );
 }

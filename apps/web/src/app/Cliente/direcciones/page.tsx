@@ -47,6 +47,7 @@ export default function DireccionesPage() {
   const [enviando, setEnviando] = useState(false);
   const [eliminando, setEliminando] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [formErrors, setFormErrors] = useState<{ telefono?: string; cp?: string }>({});
   const { paises, loading: paisesLoading } = usePaises("envio");
 
   const [formData, setFormData] = useState<Direccion>({
@@ -174,6 +175,14 @@ export default function DireccionesPage() {
     e.preventDefault();
     if (!user?.id_usuario) return;
 
+    const errors: { telefono?: string; cp?: string } = {};
+    const tel = formData.telefono?.replace(/\D/g, "") ?? "";
+    if (tel && tel.length !== 10) errors.telefono = "El teléfono debe tener 10 dígitos";
+    const cp = formData.codigo_postal ?? "";
+    if (!formData.es_internacional && cp && !/^\d{5}$/.test(cp)) errors.cp = "El código postal debe tener 5 dígitos";
+    if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
+    setFormErrors({});
+
     try {
       setEnviando(true);
       setError(null);
@@ -284,10 +293,16 @@ export default function DireccionesPage() {
                   <input
                     type="tel"
                     value={formData.telefono || ""}
-                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                    className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
-                    placeholder="+52 1234567890"
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setFormData({ ...formData, telefono: val });
+                      setFormErrors((prev) => ({ ...prev, telefono: undefined }));
+                    }}
+                    className={`w-full rounded-lg border bg-white px-4 py-3 text-dark focus:outline-none dark:bg-dark dark:text-white ${formErrors.telefono ? "border-red-400 focus:border-red-400" : "border-gray-4 focus:border-primary dark:border-dark-3"}`}
+                    placeholder="10 dígitos, ej. 9511234567"
+                    maxLength={10}
                   />
+                  {formErrors.telefono && <p className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
                 </div>
 
                 <div className="sm:col-span-2">
@@ -413,11 +428,18 @@ export default function DireccionesPage() {
                     type="text"
                     required
                     value={formData.codigo_postal || ""}
-                    onChange={(e) => setFormData({ ...formData, codigo_postal: e.target.value })}
-                    maxLength={10}
-                    className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
-                    placeholder="12345"
+                    onChange={(e) => {
+                      const val = formData.es_internacional
+                        ? e.target.value
+                        : e.target.value.replace(/\D/g, "").slice(0, 5);
+                      setFormData({ ...formData, codigo_postal: val });
+                      setFormErrors((prev) => ({ ...prev, cp: undefined }));
+                    }}
+                    maxLength={formData.es_internacional ? 10 : 5}
+                    className={`w-full rounded-lg border bg-white px-4 py-3 text-dark focus:outline-none dark:bg-dark dark:text-white ${formErrors.cp ? "border-red-400 focus:border-red-400" : "border-gray-4 focus:border-primary dark:border-dark-3"}`}
+                    placeholder={formData.es_internacional ? "Código postal" : "5 dígitos, ej. 68000"}
                   />
+                  {formErrors.cp && <p className="mt-1 text-xs text-red-500">{formErrors.cp}</p>}
                 </div>
 
                 <div>

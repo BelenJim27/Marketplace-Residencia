@@ -212,6 +212,8 @@ export class ProductoresService {
           rfc: dto.rfc ?? null,
           razon_social: dto.razon_social ?? null,
           datos_bancarios: datosBancariosEncriptados,
+          asociacion: dto.asociacion ?? null,
+          nombre_marca: dto.nombre_marca ?? null,
           motivo_rechazo: null,
           revisado_por: null,
           revisado_en: null,
@@ -242,6 +244,8 @@ export class ProductoresService {
           rfc: dto.rfc ?? null,
           razon_social: dto.razon_social ?? null,
           datos_bancarios: datosBancariosEncriptados,
+          asociacion: dto.asociacion ?? null,
+          nombre_marca: dto.nombre_marca ?? null,
           ...(dto.categorias_ids && dto.categorias_ids.length > 0
             ? {
                 productor_categoria: {
@@ -365,6 +369,13 @@ export class ProductoresService {
           console.error("[Email] sendSolicitudRecibidaEmail:", err),
         );
     }
+
+    this.notificaciones.notifyAdmins(
+      'nueva_solicitud_productor',
+      'Nueva solicitud de productor',
+      `${usuarioData?.nombre ?? 'Un usuario'} solicita convertirse en productor.`,
+      '/Administrador/solicitudes-productores',
+    ).catch(() => {});
 
     return serializeBigInts(resultado);
   }

@@ -28,6 +28,21 @@ export class ConfiguracionService {
     return map;
   }
 
+  async getAsociaciones(): Promise<string[]> {
+    const config = await this.prisma.configuracion_sistema.findUnique({ where: { clave: 'asociaciones' } });
+    if (!config?.valor) return ['Maestras Mezcaleras', 'Maestras y Maestros Mezcaleros', 'Tierra Combates'];
+    try { return JSON.parse(config.valor); } catch { return []; }
+  }
+
+  async setAsociaciones(lista: string[]): Promise<string[]> {
+    await this.prisma.configuracion_sistema.upsert({
+      where: { clave: 'asociaciones' },
+      update: { valor: JSON.stringify(lista), tipo: 'json' },
+      create: { clave: 'asociaciones', valor: JSON.stringify(lista), tipo: 'json', descripcion: 'Lista de asociaciones de productores' },
+    });
+    return lista;
+  }
+
   async getPayoutRetentionDays(): Promise<number> {
     try {
       const config = await this.prisma.configuracion_sistema.findUnique({
@@ -54,6 +69,11 @@ export class ConfiguracionService {
 
   async seedDefaults() {
     const defaults = [
+      {
+        clave: 'asociaciones',
+        valor: JSON.stringify(['Maestras Mezcaleras', 'Maestras y Maestros Mezcaleros', 'Tierra Combates']),
+        tipo: 'json',
+      },
       { clave: 'color_primario', valor: '#3b82f6', tipo: 'color' },
       { clave: 'color_secundario', valor: '#8b5cf6', tipo: 'color' },
       { clave: 'color_acento', valor: '#10b981', tipo: 'color' },

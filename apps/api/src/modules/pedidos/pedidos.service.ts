@@ -387,6 +387,38 @@ export class PedidosService {
       return createdDetalle;
     });
 
+    // Notificar al productor si el stock quedó bajo (fuera de la transacción — best-effort)
+    const finalStock = await this.prisma.inventario.findFirst({
+      where: { id_producto },
+      select: { stock: true },
+    });
+    const stockActual = finalStock ? Number(finalStock.stock) : -1;
+    if (stockActual >= 0 && stockActual <= 10 && id_productor) {
+      try {
+        const productor = await this.prisma.productores.findUnique({
+          where: { id_productor },
+          select: { id_usuario: true },
+        });
+        if (productor?.id_usuario) {
+          const nombreProducto = (detalle as any).productos?.nombre ?? 'tu producto';
+          await this.prisma.notificaciones.create({
+            data: {
+              id_usuario: productor.id_usuario,
+              tipo: 'stock_bajo',
+              titulo: stockActual === 0 ? 'Producto agotado' : 'Stock bajo',
+              cuerpo: stockActual === 0
+                ? `"${nombreProducto}" se ha agotado. Actualiza tu inventario.`
+                : `"${nombreProducto}" tiene solo ${stockActual} unidades restantes.`,
+              url_accion: '/dashboard/productor/productos',
+              leido: false,
+            },
+          });
+        }
+      } catch (err: any) {
+        console.error('[pedidos] Failed to create stock_bajo notification:', err?.message);
+      }
+    }
+
     return serializeBigInts(detalle);
   }
 

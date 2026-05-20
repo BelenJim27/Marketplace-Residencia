@@ -6,6 +6,24 @@ import { CreateConfiguracionSistemaDto, CreateTasaImpuestoDto, UpdateConfiguraci
 export class ConfiguracionController {
   constructor(private readonly service: ConfiguracionService) {}
 
+  @Get('asociaciones')
+  async getAsociaciones() {
+    try {
+      return await this.service.getAsociaciones();
+    } catch {
+      return ['Maestras Mezcaleras', 'Maestras y Maestros Mezcaleros', 'Tierra Combates'];
+    }
+  }
+
+  @Post('asociaciones')
+  async setAsociaciones(@Body() body: { lista: string[] }) {
+    try {
+      return await this.service.setAsociaciones(body.lista ?? []);
+    } catch (error: any) {
+      return { error: error.message };
+    }
+  }
+
   @Get('sistema')
   async listSistema() {
     try {

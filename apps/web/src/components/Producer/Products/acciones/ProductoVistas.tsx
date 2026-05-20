@@ -303,9 +303,25 @@ export function ProductoTabla({
                   </td>
 
                   <td className="px-5 py-4">
-                    <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
-                      {product.stock ?? 0}
-                    </span>
+                    {(() => {
+                      const stock = product.stock ?? 0;
+                      const minimo = product.stock_minimo ?? 0;
+                      if (stock === 0) return (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
+                          ⚠ Sin stock
+                        </span>
+                      );
+                      if (minimo > 0 && stock <= minimo) return (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+                          ⚠ {stock}
+                        </span>
+                      );
+                      return (
+                        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+                          {stock}
+                        </span>
+                      );
+                    })()}
                   </td>
 
                   <td className="px-5 py-4">

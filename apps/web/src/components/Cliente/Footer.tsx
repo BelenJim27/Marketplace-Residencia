@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useLocale } from "@/context/LocaleContext";
+import { useTheme } from "next-themes";
 
 const LEGAL_LINKS: { label: string; href: string }[] = [
   { label: "Aviso de Privacidad", href: "/privacy" },
@@ -12,12 +13,14 @@ const LEGAL_LINKS: { label: string; href: string }[] = [
 
 export default function Footer() {
   const { t } = useLocale();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   return (
     <footer
       className="w-full py-16 px-8"
       style={{
-        background: "rgba(20, 8, 2, 0.75)",
+        background: isDark ? "#0D1A10" : "#2E4A33",
         borderTop: "1px solid rgba(200, 169, 122, 0.2)",
       }}
     >

@@ -112,6 +112,7 @@ export function useProductos() {
           ...p,
           imagen_url: p.imagen_url ?? p.imagen_principal_url ?? null,
           stock: p.stock ?? 0,
+          stock_minimo: p.stock_minimo ?? 0,
         })),
       );
     } catch (err) {

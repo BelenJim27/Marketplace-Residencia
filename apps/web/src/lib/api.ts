@@ -55,7 +55,14 @@ async function refreshAccessToken(): Promise<string> {
 }
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, options);
+  let response: Response;
+  try {
+    response = await fetch(url, options);
+  } catch (networkError) {
+    console.error("Network error fetching", url, networkError);
+    throw new Error(`No se pudo conectar con el servidor. Verifica que la API esté disponible.`);
+  }
+
   if (response.status === 401) {
     console.warn("🔐 401 detectado, intentando refresh de token...");
     try {
@@ -66,8 +73,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
       }
 
       const newAccessToken = await pendingRefresh;
-      console.warn("✅ Token refrescado, reintentando请求...");
-
+      console.warn("✅ Token refrescado, reintentandorequest...");
 
       const newHeaders = { ...options?.headers } as Record<string, string>;
       if (newHeaders["Authorization"]) {
@@ -133,6 +139,9 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 function endpoint(path: string) {
+  if (typeof window !== "undefined") {
+    return path;
+  }
   return `${API_BASE}${path}`;
 }
 
@@ -269,7 +278,15 @@ export const api = {
   },
 
   productores: {
-    getAll: (): Promise<any[]> => fetchJson<any[]>(endpoint("/productores")),
+    getAll: (filters?: { asociacion?: string; marca?: string; id_categoria?: number; estado?: string }): Promise<any[]> => {
+      const params = new URLSearchParams();
+      if (filters?.asociacion) params.set("asociacion", filters.asociacion);
+      if (filters?.marca) params.set("marca", filters.marca);
+      if (filters?.id_categoria) params.set("id_categoria", String(filters.id_categoria));
+      if (filters?.estado) params.set("estado", filters.estado);
+      const qs = params.toString();
+      return fetchJson<any[]>(endpoint(`/productores${qs ? `?${qs}` : ""}`));
+    },
     getOne: (id: number) => fetchJson(endpoint(`/productores/${id}`)),
     getByUsuario: (id_usuario: string) => fetchJson(endpoint(`/productores/by-usuario/${id_usuario}`)),
     getByUbicacion: (ubicacion: string) => fetchJson(endpoint(`/productores?ubicacion=${ubicacion}`)),
@@ -296,7 +313,9 @@ export const api = {
         rfc?: string;
         razon_social?: string;
         datos_bancarios?: string;
-        categorias_ids?: number[];  // ← CAMPO NUEVO
+        asociacion?: string;
+        nombre_marca?: string;
+        categorias_ids?: number[];
         direccion_fiscal?: {
           linea_1?: string;
           linea_2?: string;
@@ -690,6 +709,7 @@ export const api = {
 
   notificaciones: {
     getAll: (token: string) => fetchJson(endpoint("/notificaciones"), { headers: headers(token) }),
+    getByUser: (userId: string, token: string) => fetchJson(endpoint(`/notificaciones/${userId}`), { headers: headers(token) }),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/notificaciones"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     update: (token: string, id: string, data: any) =>
@@ -711,6 +731,13 @@ export const api = {
   },
 
   configuracion: {
+    getAsociaciones: (): Promise<string[]> => fetchJson<string[]>(endpoint("/configuracion/asociaciones")),
+    setAsociaciones: (token: string, lista: string[]) =>
+      fetchJson(endpoint("/configuracion/asociaciones"), {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify({ lista }),
+      }),
     getSistema: () => fetchJson(endpoint("/configuracion/sistema")),
     getTasas: () => fetchJson(endpoint("/configuracion/tasas")),
     updateSistema: (token: string, id: number, data: any) =>
@@ -777,6 +804,15 @@ export const api = {
       fetchJson(endpoint("/admin/pedidos/recientes"), { headers: headers(token) }),
     getTopProductores: (token?: string) =>
       fetchJson(endpoint("/admin/productores/top"), { headers: headers(token) }),
+    getProductores: (token: string, filters?: { asociacion?: string; marca?: string; id_categoria?: number; estado?: string }): Promise<any[]> => {
+      const params = new URLSearchParams();
+      if (filters?.asociacion) params.set("asociacion", filters.asociacion);
+      if (filters?.marca) params.set("marca", filters.marca);
+      if (filters?.id_categoria) params.set("id_categoria", String(filters.id_categoria));
+      if (filters?.estado) params.set("estado", filters.estado);
+      const qs = params.toString();
+      return fetchJson<any[]>(endpoint(`/admin/productores${qs ? `?${qs}` : ""}`), { headers: headers(token) });
+    },
   },
 
   paises: {

@@ -23,6 +23,7 @@ import {
   Shield,
   ShieldCheck,
   TrendingUp,
+  Tag,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -99,6 +100,11 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         title: "Solicitudes Productores",
         url: "/Administrador/solicitudes-productores",
         icon: UserRound,
+      },
+      {
+        title: "Asociaciones",
+        url: "/Administrador/asociaciones",
+        icon: Tag,
       },
       {
         title: "Configuración",

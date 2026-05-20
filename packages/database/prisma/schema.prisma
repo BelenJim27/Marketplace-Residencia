@@ -67,11 +67,11 @@ model categorias {
   categorias                    categorias?                     @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
   other_categorias              categorias[]                    @relation("categoriasTocategorias")
   categorias_productos          categorias_productos[]
-  tasas_impuesto                tasas_impuesto[]
-  comisiones                    comisiones[]
   categorias_traducciones       categorias_traducciones[]
+  comisiones                    comisiones[]
+  productor_categoria           productor_categoria[]
   restricciones_envio_categoria restricciones_envio_categoria[]
-  productor_categoria productor_categoria[]
+  tasas_impuesto                tasas_impuesto[]
 
   @@index([id_padre], map: "idx_cat_padre")
 }
@@ -215,10 +215,10 @@ model envios {
   fecha_entrega_estimada   DateTime?          @db.Timestamptz(6)
   fecha_entrega            DateTime?          @db.Timestamptz(6)
   envio_guias              envio_guias[]
-  pedido_productor         pedido_productor[]
   pedidos                  pedidos            @relation(fields: [id_pedido], references: [id_pedido], onUpdate: NoAction)
   servicios_envio          servicios_envio?   @relation(fields: [id_servicio], references: [id_servicio], onUpdate: NoAction)
   transportistas           transportistas?    @relation(fields: [id_transportista], references: [id_transportista], onUpdate: NoAction)
+  pedido_productor         pedido_productor[]
 
   @@index([estado], map: "idx_envios_estado")
   @@index([id_pedido], map: "idx_envios_pedido")
@@ -488,46 +488,49 @@ model producto_imagenes {
 
   @@index([id_producto], map: "idx_producto_imagenes_producto")
 }
+
 model productor_categoria {
   id_productor Int
   id_categoria Int
   creado_en    DateTime    @default(now()) @db.Timestamptz(6)
-  productores  productores @relation(fields: [id_productor], references: [id_productor], onDelete: Cascade, onUpdate: NoAction)
   categorias   categorias  @relation(fields: [id_categoria], references: [id_categoria], onDelete: Cascade, onUpdate: NoAction)
+  productores  productores @relation(fields: [id_productor], references: [id_productor], onDelete: Cascade, onUpdate: NoAction)
+
   @@id([id_productor, id_categoria])
   @@index([id_categoria], map: "idx_prod_cat_categoria")
 }
 
 model productores {
-  id_productor                Int                @id @default(autoincrement())
-  id_usuario                  String             @unique @db.Uuid
+  id_productor                Int                   @id @default(autoincrement())
+  id_usuario                  String                @unique @db.Uuid
   id_region                   Int?
   biografia                   String?
-  creado_en                   DateTime           @default(now()) @db.Timestamptz(6)
-  actualizado_en              DateTime           @default(now()) @db.Timestamptz(6)
-  eliminado_en                DateTime?          @db.Timestamptz(6)
-  otras_caracteristicas       String?            @db.VarChar(255)
-  estado                      String             @default("pendiente") @db.VarChar(20)
+  creado_en                   DateTime              @default(now()) @db.Timestamptz(6)
+  actualizado_en              DateTime              @default(now()) @db.Timestamptz(6)
+  eliminado_en                DateTime?             @db.Timestamptz(6)
+  otras_caracteristicas       String?               @db.VarChar(255)
+  estado                      String                @default("pendiente") @db.VarChar(20)
   motivo_rechazo              String?
-  revisado_en                 DateTime?          @db.Timestamptz(6)
-  revisado_por                String?            @db.Uuid
-  solicitado_en               DateTime           @default(now()) @db.Timestamptz(6)
+  revisado_en                 DateTime?             @db.Timestamptz(6)
+  revisado_por                String?               @db.Uuid
+  solicitado_en               DateTime              @default(now()) @db.Timestamptz(6)
   datos_bancarios             String?
-  razon_social                String?            @db.VarChar(200)
-  rfc                         String?            @db.VarChar(13)
-  stripe_account_id           String?            @unique @db.VarChar(150)
-  stripe_onboarding_completed Boolean            @default(false)
+  razon_social                String?               @db.VarChar(200)
+  rfc                         String?               @db.VarChar(13)
+  stripe_account_id           String?               @unique @db.VarChar(150)
+  stripe_onboarding_completed Boolean               @default(false)
+  asociacion                  String?               @db.VarChar(150)
+  nombre_marca                String?               @db.VarChar(150)
   comisiones                  comisiones[]
   detalle_pedido              detalle_pedido[]
   lotes                       lotes[]
   payouts                     payouts[]
   pedido_productor            pedido_productor[]
-  regiones                    regiones?          @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
-  usuarios                    usuarios           @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
-  revisor                     usuarios?          @relation("RevisorProductor", fields: [revisado_por], references: [id_usuario], onUpdate: NoAction)
+  productor_categoria         productor_categoria[]
+  regiones                    regiones?             @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
+  usuarios                    usuarios              @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
+  revisor                     usuarios?             @relation("RevisorProductor", fields: [revisado_por], references: [id_usuario], onUpdate: NoAction)
   tiendas                     tiendas[]
-  productor_categoria productor_categoria[]
-
 }
 
 model productos {
@@ -952,7 +955,7 @@ model restricciones_envio_categoria {
   vigente_hasta  DateTime?  @db.Timestamptz(6)
   creado_en      DateTime   @default(now()) @db.Timestamptz(6)
   categorias     categorias @relation(fields: [id_categoria], references: [id_categoria], onDelete: Cascade, onUpdate: NoAction)
-  paises         paises     @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
+  paises         paises     @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
 
   @@unique([pais_iso2, estado_codigo, id_categoria])
   @@index([id_categoria], map: "idx_restr_envio_categoria")

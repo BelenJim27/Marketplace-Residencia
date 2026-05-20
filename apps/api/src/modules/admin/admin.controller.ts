@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Param, ParseIntPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/rbac.guard';
@@ -32,8 +32,18 @@ export class AdminController {
   }
 
   @Get('productores')
-  getAllProductores() {
-    return this.adminService.getAllProductores();
+  getAllProductores(
+    @Query('estado') estado?: string,
+    @Query('asociacion') asociacion?: string,
+    @Query('marca') marca?: string,
+    @Query('id_categoria') id_categoria?: string,
+  ) {
+    return this.adminService.getAllProductores({
+      estado: estado || undefined,
+      asociacion: asociacion || undefined,
+      marca: marca || undefined,
+      id_categoria: id_categoria ? parseInt(id_categoria) : undefined,
+    });
   }
 
   @Patch('productores/:id/revisar')

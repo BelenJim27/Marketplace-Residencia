@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit2, Eye, Plus, Search, Trash2 } from "lucide-react";
+import { Eye, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -19,6 +19,9 @@ export function ProductoresTabla() {
   const [regionFilter, setRegionFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [idFilter, setIdFilter] = useState("");
+  const [asociacionFilter, setAsociacionFilter] = useState("");
+  const [marcaFilter, setMarcaFilter] = useState("");
+  const [asociaciones, setAsociaciones] = useState<string[]>([]);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [activeMode, setActiveMode] = useState<"view" | null>(null);
   const [selectedProductor, setSelectedProductor] = useState<ProductorAdmin | null>(null);
@@ -28,8 +31,8 @@ export function ProductoresTabla() {
   async function loadProductores() {
     setLoading(true);
     try {
-      const data = await api.productores.getAll();
-      console.log("Productores data:", data);
+      const token = getCookie("token") ?? "";
+      const data = await api.admin.getProductores(token);
       const transformed = (Array.isArray(data) ? data : []).map((p: any) => ({
         id: p.id_productor as number,
         nombre: p.usuarios?.nombre || "Sin nombre",
@@ -42,22 +45,43 @@ export function ProductoresTabla() {
         otras_caracteristicas: p.otras_caracteristicas || "",
         foto_url: p.foto_url || "",
         tienda: (p.tiendas?.[0]?.nombre as string) || null,
+        asociacion: p.asociacion || null,
+        marca: p.marca || p.tiendas?.[0]?.nombre || null,
       }));
       setProductores(transformed);
     } catch (error) {
       setNotice({ type: "error", message: error instanceof Error ? error.message : "No fue posible cargar los productores." });
-      console.error("Error loading productores:", error);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { loadProductores(); }, []);
+  async function loadAsociaciones() {
+    try {
+      const lista = await api.configuracion.getAsociaciones();
+      setAsociaciones(lista);
+    } catch {
+      setAsociaciones([]);
+    }
+  }
+
+  useEffect(() => {
+    loadProductores();
+    loadAsociaciones();
+  }, []);
 
   const regionOptions = useMemo(
     () => [...new Set(productores.map((p) => p.region).filter(Boolean))].sort(),
     [productores],
   );
+
+  // Marcas disponibles filtradas por asociación seleccionada
+  const marcaOptions = useMemo(() => {
+    const base = asociacionFilter
+      ? productores.filter((p) => p.asociacion === asociacionFilter)
+      : productores;
+    return [...new Set(base.map((p) => p.marca).filter(Boolean))].sort() as string[];
+  }, [productores, asociacionFilter]);
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -69,12 +93,14 @@ export function ProductoresTabla() {
         (!normalizedQuery || fullName.includes(normalizedQuery)) &&
         (!regionFilter || p.region === regionFilter) &&
         (!statusFilter || p.status === statusFilter) &&
-        (!normalizedId || producerId === normalizedId)
+        (!normalizedId || producerId === normalizedId) &&
+        (!asociacionFilter || p.asociacion === asociacionFilter) &&
+        (!marcaFilter || p.marca === marcaFilter)
       );
     });
     const seen = new Set<number>();
     return filteredList.filter((p) => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
-  }, [idFilter, productores, query, regionFilter, statusFilter]);
+  }, [idFilter, productores, query, regionFilter, statusFilter, asociacionFilter, marcaFilter]);
 
   const stats = [
     { label: "Total Productores", value: productores.length, color: "text-slate-800 dark:text-white" },
@@ -82,7 +108,14 @@ export function ProductoresTabla() {
     { label: "Inactivos", value: productores.filter((p) => p.status === "PAUSADO").length, color: "text-amber-500" },
   ];
 
-  function clearFilters() { setQuery(""); setRegionFilter(""); setStatusFilter(""); setIdFilter(""); }
+  function clearFilters() {
+    setQuery("");
+    setRegionFilter("");
+    setStatusFilter("");
+    setIdFilter("");
+    setAsociacionFilter("");
+    setMarcaFilter("");
+  }
 
   async function handleDelete() {
     if (!deleting) return;
@@ -90,7 +123,7 @@ export function ProductoresTabla() {
     try {
       const token = getCookie("token");
       if (!token) throw new Error("No autorizado");
-      await api.productores.delete(token, deleting.id);
+      await api.productores.delete(token, deleting.id as any);
       setProductores((c) => c.filter((p) => p.id !== deleting.id));
       setNotice({ type: "success", message: "Productor eliminado correctamente." });
       setDeleting(null);
@@ -112,20 +145,17 @@ export function ProductoresTabla() {
 
   return (
     <div className="space-y-6">
-      {/* Header — sin botón "Nuevo Productor" */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Gestión de Productores</h1>
         <p className="mt-0.5 text-sm text-gray-500 dark:text-dark-6">Administra productores y el estado operativo.</p>
       </div>
 
-      {/* Notice */}
       {notice && (
         <div className={`rounded-2xl border px-4 py-3 text-sm ${notice.type === "success" ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
           {notice.message}
         </div>
       )}
 
-      {/* Stats */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {stats.map((item) => (
           <div key={item.label} className="rounded-2xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2 p-5 shadow-sm">
@@ -135,9 +165,37 @@ export function ProductoresTabla() {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-dark-2 p-6 shadow-sm">
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+      {/* Filters — cascading: Asociación → Marca → Productor */}
+      <div className="rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-dark-2 p-6 shadow-sm space-y-3">
+        {/* Row 1: cascading hierarchy */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <select
+            value={asociacionFilter}
+            onChange={(e) => { setAsociacionFilter(e.target.value); setMarcaFilter(""); }}
+            className={selectCls}
+          >
+            <option value="">Todas las asociaciones</option>
+            {asociaciones.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <select
+            value={marcaFilter}
+            onChange={(e) => setMarcaFilter(e.target.value)}
+            className={selectCls}
+            disabled={marcaOptions.length === 0}
+          >
+            <option value="">Todas las marcas</option>
+            {marcaOptions.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={selectCls}>
+            <option value="">Cualquier estado</option>
+            <option value="ACTIVO">Activo</option>
+            <option value="INACTIVO">Inactivo</option>
+            <option value="PAUSADO">Pausado</option>
+          </select>
+        </div>
+
+        {/* Row 2: text search + region + ID + clear */}
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-dark-6" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nombre..." className={inputCls} />
@@ -145,12 +203,6 @@ export function ProductoresTabla() {
           <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)} className={selectCls}>
             <option value="">Todas las regiones</option>
             {regionOptions.map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={selectCls}>
-            <option value="">Cualquier estado</option>
-            <option value="ACTIVO">Activo</option>
-            <option value="INACTIVO">Inactivo</option>
-            <option value="PAUSADO">Pausado</option>
           </select>
           <input value={idFilter} onChange={(e) => setIdFilter(e.target.value)} placeholder="Buscar por ID..."
             className="rounded-xl border border-gray-100 dark:border-dark-3 bg-gray-50 dark:bg-dark-3 px-4 py-3 text-sm text-slate-700 dark:text-white placeholder-gray-400 dark:placeholder-dark-6 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
@@ -163,35 +215,39 @@ export function ProductoresTabla() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-dark-2 shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left">
+          <table className="w-full min-w-[1000px] text-left">
             <thead className="bg-gray-50 dark:bg-dark-3 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-dark-6">
               <tr>
                 <th className="p-4">ID</th>
                 <th className="p-4">Nombre</th>
                 <th className="p-4">Región</th>
-                <th className="p-4 text-center">Tienda</th>
+                <th className="p-4">Asociación</th>
+                <th className="p-4 text-center">Marca</th>
                 <th className="p-4 text-center">Status</th>
                 <th className="p-4 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-dark-3">
               {loading ? (
-                <tr><td colSpan={6} className="p-10 text-center text-sm text-gray-500 dark:text-dark-6">Cargando productores...</td></tr>
+                <tr><td colSpan={7} className="p-10 text-center text-sm text-gray-500 dark:text-dark-6">Cargando productores...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="p-10 text-center text-sm text-gray-500 dark:text-dark-6">No hay productores para mostrar.</td></tr>
+                <tr><td colSpan={7} className="p-10 text-center text-sm text-gray-500 dark:text-dark-6">No hay productores para mostrar.</td></tr>
               ) : (
                 filtered.map((p) => (
                   <tr key={p.id} className="group transition-colors hover:bg-gray-50/60 dark:hover:bg-dark-3/60">
                     <td className="p-4 font-mono text-xs text-gray-400 dark:text-dark-6">#PR-{String(p.id).padStart(4, "0")}</td>
                     <td className="p-4 font-semibold text-slate-800 dark:text-white">{`${p.nombre} ${p.apellido_paterno} ${p.apellido_materno}`.trim()}</td>
                     <td className="p-4 text-sm text-slate-600 dark:text-dark-6">{p.region}</td>
-                    <td className="p-4 text-sm text-slate-600 dark:text-dark-6 text-center">{p.tienda ?? "—"}</td>
+                    <td className="p-4 text-sm text-slate-600 dark:text-dark-6">
+                      {p.asociacion ? (
+                        <span className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">{p.asociacion}</span>
+                      ) : "—"}
+                    </td>
+                    <td className="p-4 text-sm text-slate-600 dark:text-dark-6 text-center">{p.marca ?? "—"}</td>
                     <td className="p-4 text-center"><StatusBadge status={p.status} /></td>
                     <td className="p-4">
-                      {/* Sin botón Editar */}
                       <div className="flex justify-center gap-2 transition-opacity">
                         <Link
                           href={`/dashboard/admin/productores/${p.id}/productos`}
@@ -223,7 +279,6 @@ export function ProductoresTabla() {
         }}
       />
 
-      {/* Delete modal */}
       {deleting && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-2 p-6 sm:p-8 text-center shadow-2xl">
