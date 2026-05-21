@@ -274,7 +274,13 @@ export function ProductoresForm({
                   accept="image/*"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
-                    if (file) handleChange("foto", file);
+                    if (!file) return;
+                    if (file.size > 500 * 1024) {
+                      alert("La imagen debe pesar menos de 500 KB.");
+                      event.target.value = "";
+                      return;
+                    }
+                    handleChange("foto", file);
                   }}
                   className="block w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm file:mr-2 sm:file:mr-4 file:rounded-md sm:file:rounded-lg file:border-0 file:bg-green-100 file:px-2 sm:file:px-3 file:py-1 file:text-xs sm:file:text-sm file:font-semibold file:text-green-700 hover:file:bg-green-200"
                 />

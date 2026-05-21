@@ -163,6 +163,11 @@ export default function ClientePerfilPage() {
   const handleFotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
+    if (file.size > 500 * 1024) {
+      flash("err", "La imagen debe pesar menos de 500 KB.");
+      e.target.value = "";
+      return;
+    }
     setUploadingFoto(true);
     try {
       const token = getCookie("token");

@@ -307,7 +307,7 @@ export default function UsuariosUI() {
                     <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-gray-300 dark:border-dark-3 bg-gray-50 dark:bg-dark-3"><User size={24} className="text-gray-400 dark:text-dark-6" /></div>
                   )}
                   <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 dark:border-dark-3 px-4 py-2 text-sm font-medium text-slate-600 dark:text-dark-6 hover:bg-gray-50 dark:hover:bg-dark-3">
-                    <input type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) setSelectedFotoFile(file); }} className="hidden" />
+                    <input type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; if (file.size > 500 * 1024) { alert("La imagen debe pesar menos de 500 KB."); e.target.value = ""; return; } setSelectedFotoFile(file); }} className="hidden" />
                     Subir foto
                   </label>
                 </div>

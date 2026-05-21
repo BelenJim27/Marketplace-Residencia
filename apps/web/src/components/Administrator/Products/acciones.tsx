@@ -71,6 +71,11 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
     const handleImagenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        if (file.size > 500 * 1024) {
+            alert("La imagen debe pesar menos de 500 KB.");
+            e.target.value = "";
+            return;
+        }
         setImagenFile(file);
         const reader = new FileReader();
         reader.onloadend = () => setImagenPreview(reader.result as string);

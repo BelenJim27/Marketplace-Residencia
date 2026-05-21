@@ -142,6 +142,12 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
       return;
     }
 
+    if (file.size > 500 * 1024) {
+      setError("La imagen debe pesar menos de 500 KB.");
+      e.target.value = "";
+      return;
+    }
+
     setSelectedPhoto(file);
     setPhotoPreview(URL.createObjectURL(file));
   };
@@ -235,7 +241,7 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
                   <User className="h-4 w-4" />
                   {photoPreview ? "Cambiar foto" : "Subir foto"}
                 </button>
-                <p className="mt-2 text-xs text-gray-400">Si no tienes foto guardada, se mostrará un placeholder neutral.</p>
+                <p className="mt-2 text-xs text-gray-400">Si no tienes foto guardada, se mostrará un placeholder neutral. Máximo 500 KB.</p>
               </Field>
             </div>
           </div>

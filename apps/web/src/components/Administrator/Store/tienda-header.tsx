@@ -8,7 +8,6 @@ import {
   Store, Home, ShoppingBag, Menu, X,
 } from "lucide-react";
 import { UserInfo } from "@/components/Layouts/header/user-info";
-import { ThemeToggleSwitch } from "@/components/Layouts/header/theme-toggle";
 import { useAuth } from "@/context/AuthContext";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -253,14 +252,12 @@ export function TiendaHeader() {
               <UserInfo />
             </div>
           )}
-          <ThemeToggleSwitch />
           <CurrencySwitcher />
           <LanguageSwitcher />
         </nav>
 
         {/* ── CONTROLES MÓVIL (< md) ── */}
         <div className="flex md:hidden items-center gap-2">
-          <ThemeToggleSwitch />
           <CurrencySwitcher />
           <LanguageSwitcher />
 

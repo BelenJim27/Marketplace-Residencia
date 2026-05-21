@@ -7,7 +7,6 @@ import { useSidebarContext } from "@/context/SidebarContext";
 import { useAuth } from "@/context/AuthContext";
 import { MenuIcon, CloseIcon } from "./icons";
 import { Notification } from "./notification";
-import { ThemeToggleSwitch } from "./theme-toggle";
 import { UserInfo } from "./user-info";
 import { useNotificationPoller } from "@/hooks/useNotificationPoller";
 
@@ -75,7 +74,6 @@ export function Header() {
           <SearchIcon className="size-5" />
         </button>
 
-        <ThemeToggleSwitch />
         <Notification />
 
         <div className="shrink-0">

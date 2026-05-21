@@ -270,6 +270,11 @@ export default function SolicitarPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 500 * 1024) {
+      setError("El archivo debe pesar menos de 500 KB.");
+      e.target.value = "";
+      return;
+    }
     setCertificadoFile(file);
     setUploading(true);
     setError("");

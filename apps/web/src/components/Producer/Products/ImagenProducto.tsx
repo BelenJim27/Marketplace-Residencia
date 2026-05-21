@@ -80,13 +80,24 @@ export function ImagenProducto({
         ) : (
           <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">Sin img</div>
         )}
-        <input
-          type="file"
-          accept="image/*"
-          disabled={disabled}
-          onChange={(event) => onChange(updateImagenProductoState(imagen, event.target.files?.[0] ?? null, fallbackPreview ?? null))}
-          className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2 disabled:opacity-60"
-        />
+        <div className="flex flex-col gap-1 w-full">
+          <input
+            type="file"
+            accept="image/*"
+            disabled={disabled}
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null;
+              if (file && file.size > 500 * 1024) {
+                alert("La imagen debe pesar menos de 500 KB.");
+                event.target.value = "";
+                return;
+              }
+              onChange(updateImagenProductoState(imagen, file, fallbackPreview ?? null));
+            }}
+            className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2 disabled:opacity-60"
+          />
+          <span className="text-xs text-gray-400">Máximo 500 KB</span>
+        </div>
       </div>
     </label>
   );
