@@ -46,11 +46,10 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
-  // Rutas de auth — sin footer
+  // Rutas de auth — sin header ni footer
   if (isAuthRoute) {
     return (
       <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
-        <TiendaHeader />
         <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>

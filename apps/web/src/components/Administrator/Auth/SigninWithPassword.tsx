@@ -90,8 +90,9 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
   return (
     <form onSubmit={handleSubmit}>
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-500">
-          {error}
+        <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400">
+          <span className="mt-0.5 flex-shrink-0 text-base leading-none">⚠</span>
+          <span>{error}</span>
         </div>
       )}
 
@@ -99,7 +100,7 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
         type="email"
         label="Correo electrónico"
         className="mb-4 [&_input]:py-[15px]"
-        placeholder="Ingresa tu correo"
+        placeholder="tu@correo.com"
         name="email"
         handleChange={handleChange}
         value={data.email}
@@ -114,22 +115,22 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
           <input
             type={showPassword ? "text" : "password"}
             name="password"
-            placeholder="Ingresa tu contraseña"
+            placeholder="••••••••"
             value={data.password}
             onChange={handleChange}
-            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5.5 py-[15px] pr-12 text-dark outline-none transition focus:border-primary placeholder:text-dark-6 dark:border-dark-3 dark:bg-dark-2 dark:text-white dark:focus:border-primary"
+            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5.5 py-[15px] pr-12 text-dark outline-none transition focus:border-green-500 placeholder:text-dark-6 dark:border-dark-3 dark:bg-dark-2 dark:text-white dark:focus:border-green-500"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="absolute right-4.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
       </div>
 
-      <div className="mb-6 flex items-center justify-between gap-2 py-2 font-medium">
+      <div className="mb-6 flex items-center justify-between gap-2 py-1">
         <Checkbox
           label="Recordarme"
           name="remember"
@@ -145,24 +146,26 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
         />
         <Link
           href="/auth/forgot-password"
-          className="hover:text-primary dark:text-white dark:hover:text-primary"
+          className="text-sm text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors"
         >
           ¿Olvidaste tu contraseña?
         </Link>
       </div>
 
-      <div className="mb-4.5">
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-green-600 p-4 font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
-        >
-          {loading ? "Ingresando..." : "Ingresar"}
-          {loading && (
+      <button
+        type="submit"
+        disabled={loading}
+        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-green-600 py-3.5 px-6 font-semibold text-white shadow-sm transition-all hover:bg-green-700 hover:shadow-md active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {loading ? (
+          <>
             <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-t-transparent" />
-          )}
-        </button>
-      </div>
+            Ingresando...
+          </>
+        ) : (
+          "Ingresar"
+        )}
+      </button>
     </form>
   );
 }

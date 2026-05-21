@@ -13,8 +13,6 @@ import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import LanguageSwitcher from "@/components/Layouts/LanguageSwitcher";
-import CurrencySwitcher from "@/components/Layouts/CurrencySwitcher";
 import { useLocale } from "@/context/LocaleContext";
 import { useNotificationPoller } from "@/hooks/useNotificationPoller";
 
@@ -252,14 +250,10 @@ export function TiendaHeader() {
               <UserInfo />
             </div>
           )}
-          <CurrencySwitcher />
-          <LanguageSwitcher />
         </nav>
 
         {/* ── CONTROLES MÓVIL (< md) ── */}
         <div className="flex md:hidden items-center gap-2">
-          <CurrencySwitcher />
-          <LanguageSwitcher />
 
           {/* Botón hamburguesa */}
           <button
