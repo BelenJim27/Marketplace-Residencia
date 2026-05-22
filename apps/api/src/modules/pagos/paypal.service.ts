@@ -100,7 +100,6 @@ export class PaypalService {
       ],
       application_context: {
         brand_name: 'Marketplace Residencia',
-        locale: 'es_ES',
         user_action: 'PAY_NOW',
         return_url: `${this.configService.get('FRONTEND_URL')}/tienda/checkout/pago-exitoso`,
         cancel_url: `${this.configService.get('FRONTEND_URL')}/tienda/checkout`,

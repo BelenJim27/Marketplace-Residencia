@@ -53,7 +53,7 @@ export function AdminDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
@@ -66,7 +66,7 @@ export function AdminDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Dashboard Administrador</h1>
+        <h1 className="text-2xl font-bold text-dark dark:text-white">Dashboard Administrador</h1>
         <p className="text-sm text-gray-400 dark:text-dark-6 mt-0.5">Resumen general del sistema</p>
       </div>
 
@@ -81,7 +81,7 @@ export function AdminDashboard() {
       {/* Gráficas */}
       <div>
         <div className="flex items-center gap-3 mb-5">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-white">Análisis y Estadísticas</h2>
+          <h2 className="text-lg font-bold text-dark dark:text-white">Análisis y Estadísticas</h2>
           <span className="h-px flex-1 bg-gray-100 dark:bg-dark-3" />
         </div>
         <AdminCharts />
@@ -102,7 +102,7 @@ function StatCard({
   color?: StatColor;
 }) {
   const valueColors: Record<StatColor, string> = {
-    default: "text-gray-800 dark:text-white",
+    default: "text-dark dark:text-white",
     green:   "text-green-500",
     blue:    "text-blue-500",
     orange:  "text-orange-400",
@@ -110,8 +110,8 @@ function StatCard({
   };
 
   return (
-    <div className="bg-white dark:bg-dark-2 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-3 p-6 hover:shadow-md transition-shadow">
-      <p className="text-[11px] font-semibold tracking-widest text-gray-400 dark:text-dark-6 uppercase mb-3">
+    <div className="bg-white dark:bg-gray-dark rounded-2xl shadow-sm border border-stroke dark:border-dark-3 p-6 hover:shadow-md transition-shadow">
+      <p className="text-[11px] font-semibold tracking-widest text-gray-400 dark:text-gray-500 uppercase mb-3">
         {label}
       </p>
       <p className={`text-4xl font-bold ${valueColors[color]}`}>{value}</p>

@@ -2,32 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useLocale } from "@/context/LocaleContext";
 import { useLandingStats } from "@/hooks/useLandingStats";
 import { useMasVendidos } from "@/hooks/useMasVendidos";
 import { useTrazabilidadCarousel } from "@/hooks/useTrazabilidadCarousel";
 import type { ProductoTrazabilidad } from "@/hooks/useTrazabilidadCarousel";
-
-// ─── HOOK: detecta dark mode ──────────────────────────────────────────────────
-function useDarkMode(): boolean {
-  const [dark, setDark] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-    const check = () => {
-      const htmlClass = document.documentElement.classList.contains("dark");
-      const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      setDark(htmlClass || sysDark);
-    };
-    check();
-    const obs = new MutationObserver(check);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme"] });
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    mq.addEventListener("change", check);
-    return () => { obs.disconnect(); mq.removeEventListener("change", check); };
-  }, []);
-  return mounted ? dark : false;
-}
 
 // ─── HOOK: detecta ancho de ventana ──────────────────────────────────────────
 function useWindowWidth(): number {
@@ -43,32 +23,16 @@ function useWindowWidth(): number {
   return mounted ? width : 1024;
 }
 
-// ─── COLORES DE TEXTO según el modo ──────────────────────────────────────────
-const TEXT_COLORS = {
-  light: { dark: "#1F3A2E", mid: "#3D6B3F", italic: "#2a0f02", annotation: "#3d1800" },
-  dark:  { dark: "#FFFFFF", mid: "#D8E8D8", italic: "#F0C84A", annotation: "#F0C84A" },
+// ─── COLORES: CSS Variable defaults (permiten override desde admin)  ────────
+const COLOR_DEFAULTS = {
+  accentColor: "#C97A3E",
+  sageGreen: "#A8C26B",
 };
 
-const PALETTE = {
-  light: {
-    bgBase:      "#F4F0E3",
-    bgAccent:    "#2E4A33",
-    heading:     "#1F3A2E",
-    body:        "rgba(31,58,46,0.8)",
-    pullQuote:   "#3D6B3F",
-    skeletonBg:  "rgba(31,58,46,0.08)",
-    ctaBtnBg:    "#1F3A2E",
-  },
-  dark: {
-    bgBase:      "#0D1A10",
-    bgAccent:    "#162218",
-    heading:     "#F4F0E3",
-    body:        "rgba(244,240,227,0.82)",
-    pullQuote:   "#A8C26B",
-    skeletonBg:  "rgba(244,240,227,0.08)",
-    ctaBtnBg:    "#2E4A33",
-  },
-};
+// Helper para obtener valor de CSS variable o fallback
+function getCSSVar(varName: string, fallback: string): string {
+  return `var(${varName}, ${fallback})`;
+}
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 
@@ -352,10 +316,13 @@ export default function LandingPageOaxaca() {
   const { t } = useLocale();
   const router = useRouter();
   const { stats: landingStats, loading: statsLoading } = useLandingStats();
-  const isDark = useDarkMode();
-  const C = isDark ? TEXT_COLORS.dark : TEXT_COLORS.light;
-  const P = isDark ? PALETTE.dark : PALETTE.light;
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const winWidth = useWindowWidth();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // ─── Config dinámica desde BD ─────────────────────────────────────────────
   const [cfg, setCfg] = useState<LandingCfg>(LANDING_CFG_DEFAULTS);
@@ -415,12 +382,22 @@ export default function LandingPageOaxaca() {
   }, []);
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
+  const bgPrimary = getCSSVar("--land-bg-primary", "#F4F0E3");
+  const bgAccent = getCSSVar("--land-bg-accent", "#2E4A33");
+  const colorHeading = getCSSVar("--land-color-heading", "#1F3A2E");
+  const colorBody = getCSSVar("--land-color-body", "rgba(31,58,46,0.8)");
+  const colorAccent = getCSSVar("--land-color-accent", "#C97A3E");
+  const colorSage = getCSSVar("--land-color-sage", "#A8C26B");
+  const colorCtaBg = getCSSVar("--land-color-cta-bg", "#1F3A2E");
+
+  if (!mounted) return null;
+
   return (
     <main
       className="font-sans"
       style={{
-        background: P.bgBase,
-        color: C.dark,
+        background: bgPrimary,
+        color: colorHeading,
         overflowY: "auto",
       }}
     >
@@ -443,7 +420,7 @@ export default function LandingPageOaxaca() {
         {/* Franja decorativa lateral */}
         <div style={{
           position: "absolute", top: 0, left: 0, bottom: 0, width: "3px",
-          background: "linear-gradient(to bottom, transparent, #C97A3E 40%, #C97A3E 60%, transparent)",
+          background: `linear-gradient(to bottom, transparent, ${colorAccent} 40%, ${colorAccent} 60%, transparent)`,
         }} />
 
         <div style={{
@@ -455,10 +432,10 @@ export default function LandingPageOaxaca() {
         }}>
           {/* Eyebrow */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-            <div style={{ width: "28px", height: "1px", background: "#C97A3E" }} />
+            <div style={{ width: "28px", height: "1px", background: colorAccent }} />
             <span style={{
               fontSize: "13px", letterSpacing: "0.25em", textTransform: "uppercase",
-              color: "#A8C26B", fontWeight: 700,
+              color: colorSage, fontWeight: 700,
               textShadow: "0 1px 8px rgba(0,0,0,0.9)",
             }}>
               {t("Trazabilidad · Origen · Identidad")}
@@ -474,7 +451,7 @@ export default function LandingPageOaxaca() {
             textShadow: "0 2px 16px rgba(0,0,0,0.85)",
           }}>
             {t(cfg.landing_hero_titulo_1)}<br />
-            <span style={{ color: "#A8C26B", textShadow: "0 2px 16px rgba(0,0,0,0.85)" }}>{t(cfg.landing_hero_titulo_2)}</span>
+            <span style={{ color: colorSage, textShadow: "0 2px 16px rgba(0,0,0,0.85)" }}>{t(cfg.landing_hero_titulo_2)}</span>
           </h1>
 
           <p style={{
@@ -498,8 +475,8 @@ export default function LandingPageOaxaca() {
                 display: "flex", alignItems: "center", gap: "6px",
                 fontSize: "13px", fontWeight: 500, borderRadius: "999px",
                 padding: "5px 14px",
-                background: "rgba(201,122,62,0.15)",
-                border: "1px solid rgba(201,122,62,0.4)",
+                background: `rgba(${colorAccent}, 0.15)`.replace("#C97A3E", "201, 122, 62"),
+                border: `1px solid rgba(${colorAccent}, 0.4)`.replace("#C97A3E", "201, 122, 62"),
                 color: "#ffffff",
                 letterSpacing: "0.02em",
                 textShadow: "0 1px 6px rgba(0,0,0,0.7)",
@@ -518,7 +495,7 @@ export default function LandingPageOaxaca() {
                 fontSize: "14px", fontWeight: 600,
                 padding: isMobile ? "12px 22px" : "14px 28px",
                 borderRadius: "6px",
-                background: "#C97A3E", color: "#1F3A2E",
+                background: colorAccent, color: colorHeading,
                 border: "none", cursor: "pointer",
                 letterSpacing: "0.03em",
               }}
@@ -548,7 +525,7 @@ export default function LandingPageOaxaca() {
 
       {/* ─── Ticker strip ─────────────────────────────────────────── */}
       <div style={{
-        background: "#C97A3E", overflow: "hidden",
+        background: colorAccent, overflow: "hidden",
         height: "36px", display: "flex", alignItems: "center",
       }}>
         <div style={{
@@ -559,7 +536,7 @@ export default function LandingPageOaxaca() {
           {Array.from({ length: 6 }).map((_, i) => (
             <span key={i} style={{
               fontSize: "13px", fontWeight: 700, letterSpacing: "0.2em",
-              textTransform: "uppercase", color: "#1F3A2E", padding: "0 28px",
+              textTransform: "uppercase", color: colorHeading, padding: "0 28px",
             }}>
               {t("Mezcal artesanal")} &nbsp;·&nbsp; {t("Trazabilidad completa")} &nbsp;·&nbsp; {t("Comercio justo")} &nbsp;·&nbsp; {t("Oaxaca, México")}
             </span>
@@ -577,7 +554,7 @@ export default function LandingPageOaxaca() {
           SECCIÓN 2 — SOBRE EL MEZCAL
       ══════════════════════════════════════════════════ */}
       <div style={{
-        background: P.bgBase,
+        background: bgPrimary,
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
         alignItems: isMobile ? "stretch" : "center",
@@ -593,8 +570,8 @@ export default function LandingPageOaxaca() {
           gap: "22px",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ width: "32px", height: "2px", background: "#C97A3E", borderRadius: "1px" }} />
-            <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.24em", textTransform: "uppercase", color: "#C97A3E" }}>
+            <div style={{ width: "32px", height: "2px", background: colorAccent, borderRadius: "1px" }} />
+            <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.24em", textTransform: "uppercase", color: colorAccent }}>
               {t("Nuestra historia")}
             </span>
           </div>
@@ -603,33 +580,33 @@ export default function LandingPageOaxaca() {
             fontFamily: "'Playfair Display', Georgia, serif",
             fontSize: isMobile ? "32px" : isTablet ? "38px" : "46px",
             fontWeight: 700, lineHeight: 1.15,
-            color: P.heading, margin: 0,
+            color: colorHeading, margin: 0,
           }}>
-            {t("El alma del")} <em style={{ color: "#C97A3E" }}>{t("agave")}</em>
+            {t("El alma del")} <em style={{ color: colorAccent }}>{t("agave")}</em>
           </h2>
 
           {/* Pull-quote */}
-          <div style={{ borderLeft: "3px solid #C97A3E", paddingLeft: "20px" }}>
+          <div style={{ borderLeft: `3px solid ${colorAccent}`, paddingLeft: "20px" }}>
             <p style={{
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: isMobile ? "15px" : "17px",
               fontStyle: "italic", lineHeight: 1.8,
-              color: P.pullQuote, margin: 0,
+              color: colorAccent, margin: 0,
             }}>
               &ldquo;{t(cfg.landing_sobre_texto_1)}&rdquo;
             </p>
           </div>
 
-          <p style={{ fontSize: "15px", lineHeight: 1.85, color: P.body, margin: 0 }}>
+          <p style={{ fontSize: "15px", lineHeight: 1.85, color: colorBody, margin: 0 }}>
             {t(cfg.landing_sobre_texto_2)}
           </p>
 
           <div style={{
             display: "flex", alignItems: "center", gap: "12px",
-            paddingTop: "20px", borderTop: "1px solid rgba(201,122,62,0.2)",
+            paddingTop: "20px", borderTop: `1px solid ${colorAccent}`.replace("#C97A3E", "rgba(201,122,62,0.2)"),
           }}>
-            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#C97A3E", flexShrink: 0 }} />
-            <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "14px", fontStyle: "italic", color: "#C97A3E" }}>
+            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: colorAccent, flexShrink: 0 }} />
+            <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "14px", fontStyle: "italic", color: colorAccent }}>
               &ldquo;{t(cfg.landing_sobre_cita)}&rdquo;
             </span>
           </div>
@@ -725,21 +702,21 @@ export default function LandingPageOaxaca() {
           BLOQUE 3 — STATS
       ══════════════════════════════════════════════════ */}
       <div ref={statsRef} style={{
-        background: P.bgAccent,
+        background: bgAccent,
         padding: isMobile ? "48px 24px" : "72px 40px",
         display: "flex", flexDirection: "column", alignItems: "center",
       }}>
         {/* Eyebrow + título */}
         <div style={{ textAlign: "center", marginBottom: isMobile ? "32px" : "48px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "12px" }}>
-            <div style={{ width: "24px", height: "1px", background: "#C97A3E" }} />
+            <div style={{ width: "24px", height: "1px", background: colorAccent }} />
             <span style={{
               fontSize: "13px", fontWeight: 700, letterSpacing: "0.22em",
-              textTransform: "uppercase", color: "#C97A3E",
+              textTransform: "uppercase", color: colorAccent,
             }}>
               {t("Nuestro impacto")}
             </span>
-            <div style={{ width: "24px", height: "1px", background: "#C97A3E" }} />
+            <div style={{ width: "24px", height: "1px", background: colorAccent }} />
           </div>
           <h2 style={{
             fontFamily: "'Playfair Display', Georgia, serif",
@@ -790,7 +767,7 @@ export default function LandingPageOaxaca() {
                 <div>
                   <p style={{
                     fontSize: isMobile ? "28px" : "34px",
-                    fontWeight: 700, color: "#C97A3E",
+                    fontWeight: 700, color: colorAccent,
                     fontFamily: "'Playfair Display', Georgia, serif",
                     margin: 0, lineHeight: 1.1,
                   }}>
@@ -809,20 +786,20 @@ export default function LandingPageOaxaca() {
       {/* ══════════════════════════════════════════════════
           TRAZABILIDAD — carrusel de productos
       ══════════════════════════════════════════════════ */}
-      <div style={{ background: P.bgAccent, padding: isMobile ? "48px 0" : "72px 0", overflow: "hidden" }}>
+      <div style={{ background: bgAccent, padding: isMobile ? "48px 0" : "72px 0", overflow: "hidden" }}>
         <div style={{ maxWidth: "1100px", margin: "0 auto", padding: isMobile ? "0 20px" : "0 40px" }}>
 
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: isMobile ? "32px" : "48px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "12px" }}>
-              <div style={{ width: "24px", height: "1px", background: "#C97A3E" }} />
-              <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#C97A3E" }}>
+              <div style={{ width: "24px", height: "1px", background: colorAccent }} />
+              <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: colorAccent }}>
                 {t("Cada botella, una historia")}
               </span>
-              <div style={{ width: "24px", height: "1px", background: "#C97A3E" }} />
+              <div style={{ width: "24px", height: "1px", background: colorAccent }} />
             </div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: isMobile ? "24px" : "32px", fontWeight: 700, color: "#F4F0E3", margin: "0 0 12px", lineHeight: 1.2 }}>
-              {t("Escanea, descubre,")} <em style={{ color: "#F4D5A8" }}>{t("confía")}</em>
+              {t("Escanea, descubre,")} <em style={{ color: colorSage }}>{t("confía")}</em>
             </h2>
             <p style={{ fontSize: "15px", color: "rgba(244,240,227,0.9)", lineHeight: 1.7, maxWidth: "500px", margin: "0 auto" }}>
               {t("Cada producto trae un código QR único. Verás el productor, la comunidad, el lote y cuánto del precio vuelve al artesano.")}
@@ -854,8 +831,9 @@ export default function LandingPageOaxaca() {
                   onClick={() => trazaGoTo((trazaIdx - 1 + trazaProductos.length) % trazaProductos.length)}
                   style={{
                     width: "36px", height: "36px", borderRadius: "50%",
-                    border: "1px solid rgba(201,122,62,0.5)", background: "rgba(201,122,62,0.1)",
-                    color: "#C97A3E", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    border: `1px solid ${colorAccent}`.replace("#C97A3E", "rgba(201,122,62,0.5)"),
+                    background: `${colorAccent}`.replace("#C97A3E", "rgba(201,122,62,0.1)"),
+                    color: colorAccent, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                   }}
                   aria-label="Anterior"
                 >
@@ -873,7 +851,7 @@ export default function LandingPageOaxaca() {
                         height: "8px",
                         borderRadius: "4px",
                         border: "none",
-                        background: i === trazaIdx ? "#C97A3E" : "rgba(201,122,62,0.3)",
+                        background: i === trazaIdx ? colorAccent : `${colorAccent}`.replace("#C97A3E", "rgba(201,122,62,0.3)"),
                         cursor: "pointer",
                         transition: "width 0.3s ease, background 0.3s ease",
                         padding: 0,
@@ -888,8 +866,9 @@ export default function LandingPageOaxaca() {
                   onClick={() => trazaGoTo((trazaIdx + 1) % trazaProductos.length)}
                   style={{
                     width: "36px", height: "36px", borderRadius: "50%",
-                    border: "1px solid rgba(201,122,62,0.5)", background: "rgba(201,122,62,0.1)",
-                    color: "#C97A3E", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    border: `1px solid ${colorAccent}`.replace("#C97A3E", "rgba(201,122,62,0.5)"),
+                    background: `${colorAccent}`.replace("#C97A3E", "rgba(201,122,62,0.1)"),
+                    color: colorAccent, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                   }}
                   aria-label="Siguiente"
                 >
@@ -904,7 +883,7 @@ export default function LandingPageOaxaca() {
             <button onClick={() => router.push("/Cliente/producto")} style={{
               display: "flex", alignItems: "center", gap: "8px",
               fontSize: "14px", fontWeight: 600, padding: "13px 28px", borderRadius: "6px",
-              background: "#C97A3E", color: "#1F3A2E",
+              background: colorAccent, color: colorHeading,
               border: "none", cursor: "pointer", letterSpacing: "0.03em",
             }}>
               {t("Ver trazabilidad por botella")}
@@ -917,7 +896,7 @@ export default function LandingPageOaxaca() {
       {/* ══════════════════════════════════════════════════
           SECCIÓN PRODUCTOS DESTACADOS
       ══════════════════════════════════════════════════ */}
-      <div style={{ background: P.bgBase, padding: isMobile ? "48px 20px" : "72px 48px" }}>
+      <div style={{ background: bgPrimary, padding: isMobile ? "48px 20px" : "72px 48px" }}>
         <style>{`
           .categorias-grid {
             display: grid;
@@ -1001,16 +980,16 @@ export default function LandingPageOaxaca() {
         {/* Encabezado */}
         <div style={{ textAlign: "center", marginBottom: isMobile ? "32px" : "48px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "10px" }}>
-            <div style={{ width: "24px", height: "1px", background: "#C97A3E" }} />
-            <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#C97A3E" }}>
+            <div style={{ width: "24px", height: "1px", background: colorAccent }} />
+            <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: colorAccent }}>
               {t("Explora")}
             </span>
-            <div style={{ width: "24px", height: "1px", background: "#C97A3E" }} />
+            <div style={{ width: "24px", height: "1px", background: colorAccent }} />
           </div>
-          <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: isMobile ? "24px" : "32px", fontWeight: 700, color: P.heading, margin: "0 0 10px", lineHeight: 1.2 }}>
+          <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: isMobile ? "24px" : "32px", fontWeight: 700, color: colorHeading, margin: "0 0 10px", lineHeight: 1.2 }}>
             {t("Productos destacados")}
           </h2>
-          <p style={{ fontSize: "15px", color: P.body, lineHeight: 1.6, maxWidth: "480px", margin: "0 auto" }}>
+          <p style={{ fontSize: "15px", color: colorBody, lineHeight: 1.6, maxWidth: "480px", margin: "0 auto" }}>
             {t("Descubre nuestra selección de mezcales, cada uno con su propia historia.")}
           </p>
         </div>
@@ -1018,7 +997,7 @@ export default function LandingPageOaxaca() {
         {loadingVendidos ? (
           <div className="categorias-grid">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} style={{ height: "380px", borderRadius: "16px", background: P.skeletonBg, animation: "pulse 1.5s ease-in-out infinite", animationDelay: `${i * 0.1}s` }} />
+              <div key={i} style={{ height: "380px", borderRadius: "16px", background: "rgba(31,58,46,0.08)", animation: "pulse 1.5s ease-in-out infinite", animationDelay: `${i * 0.1}s` }} />
             ))}
           </div>
         ) : (
@@ -1076,7 +1055,7 @@ export default function LandingPageOaxaca() {
             style={{
               display: "flex", alignItems: "center", gap: "8px",
               fontSize: "14px", fontWeight: 600, padding: "13px 32px",
-              borderRadius: "6px", background: P.ctaBtnBg, color: "#F4F0E3",
+              borderRadius: "6px", background: colorCtaBg, color: "#F4F0E3",
               border: "none", cursor: "pointer", letterSpacing: "0.03em",
             }}
           >

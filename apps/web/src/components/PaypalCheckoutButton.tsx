@@ -31,7 +31,7 @@ export default function PaypalCheckoutButton({
     <div className={disabled ? 'pointer-events-none opacity-50' : ''}>
       <PayPalButtons
         style={{ layout: 'vertical', color: 'gold', shape: 'rect', label: 'pay' }}
-        createOrder={() => orderId}
+        createOrder={() => Promise.resolve(orderId)}
         onApprove={async () => {
           try {
             await onCapture(orderId);

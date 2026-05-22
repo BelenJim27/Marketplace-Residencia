@@ -239,7 +239,20 @@ export class ProductosService {
 
     // Vista pública: todos los productos activos
     const items = await this.prisma.productos.findMany({
+<<<<<<< HEAD
       where,
+=======
+      where: {
+        ...where,
+        id_lote: { not: null }, // Solo productos vinculados a lotes
+        status: 'activo',
+        inventario: {
+          some: {
+            stock: { gt: 0 },
+          },
+        },
+      },
+>>>>>>> 99598a8e31dc80ffec5eb120e5291fb291a2bea5
       include: productoInclude as any,
       orderBy: { creado_en: 'desc' },
     });
