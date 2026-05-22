@@ -244,7 +244,9 @@ export class ProductosService {
         id_lote: { not: null }, // Solo productos vinculados a lotes
         status: 'activo',
         inventario: {
-          some: { stock: { gt: 0 } },
+          some: {
+            stock: { gt: 0 },
+          },
         },
       },
       include: productoInclude as any,
