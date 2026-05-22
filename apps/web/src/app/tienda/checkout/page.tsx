@@ -6,12 +6,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle, ChevronRight, Truck, CreditCard, ShoppingBag, ArrowLeft, Lock, MapPin, Loader2 } from "lucide-react";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useCheckout, CheckoutStep } from "@/hooks/useCheckout";
 import { useCarrito } from "@/context/CarritoContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/format-number";
 import { usePaises } from "@/hooks/usePaises";
 import { getStripe, isTestMode, isStripeConfigured } from "@/lib/stripe";
+import { isPaypalConfigured, getPaypalClientId } from "@/lib/paypal";
+import PaypalCheckoutButton from "@/components/PaypalCheckoutButton";
 
 const PASOS: { key: CheckoutStep; label: string; icon: React.ReactNode }[] = [
   { key: "direccion", label: "Dirección", icon: <Truck size={16} /> },
@@ -57,8 +60,13 @@ export default function CheckoutPage() {
     obtenerUbicacionGPS,
     clientSecret,
     pedidoIdCreado,
+    metodoPago,
+    setMetodoPago,
+    paypalOrderId,
+    capturePaypalOrder,
     dobRequired,
     submitDob,
+    cargando,
   } = useCheckout();
 
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -92,12 +100,16 @@ export default function CheckoutPage() {
     }
   }, [items.length, isAuthenticated, authLoading, router]);
 
-  // Crear el PaymentIntent al entrar al paso "pago" (idempotente).
+  // Crear el PaymentIntent/PayPal Order al entrar al paso "pago" (idempotente).
   useEffect(() => {
-    if (paso === "pago" && !clientSecret && envioSeleccionado && direccionSeleccionada) {
-      prepararPago();
+    if (paso === "pago" && envioSeleccionado && direccionSeleccionada) {
+      if (metodoPago === 'stripe' && !clientSecret) {
+        prepararPago();
+      } else if (metodoPago === 'paypal' && !paypalOrderId) {
+        prepararPago();
+      }
     }
-  }, [paso, clientSecret, envioSeleccionado, direccionSeleccionada, prepararPago]);
+  }, [paso, clientSecret, paypalOrderId, metodoPago, envioSeleccionado, direccionSeleccionada, prepararPago]);
 
   if (authLoading) {
     return (
@@ -111,7 +123,7 @@ export default function CheckoutPage() {
 
   const enElements = paso === "pago" || paso === "resumen";
 
-  return (
+  const mainContent = (
     <main className="mx-auto max-w-screen-lg px-4 py-8 md:px-8">
       <Link href="/tienda/carrito" className="mb-6 flex items-center gap-2 text-sm text-gray-600 hover:text-green-600">
         <ArrowLeft size={16} />
@@ -175,44 +187,231 @@ export default function CheckoutPage() {
               />
             )}
 
-            {/* PASOS 3 & 4 dentro de Stripe Elements (PaymentElement debe vivir dentro) */}
+            {/* PASOS 3 & 4: Pago y Resumen */}
             {enElements && (
               <>
-                {!stripeConfigured && (
-                  <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
-                    Stripe no está configurado. Define <code>NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code>.
-                  </p>
-                )}
-                {stripeConfigured && dobRequired && (
-                  <DobCaptureForm
-                    edadRequerida={dobRequired.edadRequerida}
-                    message={dobRequired.message}
-                    onSubmit={submitDob}
-                  />
-                )}
-                {stripeConfigured && !dobRequired && !clientSecret && (
-                  <div className="flex items-center justify-center gap-2 rounded-md border border-gray-200 p-6 text-sm text-gray-500 dark:border-gray-700">
-                    <Loader2 size={16} className="animate-spin" />
-                    Preparando el pago seguro…
+                {/* Selector de método de pago (solo en paso "pago") */}
+                {paso === "pago" && (isStripeConfigured() || isPaypalConfigured()) && (
+                  <div className="mb-8">
+                    <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Forma de pago</h3>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {isStripeConfigured() && (
+                        <button
+                          onClick={() => {
+                            setMetodoPago('stripe');
+                            setErrorMensaje(null);
+                          }}
+                          className={`group relative rounded-lg border-2 p-4 text-left transition-all duration-200
+                            ${metodoPago === 'stripe'
+                              ? 'border-green-600 bg-green-50 shadow-lg dark:border-green-500 dark:bg-green-900/20'
+                              : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'}`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3">
+                              <div className={`mt-1 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors
+                                ${metodoPago === 'stripe' ? 'border-green-600 bg-green-600' : 'border-gray-300'}`}>
+                                {metodoPago === 'stripe' && <CheckCircle size={16} className="text-white" />}
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900 dark:text-white">Tarjeta de crédito / débito</h4>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Visa, Mastercard, American Express</p>
+                              </div>
+                            </div>
+                            <Lock size={16} className="text-gray-400" />
+                          </div>
+                          <div className="mt-3 flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                            <CheckCircle size={14} className="text-green-600" />
+                            <span>Pago seguro con Stripe</span>
+                          </div>
+                        </button>
+                      )}
+
+                      {isPaypalConfigured() && (
+                        <button
+                          onClick={() => {
+                            setMetodoPago('paypal');
+                            setErrorMensaje(null);
+                          }}
+                          className={`group relative rounded-lg border-2 p-4 text-left transition-all duration-200
+                            ${metodoPago === 'paypal'
+                              ? 'border-blue-500 bg-blue-50 shadow-lg dark:border-blue-500 dark:bg-blue-900/20'
+                              : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'}`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3">
+                              <div className={`mt-1 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors
+                                ${metodoPago === 'paypal' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
+                                {metodoPago === 'paypal' && <CheckCircle size={16} className="text-white" />}
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900 dark:text-white">PayPal</h4>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Rápido y seguro con tu cuenta PayPal</p>
+                              </div>
+                            </div>
+                            <Lock size={16} className="text-gray-400" />
+                          </div>
+                          <div className="mt-3 flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                            <CheckCircle size={14} className="text-blue-500" />
+                            <span>Pago protegido por PayPal</span>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Información de beneficios */}
+                    {metodoPago === 'stripe' && isStripeConfigured() && (
+                      <div className="mt-4 rounded-lg border border-green-100 bg-green-50/50 p-4 text-sm text-gray-700 dark:border-green-900 dark:bg-green-900/10 dark:text-gray-300">
+                        <h4 className="mb-2 font-semibold text-green-900 dark:text-green-400">Ventajas de pagar con tarjeta:</h4>
+                        <ul className="space-y-1 text-xs">
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-600">✓</span> Pago instantáneo
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-600">✓</span> Protección de comprador garantizada
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-600">✓</span> Recibe tu confirmación al instante
+                          </li>
+                        </ul>
+                      </div>
+                    )}
+
+                    {metodoPago === 'paypal' && isPaypalConfigured() && (
+                      <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/50 p-4 text-sm text-gray-700 dark:border-blue-900 dark:bg-blue-900/10 dark:text-gray-300">
+                        <h4 className="mb-2 font-semibold text-blue-900 dark:text-blue-400">Ventajas de pagar con PayPal:</h4>
+                        <ul className="space-y-1 text-xs">
+                          <li className="flex items-center gap-2">
+                            <span className="text-blue-600">✓</span> No compartes datos de tarjeta
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-blue-600">✓</span> Protección completa de PayPal
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-blue-600">✓</span> Pago rápido con un clic
+                          </li>
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
-                {stripeConfigured && !dobRequired && clientSecret && stripePromise && (
-                  <Elements
-                    stripe={stripePromise}
-                    options={{
-                      clientSecret,
-                      appearance: { theme: "stripe", variables: { colorPrimary: "#16a34a" } },
-                    }}
-                  >
-                    <PagoYResumen
-                      paso={paso}
-                      items={items}
-                      direccionSeleccionada={direccionSeleccionada}
-                      envioSeleccionado={envioSeleccionado}
-                      pedidoId={pedidoIdCreado}
-                      onError={setErrorMensaje}
-                    />
-                  </Elements>
+
+                {/* Flujo Stripe */}
+                {metodoPago === 'stripe' && (
+                  <>
+                    {!stripeConfigured && (
+                      <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                        Stripe no está configurado. Define <code>NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code>.
+                      </p>
+                    )}
+                    {stripeConfigured && dobRequired && (
+                      <DobCaptureForm
+                        edadRequerida={dobRequired.edadRequerida}
+                        message={dobRequired.message}
+                        onSubmit={submitDob}
+                      />
+                    )}
+                    {stripeConfigured && !dobRequired && !clientSecret && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/20 dark:text-gray-400">
+                          <Loader2 size={16} className="animate-spin" />
+                          Preparando el formulario de pago seguro…
+                        </div>
+                        <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-300">
+                          <div className="flex gap-2">
+                            <Lock size={16} className="shrink-0" />
+                            <div>
+                              <p className="font-medium">Pago 100% seguro con Stripe</p>
+                              <p className="mt-1 text-xs">Tu información de tarjeta está encriptada con el más alto nivel de seguridad y nunca se almacena en nuestros servidores.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {stripeConfigured && !dobRequired && clientSecret && stripePromise && (
+                      <Elements
+                        stripe={stripePromise}
+                        options={{
+                          clientSecret,
+                          appearance: { theme: "stripe", variables: { colorPrimary: "#16a34a" } },
+                        }}
+                      >
+                        <PagoYResumen
+                          paso={paso}
+                          items={items}
+                          direccionSeleccionada={direccionSeleccionada}
+                          envioSeleccionado={envioSeleccionado}
+                          pedidoId={pedidoIdCreado}
+                          onError={setErrorMensaje}
+                        />
+                      </Elements>
+                    )}
+                  </>
+                )}
+
+                {/* Flujo PayPal */}
+                {metodoPago === 'paypal' && (
+                  <>
+                    {!isPaypalConfigured() && (
+                      <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                        PayPal no está configurado. Define <code>NEXT_PUBLIC_PAYPAL_CLIENT_ID</code>.
+                      </p>
+                    )}
+                    {isPaypalConfigured() && dobRequired && (
+                      <DobCaptureForm
+                        edadRequerida={dobRequired.edadRequerida}
+                        message={dobRequired.message}
+                        onSubmit={submitDob}
+                      />
+                    )}
+                    {isPaypalConfigured() && !dobRequired && !paypalOrderId && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/20 dark:text-gray-400">
+                          <Loader2 size={16} className="animate-spin" />
+                          Preparando la opción de pago con PayPal…
+                        </div>
+                        <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                          <div className="flex gap-2">
+                            <Lock size={16} className="shrink-0" />
+                            <div>
+                              <p className="font-medium">Pago protegido por PayPal</p>
+                              <p className="mt-1 text-xs">Serás redirigido a PayPal para completar tu pago de forma segura. Nunca compartimos tus datos bancarios.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {isPaypalConfigured() && !dobRequired && paypalOrderId && paso === "pago" && (
+                      <div className="space-y-4">
+                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+                          <p className="mb-2 font-medium">Haz clic en el botón de PayPal a continuación</p>
+                          <p className="text-xs">Se abrirá una ventana segura para que completes tu pago con PayPal. Ten a mano tu cuenta PayPal lista.</p>
+                        </div>
+                        <PaypalCheckoutButton
+                          orderId={paypalOrderId}
+                          onCapture={capturePaypalOrder}
+                          onError={setErrorMensaje}
+                          disabled={cargando}
+                        />
+                      </div>
+                    )}
+                    {isPaypalConfigured() && !dobRequired && paypalOrderId && paso === "resumen" && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+                          <CheckCircle size={20} className="shrink-0" />
+                          <div>
+                            <p className="font-medium">¡Pago con PayPal confirmado!</p>
+                            <p className="text-xs">Tu pago ha sido procesado exitosamente.</p>
+                          </div>
+                        </div>
+                        <PagoYResumenPaypal
+                          items={items}
+                          direccionSeleccionada={direccionSeleccionada}
+                          envioSeleccionado={envioSeleccionado}
+                          pedidoId={pedidoIdCreado}
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -239,9 +438,16 @@ export default function CheckoutPage() {
               {paso !== "resumen" && (
                 <button
                   onClick={avanzarPaso}
-                  disabled={paso === "pago" && !clientSecret}
+                  disabled={
+                    paso === "pago" && (
+                      (metodoPago === 'stripe' && !clientSecret) ||
+                      (metodoPago === 'paypal' && !paypalOrderId)
+                    )
+                  }
                   className={`flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-medium text-white
-                    ${paso === "pago" && !clientSecret ? "cursor-not-allowed bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
+                    ${paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))
+                      ? "cursor-not-allowed bg-gray-400"
+                      : "bg-green-600 hover:bg-green-700"}`}
                 >
                   Continuar
                   <ChevronRight size={16} />
@@ -287,6 +493,23 @@ export default function CheckoutPage() {
       </div>
     </main>
   );
+
+  // Wrap with PayPal provider if configured
+  if (isPaypalConfigured()) {
+    return (
+      <PayPalScriptProvider
+        options={{
+          clientId: getPaypalClientId(),
+          currency: 'MXN',
+          intent: 'capture',
+        }}
+      >
+        {mainContent}
+      </PayPalScriptProvider>
+    );
+  }
+
+  return mainContent;
 }
 
 /* ---------- Sub-componentes ---------- */
@@ -785,5 +1008,100 @@ function PagoYResumen({
         </button>
       </div>
     </>
+  );
+}
+
+/* PayPal Resumen Component (sin Stripe Elements) */
+function PagoYResumenPaypal({
+  items,
+  direccionSeleccionada,
+  envioSeleccionado,
+  pedidoId,
+}: any) {
+  const router = useRouter();
+
+  const handleSuccess = () => {
+    router.push(`/tienda/checkout/pago-exitoso?pedido=${pedidoId}`);
+  };
+
+  return (
+    <div>
+      <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Resumen del pedido</h2>
+      <div className="mb-4 space-y-3 border-b border-gray-200 pb-4 dark:border-gray-700">
+        {items.map((item: any) => (
+          <div key={item.id_producto} className="flex items-center gap-3">
+            <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
+              {(item.producto_imagenes?.[0]?.url || item.imagen_principal_url) ? (
+                <Image
+                  src={item.producto_imagenes?.[0]?.url || item.imagen_principal_url!}
+                  alt={item.nombre}
+                  fill
+                  sizes="48px"
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-xs text-gray-400">
+                  <ShoppingBag size={16} />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 text-sm">
+              <p className="font-medium text-gray-900 dark:text-white">{item.nombre}</p>
+              <p className="text-gray-500">x{item.cantidad}</p>
+            </div>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              ${formatPrice(Number(item.precio_base) * item.cantidad, { showCurrency: false })}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {direccionSeleccionada && (
+        <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
+          <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">Enviar a:</p>
+          {direccionSeleccionada.nombre_destinatario && (
+            <p className="font-medium text-gray-800 dark:text-gray-200">{direccionSeleccionada.nombre_destinatario}</p>
+          )}
+          <p className="text-gray-600 dark:text-gray-400">
+            {direccionSeleccionada.es_internacional ? (
+              <>
+                {direccionSeleccionada.linea_1}
+                {direccionSeleccionada.linea_2 && <span>, {direccionSeleccionada.linea_2}</span>}
+              </>
+            ) : (
+              <>
+                {direccionSeleccionada.calle} {direccionSeleccionada.numero}
+                {direccionSeleccionada.colonia && <span>, {direccionSeleccionada.colonia}</span>}
+              </>
+            )}
+          </p>
+          <p className="text-gray-500 dark:text-gray-400">
+            {[
+              direccionSeleccionada.ciudad,
+              direccionSeleccionada.estado,
+              direccionSeleccionada.codigo_postal,
+              direccionSeleccionada.pais_iso2,
+            ].filter(Boolean).join(", ")}
+          </p>
+        </div>
+      )}
+
+      {envioSeleccionado && (
+        <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
+          <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">Método de envío:</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            {envioSeleccionado.productName} — {envioSeleccionado.diasHabilesEstimados} días hábiles
+          </p>
+          <p className="text-gray-600 dark:text-gray-400">
+            ${formatPrice(envioSeleccionado.precioTotal, { showCurrency: false })} {envioSeleccionado.moneda}
+          </p>
+        </div>
+      )}
+
+      <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+        <p className="font-medium">✓ Pago confirmado con PayPal</p>
+        <p className="text-xs mt-1">Tu pedido ha sido procesado correctamente.</p>
+      </div>
+    </div>
   );
 }

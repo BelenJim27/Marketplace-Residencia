@@ -37,6 +37,7 @@ export default function PerfilProductorPage() {
     rfc: "",
     razon_social: "",
     datos_bancarios: "",
+    paypal_email: "",
     id_region: null as number | null,
     direccion_calle: "",
     direccion_cp: "",
@@ -78,6 +79,7 @@ export default function PerfilProductorPage() {
               rfc: solicitud.rfc ?? "",
               razon_social: solicitud.razon_social ?? "",
               datos_bancarios: solicitud.datos_bancarios ?? "",
+              paypal_email: solicitud.paypal_email ?? "",
               id_region: solicitud.id_region ?? null,
               direccion_calle: df?.linea_1 ?? "",
               direccion_cp: df?.codigo_postal ?? "",
@@ -125,6 +127,7 @@ export default function PerfilProductorPage() {
         rfc: formData.rfc || undefined,
         razon_social: formData.razon_social || undefined,
         datos_bancarios: formData.datos_bancarios || undefined,
+        paypal_email: formData.paypal_email || undefined,
         id_region: formData.id_region ?? undefined,
         direccion_fiscal: formData.direccion_calle || formData.direccion_ciudad ? {
           linea_1: formData.direccion_calle || undefined,
@@ -392,21 +395,39 @@ export default function PerfilProductorPage() {
               <CreditCard className="h-5 w-5" />
               Datos Bancarios
             </h3>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                Cuenta bancaria (número de cuenta o CLABE)
-              </label>
-              <input
-                type="text"
-                name="datos_bancarios"
-                value={formData.datos_bancarios}
-                onChange={handleInputChange}
-                className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
-                placeholder="123456789012345678"
-              />
-              <p className="mt-1 text-xs text-gray-400">
-                Estos datos se encriptan y solo se usan para procesar tus pagos.
-              </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Cuenta bancaria (número de cuenta o CLABE)
+                </label>
+                <input
+                  type="text"
+                  name="datos_bancarios"
+                  value={formData.datos_bancarios}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="123456789012345678"
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  Estos datos se encriptan y solo se usan para procesar tus pagos.
+                </p>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                  Email de PayPal (opcional)
+                </label>
+                <input
+                  type="email"
+                  name="paypal_email"
+                  value={formData.paypal_email}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  placeholder="tu-email@example.com"
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  Si habilitas PayPal como forma de pago, tus clientes podrán pagarte directamente a esta cuenta.
+                </p>
+              </div>
             </div>
           </div>
 

@@ -69,12 +69,14 @@ export default function TiendaPage() {
       }
       setTienda(tiendaData);
 
-      const productorData = await api.productores.getAll().then(
-        (all: any[]) => all.find((p) => p.id_productor === tiendaData.id_productor)
-      );
+      const [productoresData, productosData] = await Promise.all([
+        api.productores.getAll(),
+        api.productos.getByProductor(tiendaData.id_productor),
+      ]);
+
+      const productorData = (productoresData as any[]).find((p) => p.id_productor === tiendaData.id_productor);
       setProductor(productorData || null);
 
-      const productosData = await api.productos.getByProductor(tiendaData.id_productor);
       const filtrados = (productosData as Producto[]).filter(
         (p) => p.id_tienda === Number(id) && p.categorias && p.categorias.length > 0
       );

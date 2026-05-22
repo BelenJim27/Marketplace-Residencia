@@ -62,7 +62,10 @@ async function refreshAccessToken(): Promise<string> {
   return newAccess;
 }
 
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+async function fetchJson<T>(
+  url: string,
+  options?: RequestInit & { next?: { revalidate?: number } }
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(url, options);
@@ -227,7 +230,9 @@ export const api = {
         if (filtros.maestro_mezcalero) params.append("maestro_mezcalero", filtros.maestro_mezcalero);
       }
       const query = params.toString();
-      return fetchJson<ProductItem[]>(endpoint("/productos" + (query ? `?${query}` : "")));
+      // Cache unfiltered product lists for 30 minutes
+      const cacheOpts = !query ? { next: { revalidate: 1800 } } : undefined;
+      return fetchJson<ProductItem[]>(endpoint("/productos" + (query ? `?${query}` : "")), cacheOpts);
     },
     getByProductor: (id_productor: number, token?: string) =>
       fetchJson<ProductItem[]>(endpoint(`/productos?id_productor=${id_productor}`), {
@@ -260,7 +265,10 @@ export const api = {
   },
 
   categorias: {
-    getAll: () => fetchJson(endpoint("/categorias")),
+    getAll: () =>
+      fetchJson(endpoint("/categorias"), {
+        next: { revalidate: 3600 }, // Cache for 1 hour
+      }),
     getOne: (id: number) => fetchJson(endpoint(`/categorias/${id}`)),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/categorias"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
@@ -468,6 +476,46 @@ export const api = {
         taxCalculationId?: string;
       }> =>
         fetchJson(endpoint("/pagos/stripe/intent"), {
+          method: "POST",
+          headers: headers(token),
+          body: JSON.stringify(data),
+        }),
+    },
+    paypal: {
+      createOrder: (
+        token: string,
+        data: {
+          id_pedido: string | number;
+          subtotal: number;
+          shipping_amount?: number;
+          moneda: string;
+          shipping_address?: {
+            line1: string;
+            line2?: string;
+            city: string;
+            state: string;
+            postal_code: string;
+            country: string;
+          };
+        },
+      ): Promise<{
+        orderId: string;
+        approveUrl: string;
+        subtotal: number;
+        taxAmount: number;
+        shippingAmount: number;
+        totalAmount: number;
+      }> =>
+        fetchJson(endpoint("/pagos/paypal/order"), {
+          method: "POST",
+          headers: headers(token),
+          body: JSON.stringify(data),
+        }),
+      captureOrder: (
+        token: string,
+        data: { paypal_order_id: string },
+      ): Promise<{ id_pago: string; estado: string }> =>
+        fetchJson(endpoint("/pagos/paypal/capture"), {
           method: "POST",
           headers: headers(token),
           body: JSON.stringify(data),

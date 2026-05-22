@@ -7,7 +7,6 @@ import type { PropsWithChildren } from "react";
 import { Providers } from "./providers";
 import { RootContent } from "./root-content";
 
-export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: {
     template: "%s | MARKETPLACE RESIDENCIA",

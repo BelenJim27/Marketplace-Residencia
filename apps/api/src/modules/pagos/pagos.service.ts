@@ -4,7 +4,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { calcularEdadEnAnios } from '../productos/edad.helper';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
-import { CreateMonedaDto, CreatePagoDto, CreateStripeIntentDto, UpdateMonedaDto, UpdatePagoDto } from './dto/pagos.dto';
+import { CreateMonedaDto, CreatePagoDto, CreateStripeIntentDto, UpdateMonedaDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
+import { PaypalService } from './paypal.service';
 import { StripeService } from './stripe.service';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class PagosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripeService: StripeService,
+    private readonly paypalService: PaypalService,
     private readonly emailService: EmailService,
   ) {}
   async findAll() { return serializeBigInts(await this.prisma.pagos.findMany({ include: { pedidos: true, monedas: true } })); }
@@ -145,6 +147,98 @@ export class PagosService {
       totalAmount: intent.totalAmount,
       taxCalculationId: intent.taxCalculationId,
     });
+  }
+
+  async createPaypalOrder(dto: CreatePaypalOrderDto) {
+    const moneda = dto.moneda.toUpperCase();
+
+    const monedaRow = await this.prisma.monedas.findUnique({ where: { codigo: moneda } });
+    if (!monedaRow || monedaRow.activo === false) {
+      throw new BadRequestException(`Moneda no soportada: ${moneda}`);
+    }
+
+    const id_pedido_bi = toBigIntId(dto.id_pedido);
+    const pedido = await this.prisma.pedidos.findUnique({ where: { id_pedido: id_pedido_bi } });
+    if (!pedido) throw new NotFoundException('Pedido no encontrado');
+
+    // Autoritative age validation
+    await this.validarEdadDelComprador(id_pedido_bi, pedido.id_usuario);
+
+    const totalAmount = dto.subtotal + (dto.shipping_amount ?? 0);
+
+    // Create PayPal order (no tax calculation for PayPal)
+    const paypalOrder = await this.paypalService.createOrder({
+      totalAmount,
+      currency: moneda,
+      referenceId: String(id_pedido_bi),
+      shippingAddress: dto.shipping_address,
+    });
+
+    // Update pedido with amounts
+    await this.prisma.pedidos.update({
+      where: { id_pedido: id_pedido_bi },
+      data: {
+        shipping_amount: (dto.shipping_amount ?? 0).toFixed(2),
+        total: totalAmount.toFixed(2),
+        moneda,
+        tax_amount: '0', // PayPal does not integrate with Stripe Tax
+      },
+    });
+
+    // Create pago record
+    const pago = await this.prisma.pagos.create({
+      data: {
+        id_pedido: id_pedido_bi,
+        proveedor: 'paypal',
+        payment_intent_id: paypalOrder.orderId,
+        estado: 'pendiente',
+        monto: totalAmount.toFixed(2),
+        moneda,
+      },
+    });
+
+    return serializeBigInts({
+      ...pago,
+      orderId: paypalOrder.orderId,
+      approveUrl: paypalOrder.approveUrl,
+      subtotal: dto.subtotal,
+      taxAmount: 0,
+      shippingAmount: dto.shipping_amount ?? 0,
+      totalAmount,
+    });
+  }
+
+  async capturePaypalOrder(dto: CapturePaypalOrderDto) {
+    const pago = await this.prisma.pagos.findFirst({
+      where: { payment_intent_id: dto.paypal_order_id, proveedor: 'paypal' },
+      include: { pedidos: true },
+    });
+
+    if (!pago) {
+      throw new NotFoundException('PayPal order no encontrado');
+    }
+
+    // Capture the order
+    const captureResult = await this.paypalService.captureOrder(dto.paypal_order_id);
+
+    if (captureResult.status !== 'COMPLETED') {
+      throw new BadRequestException(`PayPal capture failed with status: ${captureResult.status}`);
+    }
+
+    // Update pago with capture ID and mark as completed
+    const updated = await this.prisma.pagos.update({
+      where: { id_pago: pago.id_pago },
+      data: {
+        payment_intent_id: captureResult.captureId, // Store capture ID for future refunds
+        estado: 'completado',
+      },
+      include: { pedidos: true },
+    });
+
+    // Call updatePaymentStatus to handle order status, notifications, etc.
+    await this.updatePaymentStatus(captureResult.captureId, 'completado');
+
+    return serializeBigInts(updated);
   }
 
   async updatePaymentStatus(payment_intent_id: string, estado: string, isDirectCharge = false, taxCalculationId?: string) {
@@ -539,32 +633,21 @@ export class PagosService {
     if (pago.estado !== 'completado') throw new BadRequestException('Solo se pueden reembolsar pagos completados');
     if (!pago.payment_intent_id) throw new BadRequestException('Sin payment_intent_id');
 
-    const pi = await this.stripeService.retrievePaymentIntent(pago.payment_intent_id);
-    const isDirectCharge = !!(pi.transfer_data?.destination);
+    // Branch by provider
+    if (pago.proveedor === 'paypal') {
+      // PayPal refund: payment_intent_id holds the capture ID
+      try {
+        await this.paypalService.createRefund(pago.payment_intent_id);
+      } catch (err: any) {
+        this.logger.error('[pagos] PayPal refund failed:', err?.message);
+        throw new BadRequestException(`PayPal refund failed: ${err?.message}`);
+      }
 
-    if (isDirectCharge) {
-      // Direct charge: Stripe reverts transfer automatically
-      await this.stripeService.createRefund({
-        paymentIntentId: pago.payment_intent_id,
-        reverseTransfer: true,
-        refundApplicationFee: true,
-      });
-    } else {
-      // Manual transfers: need to revert each transfer individually
+      // Revert Stripe transfers if they exist (for producers who received payouts)
       const rows = await this.prisma.pedido_productor.findMany({
         where: { id_pedido: pago.id_pedido },
-        include: { payout: { select: { referencia_externa: true, estado: true, intentos: true, ultimo_error: true } } },
+        include: { payout: { select: { referencia_externa: true } } },
       });
-
-      const missingTransfers = rows.filter((r) => !r.payout?.referencia_externa);
-      if (missingTransfers.length > 0) {
-        const detalles = missingTransfers
-          .map((r) => `Productor ${r.id_productor}: estado=${r.payout?.estado}, intentos=${r.payout?.intentos}, error=${r.payout?.ultimo_error}`)
-          .join('; ');
-        throw new UnprocessableEntityException(
-          `No se pueden revertir las transferencias automáticamente: ${missingTransfers.length} transfer(s) faltante(s). Detalles: ${detalles}. Requiere reconciliación manual.`,
-        );
-      }
 
       for (const r of rows) {
         if (r.payout?.referencia_externa) {
@@ -575,11 +658,50 @@ export class PagosService {
           }
         }
       }
+    } else {
+      // Stripe refund logic (unchanged)
+      const pi = await this.stripeService.retrievePaymentIntent(pago.payment_intent_id);
+      const isDirectCharge = !!(pi.transfer_data?.destination);
 
-      // After reverting all transfers, refund the payment intent
-      await this.stripeService.createRefund({
-        paymentIntentId: pago.payment_intent_id,
-      });
+      if (isDirectCharge) {
+        // Direct charge: Stripe reverts transfer automatically
+        await this.stripeService.createRefund({
+          paymentIntentId: pago.payment_intent_id,
+          reverseTransfer: true,
+          refundApplicationFee: true,
+        });
+      } else {
+        // Manual transfers: need to revert each transfer individually
+        const rows = await this.prisma.pedido_productor.findMany({
+          where: { id_pedido: pago.id_pedido },
+          include: { payout: { select: { referencia_externa: true, estado: true, intentos: true, ultimo_error: true } } },
+        });
+
+        const missingTransfers = rows.filter((r) => !r.payout?.referencia_externa);
+        if (missingTransfers.length > 0) {
+          const detalles = missingTransfers
+            .map((r) => `Productor ${r.id_productor}: estado=${r.payout?.estado}, intentos=${r.payout?.intentos}, error=${r.payout?.ultimo_error}`)
+            .join('; ');
+          throw new UnprocessableEntityException(
+            `No se pueden revertir las transferencias automáticamente: ${missingTransfers.length} transfer(s) faltante(s). Detalles: ${detalles}. Requiere reconciliación manual.`,
+          );
+        }
+
+        for (const r of rows) {
+          if (r.payout?.referencia_externa) {
+            try {
+              await this.stripeService.createTransferReversal(r.payout.referencia_externa);
+            } catch (err: any) {
+              console.error('[pagos] createTransferReversal failed for transfer', r.payout.referencia_externa, ':', err?.message);
+            }
+          }
+        }
+
+        // After reverting all transfers, refund the payment intent
+        await this.stripeService.createRefund({
+          paymentIntentId: pago.payment_intent_id,
+        });
+      }
     }
 
     // Update payment and order status

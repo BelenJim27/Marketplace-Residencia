@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Package, Truck, CheckCircle, Clock,
+  ArrowLeft, Package, CheckCircle, Clock,
   MapPin, Copy, RefreshCw, AlertCircle,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -77,7 +77,7 @@ function Card({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-4 text-[13px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+    <p className="mb-4 text-[13px] font-bold uppercase tracking-widest text-gray-600 dark:text-gray-400">
       {children}
     </p>
   );
@@ -136,8 +136,8 @@ export default function DetallePedidoPage() {
       const token = getCookie("token") || "";
       const res = await api.envios.getTracking(String(idEnvio), token);
       setTracking(res);
-    } catch (err) {
-      console.error("Error fetching tracking:", err);
+    } catch {
+      setTracking(null);
     } finally {
       setTrackingLoading(false);
     }
@@ -159,13 +159,13 @@ export default function DetallePedidoPage() {
         <Card accent="bg-rose-400">
           <div className="flex items-center gap-3">
             <AlertCircle className="h-5 w-5 text-rose-500" />
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
               {error || "Pedido no encontrado."}
             </p>
           </div>
           <button
             onClick={() => router.back()}
-            className="mt-4 flex items-center gap-2 text-sm font-semibold text-green-600 hover:text-green-700"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-green-600 transition hover:bg-green-50 hover:text-green-700 focus-visible:ring-2 focus-visible:ring-green-400 dark:hover:bg-green-900/20"
           >
             <ArrowLeft size={14} /> Volver
           </button>
@@ -193,13 +193,16 @@ export default function DetallePedidoPage() {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .fade-in { animation: fadeSlideUp 0.35s ease both; }
+        .fade-in { animation: fadeSlideUp 0.35s ease-out both; }
+        @media (prefers-reduced-motion: reduce) {
+          .fade-in { animation: none; opacity: 1; }
+        }
       `}</style>
 
       {/* Back */}
       <Link
         href="/tienda/compras"
-        className="group mb-7 inline-flex items-center gap-2 text-sm font-medium text-gray-400 transition-colors hover:text-green-600 dark:hover:text-green-400"
+        className="group mb-7 inline-flex items-center gap-2 text-sm font-medium text-gray-400 transition-colors hover:text-green-600 focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 dark:hover:text-green-400 dark:focus-visible:ring-offset-gray-900"
       >
         <ArrowLeft
           size={14}
@@ -221,16 +224,16 @@ export default function DetallePedidoPage() {
               {badge.label}
             </span>
           </div>
-          <div className="mt-1 flex items-center gap-1.5 text-sm text-gray-400">
+          <div className="mt-1 flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
             <Clock size={12} />
             {fecha}
           </div>
         </div>
         <div className="text-right">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Total</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-600 dark:text-gray-400">Total</p>
           <p className="font-mono text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
             ${formatPrice(Number(pedido.total || 0), { showCurrency: false })}
-            <span className="ml-1.5 text-sm font-normal text-gray-400">
+            <span className="ml-1.5 text-sm font-normal text-gray-600 dark:text-gray-400">
               {pedido.moneda || "MXN"}
             </span>
           </p>
@@ -301,13 +304,13 @@ export default function DetallePedidoPage() {
                           #{item.id_producto}
                         </span>
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
                         {item.cantidad} {item.cantidad === 1 ? "unidad" : "unidades"}
                       </p>
                     </div>
                     <p className="shrink-0 font-mono text-sm font-bold text-gray-900 dark:text-white">
                       ${formatPrice(Number(item.precio_compra) * item.cantidad, { showCurrency: false })}
-                      <span className="ml-1 text-[10px] font-normal text-gray-400">
+                      <span className="ml-1 text-[10px] font-normal text-gray-600 dark:text-gray-400">
                         {item.moneda_compra || "MXN"}
                       </span>
                     </p>
@@ -315,7 +318,7 @@ export default function DetallePedidoPage() {
                 ))}
               </div>
             ) : (
-              <p className="py-4 text-center text-sm text-gray-400">Sin detalles de productos.</p>
+              <p className="py-4 text-center text-sm text-gray-600 dark:text-gray-400">Sin información de productos.</p>
             )}
           </Card>
         </div>
@@ -331,7 +334,7 @@ export default function DetallePedidoPage() {
                   <MapPin size={15} className="text-sky-600 dark:text-sky-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="text-sm text-gray-900 dark:text-white">
                     {direccion.es_internacional ? (
                       <>
                         {direccion.linea_1}
@@ -345,7 +348,7 @@ export default function DetallePedidoPage() {
                     )}
                   </p>
                   {direccion.referencia && (
-                    <p className="mt-1 text-xs text-gray-400">{direccion.referencia}</p>
+                    <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">{direccion.referencia}</p>
                   )}
                 </div>
               </div>
@@ -359,7 +362,7 @@ export default function DetallePedidoPage() {
               <div className="space-y-3.5">
                 {envio.numero_rastreo && (
                   <div>
-                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">
                       Número de rastreo
                     </p>
                     <div className="flex items-center gap-2">
@@ -368,13 +371,14 @@ export default function DetallePedidoPage() {
                       </span>
                       <button
                         onClick={copiarTracking}
-                        className="flex h-6 w-6 items-center justify-center rounded-md bg-gray-50 text-gray-400 transition hover:bg-green-50 hover:text-green-600 dark:bg-gray-700 dark:hover:bg-green-900/30 dark:hover:text-green-400"
+                        aria-label={copied ? "Número copiado al portapapeles" : "Copiar número de rastreo"}
+                        className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-50 text-gray-400 transition hover:bg-green-50 hover:text-green-600 focus-visible:ring-2 focus-visible:ring-green-400 dark:bg-gray-700 dark:hover:bg-green-900/30 dark:hover:text-green-400"
                         title="Copiar número de rastreo"
                       >
-                        <Copy size={12} />
+                        <Copy size={14} />
                       </button>
                       {copied && (
-                        <span className="text-[11px] font-semibold text-green-600 dark:text-green-400">
+                        <span className="text-[11px] font-semibold text-green-600 dark:text-green-400" role="status" aria-live="polite">
                           ¡Copiado!
                         </span>
                       )}
@@ -411,16 +415,26 @@ export default function DetallePedidoPage() {
           )}
 
           {/* Tracking events */}
-          {tracking && (
+          {trackingLoading ? (
+            <Card accent="bg-gradient-to-r from-emerald-400 to-teal-400">
+              <SectionTitle>Seguimiento</SectionTitle>
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-12 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700" />
+                ))}
+              </div>
+            </Card>
+          ) : tracking ? (
             <Card accent="bg-gradient-to-r from-emerald-400 to-teal-400">
               <div className="mb-4 flex items-center justify-between">
                 <SectionTitle>Seguimiento</SectionTitle>
                 <button
                   onClick={() => envio?.id_envio && fetchTracking(envio.id_envio)}
                   disabled={trackingLoading}
-                  className="mb-4 flex items-center gap-1.5 rounded-lg bg-gray-50 px-2.5 py-1.5 text-[11px] font-semibold text-gray-500 transition hover:bg-green-50 hover:text-green-600 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-green-900/30 dark:hover:text-green-400"
+                  aria-label={trackingLoading ? "Actualizando información de seguimiento" : "Actualizar información de seguimiento"}
+                  className="mb-4 flex h-9 items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-1.5 text-[11px] font-semibold text-gray-500 transition hover:bg-green-50 hover:text-green-600 focus-visible:ring-2 focus-visible:ring-green-400 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-green-900/30 dark:hover:text-green-400"
                 >
-                  <RefreshCw size={11} className={trackingLoading ? "animate-spin" : ""} />
+                  <RefreshCw size={14} className={trackingLoading ? "animate-spin" : ""} />
                   {trackingLoading ? "Actualizando…" : "Actualizar"}
                 </button>
               </div>
@@ -441,7 +455,7 @@ export default function DetallePedidoPage() {
                         <p className={`text-sm font-semibold ${idx === 0 ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"}`}>
                           {evento.descripcion}
                         </p>
-                        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-gray-400">
+                        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-gray-600 dark:text-gray-400">
                           <span>{new Date(evento.fecha).toLocaleDateString("es-MX")}</span>
                           {evento.ubicacion && (
                             <>
@@ -458,12 +472,12 @@ export default function DetallePedidoPage() {
                   ))}
                 </div>
               ) : (
-                <p className="py-2 text-sm text-gray-400">
+                <p className="py-2 text-sm text-gray-600 dark:text-gray-400">
                   Sin información de seguimiento disponible.
                 </p>
               )}
             </Card>
-          )}
+          ) : null}
         </div>
       </div>
     </main>

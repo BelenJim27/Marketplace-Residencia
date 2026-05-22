@@ -1,17 +1,19 @@
 "use client";
 
 import { Calendar } from "@/components/Layouts/sidebar/icons";
-import flatpickr from "flatpickr";
 import { useEffect } from "react";
 
 const DatePickerOne = () => {
   useEffect(() => {
-    // Init flatpickr
-    flatpickr(".form-datepicker", {
-      mode: "single",
-      static: true,
-      monthSelectorType: "static",
-      dateFormat: "M j, Y",
+    // Dynamically import flatpickr only when needed
+    import("flatpickr").then((module) => {
+      const flatpickr = module.default;
+      flatpickr(".form-datepicker", {
+        mode: "single",
+        static: true,
+        monthSelectorType: "static",
+        dateFormat: "M j, Y",
+      });
     });
   }, []);
 

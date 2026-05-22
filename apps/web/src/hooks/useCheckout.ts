@@ -52,6 +52,8 @@ export function useCheckout() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [pedidoIdCreado, setPedidoIdCreado] = useState<string | null>(null);
+  const [metodoPago, setMetodoPago] = useState<'stripe' | 'paypal'>('stripe');
+  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
 
   const [dobRequired, setDobRequired] = useState<DobRequiredState | null>(null);
 
@@ -392,15 +394,30 @@ export function useCheckout() {
 
       let pagoResponse;
       try {
-        pagoResponse = await api.pagos.stripe.createIntent(token, {
-          id_pedido: pedidoId,
-          subtotal,
-          shipping_amount: costoEnvio,
-          moneda: "MXN",
-          shipping_address: buildShippingAddressForStripe(direccionSeleccionada),
-          recipient_name: recipientName,
-          automatic_tax: true,
-        });
+        if (metodoPago === 'paypal') {
+          pagoResponse = await api.pagos.paypal.createOrder(token, {
+            id_pedido: pedidoId,
+            subtotal,
+            shipping_amount: costoEnvio,
+            moneda: "MXN",
+            shipping_address: buildShippingAddressForStripe(direccionSeleccionada),
+          });
+          setPaypalOrderId(pagoResponse.orderId);
+          return { pedidoId, paypalOrderId: pagoResponse.orderId };
+        } else {
+          pagoResponse = await api.pagos.stripe.createIntent(token, {
+            id_pedido: pedidoId,
+            subtotal,
+            shipping_amount: costoEnvio,
+            moneda: "MXN",
+            shipping_address: buildShippingAddressForStripe(direccionSeleccionada),
+            recipient_name: recipientName,
+            automatic_tax: true,
+          });
+          setClientSecret(pagoResponse.clientSecret);
+          setPaymentIntentId(pagoResponse.paymentIntentId);
+          return { pedidoId, clientSecret: pagoResponse.clientSecret };
+        }
       } catch (err) {
         if (err instanceof ApiError && err.code === "AGE_DOB_REQUIRED") {
           setDobRequired({
@@ -420,11 +437,6 @@ export function useCheckout() {
         }
         throw err;
       }
-
-      setClientSecret(pagoResponse.clientSecret);
-      setPaymentIntentId(pagoResponse.paymentIntentId);
-
-      return { pedidoId, clientSecret: pagoResponse.clientSecret };
     } catch (err) {
       setErrorMensaje(err instanceof Error ? err.message : "Error desconocido");
       return null;
@@ -444,7 +456,27 @@ export function useCheckout() {
     buildShippingAddressForStripe,
     clientSecret,
     pedidoIdCreado,
+    metodoPago,
   ]);
+
+  const capturePaypalOrder = useCallback(async (orderId: string) => {
+    if (!pedidoIdCreado) {
+      setErrorMensaje("Pedido no creado");
+      return;
+    }
+    const token = getCookie("token") || "";
+    setCargando(true);
+    setErrorMensaje(null);
+    try {
+      await api.pagos.paypal.captureOrder(token, { paypal_order_id: orderId });
+      limpiarCarrito();
+      router.push(`/tienda/checkout/pago-exitoso?pedido=${pedidoIdCreado}`);
+    } catch (err) {
+      setErrorMensaje(err instanceof Error ? err.message : "Error al capturar el pago con PayPal.");
+    } finally {
+      setCargando(false);
+    }
+  }, [pedidoIdCreado, router, limpiarCarrito]);
 
   const submitDob = useCallback(async (fechaNacimientoISO: string) => {
     if (!user?.id_usuario) return false;
@@ -499,6 +531,10 @@ export function useCheckout() {
     clientSecret,
     paymentIntentId,
     pedidoIdCreado,
+    metodoPago,
+    setMetodoPago,
+    paypalOrderId,
+    capturePaypalOrder,
     dobRequired,
     submitDob,
   };

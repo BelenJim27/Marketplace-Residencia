@@ -39,3 +39,15 @@ export class CreateStripeIntentDto {
   @IsOptional() @IsString() customer_id?: string;
   @IsOptional() @IsBoolean() automatic_tax?: boolean;
 }
+
+export class CreatePaypalOrderDto {
+  @IsString() id_pedido!: string;
+  @IsNumber() @Min(0.01) @Type(() => Number) subtotal!: number;
+  @IsOptional() @IsNumber() @Min(0) @Type(() => Number) shipping_amount?: number;
+  @IsString() @Length(3, 3) moneda!: string;
+  @IsOptional() @ValidateNested() @Type(() => StripeShippingAddressDto) shipping_address?: StripeShippingAddressDto;
+}
+
+export class CapturePaypalOrderDto {
+  @IsString() paypal_order_id!: string;
+}

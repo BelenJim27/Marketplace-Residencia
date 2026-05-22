@@ -48,9 +48,7 @@ export default function ProductorPage() {
     setError(null);
     try {
       const [productorData, productosData] = await Promise.all([
-        api.productores.getAll().then(
-          (all: any[]) => all.find((p) => p.id_productor === Number(id))
-        ),
+        api.productores.getOne(Number(id)),
         api.productos.getByProductor(Number(id)),
       ]);
 

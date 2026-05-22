@@ -11,7 +11,9 @@ import type { ProductoTrazabilidad } from "@/hooks/useTrazabilidadCarousel";
 // ─── HOOK: detecta dark mode ──────────────────────────────────────────────────
 function useDarkMode(): boolean {
   const [dark, setDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
+    setMounted(true);
     const check = () => {
       const htmlClass = document.documentElement.classList.contains("dark");
       const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -24,18 +26,21 @@ function useDarkMode(): boolean {
     mq.addEventListener("change", check);
     return () => { obs.disconnect(); mq.removeEventListener("change", check); };
   }, []);
-  return dark;
+  return mounted ? dark : false;
 }
 
 // ─── HOOK: detecta ancho de ventana ──────────────────────────────────────────
 function useWindowWidth(): number {
-  const [width, setWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
+  const [width, setWidth] = useState(1024);
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
+    setMounted(true);
+    setWidth(window.innerWidth);
     const handle = () => setWidth(window.innerWidth);
     window.addEventListener("resize", handle);
     return () => window.removeEventListener("resize", handle);
   }, []);
-  return width;
+  return mounted ? width : 1024;
 }
 
 // ─── COLORES DE TEXTO según el modo ──────────────────────────────────────────
@@ -432,6 +437,7 @@ export default function LandingPageOaxaca() {
         <video
           src="/fotos/videohero.mp4"
           autoPlay muted loop playsInline
+          preload="none"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
         />
         {/* Franja decorativa lateral */}

@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Req } from '@nestjs/common';
-import { CreateMonedaDto, CreatePagoDto, CreateStripeIntentDto, UpdateMonedaDto, UpdatePagoDto } from './dto/pagos.dto';
+import { CreateMonedaDto, CreatePagoDto, CreateStripeIntentDto, UpdateMonedaDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
 import { ConnectService } from './connect.service';
 import { PagosService } from './pagos.service';
+import { PaypalService } from './paypal.service';
 import { StripeService } from './stripe.service';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
@@ -11,6 +12,7 @@ export class PagosController {
   constructor(
     private readonly service: PagosService,
     private readonly stripeService: StripeService,
+    private readonly paypalService: PaypalService,
     private readonly connectService: ConnectService,
     private readonly configService: ConfigService,
   ) {}
@@ -45,6 +47,44 @@ export class PagosController {
     } else if (event.type === 'account.updated') {
       // Connect onboarding progress — flip stripe_onboarding_completed when KYC clears.
       await this.connectService.syncFromAccountUpdated(event.data.object);
+    }
+
+    return { received: true };
+  }
+
+  @Post('paypal/order')
+  createPaypalOrder(@Body() dto: CreatePaypalOrderDto) {
+    return this.service.createPaypalOrder(dto);
+  }
+
+  @Post('paypal/capture')
+  capturePaypalOrder(@Body() dto: CapturePaypalOrderDto) {
+    return this.service.capturePaypalOrder(dto);
+  }
+
+  @Post('paypal/webhook')
+  async handlePaypalWebhook(@Req() req: Request) {
+    const headers = req.headers as Record<string, string>;
+    const isValid = await this.paypalService.verifyWebhookSignature(headers, (req as any).rawBody as Buffer);
+
+    if (!isValid) {
+      return { received: true };
+    }
+
+    const event = JSON.parse(((req as any).rawBody as Buffer).toString());
+    const eventType = event.event_type as string;
+
+    if (eventType === 'PAYMENT.CAPTURE.COMPLETED') {
+      const capture = event.resource as any;
+      const captureId = capture.id;
+      const purchaseUnit = event.resource.supplementary_data?.related_ids?.order_id;
+
+      // Use captur ID to find the payment
+      await this.service.updatePaymentStatus(captureId, 'completado');
+    } else if (eventType === 'PAYMENT.CAPTURE.DENIED' || eventType === 'PAYMENT.CAPTURE.REFUNDED') {
+      const capture = event.resource as any;
+      const captureId = capture.id;
+      await this.service.updatePaymentStatus(captureId, 'fallido');
     }
 
     return { received: true };

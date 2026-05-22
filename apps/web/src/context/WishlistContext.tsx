@@ -97,8 +97,16 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       const usuarioId = usuario ? JSON.parse(usuario).id_usuario || "guest" : "guest";
       setCurrentUserId(usuarioId);
     } catch {}
-    cargarWishlist();
-  }, [cargarWishlist]);
+    // Lazy-load wishlist: only load from localStorage, don't fetch from API on mount
+    const stored = localStorage.getItem(getStorageKey());
+    if (stored) {
+      try {
+        setItems(JSON.parse(stored));
+      } catch (e) {
+        console.error("Error parsing stored wishlist:", e);
+      }
+    }
+  }, []);
 
   // Detectar cambio de usuario y recargar wishlist
   useEffect(() => {

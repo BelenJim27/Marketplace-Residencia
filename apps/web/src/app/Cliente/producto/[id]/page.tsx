@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap, ChevronDown, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
 import type { ProductItem } from "@/types/producer";
 import { useCarrito } from "@/context/CarritoContext";
@@ -13,8 +13,9 @@ import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/format-number";
 import { useShipping } from "@/hooks/useShipping";
 import RatingAgregado from "@/components/Cliente/RatingAgregado";
-import ResenasSeccion from "@/components/Cliente/ResenasSeccion";
-import { ProductosSimilares, TambienCompraron } from "@/components/Cliente/ProductosRelacionados";
+const ResenasSeccion = lazy(() => import("@/components/Cliente/ResenasSeccion"));
+const ProductosSimilares = lazy(() => import("@/components/Cliente/ProductosRelacionados").then(m => ({ default: m.ProductosSimilares })));
+const TambienCompraron = lazy(() => import("@/components/Cliente/ProductosRelacionados").then(m => ({ default: m.TambienCompraron })));
 import AgeGate from "@/components/AgeGate";
 import CategoryDisclaimer from "@/components/CategoryDisclaimer";
 import { getEdadMinima } from "@/lib/edad";
@@ -92,6 +93,8 @@ export default function ProductoDetallePage() {
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
   const [forceAgeGate, setForceAgeGate] = useState(false);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const { cotizarTodos } = useShipping();
 
   const fetchProducto = useCallback(async () => {
@@ -192,25 +195,81 @@ export default function ProductoDetallePage() {
     (typeof datosApi.url_trazabilidad === "string" ? datosApi.url_trazabilidad : null) ||
     null;
 
+  // Specs grouping for mezcal domain
+  const specGroups = {
+    "Dónde y Qué": [
+      { label: "Región de Origen", value: region, help: "Estado o región donde se produjo" },
+      { label: "Tipo de Maguey", value: producto?.maguey, help: "La planta base del mezcal" },
+      { label: "Clasificación", value: producto?.tipo_mezcal, help: "Artesanal, ancestral, o industrial" },
+      { label: "Maestro Productor", value: producto?.maestro_mezcalero, help: "Productor responsable" },
+    ],
+    "Cómo se Hace": [
+      { label: "Tipo de Horno", value: producto?.destilacion, help: "Método de cocción del maguey" },
+      { label: "Molienda", value: producto?.molienda, help: "Cómo se tritura el maguey" },
+      { label: "Graduación Alcohólica", value: producto?.abv ? `${producto.abv}%` : gradoAlcohol ? `${gradoAlcohol}%` : null, help: "Fuerza del mezcal" },
+    ],
+    "Cómo Sabe": [
+      { label: "Notas de Sabor", value: producto?.perfil, help: "Aromas y sabores principales" },
+      { label: "Nombre Local", value: nombreComun, help: "Cómo se conoce la planta localmente" },
+      { label: "Nombre Científico", value: nombreCientifico, help: "Clasificación botánica" },
+    ],
+  } as const;
+
+  // Filter out empty specs
+  const filteredGroups = Object.fromEntries(
+    Object.entries(specGroups).map(([group, specs]) => [
+      group,
+      specs.filter((spec) => spec.value),
+    ])
+  );
+
+  // Hero specs (always show if populated)
+  const magueySpec = producto?.maguey;
+  const categoriaSpec = producto?.tipo_mezcal;
+  const abvSpec = producto?.abv ? `${producto.abv}%` : gradoAlcohol ? `${gradoAlcohol}%` : null;
+
   if (loading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-green-600">Cargando producto...</div>
+      <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8">
+        <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-green-600 dark:border-gray-700 dark:border-t-green-500" />
+          <div className="text-center">
+            <p className="text-gray-600 dark:text-gray-400">Cargando detalles del producto...</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">Por favor espera</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !producto) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
-        <div className="text-red-500">Error: {error || "Producto no encontrado"}</div>
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white"
-        >
-          <ArrowLeft size={18} />
-          Volver
-        </button>
+      <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8">
+        <div className="flex min-h-[400px] flex-col items-center justify-center gap-6">
+          <div className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950 p-6 max-w-md text-center">
+            <p className="mb-2 text-sm font-semibold text-red-800 dark:text-red-200">Producto no disponible</p>
+            <p className="text-sm text-red-700 dark:text-red-300">
+              {error ? `Error: ${error}` : "El producto que buscas no existe o no está disponible en este momento."}
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
+              style={{ border: "1px solid #e8dcc8", color: "var(--bio-color-precio, #8b6914)" }}
+            >
+              <ArrowLeft size={18} />
+              Volver
+            </button>
+            <Link
+              href="/producto"
+              className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
+              style={{ backgroundColor: "var(--bio-color-boton, #5c3d1e)" }}
+            >
+              Ver catálogo
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -234,8 +293,9 @@ export default function ProductoDetallePage() {
       />
       <button
         onClick={() => router.back()}
-        className="mb-6 flex items-center gap-2 hover:opacity-80 transition-opacity"
+        className="mb-8 flex items-center gap-2 hover:opacity-70 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-lg p-2 -ml-2"
         style={{ color: "var(--bio-color-precio, #8b6914)" }}
+        aria-label="Volver a la página anterior"
       >
         <ArrowLeft size={20} />
         Volver a productos
@@ -243,26 +303,28 @@ export default function ProductoDetallePage() {
 
       {/* Breadcrumb de categorías */}
       {producto.categorias && producto.categorias.length > 0 && (
-        <div className="mb-6 flex flex-wrap gap-2">
-          {producto.categorias.map((cat) => (
-            <Link
-              key={cat}
-              href={`/categoria/${encodeURIComponent(cat)}`}
-              className="text-xs font-medium rounded-full px-3 py-1 hover:opacity-80 transition-opacity"
-              style={{ backgroundColor: "#f0ebe0", color: "var(--bio-color-precio, #8b6914)", border: "1px solid #e8dcc8" }}
-            >
-              {cat}
-            </Link>
-          ))}
-        </div>
+        <nav aria-label="Categorías de producto" className="mb-10">
+          <div className="flex flex-wrap gap-2">
+            {producto.categorias.map((cat, idx) => (
+              <Link
+                key={cat}
+                href={`/categoria/${encodeURIComponent(cat)}`}
+                className="text-xs font-medium rounded-full px-3 py-2 hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[32px] flex items-center"
+                style={{ backgroundColor: "#f0ebe0", color: "var(--bio-color-precio, #8b6914)", border: "1px solid #e8dcc8" }}
+              >
+                {cat}
+              </Link>
+            ))}
+          </div>
+        </nav>
       )}
 
       {/* ── Grid principal ─────────────────────────────────────────────────── */}
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-10 lg:gap-14 lg:grid-cols-2">
 
         {/* Columna izquierda — Imágenes */}
-        <div className="space-y-4">
-          <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
+        <div className="space-y-8">
+          <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 shadow-sm">
             {todasImagenes[imagenSeleccionada] ? (
               <Image
                 src={todasImagenes[imagenSeleccionada]}
@@ -270,6 +332,8 @@ export default function ProductoDetallePage() {
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover"
+                priority={imagenSeleccionada === 0}
+                loading={imagenSeleccionada === 0 ? "eager" : "lazy"}
               />
             ) : (
               <div className="flex h-full items-center justify-center text-gray-400">Sin imagen</div>
@@ -277,250 +341,279 @@ export default function ProductoDetallePage() {
           </div>
 
           {todasImagenes.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto">
-              {todasImagenes.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setImagenSeleccionada(idx)}
-                  className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border-2"
-                  style={{ borderColor: idx === imagenSeleccionada ? "var(--bio-color-precio, #8b6914)" : "transparent" }}
-                >
-                  <Image src={img} alt={`${producto.nombre} ${idx + 1}`} fill sizes="80px" className="object-cover" />
-                </button>
-              ))}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Vistas del producto</p>
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {todasImagenes.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setImagenSeleccionada(idx)}
+                    className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1"
+                    style={{
+                      borderColor: idx === imagenSeleccionada ? "var(--bio-color-precio, #8b6914)" : "transparent",
+                      opacity: idx === imagenSeleccionada ? 1 : 0.6
+                    }}
+                    aria-label={`Ver imagen ${idx + 1} de ${todasImagenes.length}`}
+                    aria-current={idx === imagenSeleccionada ? "true" : "false"}
+                  >
+                    <Image src={img} alt={`${producto.nombre} vista ${idx + 1}`} fill sizes="80px" className="object-cover" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Trazabilidad QR */}
+          {loteData && (
+            <div className="rounded-lg p-7 sm:p-8">
+              <h2
+                className="text-lg sm:text-xl font-semibold mb-3"
+                style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+              >
+                Rastreo y Autenticidad
+              </h2>
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">Verifica que este mezcal es auténtico escaneando el código QR. Desde dónde se produjo hasta tu mano.</p>
+              {urlTrazabilidad ? (
+                <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
+                  {/* QR Code */}
+                  <div className="flex-shrink-0">
+                    <div className="rounded-lg bg-white p-4 shadow-sm">
+                      <QRCode value={urlTrazabilidad} size={140} level="H" />
+                    </div>
+                  </div>
+
+                  {/* Info + CTA */}
+                  <div className="flex-1 space-y-4">
+                    {codigoLote && (
+                      <div className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Tu código de lote</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">Abre el portal oficial con el botón de abajo o escanea el QR con tu teléfono para ver todos los detalles: productor, región, procedencia.</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white break-words font-mono">{codigoLote}</p>
+                        
+                      </div>
+                    )}
+                    <div>
+                        
+                      <a
+                        href={urlTrazabilidad}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-all duration-200 hover:shadow-md hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
+                        style={{ backgroundColor: "var(--bio-color-boton, #5c3d1e)" }}
+                      >
+                        Verifica aquí
+                        <span>→</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Este mezcal aún no tiene código de rastreo. Pronto podrás verificar su autenticidad aquí.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Specifications Accordion - detailed specs */}
+          {Object.entries(filteredGroups).length > 0 && (
+            <div className="space-y-4 mt-10 pt-10 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Detalles Técnicos</p>
+              {Object.entries(filteredGroups).map(([groupName, specs]) =>
+                specs.length > 0 ? (
+                  <div key={groupName} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setExpandedGroup(expandedGroup === groupName ? null : groupName)}
+                      className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-inset"
+                      style={{
+                        backgroundColor: expandedGroup === groupName ? "var(--bio-color-fondo, #faf8f4)" : "transparent",
+                        outlineColor: "var(--bio-color-precio, #8b6914)"
+                      }}
+                      aria-expanded={expandedGroup === groupName}
+                      aria-controls={`specs-${groupName}`}
+                    >
+                      <span className="font-medium text-gray-900 dark:text-white text-left text-sm">{groupName}</span>
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform flex-shrink-0 ml-2 ${expandedGroup === groupName ? "rotate-180" : ""}`}
+                        style={{ color: "var(--bio-color-precio, #8b6914)" }}
+                        aria-hidden="true"
+                      />
+                    </button>
+                    {expandedGroup === groupName && (
+                      <div
+                        id={`specs-${groupName}`}
+                        className="px-4 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 space-y-4"
+                        role="region"
+                        aria-labelledby={`specs-${groupName}-title`}
+                      >
+                        {specs.map((spec) => (
+                          <div key={spec.label} className="space-y-1">
+                            <div className="flex justify-between items-start gap-4 min-w-0">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white flex-shrink-0">{spec.label}</span>
+                              <span className="text-sm text-gray-700 dark:text-gray-300 text-right break-words">{spec.value || "—"}</span>
+                            </div>
+                            {spec.help && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{spec.help}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : null
+              )}
             </div>
           )}
         </div>
 
         {/* Columna derecha — Info */}
-        <div className="space-y-6">
+        <div className="space-y-9 lg:space-y-10">
 
           {/* Nombre y precio */}
-          <div>
+          <div className="space-y-4">
             <h1
-              className="mb-2 text-3xl font-bold"
+              className="text-3xl sm:text-4xl font-bold break-words leading-tight"
               style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
             >
               {producto.nombre}
             </h1>
             <p
-              className="text-2xl font-bold"
+              className="text-3xl sm:text-4xl font-bold"
               style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}
             >
               ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
             </p>
           </div>
 
-          {/* ★ Rating agregado — justo debajo del precio */}
+          {/* ★ Rating agregado */}
           <RatingAgregado productoId={productoId} />
 
-          {/* Disclaimer regulatorio (alcohol/tabaco/etc.) — solo si la categoría lo requiere. */}
+          {/* Disclaimer regulatorio */}
           <CategoryDisclaimer
             categorias={producto.categorias_full ?? []}
             gradoAlcohol={producto.grado_alcohol ?? producto.lotes?.grado_alcohol ?? null}
           />
 
-          {/* Maestro Productor */}
-          {productor && (
-            <div className="rounded-lg p-4" style={{ backgroundColor: "#f0ebe0", border: "1px solid #e8dcc8" }}>
-              <h3
-                className="mb-2 font-semibold"
-                style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
-              >
-                Maestro Productor
-              </h3>
-              <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                {loteData?.id_productor ? (
-                  <Link
-                    href={`/cliente/productor/${loteData.id_productor}`}
-                    className="font-medium hover:opacity-70 transition-opacity block"
-                    style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}
-                  >
-                    {nombreProductor}
-                  </Link>
-                ) : (
-                  <p className="font-medium">{nombreProductor}</p>
+          {/* Hero Specs - Key characteristics first */}
+          {(magueySpec || categoriaSpec || abvSpec) && (
+            <div className="space-y-4 rounded-lg p-6 sm:p-7" style={{ backgroundColor: "var(--bio-color-fondo-sec, #f0ebe0)", border: "2px solid var(--bio-color-precio, #8b6914)" }}>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--bio-color-precio, #8b6914)" }}>Lo Importante</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                {magueySpec && (
+                  <div className="space-y-2">
+                    <span className="block text-xs text-gray-600 dark:text-gray-400">Maguey</span>
+                    <p className="font-semibold text-base break-words" style={{ color: "var(--bio-color-titulo, #5c3d1e)", fontFamily: "var(--bio-fuente-titulo, Georgia, serif)" }}>{magueySpec}</p>
+                  </div>
                 )}
-                {productor.biografia && <p className="text-gray-500">{productor.biografia}</p>}
-                {productor.otras_caracteristicas && <p className="text-gray-500">{productor.otras_caracteristicas}</p>}
+                {categoriaSpec && (
+                  <div className="space-y-2">
+                    <span className="block text-xs text-gray-600 dark:text-gray-400">Categoría</span>
+                    <p className="font-semibold text-base break-words" style={{ color: "var(--bio-color-titulo, #5c3d1e)", fontFamily: "var(--bio-fuente-titulo, Georgia, serif)" }}>{categoriaSpec}</p>
+                  </div>
+                )}
+                {abvSpec && (
+                  <div className="space-y-2">
+                    <span className="block text-xs text-gray-600 dark:text-gray-400">ABV</span>
+                    <p className="font-semibold text-base break-words" style={{ color: "var(--bio-color-titulo, #5c3d1e)", fontFamily: "var(--bio-fuente-titulo, Georgia, serif)" }}>{abvSpec}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* Tienda */}
-          {tiendaData && (
-            <div className="rounded-lg p-4" style={{ backgroundColor: "#f0ebe0", border: "1px solid #e8dcc8" }}>
-              <h3
-                className="mb-2 font-semibold"
-                style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
-              >
-                Tienda
-              </h3>
-              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                {producto.id_tienda ? (
-                  <Link
-                    href={`/cliente/tienda/${producto.id_tienda}`}
-                    className="font-medium hover:opacity-70 transition-opacity block"
-                    style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}
-                  >
-                    {tiendaData.nombre}
-                  </Link>
-                ) : (
-                  <p className="font-medium">{tiendaData.nombre}</p>
-                )}
-                {tiendaData.descripcion && <p className="text-gray-500">{tiendaData.descripcion}</p>}
-                {(tiendaData.ciudad_origen || tiendaData.estado_origen) && (
-                  <p className="flex items-center gap-1">
-                    <MapPin size={14} />
-                    {[tiendaData.ciudad_origen, tiendaData.estado_origen].filter(Boolean).join(", ")}
-                  </p>
-                )}
-                {tiendaData.nombre_contacto && <p className="text-gray-500">Contacto: {tiendaData.nombre_contacto}</p>}
-                {tiendaData.telefono_contacto && <p className="text-gray-500">Teléfono: {tiendaData.telefono_contacto}</p>}
+          {/* Producer + Store info - simplified grouping */}
+          <div className="space-y-5 pt-6 pb-8 border-b border-gray-200 dark:border-gray-700">
+            {/* Maestro Productor */}
+            {productor && (
+              <div className="space-y-2">
+                <h3
+                  className="text-sm font-semibold"
+                  style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+                >
+                  Maestro Productor
+                </h3>
+                <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                  {loteData?.id_productor ? (
+                    <Link
+                      href={`/cliente/productor/${loteData.id_productor}`}
+                      className="font-medium hover:opacity-70 transition-opacity block"
+                      style={{ color: "var(--bio-color-precio, #8b6914)" }}
+                    >
+                      {nombreProductor} →
+                    </Link>
+                  ) : (
+                    <p className="font-medium">{nombreProductor}</p>
+                  )}
+                  {productor.biografia && <p className="text-xs text-gray-600 dark:text-gray-400">{productor.biografia}</p>}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Tienda */}
+            {tiendaData && (
+              <div className="space-y-2">
+                <h3
+                  className="text-sm font-semibold"
+                  style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+                >
+                  Tienda
+                </h3>
+                <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                  {producto.id_tienda ? (
+                    <Link
+                      href={`/cliente/tienda/${producto.id_tienda}`}
+                      className="font-medium hover:opacity-70 transition-opacity block"
+                      style={{ color: "var(--bio-color-precio, #8b6914)" }}
+                    >
+                      {tiendaData.nombre} →
+                    </Link>
+                  ) : (
+                    <p className="font-medium">{tiendaData.nombre}</p>
+                  )}
+                  {(tiendaData.ciudad_origen || tiendaData.estado_origen) && (
+                    <p className="flex items-center gap-1 text-xs">
+                      <MapPin size={13} />
+                      {[tiendaData.ciudad_origen, tiendaData.estado_origen].filter(Boolean).join(", ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Descripción */}
-          <div>
-            <h3 className="mb-2 font-semibold text-gray-900 dark:text-white">Descripción</h3>
-            <p className="text-gray-600 dark:text-gray-300">
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Descripción</h3>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-[65ch]">
               {producto.descripcion || "Sin descripción disponible"}
             </p>
           </div>
 
-          {/* Atributos del lote */}
-          <div className="grid grid-cols-2 gap-4">
-            {producto.tipo_mezcal && (
-              <div style={{ borderBottom: "1px solid #e8dcc8", paddingBottom: "1rem" }}>
-                <span className="text-sm" style={{ color: "var(--bio-color-precio, #8b6914)", textTransform: "uppercase", letterSpacing: "2px", fontSize: "10px", fontWeight: "600" }}>Tipo de Mezcal</span>
-                <p className="font-medium mt-1" style={{ color: "var(--bio-color-titulo, #5c3d1e)", fontFamily: "var(--bio-fuente-titulo, Georgia, serif)" }}>{producto.tipo_mezcal}</p>
-              </div>
-            )}
-            {producto.maguey && (
-              <div>
-                <span className="text-sm text-gray-500">Maguey</span>
-                <p className="font-medium text-gray-900 dark:text-white">{producto.maguey}</p>
-              </div>
-            )}
-            {producto.destilacion && (
-              <div>
-                <span className="text-sm text-gray-500">Destilación</span>
-                <p className="font-medium text-gray-900 dark:text-white">{producto.destilacion}</p>
-              </div>
-            )}
-            {producto.molienda && (
-              <div>
-                <span className="text-sm text-gray-500">Molienda</span>
-                <p className="font-medium text-gray-900 dark:text-white">{producto.molienda}</p>
-              </div>
-            )}
-            {producto.abv && (
-              <div>
-                <span className="text-sm text-gray-500">ABV</span>
-                <p className="font-medium text-gray-900 dark:text-white">{producto.abv}%</p>
-              </div>
-            )}
-            {producto.maestro_mezcalero && (
-              <div>
-                <span className="text-sm text-gray-500">Maestro Mezcalero</span>
-                <p className="font-medium text-gray-900 dark:text-white">{producto.maestro_mezcalero}</p>
-              </div>
-            )}
-            {region && (
-              <div>
-                <span className="text-sm text-gray-500">Región</span>
-                <p className="font-medium text-gray-900 dark:text-white">{region}</p>
-              </div>
-            )}
-            {codigoLote && (
-              <div>
-                <span className="text-sm text-gray-500">Código Lote</span>
-                <p className="font-medium text-gray-900 dark:text-white">{codigoLote}</p>
-              </div>
-            )}
-            {sitio && (
-              <div>
-                <span className="text-sm text-gray-500">Sitio</span>
-                <p className="font-medium text-gray-900 dark:text-white">{sitio}</p>
-              </div>
-            )}
-            {gradoAlcohol && (
-              <div>
-                <span className="text-sm text-gray-500">Grados Alcohol</span>
-                <p className="font-medium text-gray-900 dark:text-white">{gradoAlcohol}%</p>
-              </div>
-            )}
-            {producto.marca && (
-              <div>
-                <span className="text-sm text-gray-500">Marca</span>
-                <p className="font-medium text-gray-900 dark:text-white">{producto.marca}</p>
-              </div>
-            )}
-            {nombreComun && (
-              <div>
-                <span className="text-sm text-gray-500">Nombre Común</span>
-                <p className="font-medium text-gray-900 dark:text-white">{nombreComun}</p>
-              </div>
-            )}
-            {nombreCientifico && (
-              <div className="col-span-2">
-                <span className="text-sm text-gray-500">Nombre Científico</span>
-                <p className="font-medium text-gray-900 dark:text-white italic">{nombreCientifico}</p>
-              </div>
-            )}
-            {unidades && (
-              <div>
-                <span className="text-sm text-gray-500">Unidades</span>
-                <p className="font-medium text-gray-900 dark:text-white">{unidades}</p>
-              </div>
-            )}
-            {fechaElaboracion && (
-              <div>
-                <span className="text-sm text-gray-500">Fecha Elaboración</span>
-                <p className="font-medium text-gray-900 dark:text-white">{fechaElaboracion}</p>
-              </div>
-            )}
-            {estadoLote && (
-              <div>
-                <span className="text-sm text-gray-500">Estado</span>
-                <p className="font-medium text-gray-900 dark:text-white">{estadoLote}</p>
-              </div>
-            )}
-            {marcaLote && (
-              <div>
-                <span className="text-sm text-gray-500">Marca</span>
-                <p className="font-medium text-gray-900 dark:text-white">{marcaLote}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Perfil de sabor */}
-          {producto.perfil && (
-            <div>
-              <h3 className="mb-2 font-semibold text-gray-900 dark:text-white">Perfil de Sabor</h3>
-              <p className="text-gray-600 dark:text-gray-300">{producto.perfil}</p>
-            </div>
-          )}
-
           {/* Cantidad + acciones */}
-          <div className="space-y-4 border-t border-gray-200 pt-6 dark:border-gray-700">
-            <div className="flex items-center gap-4">
+          <div className="space-y-6 pt-8 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-6">
               <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Cantidad</label>
-                <div className="flex items-center gap-2">
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Cantidad</label>
+                <div className="flex items-center gap-3">
                   <button
                     onClick={() => setCantidad(Math.max(1, cantidad - 1))}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg hover:opacity-80 transition-opacity"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 active:scale-95"
                     style={{ border: "1px solid #e8dcc8", backgroundColor: "#f0ebe0", color: "var(--bio-color-titulo, #5c3d1e)" }}
+                    title="Disminuir cantidad"
+                    aria-label="Restar una botella"
                   >
-                    -
+                    −
                   </button>
-                  <span className="w-12 text-center font-medium" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>{cantidad}</span>
+                  <span className="w-10 text-center font-semibold text-base" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>{cantidad}</span>
                   <button
                     onClick={() => setCantidad(cantidad + 1)}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg hover:opacity-80 transition-opacity"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 active:scale-95"
                     style={{ border: "1px solid #e8dcc8", backgroundColor: "#f0ebe0", color: "var(--bio-color-titulo, #5c3d1e)" }}
+                    title="Aumentar cantidad"
+                    aria-label="Agregar una botella"
                   >
                     +
                   </button>
@@ -529,19 +622,19 @@ export default function ProductoDetallePage() {
             </div>
 
             {/* Envío */}
-            <div className="rounded-lg p-4" style={{ border: "1px solid #e8dcc8", backgroundColor: "#fdf7ee" }}>
-              <div className="flex items-center gap-2 mb-2">
+            <div className="rounded-lg p-4 sm:p-5" style={{ border: "1px solid #e8dcc8", backgroundColor: "#fdf7ee" }}>
+              <div className="flex items-center gap-2 mb-3">
                 <Truck size={16} style={{ color: "var(--bio-color-precio, #8b6914)" }} />
-                <span className="text-sm font-semibold" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>Costo de envío</span>
+                <span className="text-sm font-semibold" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>Envío</span>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                El costo de envío se calculará automáticamente al momento del checkout, según tu dirección de entrega.
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Te mostraremos el costo cuando ingreses tu dirección. Enviamos a todo el país.
               </p>
             </div>
 
             {/* Botones */}
             <div className="flex flex-col gap-3">
-              <div className="flex gap-3">
+              <div className="flex gap-3 sm:gap-4">
                 <button
                   onClick={() => {
                     if (!producto) return;
@@ -561,87 +654,81 @@ export default function ProductoDetallePage() {
                       });
                     }
                   }}
-                  className="flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors"
+                  className="flex items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-medium transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px] active:scale-95"
                   style={{
                     backgroundColor: isInWishlist(producto.id_producto) ? "#fdf7ee" : "transparent",
                     color: isInWishlist(producto.id_producto) ? "var(--bio-color-precio, #8b6914)" : "var(--bio-color-titulo, #5c3d1e)",
                     border: "1px solid #e8dcc8",
                   }}
+                  aria-label={isInWishlist(producto.id_producto) ? "Remover de mi lista" : "Agregar a mi lista"}
+                  aria-pressed={isInWishlist(producto.id_producto)}
+                  title={isInWishlist(producto.id_producto) ? "Remover de mi lista" : "Guarda este mezcal para luego"}
                 >
-                  <Heart size={20} fill={isInWishlist(producto.id_producto) ? "currentColor" : "none"} />
-                  {isInWishlist(producto.id_producto) ? "En favoritos" : "Favoritos"}
+                  <Heart size={20} fill={isInWishlist(producto.id_producto) ? "currentColor" : "none"} aria-hidden="true" />
+                  <span className="hidden sm:inline">{isInWishlist(producto.id_producto) ? "En mi lista" : "Mi lista"}</span>
+                  <span className="sm:hidden">{isInWishlist(producto.id_producto) ? "✓" : "♡"}</span>
                 </button>
                 <button
                   onClick={handleAgregar}
                   disabled={agregado}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors text-white hover:opacity-90"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-medium transition-all duration-200 text-white hover:shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
                   style={{ backgroundColor: "var(--bio-color-boton, #5c3d1e)" }}
+                  aria-busy={agregado}
                 >
-                  <ShoppingCart size={20} />
-                  {agregado ? "Agregado" : "Agregar al carrito"}
+                  <ShoppingCart size={20} aria-hidden="true" />
+                  <span className="hidden sm:inline">{agregado ? "¡Agregado!" : "Agregar al carrito"}</span>
+                  <span className="sm:hidden">{agregado ? "✓" : "+"}</span>
                 </button>
               </div>
-              <button
-                onClick={handleComprarAhora}
-                className="flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 font-semibold text-white transition-colors hover:opacity-90"
-                style={{ backgroundColor: "var(--bio-color-boton2, #8b6914)" }}
-              >
-                <Zap size={20} />
-                Comprar ahora
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Trazabilidad QR ──────────────────────────────────────────────────── */}
-      {loteData && (
-        <div className="mt-10 rounded-lg p-6" style={{ border: "1px solid #e8dcc8", backgroundColor: "#fdf7ee" }}>
-          <h2
-            className="mb-4 text-lg font-semibold"
-            style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
-          >
-            Trazabilidad del lote
-          </h2>
-          {urlTrazabilidad ? (
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-              <div className="rounded bg-white p-3 shadow-sm">
-                <QRCode value={urlTrazabilidad} size={160} />
-              </div>
-              <div className="space-y-1 text-sm text-gray-600">
-                <p>Escanea el código QR para consultar la información oficial de trazabilidad de este lote.</p>
-                {codigoLote && (
-                  <div className="rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm">
-                    <p className="mb-1 font-semibold text-gray-900">Código de trazabilidad</p>
-                    <p className="break-words">{codigoLote}</p>
-                  </div>
-                )}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleComprarAhora}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
+                  style={{ backgroundColor: "var(--bio-color-boton2, #8b6914)" }}
+                  title="Ir al carrito y completar tu compra"
+                >
+                  <Zap size={20} aria-hidden="true" />
+                  <span className="hidden sm:inline">Comprar ahora</span>
+                  <span className="sm:hidden">Comprar</span>
+                </button>
                 <a
-                  href={urlTrazabilidad}
+                  href={`https://www.amazon.com/s?k=${encodeURIComponent(producto.nombre)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block mt-2 text-xs underline hover:opacity-70"
-                  style={{ color: "var(--bio-color-precio, #8b6914)" }}
+                  className="flex items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
+                  style={{ backgroundColor: "#FF9900" }}
+                  title="Buscar en Amazon"
                 >
-                  Ver en portal de trazabilidad
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 0c6.627 0 12 5.373 12 12s-5.373 12-12 12S0 18.627 0 12 5.373 0 12 0z"/>
+                    <path fill="white" d="M6.5 11c-.828 0-1.5.672-1.5 1.5v1c0 .828.672 1.5 1.5 1.5h11c.828 0 1.5-.672 1.5-1.5v-1c0-.828-.672-1.5-1.5-1.5h-11z"/>
+                    <path fill="white" d="M8 9.5c0 .276.224.5.5.5h7c.276 0 .5-.224.5-.5V8c0-.552-.448-1-1-1H9c-.552 0-1 .448-1 1v1.5z"/>
+                  </svg>
+                  <span className="hidden sm:inline">Comprar en Amazon</span>
+                  <span className="sm:hidden">Amazon</span>
                 </a>
               </div>
             </div>
-          ) : (
-            <p className="text-sm text-gray-500 italic">Trazabilidad no disponible para este producto.</p>
-          )}
+          </div>
+
         </div>
-      )}
+      </div>
 
       {/* ── Reseñas ────────────────────────────────────────────────────────── */}
-      <div className="mt-16">
-        <ResenasSeccion productoId={productoId} />
+      <div className="mt-28 border-t border-gray-300 dark:border-gray-700 pt-16">
+        <Suspense fallback={<div className="py-12 text-center text-gray-500 dark:text-gray-400">Cargando reseñas...</div>}>
+          <ResenasSeccion productoId={productoId} />
+        </Suspense>
       </div>
 
       {/* ── Productos relacionados ─────────────────────────────────────────── */}
-      <div className="mt-16 space-y-12">
-        <ProductosSimilares productoId={productoId} />
-        <TambienCompraron productoId={productoId} />
+      <div className="mt-28 border-t border-gray-300 dark:border-gray-700 pt-16 space-y-24">
+        <Suspense fallback={<div className="py-12 text-center text-gray-500 dark:text-gray-400">Cargando productos similares...</div>}>
+          <ProductosSimilares productoId={productoId} />
+        </Suspense>
+        <Suspense fallback={<div className="py-12 text-center text-gray-500 dark:text-gray-400">Cargando más productos...</div>}>
+          <TambienCompraron productoId={productoId} />
+        </Suspense>
       </div>
     </div>
   );

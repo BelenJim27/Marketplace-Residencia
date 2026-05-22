@@ -152,7 +152,27 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   }, [loading]);
 
   useEffect(() => {
-    fetchConfig();
+    // Lazy init: only load from localStorage on mount, fetch API later if needed
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      try {
+        const cachedMap = JSON.parse(cached);
+        setConfig(cachedMap);
+        applyColors(cachedMap);
+        setLoading(false);
+        return;
+      } catch {
+        // ignore parse errors
+      }
+    }
+
+    // Apply defaults and mark as loaded — fetchConfig() will be called on-demand
+    applyColors({
+      color_primario: defaultPrimary,
+      color_secundario: defaultSecondary,
+      color_acento: defaultAccent,
+    });
+    setLoading(false);
   }, []);
 
   // Re-aplicar colores cada vez que cambia el tema (dark/light)

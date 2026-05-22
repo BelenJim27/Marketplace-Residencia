@@ -8,6 +8,9 @@ import {
   Store, Home, ShoppingBag, Menu, X,
 } from "lucide-react";
 import { UserInfo } from "@/components/Layouts/header/user-info";
+import { ThemeToggleSwitch } from "@/components/Layouts/header/theme-toggle";
+import CurrencySwitcher from "@/components/Layouts/CurrencySwitcher";
+import LanguageSwitcher from "@/components/Layouts/LanguageSwitcher";
 import { useAuth } from "@/context/AuthContext";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -64,6 +67,18 @@ export function TiendaHeader() {
     setShowMobileMenu(false);
   }, [pathname]);
 
+  // Escape key handler for dropdowns and mobile menu
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowProfileMenu(false);
+        setShowMobileMenu(false);
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, []);
+
   const isClient = isAuthenticated && !isAdmin && !isProductor;
 
   const handleCartClick = () => router.push(isAuthenticated ? "/tienda/carrito" : "/auth/sign-in");
@@ -78,10 +93,13 @@ export function TiendaHeader() {
   const navBtnClass =
     "flex flex-col items-center gap-1 px-3 py-2 transition-colors text-[var(--tienda-nav-color)] hover:opacity-70";
 
+  const utilityBtnClass =
+    "flex items-center transition-colors text-[var(--tienda-nav-color)] hover:opacity-60";
+
   // ─── Nav items por estado de autenticación ───────────────────
   const clientNavItems: NavItem[] = [
     { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/Cliente/inicio"),  href: "/Cliente/inicio" },
-    { label: "Productos",      icon: <ShoppingBag size={22} />,  onClick: () => router.push("/producto"),        href: "/producto" },
+    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/producto"),        href: "/producto" },
     { label: t("Mis compras"), icon: <Package size={22} />,      onClick: handleMyPurchasesClick,                href: "/tienda/compras" },
     {
       label: t("Favoritos"),
@@ -97,12 +115,12 @@ export function TiendaHeader() {
       href: "/tienda/carrito",
       badge: cantidadTotal > 0 ? cantidadTotal : undefined,
     },
-    { label: t("Vender"),      icon: <Store size={22} />,        onClick: handleSellClick },
+    { label: t("Mis ventas"),  icon: <Store size={22} />,        onClick: handleSellClick },
   ];
 
   const authNavItems: NavItem[] = [
     { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/Cliente/inicio"),  href: "/Cliente/inicio" },
-    { label: "Productos",      icon: <ShoppingBag size={22} />,  onClick: () => router.push("/producto"),        href: "/producto" },
+    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/producto"),        href: "/producto" },
     { label: t("Mis compras"), icon: <Package size={22} />,      onClick: handleMyPurchasesClick,                href: "/tienda/compras" },
     {
       label: t("Carrito"),
@@ -111,22 +129,22 @@ export function TiendaHeader() {
       href: "/tienda/carrito",
       badge: cantidadTotal > 0 ? cantidadTotal : undefined,
     },
-    { label: t("Vender"),      icon: <Store size={22} />,        onClick: handleSellClick },
+    { label: t("Mis ventas"),  icon: <Store size={22} />,        onClick: handleSellClick },
   ];
 
   // Nav items desktop para guest — SIN "Ingresar" (va en dropdown Perfil)
   const guestNavItemsDesktop: NavItem[] = [
-    { label: t("Inicio"),   icon: <Home size={22} />,        onClick: () => router.push("/Cliente/inicio"), href: "/Cliente/inicio" },
-    { label: "Productos",   icon: <ShoppingBag size={22} />, onClick: () => router.push("/producto"),       href: "/producto" },
-    { label: t("Vender"),   icon: <Store size={22} />,       onClick: handleSellClick },
+    { label: t("Inicio"),          icon: <Home size={22} />,        onClick: () => router.push("/Cliente/inicio"), href: "/Cliente/inicio" },
+    { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/producto"),       href: "/producto" },
+    { label: t("Vender mezcal"),   icon: <Store size={22} />,       onClick: handleSellClick },
   ];
 
   // Nav items móvil (bottom nav) para guest — CON "Ingresar"
   const guestNavItems: NavItem[] = [
-    { label: t("Inicio"),   icon: <Home size={22} />,        onClick: () => router.push("/Cliente/inicio"), href: "/Cliente/inicio" },
-    { label: "Productos",   icon: <ShoppingBag size={22} />, onClick: () => router.push("/producto"),       href: "/producto" },
-    { label: t("Vender"),   icon: <Store size={22} />,       onClick: handleSellClick },
-    { label: t("Ingresar"), icon: <User size={22} />,        onClick: () => router.push("/auth/sign-in"),  href: "/auth/sign-in" },
+    { label: t("Inicio"),          icon: <Home size={22} />,        onClick: () => router.push("/Cliente/inicio"), href: "/Cliente/inicio" },
+    { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/producto"),       href: "/producto" },
+    { label: t("Vender mezcal"),   icon: <Store size={22} />,       onClick: handleSellClick },
+    { label: t("Ingresar"),        icon: <User size={22} />,        onClick: () => router.push("/auth/sign-in"),  href: "/auth/sign-in" },
   ];
 
   // Desktop usa guestNavItemsDesktop (sin Ingresar, va en dropdown Perfil)
@@ -174,93 +192,110 @@ export function TiendaHeader() {
         </Link>
 
         {/* ── NAV DESKTOP (≥ md) ── */}
-        <nav className="hidden md:flex items-center gap-0.5">
-          {desktopNavItems.map((item) => (
-            <button
-              key={item.label}
-              onClick={item.onClick}
-              style={{ color: "#F4F0E3" }}
-              className="relative group flex flex-col items-center gap-1 px-3 py-2 transition-colors"
-            >
-              <span className="transition-transform group-hover:scale-110">{item.icon}</span>
-              <span className="text-[11px] font-medium tracking-wide">{item.label}</span>
-              {/* Subrayado dorado al hover */}
-              <span
-                style={{ backgroundColor: "#C97A3E" }}
-                className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] w-0 rounded-full transition-all duration-200 group-hover:w-5"
-              />
-              {item.badge != null && (
-                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold">
-                  {item.badge > 9 ? "9+" : item.badge}
-                </span>
-              )}
-            </button>
-          ))}
-
-          {/* Perfil dropdown (solo guest) */}
-          {!isAuthenticated && (
-            <div className="relative ml-1">
+        <nav className="hidden md:flex items-center gap-6 flex-1">
+          {/* Primary Navigation (center) */}
+          <div className="flex items-center gap-0.5">
+            {desktopNavItems.map((item) => (
               <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                key={item.label}
+                onClick={item.onClick}
                 style={{ color: "#F4F0E3" }}
-                className="group relative flex flex-col items-center gap-1 px-3 py-2 transition-colors"
+                className="relative group flex flex-col items-center gap-1 px-4 py-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C97A3E]"
+                aria-current={item.href && pathname.startsWith(item.href) ? "page" : undefined}
               >
-                <User size={22} />
-                <span className="text-[11px] font-medium tracking-wide">{t("Perfil")}</span>
+                <span className="transition-transform group-hover:scale-110">{item.icon}</span>
+                <span className="text-[12px] font-medium tracking-wide">{item.label}</span>
+                {/* Subrayado dorado al hover */}
                 <span
-                  style={{ backgroundColor: "#b88a4a" }}
+                  style={{ backgroundColor: "#C97A3E" }}
                   className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] w-0 rounded-full transition-all duration-200 group-hover:w-5"
                 />
+                {item.badge != null && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold">
+                    {item.badge > 9 ? "9+" : item.badge}
+                  </span>
+                )}
               </button>
-              {showProfileMenu && (
-                <div
-                  style={{
-                    backgroundColor: "#3A5C40",
-                    backdropFilter: "blur(14px)",
-                    WebkitBackdropFilter: "blur(14px)",
-                    border: "1px solid rgba(244,240,227,0.15)",
-                  }}
-                  className="absolute right-0 mt-2 w-52 rounded-xl shadow-xl z-50 overflow-hidden"
-                >
-                  <Link
-                    href="/auth/sign-in"
-                    style={{ color: "#F4F0E3" }}
-                    className="flex items-center gap-2 px-4 py-3 hover:bg-[rgba(244,240,227,0.1)] text-sm font-medium transition-colors"
-                    onClick={() => setShowProfileMenu(false)}
-                  >
-                    <User size={15} />{t("Ingresar")}
-                  </Link>
-                  <div style={{ height: "1px", background: "rgba(244,240,227,0.12)" }} />
-                  <Link
-                    href="/auth/sign-up"
-                    style={{ color: "#F4F0E3" }}
-                    className="flex items-center gap-2 px-4 py-3 hover:bg-[rgba(244,240,227,0.1)] text-sm font-medium transition-colors"
-                    onClick={() => setShowProfileMenu(false)}
-                  >
-                    <UserPlus size={15} />{t("Crear cuenta")}
-                  </Link>
-                </div>
-              )}
-            </div>
-          )}
+            ))}
+          </div>
 
-          {/* Controles */}
-          {isAuthenticated && (
-            <div className="ml-1 shrink-0">
-              <UserInfo whiteText />
+          {/* Spacer to push account/utilities to the right */}
+          <div className="flex-1" />
+
+          {/* Account & Secondary Controls (right) */}
+          <div className="flex items-center gap-4 border-l border-[rgba(244,240,227,0.15)] pl-4">
+            {/* Profile / Guest Auth */}
+            {!isAuthenticated ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  style={{ color: "#F4F0E3" }}
+                  className="group relative flex flex-col items-center gap-1 px-4 py-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C97A3E]"
+                  aria-expanded={showProfileMenu}
+                  aria-haspopup="true"
+                >
+                  <User size={22} />
+                  <span className="text-[11px] font-medium tracking-wide">{t("Perfil")}</span>
+                  <span
+                    style={{ backgroundColor: "#b88a4a" }}
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] w-0 rounded-full transition-all duration-200 group-hover:w-5"
+                  />
+                </button>
+                {showProfileMenu && (
+                  <div
+                    style={{
+                      backgroundColor: "#3A5C40",
+                      backdropFilter: "blur(14px)",
+                      WebkitBackdropFilter: "blur(14px)",
+                      border: "1px solid rgba(244,240,227,0.15)",
+                    }}
+                    className="absolute right-0 mt-2 w-52 rounded-xl shadow-xl z-50 overflow-hidden"
+                  >
+                    <Link
+                      href="/auth/sign-in"
+                      style={{ color: "#F4F0E3" }}
+                      className="flex items-center gap-2 px-4 py-4 hover:bg-[rgba(244,240,227,0.1)] text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C97A3E]"
+                      onClick={() => setShowProfileMenu(false)}
+                    >
+                      <User size={15} />{t("Ingresar")}
+                    </Link>
+                    <div style={{ height: "1px", background: "rgba(244,240,227,0.12)" }} />
+                    <Link
+                      href="/auth/sign-up"
+                      style={{ color: "#F4F0E3" }}
+                      className="flex items-center gap-2 px-4 py-4 hover:bg-[rgba(244,240,227,0.1)] text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C97A3E]"
+                      onClick={() => setShowProfileMenu(false)}
+                    >
+                      <UserPlus size={15} />{t("Crear cuenta")}
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="shrink-0">
+                <UserInfo />
+              </div>
+            )}
+
+            {/* Utilities (secondary) */}
+            <div className="flex items-center gap-2 border-l border-[rgba(244,240,227,0.15)] pl-4 ml-2">
+              <ThemeToggleSwitch />
+              <CurrencySwitcher />
+              <LanguageSwitcher />
             </div>
-          )}
+          </div>
         </nav>
 
         {/* ── CONTROLES MÓVIL (< md) ── */}
-        <div className="flex md:hidden items-center gap-2">
-
+        <div className="flex md:hidden items-center">
           {/* Botón hamburguesa */}
           <button
             onClick={() => setShowMobileMenu(!showMobileMenu)}
             style={{ borderColor: "rgba(244,240,227,0.3)", color: "#F4F0E3" }}
-            className="p-1.5 rounded-lg border hover:bg-[rgba(244,240,227,0.1)] transition-colors"
-            aria-label="Menú"
+            className="p-2.5 rounded-lg border hover:bg-[rgba(244,240,227,0.1)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C97A3E]"
+            aria-label={t("Abrir menú de navegación")}
+            aria-expanded={showMobileMenu}
+            aria-haspopup="true"
           >
             {showMobileMenu ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -287,48 +322,64 @@ export function TiendaHeader() {
             }}
             className="fixed top-[57px] right-0 z-50 w-64 rounded-bl-2xl shadow-xl md:hidden"
           >
-            <div className="flex flex-col p-4 gap-3">
-              {isAuthenticated ? (
-                <div className="pb-3 border-b border-gray-200 dark:border-gray-700">
-                  <UserInfo whiteText />
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2 pb-3 border-b border-gray-200 dark:border-gray-700">
-                  <Link
-                    href="/auth/sign-in"
-                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium bg-green-700 text-white hover:bg-green-800 transition"
-                    onClick={() => setShowMobileMenu(false)}
-                  >
-                    <User size={16} /> {t("Ingresar")}
-                  </Link>
-                  <Link
-                    href="/auth/sign-up"
-                    style={{ borderColor: "rgba(var(--color-primary-rgb,45,122,62),0.4)", color: "var(--tienda-nav-color)" }}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium border hover:opacity-70 transition"
-                    onClick={() => setShowMobileMenu(false)}
-                  >
-                    <UserPlus size={16} /> {t("Crear cuenta")}
-                  </Link>
+
+            <div className="flex flex-col">
+              {/* Account Section */}
+              <div className="px-4 py-4 border-b border-[rgba(244,240,227,0.15)]">
+                {isAuthenticated ? (
+                  <UserInfo />
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      href="/auth/sign-in"
+                      className="flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium bg-green-700 text-white hover:bg-green-800 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-offset-1 focus-visible:outline-[#C97A3E]"
+                      onClick={() => setShowMobileMenu(false)}
+                    >
+                      <User size={16} /> {t("Ingresar")}
+                    </Link>
+                    <Link
+                      href="/auth/sign-up"
+                      style={{ borderColor: "rgba(var(--color-primary-rgb,45,122,62),0.4)", color: "var(--tienda-nav-color)" }}
+                      className="flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium border hover:opacity-70 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-offset-1 focus-visible:outline-[#C97A3E]"
+                      onClick={() => setShowMobileMenu(false)}
+                    >
+                      <UserPlus size={16} /> {t("Crear cuenta")}
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Navigation Items (extras for clients with 6+ items) */}
+              {navItems.slice(5).length > 0 && (
+                <div className="px-4 py-4 border-b border-[rgba(244,240,227,0.15)]">
+                  {navItems.slice(5).map((item) => (
+                    <button
+                      key={item.label}
+                      onClick={() => { item.onClick(); setShowMobileMenu(false); }}
+                      style={{ color: "#F4F0E3" }}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm hover:opacity-70 transition text-left w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-offset-1 focus-visible:outline-[#C97A3E]"
+                    >
+                      {item.icon}
+                      <span className="flex-1">{item.label}</span>
+                      {item.badge != null && (
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold">
+                          {item.badge > 9 ? "9+" : item.badge}
+                        </span>
+                      )}
+                    </button>
+                  ))}
                 </div>
               )}
 
-              {/* Items extra que no caben en el bottom nav (solo cliente con 6+ items) */}
-              {navItems.slice(5).map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => { item.onClick(); setShowMobileMenu(false); }}
-                  style={{ color: "#F4F0E3" }}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:opacity-70 transition text-left"
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                  {item.badge != null && (
-                    <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold">
-                      {item.badge > 9 ? "9+" : item.badge}
-                    </span>
-                  )}
-                </button>
-              ))}
+              {/* Settings / Utilities */}
+              <div className="px-4 py-4 flex items-center justify-between gap-3">
+                <span className="text-[11px] font-medium tracking-wide opacity-60">{t("Preferencias")}</span>
+                <div className="flex items-center gap-3">
+                  <ThemeToggleSwitch />
+                  <CurrencySwitcher />
+                  <LanguageSwitcher />
+                </div>
+              </div>
             </div>
           </div>
         </>
@@ -353,24 +404,25 @@ export function TiendaHeader() {
             <button
               key={item.label}
               onClick={item.onClick}
-              style={{ color: isActive ? "#F4F0E3" : "rgba(244,240,227,0.55)" }}
-              className="relative flex flex-col items-center gap-0.5 px-3 py-2 transition-all"
+              style={{ color: isActive ? "#F4F0E3" : "rgba(244,240,227,0.70)" }}
+              className="relative flex flex-col items-center gap-0.5 px-4 py-3 transition-all flex-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C97A3E]"
+              aria-current={isActive ? "page" : undefined}
             >
               <span className={`transition-transform ${isActive ? "scale-110" : ""}`}>
                 {item.icon}
               </span>
-              <span className={`text-[10px] tracking-wide ${isActive ? "font-semibold" : "font-medium"}`}>
+              <span className={`text-[11px] tracking-wide ${isActive ? "font-semibold" : "font-medium"}`}>
                 {item.label}
               </span>
               {item.badge != null && (
-                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] text-white font-bold">
+                <span className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[9px] text-white font-bold">
                   {item.badge > 9 ? "9+" : item.badge}
                 </span>
               )}
               {isActive && (
                 <span
-                  style={{ backgroundColor: "#b88a4a" }}
-                  className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-0.5 w-5 rounded-full"
+                  style={{ backgroundColor: "#C97A3E" }}
+                  className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-1 w-6 rounded-full"
                 />
               )}
             </button>

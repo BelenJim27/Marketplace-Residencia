@@ -64,7 +64,11 @@ export default function CategoriaPage() {
     try {
       const decodedSlug = decodeURIComponent(slug as string);
 
-      const categoriasData = await api.categorias.getAll();
+      const [categoriasData, productosData] = await Promise.all([
+        api.categorias.getAll(),
+        api.productos.getAll({}),
+      ]);
+
       const categoriaFound = (categoriasData as any[]).find(
         (c) => c.nombre === decodedSlug,
       );
@@ -76,7 +80,6 @@ export default function CategoriaPage() {
 
       setCategoria(categoriaFound);
 
-      const productosData = await api.productos.getAll({});
       const filtrados = (productosData as ProductoPublico[]).filter(
         (p) =>
           p.categorias &&

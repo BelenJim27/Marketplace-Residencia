@@ -19,11 +19,11 @@ interface Pedido {
 }
 
 const ESTADO_COLORES: Record<string, string> = {
-  pendiente: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-  pagado: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  enviado: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  entregado: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  cancelado: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  pendiente: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  pagado: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+  enviado: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
+  entregado: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+  cancelado: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
 };
 
 export default function MisComprasPage() {
@@ -59,7 +59,7 @@ export default function MisComprasPage() {
       <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
         <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white">Mis Compras</h1>
         <div className="flex min-h-[200px] items-center justify-center">
-          <p className="text-gray-400">Cargando pedidos...</p>
+          <p className="text-gray-600 dark:text-gray-400">Cargando pedidos...</p>
         </div>
       </main>
     );
@@ -70,8 +70,8 @@ export default function MisComprasPage() {
       <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
         <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white">Mis Compras</h1>
         <div className="rounded-lg bg-white p-8 text-center shadow-md dark:bg-gray-dark">
-          <p className="mb-4 text-gray-500">Inicia sesión para ver tu historial de compras.</p>
-          <Link href="/auth/sign-in" className="rounded-lg bg-green-600 px-6 py-2 text-white hover:bg-green-700">
+          <p className="mb-4 text-gray-600 dark:text-gray-400">Inicia sesión para ver tu historial de compras.</p>
+          <Link href="/auth/sign-in" className="inline-block rounded-lg bg-green-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-green-700 focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900">
             Iniciar sesión
           </Link>
         </div>
@@ -85,9 +85,9 @@ export default function MisComprasPage() {
 
       {pedidos.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-lg bg-white p-10 text-center shadow-md dark:bg-gray-dark">
-          <ShoppingBag className="h-14 w-14 text-gray-300" />
-          <p className="text-gray-500">Aún no tienes compras.</p>
-          <Link href="/cliente/producto" className="rounded-lg bg-green-600 px-6 py-2 text-white hover:bg-green-700">
+          <ShoppingBag className="h-14 w-14 text-gray-400 dark:text-gray-600" aria-hidden="true" />
+          <p className="text-gray-600 dark:text-gray-400">Aún no tienes compras.</p>
+          <Link href="/cliente/producto" className="inline-block rounded-lg bg-green-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-green-700 focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900">
             Explorar mezcales
           </Link>
         </div>
@@ -109,7 +109,7 @@ export default function MisComprasPage() {
               <Link
                 key={id}
                 href={`/tienda/compras/${id}`}
-                className="flex items-center justify-between rounded-lg bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:bg-gray-dark"
+                className="flex items-center justify-between rounded-lg bg-white p-5 shadow-sm transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 dark:bg-gray-dark dark:focus-visible:ring-offset-gray-900"
               >
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20">
@@ -118,7 +118,7 @@ export default function MisComprasPage() {
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white">Pedido #{id}</p>
                     <p className="text-sm text-gray-500">
-                      {fecha} · {numItems > 0 ? `${numItems} producto(s)` : "Sin detalles"}
+                      {fecha} · {numItems > 0 ? `${numItems} ${numItems === 1 ? 'producto' : 'productos'}` : "N/A"}
                     </p>
                   </div>
                 </div>

@@ -128,12 +128,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshAuth();
   }, [refreshAuth, session]);
 
+  // Productor resolution in background — does NOT block layout rendering
   useEffect(() => {
     if (!user?.id_usuario) return;
     if (user.id_productor != null && user.id_productor !== 0) return;
     if (productorResolved) return;
 
-    // Los admins no necesitan resolver perfil de productor
     const isAdminRole = user?.roles?.some((r) => ["ADMIN", "administrador", "admin"].includes(r));
     if (isAdminRole) {
       setProductorResolved(true);
@@ -156,19 +156,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (!prod || (typeof prod === "object" && !Array.isArray(prod) && !prod.id_productor)) return;
 
-        console.log("Respuesta completa del productor:", JSON.stringify(prod, null, 2));
         const idProductor = Array.isArray(prod) ? prod[0]?.id_productor : prod.id_productor;
         const estadoProductor = Array.isArray(prod) ? prod[0]?.estado : prod.estado;
 
         if (idProductor == null) return;
 
-        // ── Si el productor está inactivo, limpiar y no mostrar panel productor ──
         if (estadoProductor === "inactivo") {
           if (cancelled) return;
           const nextUser: Usuario = {
             ...user,
             id_productor: undefined,
-            // Quitar el rol productor de la lista local también
             roles: user.roles.filter((r) => !["PRODUCTOR", "productor"].includes(r)),
           };
           setCookie("usuario", JSON.stringify(nextUser), 7);
@@ -177,8 +174,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Si el productor fue aprobado pero el token aún no tiene el rol,
-        // usar el refresh token para obtener un JWT actualizado.
         const rolesActualizados = user.roles?.some((r) =>
           ["PRODUCTOR", "productor"].includes(r),
         );
@@ -212,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return;
               }
             } catch {
-              // Si el refresh falla, continuar y actualizar solo el id_productor
+              // If refresh fails, continue and update only id_productor
             }
           }
         }
@@ -223,12 +218,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCookie("usuario", JSON.stringify(nextUser), 7);
         setUser(nextUser);
         setProductorResolved(true);
-      } finally {
-        if (!cancelled) setLoading(false);
+      } catch (err) {
+        console.error("Error resolving productor:", err);
       }
     };
 
-    setLoading(true);
+    // Start in background — no setLoading(true) here to avoid blocking layout
     resolveProductor();
 
     return () => {

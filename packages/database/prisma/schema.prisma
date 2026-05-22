@@ -510,6 +510,7 @@ model productores {
   rfc                         String?               @db.VarChar(13)
   stripe_account_id           String?               @unique @db.VarChar(150)
   stripe_onboarding_completed Boolean               @default(false)
+  paypal_email                String?               @db.VarChar(254)
   asociacion                  String?               @db.VarChar(150)
   nombre_marca                String?               @db.VarChar(150)
   comisiones                  comisiones[]

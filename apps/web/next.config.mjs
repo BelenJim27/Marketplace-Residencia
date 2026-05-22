@@ -6,8 +6,13 @@ const nextConfig = {
   productionBrowserSourceMaps: false,
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts'],
+  },
   images: {
-    unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "cdn.sanity.io" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
