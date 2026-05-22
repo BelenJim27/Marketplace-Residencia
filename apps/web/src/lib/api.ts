@@ -6,6 +6,14 @@ import type { InventarioItem, ProductItem } from "@/types/producer";
 // En el servidor (SSR / NextAuth callbacks) usamos la URL directa.
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "");
 
+// Tipos para respuestas del API
+interface ArchivosUploadResponse {
+  url?: string;
+  ruta?: string;
+  path?: string;
+  [key: string]: any;
+}
+
 /**
  * Error con la respuesta del backend preservada (status + payload). Permite que los
  * llamadores hagan `if (err instanceof ApiError && err.code === 'AGE_DOB_REQUIRED')`.
@@ -771,7 +779,7 @@ export const api = {
     create: (token: string, data: any) =>
       fetchJson(endpoint("/archivos"), { method: "POST", headers: headers(token), body: JSON.stringify(data) }),
     upload: (token: string, data: FormData) =>
-      fetchJson(endpoint("/archivos/upload"), { method: "POST", headers: headers(token, true), body: data }),
+      fetchJson<ArchivosUploadResponse>(endpoint("/archivos/upload"), { method: "POST", headers: headers(token, true), body: data }),
     update: (token: string, id: string, data: any) =>
       fetchJson(endpoint(`/archivos/${id}`), { method: "PATCH", headers: headers(token), body: JSON.stringify(data) }),
     replace: (token: string, id: string, data: FormData) =>
@@ -782,6 +790,12 @@ export const api = {
 
   auditoria: {
     getAll: () => fetchJson(endpoint("/auditoria")),
+  },
+
+  estadisticas: {
+    landing: () => fetchJson(endpoint("/estadisticas/landing")),
+    topProductos: (top = 4) => fetchJson(endpoint(`/estadisticas/top-productos?top=${top}`)),
+    topProductosConLote: (top = 4) => fetchJson(endpoint(`/estadisticas/top-productos-lote?top=${top}`)),
   },
 
   wishlist: {

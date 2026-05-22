@@ -7,6 +7,7 @@ import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useTheme } from "next-themes";
+import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
 
 /* ── Wizard steps ─────────────────────────────────────────────────────────── */
 const STEPS = [
@@ -82,7 +83,7 @@ function SignUpContent() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
-  /* ── Vender flow: wizard layout ── */
+  /* ── Vender flow: wizard layout con TiendaHeader ── */
   if (isVenderFlow) {
     const C = {
       page:    isDark ? "#0B1610" : "#FAF6EC",
@@ -104,6 +105,7 @@ function SignUpContent() {
 
     return (
       <div style={{ minHeight: "100vh", background: C.page, fontFamily: SANS, color: C.heading }}>
+        <TiendaHeader />
         <style>{`
           @media (max-width: 768px) {
             .signup-wizard-grid { grid-template-columns: 1fr !important; }
@@ -119,7 +121,7 @@ function SignUpContent() {
             gap: "0",
             maxWidth: "1100px",
             margin: "0 auto",
-            padding: "48px 24px 48px",
+            padding: "88px 24px 64px",
             alignItems: "start",
           }}
         >
@@ -225,9 +227,9 @@ function SignUpContent() {
     );
   }
 
-  /* ── Regular sign-up (sin cambios) ── */
+  /* ── Regular sign-up ── */
   return (
-    <>
+    <div className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
       <Breadcrumb pageName="Crear Cuenta" />
 
       <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card">
@@ -280,7 +282,7 @@ function SignUpContent() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

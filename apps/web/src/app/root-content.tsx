@@ -47,7 +47,15 @@ export function RootContent({ children }: PropsWithChildren) {
   }
 
   // Rutas de auth — sin header ni footer
+  // Excepción: /auth/sign-up maneja su propio layout (puede incluir TiendaHeader)
   if (isAuthRoute) {
+    if (pathname === "/auth/sign-up") {
+      return (
+        <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+          {children}
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
         <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">

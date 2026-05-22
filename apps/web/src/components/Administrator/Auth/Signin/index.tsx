@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import GoogleSigninButton from "../GoogleSigninButton";
 import SigninWithPassword from "../SigninWithPassword";
@@ -11,8 +12,14 @@ export default function Signin({ isVenderFlow = false }: { isVenderFlow?: boolea
     <>
       {/* Brand header */}
       <div className="mb-8">
-        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-green-600/10 dark:bg-green-500/10">
-          <span className="text-xl">🌵</span>
+        <div className="mb-4">
+          <Image
+            src="/images/logo/tierra_agaves.png"
+            alt="Tierra Agaves"
+            width={100}
+            height={36}
+            className="object-contain"
+          />
         </div>
         <h1 className="text-2xl font-bold text-dark dark:text-white">
           {isVenderFlow ? "Únete como productor" : "Bienvenido de vuelta"}

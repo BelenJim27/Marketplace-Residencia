@@ -247,7 +247,7 @@ export function TiendaHeader() {
           {/* Controles */}
           {isAuthenticated && (
             <div className="ml-1 shrink-0">
-              <UserInfo />
+              <UserInfo whiteText />
             </div>
           )}
         </nav>
@@ -290,7 +290,7 @@ export function TiendaHeader() {
             <div className="flex flex-col p-4 gap-3">
               {isAuthenticated ? (
                 <div className="pb-3 border-b border-gray-200 dark:border-gray-700">
-                  <UserInfo />
+                  <UserInfo whiteText />
                 </div>
               ) : (
                 <div className="flex flex-col gap-2 pb-3 border-b border-gray-200 dark:border-gray-700">

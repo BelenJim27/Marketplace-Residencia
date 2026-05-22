@@ -5,8 +5,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useConfig } from "@/context/ConfigContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
-import { useState, useEffect } from "react";
-import { Save, RotateCcw } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Save, RotateCcw, Palette, Home } from "lucide-react";
 import LandingConfigSection from "@/components/Administrator/Configuration/Landingconfigsection";
 
 const FONT_OPTIONS = [
@@ -31,10 +31,13 @@ const DEFAULT_CONFIG = {
   bio_fuente_titulo: "Georgia, serif",
 };
 
+type Tab = "colores" | "landing";
+
 export default function ConfiguracionPage() {
   const { isAuthenticated } = useAuth();
   const { config, refreshAndUpdate } = useConfig();
   const token = getCookie("token");
+  const [activeTab, setActiveTab] = useState<Tab>("colores");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -97,10 +100,15 @@ export default function ConfiguracionPage() {
     }
   };
 
+  const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: "colores", label: "Colores y Diseño", icon: <Palette size={16} /> },
+    { id: "landing", label: "Página de Inicio", icon: <Home size={16} /> },
+  ];
+
   return (
     <>
       <Breadcrumb pageName="Configuración" />
-      <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card p-7.5 space-y-8">
+      <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card p-7.5 space-y-6">
         <div>
           <h2 className="text-title-md2 font-bold text-black dark:text-white mb-2">
             Configuración del Sistema
@@ -110,244 +118,265 @@ export default function ConfiguracionPage() {
           </p>
         </div>
 
-        {message && (
-          <div className={`rounded-lg p-4 ${message.type === "success" ? "bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-300" : "bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300"}`}>
-            {message.text}
-          </div>
-        )}
+        {/* TABS */}
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="flex gap-1" aria-label="Tabs de configuración">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/10"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
-          {/* SECCIÓN: Identidad de la tienda */}
-          <section>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-              Identidad de la Tienda
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Nombre de la Aplicación
-                </label>
-                <input
-                  type="text"
-                  name="nombre_app"
-                  value={formData.nombre_app}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+        {/* TAB: Colores y Diseño */}
+        {activeTab === "colores" && (
+          <>
+            {message && (
+              <div className={`rounded-lg p-4 ${message.type === "success" ? "bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-300" : "bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300"}`}>
+                {message.text}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Idioma por Defecto
-                </label>
-                <select
-                  name="idioma_default"
-                  value={formData.idioma_default}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="es">Español</option>
-                  <option value="en">English</option>
-                </select>
-              </div>
-            </div>
-          </section>
+            )}
 
-          {/* SECCIÓN: Colores generales */}
-          <section>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-              Paleta de Colores (Sistema)
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { key: "color_primario", label: "Color Primario" },
-                { key: "color_secundario", label: "Color Secundario" },
-                { key: "color_acento", label: "Color de Acento" },
-              ].map(({ key, label }) => (
-                <div key={key}>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {label}
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="color"
-                      name={key}
-                      value={formData[key as keyof typeof formData]}
-                      onChange={handleChange}
-                      className="h-10 w-20 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
-                    />
+            <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
+              {/* SECCIÓN: Identidad de la tienda */}
+              <section>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  Identidad de la Tienda
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Nombre de la Aplicación
+                    </label>
                     <input
                       type="text"
-                      value={formData[key as keyof typeof formData]}
+                      name="nombre_app"
+                      value={formData.nombre_app}
                       onChange={handleChange}
-                      name={key}
-                      className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Idioma por Defecto
+                    </label>
+                    <select
+                      name="idioma_default"
+                      value={formData.idioma_default}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="es">Español</option>
+                      <option value="en">English</option>
+                    </select>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </section>
+              </section>
 
-          {/* SECCIÓN: Diseño Biocultural */}
-          <section>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-              Diseño Biocultural (Oaxaca)
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              {[
-                { key: "bio_color_fondo", label: "Color Fondo Principal" },
-                { key: "bio_color_tarjeta", label: "Color Tarjeta" },
-                { key: "bio_color_titulo", label: "Color Títulos" },
-                { key: "bio_color_precio", label: "Color Precio/Acento" },
-                { key: "bio_color_boton", label: "Color Botón Primario" },
-                { key: "bio_color_boton2", label: "Color Botón Secundario" },
-              ].map(({ key, label }) => (
-                <div key={key}>
+              {/* SECCIÓN: Colores generales */}
+              <section>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  Paleta de Colores (Sistema)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    { key: "color_primario", label: "Color Primario" },
+                    { key: "color_secundario", label: "Color Secundario" },
+                    { key: "color_acento", label: "Color de Acento" },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {label}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          name={key}
+                          value={formData[key as keyof typeof formData]}
+                          onChange={handleChange}
+                          className="h-10 w-20 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={formData[key as keyof typeof formData]}
+                          onChange={handleChange}
+                          name={key}
+                          className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* SECCIÓN: Diseño Biocultural */}
+              <section>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  Diseño Biocultural (Oaxaca)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  {[
+                    { key: "bio_color_fondo", label: "Color Fondo Principal" },
+                    { key: "bio_color_tarjeta", label: "Color Tarjeta" },
+                    { key: "bio_color_titulo", label: "Color Títulos" },
+                    { key: "bio_color_precio", label: "Color Precio/Acento" },
+                    { key: "bio_color_boton", label: "Color Botón Primario" },
+                    { key: "bio_color_boton2", label: "Color Botón Secundario" },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {label}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          name={key}
+                          value={formData[key as keyof typeof formData]}
+                          onChange={handleChange}
+                          className="h-10 w-20 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={formData[key as keyof typeof formData]}
+                          onChange={handleChange}
+                          name={key}
+                          className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {label}
+                    Fuente de Títulos
                   </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="color"
-                      name={key}
-                      value={formData[key as keyof typeof formData]}
-                      onChange={handleChange}
-                      className="h-10 w-20 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={formData[key as keyof typeof formData]}
-                      onChange={handleChange}
-                      name={key}
-                      className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
+                  <select
+                    name="bio_fuente_titulo"
+                    value={formData.bio_fuente_titulo}
+                    onChange={handleChange}
+                    className="w-full md:w-1/3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    {FONT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              ))}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Fuente de Títulos
-              </label>
-              <select
-                name="bio_fuente_titulo"
-                value={formData.bio_fuente_titulo}
-                onChange={handleChange}
-                className="w-full md:w-1/3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              >
-                {FONT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </section>
+              </section>
 
-          {/* VISTA PREVIA */}
-          <section>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-              Vista Previa
-            </h3>
-            <div
-              style={{
-                backgroundColor: formData.bio_color_fondo,
-                padding: "2rem",
-                borderRadius: "8px",
-              }}
-            >
-              <div
-                style={{
-                  backgroundColor: formData.bio_color_tarjeta,
-                  border: `2px solid ${formData.bio_color_precio}`,
-                  padding: "1.5rem",
-                  borderRadius: "12px",
-                  maxWidth: "300px",
-                }}
-              >
-                <h4
-                  style={{
-                    fontFamily: formData.bio_fuente_titulo,
-                    color: formData.bio_color_titulo,
-                    fontSize: "1.5rem",
-                    fontWeight: "bold",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  Mezcal Premium
-                </h4>
-                <p
-                  style={{
-                    color: formData.bio_color_titulo,
-                    fontSize: "0.875rem",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  Destilado artesanal de Oaxaca
-                </p>
+              {/* VISTA PREVIA */}
+              <section>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  Vista Previa
+                </h3>
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
+                    backgroundColor: formData.bio_color_fondo,
+                    padding: "2rem",
+                    borderRadius: "8px",
                   }}
                 >
-                  <span
+                  <div
                     style={{
-                      fontFamily: formData.bio_fuente_titulo,
-                      color: formData.bio_color_precio,
-                      fontSize: "1.25rem",
-                      fontWeight: "bold",
+                      backgroundColor: formData.bio_color_tarjeta,
+                      border: `2px solid ${formData.bio_color_precio}`,
+                      padding: "1.5rem",
+                      borderRadius: "12px",
+                      maxWidth: "300px",
                     }}
                   >
-                    $450.00
-                  </span>
-                  <button
-                    style={{
-                      backgroundColor: formData.bio_color_boton,
-                      color: "white",
-                      padding: "0.5rem 1rem",
-                      borderRadius: "8px",
-                      border: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Agregar
-                  </button>
+                    <h4
+                      style={{
+                        fontFamily: formData.bio_fuente_titulo,
+                        color: formData.bio_color_titulo,
+                        fontSize: "1.5rem",
+                        fontWeight: "bold",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Mezcal Premium
+                    </h4>
+                    <p
+                      style={{
+                        color: formData.bio_color_titulo,
+                        fontSize: "0.875rem",
+                        marginBottom: "1rem",
+                      }}
+                    >
+                      Destilado artesanal de Oaxaca
+                    </p>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: formData.bio_fuente_titulo,
+                          color: formData.bio_color_precio,
+                          fontSize: "1.25rem",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        $450.00
+                      </span>
+                      <button
+                        style={{
+                          backgroundColor: formData.bio_color_boton,
+                          color: "white",
+                          padding: "0.5rem 1rem",
+                          borderRadius: "8px",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Agregar
+                      </button>
+                    </div>
+                  </div>
                 </div>
+              </section>
+
+              {/* BOTONES DE ACCIÓN */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleRestore}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <RotateCcw size={18} />
+                  Restaurar Defaults
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
+                >
+                  <Save size={18} />
+                  {saving ? "Guardando..." : "Guardar Cambios"}
+                </button>
               </div>
-            </div>
-          </section>
+            </form>
+          </>
+        )}
 
-          {/* SECCIÓN: Página de Inicio ← NUEVA SECCIÓN AGREGADA */}
-          <section>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-              Página de Inicio
-            </h3>
-            <LandingConfigSection />
-          </section>
-
-          {/* BOTONES DE ACCIÓN */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={handleRestore}
-              disabled={saving}
-              className="flex items-center gap-2 px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <RotateCcw size={18} />
-              Restaurar Defaults
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
-            >
-              <Save size={18} />
-              {saving ? "Guardando..." : "Guardar Cambios"}
-            </button>
-          </div>
-        </form>
+        {/* TAB: Página de Inicio */}
+        {activeTab === "landing" && <LandingConfigSection />}
       </div>
     </>
   );

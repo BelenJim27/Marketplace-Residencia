@@ -18,37 +18,64 @@ export default function Footer() {
 
   return (
     <footer
-      className="w-full py-16 px-8"
+      className="w-full py-8 px-6"
       style={{
         background: isDark ? "#0D1A10" : "#2E4A33",
         borderTop: "1px solid rgba(200, 169, 122, 0.2)",
       }}
     >
-      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
 
-        <div className="space-y-3">
-          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "18px" }}>
+        <div className="space-y-2">
+          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "15px" }}>
             {t("Guardianas del Mezcal")}
           </h3>
-          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", color: "#c8a97a", fontSize: "14px", lineHeight: "1.7" }}>
-            {t("Honrando la tierra, el fuego y las manos que transforman el agave en espíritu puro. Distribuimos el mejor mezcal artesanal de México")}
+          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", color: "#c8a97a", fontSize: "12px", lineHeight: "1.6" }}>
+            {t("Honrando la tierra, el fuego y las manos que transforman el agave en espíritu puro.")}
           </p>
         </div>
 
-        <div className="space-y-3">
-          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "18px" }}>
+        <div className="space-y-2 lg:col-span-2">
+          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "15px" }}>
+            {t("Asociaciones")}
+          </h3>
+          <ul className="space-y-3">
+            {[
+              {
+                nombre: "Guardianas del Mezcal",
+                desc: "Organización liderada por mujeres indígenas de Oaxaca que preservan la producción ancestral del mezcal.",
+              },
+              {
+                nombre: "Maestros y Maestras Mezcaleras",
+                desc: "Red de maestros mezcaleros que mantienen vivas las técnicas artesanales transmitidas de generación en generación.",
+              },
+              {
+                nombre: "Tierra de Combates",
+                desc: "Colectivo comprometido con la producción sostenible del agave y la protección de las comunidades mezcaleras.",
+              },
+            ].map((asoc) => (
+              <li key={asoc.nombre}>
+                <p style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "12px", fontWeight: 600, margin: "0 0 2px" }}>
+                  {t(asoc.nombre)}
+                </p>
+                <p style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "11.5px", lineHeight: "1.55", margin: 0 }}>
+                  {t(asoc.desc)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="space-y-2">
+          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "15px" }}>
             {t("Explorar")}
           </h3>
-          <ul className="space-y-2">
-            {[
-              "Maestras mezcaleras",
-              "Historia",
-              "Nuestro proceso"
-            ].map((item) => (
+          <ul className="space-y-1.5">
+            {["Maestras mezcaleras", "Historia", "Nuestro proceso"].map((item) => (
               <li key={item}>
                 <a
                   href="#"
-                  style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "14px", textDecoration: "none" }}
+                  style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "12px", textDecoration: "none" }}
                   className="hover:opacity-75 transition-opacity"
                 >
                   {t(item)}
@@ -58,16 +85,16 @@ export default function Footer() {
           </ul>
         </div>
 
-        <div className="space-y-3">
-          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "18px" }}>
+        <div className="space-y-2">
+          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "15px" }}>
             {t("Legal")}
           </h3>
-          <ul className="space-y-2">
+          <ul className="space-y-1.5">
             {LEGAL_LINKS.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "14px", textDecoration: "none" }}
+                  style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "12px", textDecoration: "none" }}
                   className="hover:opacity-75 transition-opacity"
                 >
                   {t(item.label)}
@@ -75,31 +102,28 @@ export default function Footer() {
               </li>
             ))}
           </ul>
-        </div>
-
-        <div className="space-y-3">
-          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "18px" }}>
-            {t("Contacto")}
-          </h3>
-          <ul className="space-y-2">
+          <div className="pt-1 space-y-1">
+            <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "15px" }}>
+              {t("Contacto")}
+            </h3>
             {[
               "guardianasmezcal@gmail.com",
               "9512578906",
-              "Santa Maria Zaquiltán, Oaxaca, México",
+              "Santa Maria Zaquiltán, Oaxaca",
             ].map((item) => (
-              <li key={item} style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "14px" }}>
+              <p key={item} style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "12px", margin: 0 }}>
                 {t(item)}
-              </li>
+              </p>
             ))}
-          </ul>
+          </div>
         </div>
       </div>
 
       <div
-        className="max-w-5xl mx-auto mt-12 pt-6 text-center space-y-1"
+        className="max-w-6xl mx-auto mt-6 pt-4 text-center"
         style={{ borderTop: "1px solid rgba(200,169,122,0.15)" }}
       >
-        <p style={{ color: "#8a6a3a", fontSize: "12px", fontFamily: "Georgia, serif" }}>
+        <p style={{ color: "#8a6a3a", fontSize: "11px", fontFamily: "Georgia, serif" }}>
           2026 {t("Guardianas de mezcal. Todos los derechos reservados.")}
         </p>
       </div>

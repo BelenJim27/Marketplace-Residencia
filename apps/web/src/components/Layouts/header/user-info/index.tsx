@@ -7,7 +7,6 @@ import {
   DropdownTrigger,
 } from "@/components/ui/dropdown";
 import { cn } from "@/lib/utils";
-import { getMediaUrl } from "@/lib/media";
 import Link from "next/link";
 import { useState } from "react";
 import { LogOutIcon, SettingsIcon, UserIcon } from "./icons";
@@ -15,14 +14,15 @@ import { useAuth } from "@/context/AuthContext";
 import { useSession, signOut } from "next-auth/react";
 import { MapPin } from "lucide-react";
 
+/* ─── Role badges ─────────────────────────────────────────────────────────── */
 const ROLE_LABELS: Record<string, { label: string; className: string }> = {
   administrador: { label: "Administrador", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
-  admin: { label: "Administrador", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
-  ADMIN: { label: "Administrador", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
-  productor: { label: "Productor", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
-  PRODUCTOR: { label: "Productor", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
-  cliente: { label: "Cliente", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
-  CLIENTE: { label: "Cliente", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+  admin:         { label: "Administrador", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  ADMIN:         { label: "Administrador", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  productor:     { label: "Productor",     className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+  PRODUCTOR:     { label: "Productor",     className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+  cliente:       { label: "Cliente",       className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+  CLIENTE:       { label: "Cliente",       className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
 };
 
 function getRoleBadge(roles: string[] | undefined) {
@@ -34,32 +34,65 @@ function getRoleBadge(roles: string[] | undefined) {
   return null;
 }
 
-export function UserInfo() {
+/* ─── Avatar component ────────────────────────────────────────────────────── */
+function Avatar({ photo, initials, size = 48 }: { photo: string | null; initials: string; size?: number }) {
+  if (photo) {
+    return (
+      <img
+        src={photo}
+        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
+        alt=""
+        role="presentation"
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+
+  // Initials avatar con paleta del proyecto
+  const fontSize = Math.round(size * 0.36);
+  return (
+    <div
+      aria-hidden
+      style={{
+        width: size, height: size, borderRadius: "50%",
+        background: "linear-gradient(135deg, #2E4A33 0%, #C97A3E 100%)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0, color: "#F4F0E3",
+        fontWeight: 700, fontSize,
+        fontFamily: "'Manrope', 'DM Sans', sans-serif",
+        letterSpacing: "0.04em",
+        userSelect: "none",
+      }}
+    >
+      {initials}
+    </div>
+  );
+}
+
+/* ─── UserInfo ────────────────────────────────────────────────────────────── */
+export function UserInfo({ whiteText = false }: { whiteText?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const { user: contextUser, logout } = useAuth();
   const { data: session } = useSession();
 
-  const userName =
+  /* ── datos del usuario ── */
+  const rawName =
     contextUser?.nombre ||
-    session?.user?.nombre ||
+    (session?.user as any)?.nombre ||
     session?.user?.name ||
     "Usuario";
+
+  const firstName = rawName.split(" ")[0];
 
   const apellido =
     contextUser?.apellido_paterno ||
     (session?.user as any)?.apellido_paterno ||
     "";
 
-  const fullName = apellido ? `${userName} ${apellido}` : userName;
+  const fullName = apellido ? `${rawName} ${apellido}` : rawName;
 
   const userEmail =
     contextUser?.email || session?.user?.email || "correo@ejemplo.com";
-
-  const userPhoto =
-    contextUser?.foto_url ??
-    (session?.user as any)?.foto_url ??
-    session?.user?.image ??
-    null;
 
   const roles: string[] =
     contextUser?.roles ||
@@ -68,6 +101,20 @@ export function UserInfo() {
 
   const badge = getRoleBadge(roles);
 
+  /* ── foto: solo si vino de Google OAuth ──
+     session.user.image viene de NextAuth cuando el proveedor es Google.
+     Si se registró con email/password, no habrá image de Google.
+     foto_url podría existir si el usuario subió una foto manualmente. */
+  const googlePhoto = session?.user?.image ?? null;
+  const uploadedPhoto = contextUser?.foto_url ?? (session?.user as any)?.foto_url ?? null;
+  const userPhoto: string | null = googlePhoto || uploadedPhoto || null;
+
+  /* ── iniciales (máx. 2 caracteres) ── */
+  const initials = (
+    firstName.charAt(0) + (apellido ? apellido.charAt(0) : firstName.charAt(1) || "")
+  ).toUpperCase();
+
+  /* ── logout ── */
   const handleLogout = async () => {
     setIsOpen(false);
     if (session) {
@@ -83,20 +130,16 @@ export function UserInfo() {
         <span className="sr-only">Mi cuenta</span>
 
         <figure className="flex items-center gap-3">
-          <img
-            src={getMediaUrl(userPhoto) || "/images/user/user-03.png"}
-            className="size-12 rounded-full object-cover object-center"
-            alt={`Avatar de ${fullName}`}
-            role="presentation"
-          />
-          <figcaption className="flex items-center gap-1 font-medium text-dark dark:text-dark-6 max-[1024px]:sr-only">
-            <span>{fullName}</span>
+          <Avatar photo={userPhoto} initials={initials} size={40} />
+
+          <figcaption className={cn(
+            "flex items-center gap-1 font-medium max-[1024px]:sr-only",
+            whiteText ? "text-white" : "text-dark dark:text-white",
+          )}>
+            <span>{firstName}</span>
             <ChevronUpIcon
               aria-hidden
-              className={cn(
-                "rotate-180 transition-transform",
-                isOpen && "rotate-0",
-              )}
+              className={cn("rotate-180 transition-transform", isOpen && "rotate-0")}
               strokeWidth={1.5}
             />
           </figcaption>
@@ -110,12 +153,7 @@ export function UserInfo() {
         <h2 className="sr-only">Información de usuario</h2>
 
         <figure className="flex items-center gap-2.5 px-5 py-3.5">
-          <img
-            src={getMediaUrl(userPhoto) || "/images/user/user-03.png"}
-            className="size-12 rounded-full object-cover object-center"
-            alt={`Avatar de ${fullName}`}
-            role="presentation"
-          />
+          <Avatar photo={userPhoto} initials={initials} size={48} />
 
           <figcaption className="space-y-1 text-base font-medium min-w-0">
             <div className="leading-snug text-dark dark:text-white truncate">
@@ -125,12 +163,7 @@ export function UserInfo() {
               {userEmail}
             </div>
             {badge && (
-              <span
-                className={cn(
-                  "inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1",
-                  badge.className,
-                )}
-              >
+              <span className={cn("inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1", badge.className)}>
                 {badge.label}
               </span>
             )}

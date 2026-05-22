@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/context/LocaleContext";
 import { useLandingStats } from "@/hooks/useLandingStats";
 import { useMasVendidos } from "@/hooks/useMasVendidos";
+import { useTrazabilidadCarousel } from "@/hooks/useTrazabilidadCarousel";
+import type { ProductoTrazabilidad } from "@/hooks/useTrazabilidadCarousel";
 
 // ─── HOOK: detecta dark mode ──────────────────────────────────────────────────
 function useDarkMode(): boolean {
@@ -105,25 +107,240 @@ const STATS_CONFIG = [
         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
       </svg>
     ),
-    label: "Ingresos generados para comunidades",
+    label: "Ingresos generados",
   },
 ];
 
 
-const BOTTLE_CARDS = [
-  { imagen: "/fotos/28.1.png", nombre: "Tobalá",      tipo: "Agave silvestre" },
-  { imagen: "/fotos/29.1.png", nombre: "Espadín",     tipo: "Agave cultivado" },
-  { imagen: "/fotos/30.1.png", nombre: "Madrecuixe",  tipo: "Agave silvestre" },
-  { imagen: "/fotos/31.1.png", nombre: "Tepeztate",   tipo: "Agave silvestre" },
+const BOTTLE_CARDS_STATIC = [
+  { nombre: "Tobalá",     tipo: "Agave silvestre" },
+  { nombre: "Espadín",    tipo: "Agave cultivado" },
+  { nombre: "Madrecuixe", tipo: "Agave silvestre" },
+  { nombre: "Tepeztate",  tipo: "Agave silvestre" },
 ];
 
-const TRAZA_STEPS = [
-  { paso: "01", titulo: "Recolección", desc: "Agave silvestre cosechado a mano en su punto óptimo de madurez, respetando el ciclo natural.", fecha: "12 MAR 2024", done: true },
-  { paso: "02", titulo: "Cocción", desc: "Las piñas se cuecen en horno cónico de tierra durante 4 días bajo piedras volcánicas.", fecha: "18 MAR 2024", done: true },
-  { paso: "03", titulo: "Molienda", desc: "Machacado con tahona de piedra jalada por animal. Sin atajos industriales.", fecha: "22 MAR 2024", done: true },
-  { paso: "04", titulo: "Fermentación", desc: "Fermentación natural en tinas de madera durante 8 días con levaduras silvestres.", fecha: "26 MAR 2024", done: true },
-  { paso: "05", titulo: "Destilación", desc: "Doble destilación en alambique de cobre por manos artesanas. Ajuste a 47° alc.", fecha: "03 ABR 2024", done: true },
-];
+
+// ─── Helpers de fecha ────────────────────────────────────────────────────────
+function formatFecha(iso: string | null | undefined): string {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
+  } catch {
+    return "";
+  }
+}
+
+// ─── Slide de trazabilidad ────────────────────────────────────────────────────
+function TrazaSlide({ producto, isMobile, t }: { producto: ProductoTrazabilidad; isMobile: boolean; t: (s: string) => string }) {
+  const lote = producto.lote;
+
+  // Pasos estándar del proceso mezcalero; si existen en atributos los sobreescribimos
+  const PASOS_BASE = [
+    { clave: "recoleccion",   titulo: "Recolección",  desc: "Agave cosechado a mano en su punto óptimo de madurez." },
+    { clave: "coccion",       titulo: "Cocción",       desc: "Piñas cocidas en horno cónico de tierra bajo piedras volcánicas." },
+    { clave: "molienda",      titulo: "Molienda",      desc: "Machacado con tahona de piedra. Sin atajos industriales." },
+    { clave: "fermentacion",  titulo: "Fermentación",  desc: "Fermentación natural en tinas de madera con levaduras silvestres." },
+    { clave: "destilacion",   titulo: "Destilación",   desc: "Doble destilación en alambique de cobre por manos artesanas." },
+  ];
+
+  const atributoMap = new Map((lote?.atributos ?? []).map((a) => [a.clave.toLowerCase().trim(), a]));
+
+  const pasos = PASOS_BASE.map((base, i) => {
+    const attr = atributoMap.get(base.clave);
+    return {
+      numero: String(i + 1).padStart(2, "0"),
+      titulo: attr ? (attr.valor ?? base.titulo) : base.titulo,
+      desc:   attr ? `${attr.valor ?? ""}${attr.unidad ? " " + attr.unidad : ""}` || base.desc : base.desc,
+      fecha:  attr ? formatFecha(attr.fecha) : "",
+      done:   true,
+    };
+  });
+
+  const imgSrc = producto.imagen || "/fotos/28.1.png";
+  const alcoholStr = lote?.grado_alcohol ? `${lote.grado_alcohol}° alc` : null;
+  const unidadesStr = lote?.botellas_750ml ? `${lote.botellas_750ml} botellas 750ml` : lote?.unidades ? `${lote.unidades} uds` : null;
+
+  return (
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "300px 1fr",
+      gap: isMobile ? "24px" : "48px",
+      alignItems: "start",
+      animation: "fadeSlide 0.4s ease",
+    }}>
+      <style>{`
+        @keyframes fadeSlide {
+          from { opacity: 0; transform: translateX(20px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
+
+      {/* ── Card imagen ── */}
+      <div style={{ borderRadius: "16px", overflow: "hidden", position: "relative", flexShrink: 0 }}>
+        <img
+          src={imgSrc}
+          alt={producto.nombre}
+          style={{ width: "100%", height: isMobile ? "220px" : "340px", objectFit: "cover", display: "block" }}
+          onError={(e) => { (e.target as HTMLImageElement).src = "/fotos/28.1.png"; }}
+        />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(22,34,24,0.92) 35%, transparent 65%)" }} />
+        <div style={{ position: "absolute", bottom: "16px", left: "16px", right: "16px" }}>
+          {lote?.codigo_lote && (
+            <p style={{ fontSize: "11px", color: "#C97A3E", letterSpacing: "0.14em", textTransform: "uppercase", margin: "0 0 3px" }}>
+              LOTE · {lote.codigo_lote}
+            </p>
+          )}
+          <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "19px", fontWeight: 700, color: "#F4F0E3", margin: "0 0 3px" }}>
+            {producto.nombre}
+          </p>
+          {(lote?.nombre_comun || lote?.nombre_cientifico) && (
+            <p style={{ fontSize: "12px", color: "rgba(244,240,227,0.7)", margin: "0 0 6px", fontStyle: "italic" }}>
+              {lote.nombre_comun ?? lote.nombre_cientifico}
+            </p>
+          )}
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {alcoholStr && (
+              <span style={{ fontSize: "12px", color: "#C97A3E", background: "rgba(201,122,62,0.18)", border: "1px solid rgba(201,122,62,0.35)", borderRadius: "4px", padding: "2px 8px" }}>
+                {alcoholStr}
+              </span>
+            )}
+            {unidadesStr && (
+              <span style={{ fontSize: "12px", color: "rgba(244,240,227,0.8)", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "4px", padding: "2px 8px" }}>
+                {unidadesStr}
+              </span>
+            )}
+            {lote?.region && (
+              <span style={{ fontSize: "12px", color: "rgba(244,240,227,0.8)", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "4px", padding: "2px 8px" }}>
+                📍 {lote.region}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Timeline ── */}
+      <div>
+        {lote?.productor && (
+          <p style={{ fontSize: "13px", color: "#C97A3E", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "20px" }}>
+            {t("Productor")}: {lote.productor}
+          </p>
+        )}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {pasos.map((step, i) => (
+            <div key={i} style={{ display: "flex", gap: "14px", paddingBottom: i < pasos.length - 1 ? "20px" : "0" }}>
+              {/* Dot + línea */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div style={{
+                  width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
+                  background: "#C97A3E", display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1F3A2E" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                {i < pasos.length - 1 && (
+                  <div style={{ width: "1px", flex: 1, background: "rgba(201,122,62,0.35)", minHeight: "20px" }} />
+                )}
+              </div>
+              {/* Texto */}
+              <div style={{ paddingTop: "4px", flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2px" }}>
+                  <span style={{ fontSize: "11px", color: "#C97A3E", fontWeight: 700, letterSpacing: "0.1em" }}>PASO {step.numero}</span>
+                  {step.fecha && <span style={{ fontSize: "12px", color: "rgba(244,240,227,0.6)" }}>{step.fecha}</span>}
+                </div>
+                <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "14px", fontWeight: 600, color: "#F4F0E3", margin: "0 0 2px" }}>
+                  {t(step.titulo)}
+                </p>
+                <p style={{ fontSize: "13px", color: "rgba(244,240,227,0.75)", lineHeight: 1.5, margin: 0 }}>
+                  {t(step.desc)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+        {lote?.url_trazabilidad && (
+          <a
+            href={lote.url_trazabilidad}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "6px", marginTop: "20px",
+              fontSize: "13px", fontWeight: 600, color: "#C97A3E",
+              textDecoration: "none", letterSpacing: "0.04em",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            {t("Ver trazabilidad completa")}
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Fallback cuando no hay datos ─────────────────────────────────────────────
+function TrazaFallback({ isMobile, t }: { isMobile: boolean; t: (s: string) => string }) {
+  const PASOS_BASE = [
+    { numero: "01", titulo: "Recolección",  desc: "Agave silvestre cosechado a mano en su punto óptimo de madurez.", fecha: "" },
+    { numero: "02", titulo: "Cocción",       desc: "Las piñas se cuecen en horno cónico de tierra durante 4 días.", fecha: "" },
+    { numero: "03", titulo: "Molienda",      desc: "Machacado con tahona de piedra jalada por animal.", fecha: "" },
+    { numero: "04", titulo: "Fermentación",  desc: "Fermentación natural en tinas de madera con levaduras silvestres.", fecha: "" },
+    { numero: "05", titulo: "Destilación",   desc: "Doble destilación en alambique de cobre artesanal.", fecha: "" },
+  ];
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "300px 1fr", gap: isMobile ? "24px" : "48px", alignItems: "start" }}>
+      <div style={{ borderRadius: "16px", overflow: "hidden", position: "relative" }}>
+        <img src="/fotos/28.1.png" alt="Mezcal" style={{ width: "100%", height: isMobile ? "220px" : "340px", objectFit: "cover", display: "block" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(22,34,24,0.92) 35%, transparent 65%)" }} />
+        <div style={{ position: "absolute", bottom: "16px", left: "16px", right: "16px" }}>
+          <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "19px", fontWeight: 700, color: "#F4F0E3", margin: 0 }}>Mezcal Artesanal</p>
+          <p style={{ fontSize: "13px", color: "rgba(244,240,227,0.75)", margin: "4px 0 0" }}>Oaxaca, México</p>
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {PASOS_BASE.map((step, i) => (
+          <div key={i} style={{ display: "flex", gap: "14px", paddingBottom: i < PASOS_BASE.length - 1 ? "20px" : "0" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#C97A3E", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1F3A2E" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              {i < PASOS_BASE.length - 1 && <div style={{ width: "1px", flex: 1, background: "rgba(201,122,62,0.35)", minHeight: "20px" }} />}
+            </div>
+            <div style={{ paddingTop: "4px", flex: 1 }}>
+              <span style={{ fontSize: "11px", color: "#C97A3E", fontWeight: 700, letterSpacing: "0.1em" }}>PASO {step.numero}</span>
+              <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "14px", fontWeight: 600, color: "#F4F0E3", margin: "2px 0" }}>{t(step.titulo)}</p>
+              <p style={{ fontSize: "13px", color: "rgba(244,240,227,0.75)", lineHeight: 1.5, margin: 0 }}>{t(step.desc)}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── CONFIG defaults ─────────────────────────────────────────────────────────
+const LANDING_CFG_DEFAULTS = {
+  landing_hero_titulo_1:  "Oaxaca auténtico,",
+  landing_hero_titulo_2:  "trazable y justo",
+  landing_hero_subtitulo: "Conectamos el origen, la tradición y el talento de nuestras comunidades con el mundo.",
+  landing_hero_boton:     "Explorar productos",
+  landing_hero_badge_1:   "Trazabilidad completa",
+  landing_hero_badge_2:   "Comercio justo",
+  landing_hero_badge_3:   "Protección cultural",
+  landing_sobre_texto_1:  "Descubre el auténtico sabor del mezcal, un destilado artesanal nacido del corazón del agave.",
+  landing_sobre_texto_2:  "Elaborado con procesos tradicionales que respetan la tierra y el tiempo, cada botella guarda carácter y tradición. Sus notas ahumadas y matices únicos lo convierten en una experiencia inigualable.",
+  landing_sobre_cita:     "El alma de Oaxaca en cada gota",
+  landing_stats_titulo:   "Impacto que construimos juntos",
+  landing_stats_subtitulo:"Cada compra transforma vidas y preserva nuestra herencia cultural.",
+  landing_sobre_img_1:    "/fotos/16.jpg",
+  landing_sobre_img_2:    "/fotos/24.jpeg",
+  landing_sobre_img_3:    "/fotos/5.jpg",
+  landing_sobre_img_4:    "/fotos/22.jpeg",
+  landing_sobre_img_5:    "/fotos/20.jpeg",
+  landing_botella_1_img:  "/fotos/28.1.png",
+  landing_botella_2_img:  "/fotos/29.1.png",
+  landing_botella_3_img:  "/fotos/30.1.png",
+  landing_botella_4_img:  "/fotos/31.1.png",
+};
+type LandingCfg = typeof LANDING_CFG_DEFAULTS;
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function LandingPageOaxaca() {
@@ -135,8 +352,46 @@ export default function LandingPageOaxaca() {
   const P = isDark ? PALETTE.dark : PALETTE.light;
   const winWidth = useWindowWidth();
 
+  // ─── Config dinámica desde BD ─────────────────────────────────────────────
+  const [cfg, setCfg] = useState<LandingCfg>(LANDING_CFG_DEFAULTS);
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/configuracion/sistema/mapa`)
+      .then((r) => r.ok ? r.json() : {})
+      .then((data: Record<string, string>) => {
+        setCfg((prev) => {
+          const next = { ...prev };
+          for (const k of Object.keys(LANDING_CFG_DEFAULTS) as (keyof LandingCfg)[]) {
+            if (data[k]) next[k] = data[k];
+          }
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, []);
+
   // ─── Más vendidos ─────────────────────────────────────────────────────────
-  const { productos: masVendidos, loading: loadingVendidos } = useMasVendidos(5);
+  const { productos: masVendidos, loading: loadingVendidos, error: errorVendidos } = useMasVendidos(5);
+
+  // ─── Carrusel trazabilidad ────────────────────────────────────────────────
+  const { productos: trazaProductos, loading: trazaLoading } = useTrazabilidadCarousel(4);
+  const [trazaIdx, setTrazaIdx] = useState(0);
+  const trazaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const trazaGoTo = useCallback((idx: number) => {
+    setTrazaIdx(idx);
+    if (trazaTimerRef.current) clearTimeout(trazaTimerRef.current);
+    trazaTimerRef.current = setTimeout(() => {
+      setTrazaIdx((prev) => (prev + 1) % Math.max(trazaProductos.length, 1));
+    }, 6000);
+  }, [trazaProductos.length]);
+
+  useEffect(() => {
+    if (trazaProductos.length === 0) return;
+    trazaTimerRef.current = setTimeout(() => {
+      setTrazaIdx((prev) => (prev + 1) % trazaProductos.length);
+    }, 6000);
+    return () => { if (trazaTimerRef.current) clearTimeout(trazaTimerRef.current); };
+  }, [trazaIdx, trazaProductos.length]);
 
   // Breakpoints
   const isMobile = winWidth < 640;
@@ -212,8 +467,8 @@ export default function LandingPageOaxaca() {
             letterSpacing: "-0.01em",
             textShadow: "0 2px 16px rgba(0,0,0,0.85)",
           }}>
-            {t("Oaxaca auténtico,")}<br />
-            <span style={{ color: "#A8C26B", textShadow: "0 2px 16px rgba(0,0,0,0.85)" }}>{t("trazable y justo")}</span>
+            {t(cfg.landing_hero_titulo_1)}<br />
+            <span style={{ color: "#A8C26B", textShadow: "0 2px 16px rgba(0,0,0,0.85)" }}>{t(cfg.landing_hero_titulo_2)}</span>
           </h1>
 
           <p style={{
@@ -223,15 +478,15 @@ export default function LandingPageOaxaca() {
             fontFamily: "'DM Sans', sans-serif",
             textShadow: "0 1px 10px rgba(0,0,0,0.8)",
           }}>
-            {t("Conectamos el origen, la tradición y el talento de nuestras comunidades con el mundo.")}
+            {t(cfg.landing_hero_subtitulo)}
           </p>
 
           {/* Badges */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "28px" }}>
             {[
-              { icon: "✓", label: "Trazabilidad completa" },
-              { icon: "⚖", label: "Comercio justo" },
-              { icon: "🛡", label: "Protección cultural" },
+              { icon: "✓", label: cfg.landing_hero_badge_1 },
+              { icon: "⚖", label: cfg.landing_hero_badge_2 },
+              { icon: "🛡", label: cfg.landing_hero_badge_3 },
             ].map((p) => (
               <div key={p.label} style={{
                 display: "flex", alignItems: "center", gap: "6px",
@@ -262,7 +517,7 @@ export default function LandingPageOaxaca() {
                 letterSpacing: "0.03em",
               }}
             >
-              {t("Explorar productos")}
+              {t(cfg.landing_hero_boton)}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
               </svg>
@@ -355,12 +610,12 @@ export default function LandingPageOaxaca() {
               fontStyle: "italic", lineHeight: 1.8,
               color: P.pullQuote, margin: 0,
             }}>
-              &ldquo;{t("Descubre el auténtico sabor del mezcal, un destilado artesanal nacido del corazón del agave.")}&rdquo;
+              &ldquo;{t(cfg.landing_sobre_texto_1)}&rdquo;
             </p>
           </div>
 
           <p style={{ fontSize: "15px", lineHeight: 1.85, color: P.body, margin: 0 }}>
-            {t("Elaborado con procesos tradicionales que respetan la tierra y el tiempo, cada botella guarda carácter y tradición. Sus notas ahumadas y matices únicos lo convierten en una experiencia inigualable.")}
+            {t(cfg.landing_sobre_texto_2)}
           </p>
 
           <div style={{
@@ -369,7 +624,7 @@ export default function LandingPageOaxaca() {
           }}>
             <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#C97A3E", flexShrink: 0 }} />
             <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "14px", fontStyle: "italic", color: "#C97A3E" }}>
-              &ldquo;{t("El alma de Oaxaca en cada gota")}&rdquo;
+              &ldquo;{t(cfg.landing_sobre_cita)}&rdquo;
             </span>
           </div>
         </div>
@@ -378,29 +633,29 @@ export default function LandingPageOaxaca() {
         {isMobile ? (
           /* MÓVIL: 2 columnas, 3 filas */
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-            {/* 16.jpg — fila 1 completa */}
+            {/* img 1 — fila 1 completa */}
             <div style={{ gridColumn: "1/3", height: "150px", overflow: "hidden", borderRadius: "10px" }}>
-              <img src="/fotos/16.jpg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img src={cfg.landing_sobre_img_1} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
-            {/* 24.jpeg */}
+            {/* img 2 */}
             <div style={{ height: "120px", overflow: "hidden", borderRadius: "10px" }}>
-              <img src="/fotos/24.jpeg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img src={cfg.landing_sobre_img_2} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
-            {/* 5.jpg */}
+            {/* img 3 */}
             <div style={{ height: "120px", overflow: "hidden", borderRadius: "10px" }}>
-              <img src="/fotos/5.jpg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img src={cfg.landing_sobre_img_3} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
-            {/* 22.jpeg */}
+            {/* img 4 */}
             <div style={{ height: "150px", overflow: "hidden", borderRadius: "10px", position: "relative" }}>
-              <img src="/fotos/22.jpeg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img src={cfg.landing_sobre_img_4} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(31,58,46,0.5) 20%, transparent 55%)" }} />
               <span style={{ position: "absolute", bottom: "10px", left: "10px", fontSize: "12px", color: "#F4F0E3", fontWeight: 600, letterSpacing: "0.06em" }}>
                 {t("Proceso artesanal")}
               </span>
             </div>
-            {/* 20.jpeg */}
+            {/* img 5 */}
             <div style={{ height: "150px", overflow: "hidden", borderRadius: "10px", position: "relative" }}>
-              <img src="/fotos/20.jpeg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img src={cfg.landing_sobre_img_5} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "3px", background: "#C97A3E" }} />
             </div>
           </div>
@@ -415,28 +670,28 @@ export default function LandingPageOaxaca() {
             width: "100%",
           }}>
 
-            {/* ── Izquierda: fila top 110px + 5.jpg 210px ── */}
+            {/* ── Izquierda: fila top 110px + img3 210px ── */}
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "10px", height: "110px" }}>
                 <div style={{ overflow: "hidden", borderRadius: "12px" }}>
-                  <img src="/fotos/16.jpg" alt="Paisaje"
+                  <img src={cfg.landing_sobre_img_1} alt="Paisaje"
                     style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </div>
                 <div style={{ overflow: "hidden", borderRadius: "12px" }}>
-                  <img src="/fotos/24.jpeg" alt="Piñas"
+                  <img src={cfg.landing_sobre_img_2} alt="Piñas"
                     style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </div>
               </div>
               <div style={{ height: "210px", overflow: "hidden", borderRadius: "12px" }}>
-                <img src="/fotos/5.jpg" alt="Valle"
+                <img src={cfg.landing_sobre_img_3} alt="Valle"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               </div>
             </div>
 
-            {/* ── Derecha: 22.jpeg 220px + 20.jpeg 100px ── */}
+            {/* ── Derecha: img4 220px + img5 100px ── */}
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div style={{ height: "220px", overflow: "hidden", borderRadius: "12px", position: "relative" }}>
-                <img src="/fotos/22.jpeg" alt="Proceso artesanal"
+                <img src={cfg.landing_sobre_img_4} alt="Proceso artesanal"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 <div style={{
                   position: "absolute", inset: 0,
@@ -450,7 +705,7 @@ export default function LandingPageOaxaca() {
                 </div>
               </div>
               <div style={{ height: "100px", overflow: "hidden", borderRadius: "12px", position: "relative" }}>
-                <img src="/fotos/20.jpeg" alt="Piñas con humo"
+                <img src={cfg.landing_sobre_img_5} alt="Piñas con humo"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "3px", background: "#C97A3E" }} />
               </div>
@@ -461,7 +716,7 @@ export default function LandingPageOaxaca() {
       </div>
 
       {/* ══════════════════════════════════════════════════
-          BLOQUE 3 — STATS (oscuro)
+          BLOQUE 3 — STATS
       ══════════════════════════════════════════════════ */}
       <div ref={statsRef} style={{
         background: P.bgAccent,
@@ -486,14 +741,14 @@ export default function LandingPageOaxaca() {
             fontWeight: 700, color: "#F4F0E3",
             margin: "0 0 10px", lineHeight: 1.2,
           }}>
-            {t("Impacto que construimos juntos")}
+            {t(cfg.landing_stats_titulo)}
           </h2>
           <p style={{
             fontSize: isMobile ? "13px" : "15px",
             color: "rgba(244,240,227,0.9)", fontStyle: "italic",
             fontFamily: "'Playfair Display', Georgia, serif", margin: 0,
           }}>
-            {t("Cada compra transforma vidas y preserva nuestra herencia cultural.")}
+            {t(cfg.landing_stats_subtitulo)}
           </p>
         </div>
 
@@ -546,10 +801,11 @@ export default function LandingPageOaxaca() {
       </div>
 
       {/* ══════════════════════════════════════════════════
-          TRAZABILIDAD — timeline
+          TRAZABILIDAD — carrusel de productos
       ══════════════════════════════════════════════════ */}
-      <div style={{ background: P.bgAccent, padding: isMobile ? "48px 20px" : "72px 40px" }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+      <div style={{ background: P.bgAccent, padding: isMobile ? "48px 0" : "72px 0", overflow: "hidden" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: isMobile ? "0 20px" : "0 40px" }}>
+
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: isMobile ? "32px" : "48px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "12px" }}>
@@ -567,65 +823,78 @@ export default function LandingPageOaxaca() {
             </p>
           </div>
 
-          {/* Layout: imagen + timeline */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "320px 1fr",
-            gap: isMobile ? "32px" : "56px",
-            alignItems: "start",
-          }}>
-            {/* Botella card */}
-            <div style={{ borderRadius: "16px", overflow: "hidden", position: "relative" }}>
-              <img src="/fotos/28.1.png" alt="Tobalá" style={{ width: "100%", height: isMobile ? "240px" : "360px", objectFit: "cover", display: "block" }} />
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(31,58,46,0.88) 30%, transparent 60%)" }} />
-              <div style={{ position: "absolute", bottom: "16px", left: "16px", right: "16px" }}>
-                <p style={{ fontSize: "12px", color: "#C97A3E", letterSpacing: "0.12em", textTransform: "uppercase", margin: "0 0 2px" }}>LOTE · TBL-2024-0073</p>
-                <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "20px", fontWeight: 700, color: "#F4F0E3", margin: "0 0 2px" }}>Tobalá Cerro Quiniño</p>
-                <p style={{ fontSize: "13px", color: "rgba(244,240,227,0.85)", margin: 0 }}>750ml · 47° alc · Botella 73 de 400</p>
-              </div>
+          {/* Carrusel */}
+          {trazaLoading ? (
+            <div style={{ height: "320px", borderRadius: "20px", background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: "32px", height: "32px", borderRadius: "50%", border: "2px solid #C97A3E", borderTopColor: "transparent", animation: "spin 0.8s linear infinite" }} />
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
+          ) : trazaProductos.length === 0 ? (
+            <TrazaFallback isMobile={isMobile} t={t} />
+          ) : (
+            <>
+              {/* Slide activo */}
+              <TrazaSlide
+                key={trazaIdx}
+                producto={trazaProductos[trazaIdx]}
+                isMobile={isMobile}
+                t={t}
+              />
 
-            {/* Timeline */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-              {TRAZA_STEPS.map((step, i) => (
-                <div key={i} style={{ display: "flex", gap: "16px", paddingBottom: i < TRAZA_STEPS.length - 1 ? "24px" : "0" }}>
-                  {/* Línea + dot */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0" }}>
-                    <div style={{
-                      width: "36px", height: "36px", borderRadius: "50%", flexShrink: 0,
-                      background: step.done ? "#C97A3E" : "rgba(201,122,62,0.15)",
-                      border: step.done ? "none" : "1px solid rgba(201,122,62,0.4)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      {step.done ? (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1F3A2E" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                      ) : (
-                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#C97A3E", boxShadow: "0 0 8px #C97A3E" }} />
-                      )}
-                    </div>
-                    {i < TRAZA_STEPS.length - 1 && (
-                      <div style={{ width: "1px", flex: 1, background: step.done ? "rgba(201,122,62,0.4)" : "rgba(201,122,62,0.15)", minHeight: "24px" }} />
-                    )}
-                  </div>
-                  {/* Info */}
-                  <div style={{ paddingTop: "4px", flex: 1 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
-                      <div>
-                        <span style={{ fontSize: "12px", color: "#C97A3E", fontWeight: 700, letterSpacing: "0.1em" }}>PASO {step.paso}</span>
-                        {!step.done && <span style={{ marginLeft: "8px", fontSize: "12px", color: "#C97A3E", fontWeight: 700, letterSpacing: "0.08em" }}>· ACTUAL</span>}
-                      </div>
-                      <span style={{ fontSize: "13px", color: "rgba(244,240,227,0.75)", letterSpacing: "0.05em" }}>{step.fecha}</span>
-                    </div>
-                    <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "15px", fontWeight: 600, color: "#F4F0E3", margin: "0 0 3px" }}>{t(step.titulo)}</p>
-                    <p style={{ fontSize: "14px", color: "rgba(244,240,227,0.85)", lineHeight: 1.5, margin: 0 }}>{t(step.desc)}</p>
-                  </div>
+              {/* Controles */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "16px", marginTop: "32px" }}>
+                {/* Prev */}
+                <button
+                  onClick={() => trazaGoTo((trazaIdx - 1 + trazaProductos.length) % trazaProductos.length)}
+                  style={{
+                    width: "36px", height: "36px", borderRadius: "50%",
+                    border: "1px solid rgba(201,122,62,0.5)", background: "rgba(201,122,62,0.1)",
+                    color: "#C97A3E", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                  aria-label="Anterior"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+
+                {/* Dots */}
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {trazaProductos.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => trazaGoTo(i)}
+                      style={{
+                        width: i === trazaIdx ? "24px" : "8px",
+                        height: "8px",
+                        borderRadius: "4px",
+                        border: "none",
+                        background: i === trazaIdx ? "#C97A3E" : "rgba(201,122,62,0.3)",
+                        cursor: "pointer",
+                        transition: "width 0.3s ease, background 0.3s ease",
+                        padding: 0,
+                      }}
+                      aria-label={`Slide ${i + 1}`}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+
+                {/* Next */}
+                <button
+                  onClick={() => trazaGoTo((trazaIdx + 1) % trazaProductos.length)}
+                  style={{
+                    width: "36px", height: "36px", borderRadius: "50%",
+                    border: "1px solid rgba(201,122,62,0.5)", background: "rgba(201,122,62,0.1)",
+                    color: "#C97A3E", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                  aria-label="Siguiente"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </>
+          )}
 
           {/* CTA */}
-          <div style={{ display: "flex", justifyContent: "center", marginTop: isMobile ? "32px" : "48px" }}>
+          <div style={{ display: "flex", justifyContent: "center", marginTop: isMobile ? "32px" : "40px" }}>
             <button onClick={() => router.push("/producto")} style={{
               display: "flex", alignItems: "center", gap: "8px",
               fontSize: "14px", fontWeight: 600, padding: "13px 28px", borderRadius: "6px",
@@ -748,27 +1017,40 @@ export default function LandingPageOaxaca() {
           </div>
         ) : (
           <div className="categorias-grid">
-            {Array.from({ length: 4 }, (_, i) => {
-              const prod = masVendidos[i];
-              const fb   = BOTTLE_CARDS[i];
+            {BOTTLE_CARDS_STATIC.map((card, i) => {
+              const prod     = masVendidos[i];
+              const cfgKey   = `landing_botella_${i + 1}_img` as keyof LandingCfg;
+              const imgSrc   = prod?.imagen || (cfg[cfgKey] as string);
+              const nombre   = prod?.nombre ?? card.nombre;
+              const cantidad = prod?.cantidad ?? 0;
+              const href     = prod?.id ? `/Cliente/producto/${prod.id}` : "/Cliente/producto";
               return (
                 <div
                   key={i}
                   className="categoria-card"
-                  onClick={() => router.push("/producto")}
+                  onClick={() => router.push(href)}
                 >
                   <img
-                    src={prod?.imagen || fb.imagen}
-                    alt={prod?.nombre ?? fb.nombre}
-                    onError={(e) => { const img = e.target as HTMLImageElement; if (!img.dataset.err) { img.dataset.err = "1"; img.src = fb.imagen; } }}
+                    src={imgSrc}
+                    alt={nombre}
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      if (!img.dataset.err) { img.dataset.err = "1"; img.src = cfg[cfgKey] as string; }
+                    }}
                   />
                   <div className="card-overlay" />
                   <div className="card-content">
                     <div>
-                      <span className="card-count">{fb.tipo}</span>
-                      <h3 className="card-title">{prod?.nombre ?? fb.nombre}</h3>
+                      <span className="card-count">
+                        {cantidad > 0 ? `${cantidad} vendidos` : card.tipo}
+                      </span>
+                      <h3 className="card-title">{nombre}</h3>
                     </div>
-                    <button className="card-btn" aria-label="Ver productos">
+                    <button
+                      className="card-btn"
+                      aria-label={`Ver ${nombre}`}
+                      onClick={(e) => { e.stopPropagation(); router.push(href); }}
+                    >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <line x1="5" y1="12" x2="19" y2="12" />
                         <polyline points="12 5 19 12 12 19" />
