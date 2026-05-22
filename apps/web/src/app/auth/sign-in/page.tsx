@@ -29,7 +29,7 @@ function SignInContent() {
       return;
     }
     if (isAdmin) {
-      router.replace("/dashboard/administrador");
+      router.replace("/Administrador/dashboard");
       return;
     }
     if (isProductor) {

@@ -65,7 +65,7 @@ export function FooterTienda() {
             { label: "Maestras mezcaleras", href: "/productores" },
             { label: "Historia", href: "#historia" },
             { label: "Nuestro proceso", href: "#proceso" },
-            { label: "Catálogo", href: "/producto" },
+            { label: "Catálogo", href: "/Cliente/producto" },
           ].map(({ label, href }) => (
             <Link key={label} href={href} style={{
               display: "block", fontSize: "13px", color: "rgba(209,201,184,0.7)",

@@ -512,7 +512,7 @@ export default function LandingPageOaxaca() {
           {/* CTA */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
             <button
-              onClick={() => router.push("/producto")}
+              onClick={() => router.push("/Cliente/producto")}
               style={{
                 display: "flex", alignItems: "center", gap: "8px",
                 fontSize: "14px", fontWeight: 600,
@@ -901,7 +901,7 @@ export default function LandingPageOaxaca() {
 
           {/* CTA */}
           <div style={{ display: "flex", justifyContent: "center", marginTop: isMobile ? "32px" : "40px" }}>
-            <button onClick={() => router.push("/producto")} style={{
+            <button onClick={() => router.push("/Cliente/producto")} style={{
               display: "flex", alignItems: "center", gap: "8px",
               fontSize: "14px", fontWeight: 600, padding: "13px 28px", borderRadius: "6px",
               background: "#C97A3E", color: "#1F3A2E",
@@ -1072,7 +1072,7 @@ export default function LandingPageOaxaca() {
         {/* CTA */}
         <div style={{ display: "flex", justifyContent: "center", marginTop: "40px" }}>
           <button
-            onClick={() => router.push("/producto")}
+            onClick={() => router.push("/Cliente/producto")}
             style={{
               display: "flex", alignItems: "center", gap: "8px",
               fontSize: "14px", fontWeight: 600, padding: "13px 32px",

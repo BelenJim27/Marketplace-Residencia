@@ -51,6 +51,8 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
           email: response.user.email || data.email,
           id_productor: response.user.id_productor ?? null,
           nombre: response.user.nombre || "",
+          apellido_paterno: response.user.apellido_paterno || "",
+          foto_url: response.user.foto_url ?? null,
           roles,
           permisos,
         },
@@ -65,7 +67,7 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
 
       const isAdmin = roles.some((rol: string) => ["ADMIN", "administrador", "admin"].includes(rol));
       if (isAdmin) {
-        router.push("/dashboard/administrador");
+        router.push("/Administrador/dashboard");
         return;
       }
 

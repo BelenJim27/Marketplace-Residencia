@@ -38,7 +38,7 @@ export function Header() {
 
       {/* LOGO MOBILE - SÓLO CLIENTE */}
       {isMobile && showLogo && (
-        <Link href={"/producto"} className="ml-2 max-[430px]:hidden min-[375px]:ml-4">
+        <Link href={"/Cliente/producto"} className="ml-2 max-[430px]:hidden min-[375px]:ml-4">
           <Image
             src={"/images/logo/tierra_agaves.png"}
             width={28}
@@ -52,7 +52,7 @@ export function Header() {
 
       {/* LOGO DESKTOP - SÓLO CLIENTE */}
       {!isMobile && showLogo && (
-        <Link href={"/producto"} className="hidden lg:flex items-center">
+        <Link href={"/Cliente/producto"} className="hidden lg:flex items-center">
           <Image
             src={"/images/logo/tierra_agaves.png"}
             width={80}

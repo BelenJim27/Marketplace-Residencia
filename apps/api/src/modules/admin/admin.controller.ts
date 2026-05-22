@@ -46,6 +46,11 @@ export class AdminController {
     });
   }
 
+  @Get('productos')
+  getAllProductos(@Query('id_productor') id_productor?: string) {
+    return this.adminService.getAllProductos(id_productor ? parseInt(id_productor) : undefined);
+  }
+
   @Patch('productores/:id/revisar')
   async revisarSolicitud(
     @Param('id', ParseIntPipe) id: number,

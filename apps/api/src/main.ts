@@ -1,7 +1,6 @@
 import * as dotenv from 'dotenv';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { join, resolve } from 'path';
 import { static as expressStatic, raw } from 'express';
 
@@ -39,41 +38,8 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger documentation
-  const config = new DocumentBuilder()
-    .setTitle('Marketplace-Residencia API')
-    .setDescription('API para marketplace de mezcal con Stripe Connect y FedEx')
-    .setVersion('1.0.0')
-    .addBearerAuth({
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'JWT',
-      description: 'JWT access token (15m expiry)',
-    }, 'jwt-access')
-    .addBearerAuth({
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'JWT',
-      description: 'JWT refresh token (30d expiry)',
-    }, 'jwt-refresh')
-    .addTag('Auth', 'Login, register, token refresh')
-    .addTag('Productos', 'Product catalog management')
-    .addTag('Pedidos', 'Order lifecycle')
-    .addTag('Pagos', 'Payment records and Stripe')
-    .addTag('Envios', 'Shipping and FedEx tracking')
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-      defaultModelsExpandDepth: 2,
-    },
-  });
-
   const port = process.env.PORT || 3001;
   await app.listen(port);
   console.log(`API running on http://localhost:${port}`);
-  console.log(`📚 Swagger docs: http://localhost:${port}/docs`);
 }
 bootstrap();

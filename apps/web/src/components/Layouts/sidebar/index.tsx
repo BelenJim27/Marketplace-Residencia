@@ -30,7 +30,7 @@ export function Sidebar() {
 
   // ── Categorías del productor para mostrar/ocultar Lotes y Categorías ──────
   const token = getCookie("token") ?? "";
-  const { tieneLotes } = useProductorCategorias(token);
+  const { tieneLotes } = useProductorCategorias(token, isAdmin);
 
   // ── LÍNEA MODIFICADA: se pasa tieneLotes a getNavData ────────────────────
   const navData = getNavData(isProductor, isAdmin, tieneLotes);

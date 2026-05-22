@@ -207,7 +207,7 @@ export default function UsuariosUI() {
       <div className="bg-white dark:bg-dark-2 border border-gray-200 dark:border-dark-3 rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead className="bg-gray-50/50 dark:bg-dark-3 text-gray-400 dark:text-dark-6 text-[10px] font-bold uppercase tracking-widest border-b border-gray-100 dark:border-dark-3">
+            <thead className="bg-gray-50/50 dark:bg-dark-3 text-gray-400 dark:text-dark-6 text-[11px] font-bold uppercase tracking-widest border-b border-gray-100 dark:border-dark-3">
               <tr>
                 <th className="py-4 px-6">Usuario</th>
                 <th className="py-4 px-6">Rol / Permisos</th>

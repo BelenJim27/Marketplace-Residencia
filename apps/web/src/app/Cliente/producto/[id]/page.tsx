@@ -262,7 +262,7 @@ export default function ProductoDetallePage() {
               Volver
             </button>
             <Link
-              href="/producto"
+              href="/Cliente/producto"
               className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
               style={{ backgroundColor: "var(--bio-color-boton, #5c3d1e)" }}
             >

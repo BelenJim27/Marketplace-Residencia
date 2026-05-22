@@ -5,7 +5,6 @@ import { api } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import GoogleSigninButton from "@/components/Administrator/Auth/GoogleSigninButton";
 import { useAuth } from "@/context/AuthContext";
-import { SolicitarVendedor } from "@/components/Administrator/Auth/SolicitarVendedor";
 import { Eye, EyeOff } from "lucide-react";
 
 export function SignUpForm() {
@@ -16,7 +15,6 @@ export function SignUpForm() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const wantToSellDefault = searchParams.get("vender") === "true";
   const isVenderFlow = searchParams.get("vender") === "true";
 
   const [formData, setFormData] = useState({
@@ -25,12 +23,9 @@ export function SignUpForm() {
     apellido_paterno: "",
     apellido_materno: "",
     email: "",
-    telefono: "",
     password: "",
     confirmarPassword: "",
-    wantToSell: wantToSellDefault,
   });
-  const [telefonoError, setTelefonoError] = useState<string | null>(null);
 
   // --- Validaciones de Password ---
   const passwordValidations = useMemo(() => {
@@ -71,12 +66,6 @@ export function SignUpForm() {
     e.preventDefault();
     setError(null);
 
-    if (formData.telefono && formData.telefono.replace(/\D/g, "").length !== 10) {
-      setTelefonoError("El teléfono debe tener 10 dígitos");
-      return;
-    }
-    setTelefonoError(null);
-
     if (!allPasswordValid) {
       setError("La contraseña no cumple con los requisitos");
       return;
@@ -96,7 +85,6 @@ export function SignUpForm() {
         nombre: formData.nombre,
         apellido_paterno: formData.apellido_paterno,
         apellido_materno: formData.apellido_materno,
-        ...(formData.telefono ? { telefono: formData.telefono } : {}),
       })) as any;
 
       const usuario = result.user ?? {};
@@ -116,10 +104,10 @@ export function SignUpForm() {
         result.tokens.refresh_token,
       );
 
-      if (isVenderFlow || formData.wantToSell) {
+      if (isVenderFlow) {
         router.push("/dashboard/productor/solicitar");
       } else {
-        router.push("/producto");
+        router.push("/Cliente/producto");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al registrar usuario");
@@ -220,30 +208,6 @@ export function SignUpForm() {
           />
         </div>
 
-        {/* TELÉFONO */}
-        <div>
-          <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
-            Teléfono <span className="text-gray-400 font-normal">(opcional)</span>
-          </label>
-          <input
-            type="tel"
-            className={`w-full rounded-lg border bg-white p-3 outline-none dark:bg-gray-dark ${
-              telefonoError ? "border-red-400" : "border-green-200 focus:border-green-400"
-            }`}
-            placeholder="10 dígitos, ej. 9511234567"
-            value={formData.telefono}
-            maxLength={10}
-            onChange={(e) => {
-              const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-              setFormData({ ...formData, telefono: val });
-              setTelefonoError(null);
-            }}
-          />
-          {telefonoError && (
-            <p className="mt-1 text-[11px] text-red-500">{telefonoError}</p>
-          )}
-        </div>
-
         {/* CONTRASEÑA */}
         <div>
           <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
@@ -321,8 +285,6 @@ export function SignUpForm() {
             <p className="mt-1 text-[11px] text-red-500">Las contraseñas no coinciden</p>
           )}
         </div>
-
-        {!isVenderFlow && <SolicitarVendedor mode="checkbox" />}
 
         <button
           type="submit"

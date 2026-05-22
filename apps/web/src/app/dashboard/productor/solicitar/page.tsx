@@ -302,7 +302,7 @@ export default function SolicitarPage() {
   if (noElegible) return (
     <StatusCard icon={<AlertCircle style={{ width:"28px", height:"28px", color:"#D97706" }} />} iconBg="rgba(217,119,6,0.12)" title="No disponible con esta cuenta" message="Esta cuenta ya realizó pedidos como cliente. Para vender en Tierra Agaves necesitas crear una cuenta dedicada a tu actividad como productor.">
       <div style={{ display:"flex", gap:"12px", justifyContent:"center", flexWrap:"wrap" }}>
-        <button onClick={() => router.push("/producto")} style={{ background:"transparent", border:`1px solid ${C.inputBorder}`, borderRadius:"8px", padding:"11px 22px", fontFamily:SANS, fontSize:"13px", cursor:"pointer", color:C.label }}>Volver a la tienda</button>
+        <button onClick={() => router.push("/Cliente/producto")} style={{ background:"transparent", border:`1px solid ${C.inputBorder}`, borderRadius:"8px", padding:"11px 22px", fontFamily:SANS, fontSize:"13px", cursor:"pointer", color:C.label }}>Volver a la tienda</button>
         <button onClick={() => router.push("/auth/sign-up?vender=true")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 22px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>Crear cuenta nueva</button>
       </div>
     </StatusCard>
@@ -311,7 +311,7 @@ export default function SolicitarPage() {
   if (solicitudActual) {
     if (solicitudActual.estado === "pendiente") return (
       <StatusCard icon={<Loader2 className="_spin" style={{ width:"28px", height:"28px", color:C.copper }} />} iconBg="rgba(201,122,62,0.12)" title="Solicitud en revisión" message="Tu solicitud está siendo revisada por un administrador. Te notificaremos cuando haya una respuesta.">
-        <button onClick={() => router.push("/producto")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>Volver a la tienda</button>
+        <button onClick={() => router.push("/Cliente/producto")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>Volver a la tienda</button>
       </StatusCard>
     );
     if (solicitudActual.estado === "aprobado") return (
@@ -331,7 +331,7 @@ export default function SolicitarPage() {
 
   if (success) return (
     <StatusCard icon={<CheckCircle2 style={{ width:"28px", height:"28px", color:"#15803D" }} />} iconBg="rgba(21,128,61,0.12)" title="Solicitud enviada" message="Tu solicitud ha sido enviada. Un administrador la revisará pronto y te notificaremos por correo.">
-      <button onClick={() => router.push("/producto")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>Volver a la tienda</button>
+      <button onClick={() => router.push("/Cliente/producto")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>Volver a la tienda</button>
     </StatusCard>
   );
 

@@ -118,7 +118,7 @@ export function UserInfo({ whiteText = false }: { whiteText?: boolean }) {
   const handleLogout = async () => {
     setIsOpen(false);
     if (session) {
-      await signOut({ callbackUrl: "/auth/sign-in" });
+      await signOut({ callbackUrl: "/Cliente/producto" });
     } else {
       logout();
     }

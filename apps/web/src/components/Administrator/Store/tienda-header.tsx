@@ -8,9 +8,6 @@ import {
   Store, Home, ShoppingBag, Menu, X,
 } from "lucide-react";
 import { UserInfo } from "@/components/Layouts/header/user-info";
-import { ThemeToggleSwitch } from "@/components/Layouts/header/theme-toggle";
-import CurrencySwitcher from "@/components/Layouts/CurrencySwitcher";
-import LanguageSwitcher from "@/components/Layouts/LanguageSwitcher";
 import { useAuth } from "@/context/AuthContext";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -99,7 +96,7 @@ export function TiendaHeader() {
   // ─── Nav items por estado de autenticación ───────────────────
   const clientNavItems: NavItem[] = [
     { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/Cliente/inicio"),  href: "/Cliente/inicio" },
-    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/producto"),        href: "/producto" },
+    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/Cliente/producto"),        href: "/Cliente/producto" },
     { label: t("Mis compras"), icon: <Package size={22} />,      onClick: handleMyPurchasesClick,                href: "/tienda/compras" },
     {
       label: t("Favoritos"),
@@ -120,7 +117,7 @@ export function TiendaHeader() {
 
   const authNavItems: NavItem[] = [
     { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/Cliente/inicio"),  href: "/Cliente/inicio" },
-    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/producto"),        href: "/producto" },
+    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/Cliente/producto"),        href: "/Cliente/producto" },
     { label: t("Mis compras"), icon: <Package size={22} />,      onClick: handleMyPurchasesClick,                href: "/tienda/compras" },
     {
       label: t("Carrito"),
@@ -135,14 +132,14 @@ export function TiendaHeader() {
   // Nav items desktop para guest — SIN "Ingresar" (va en dropdown Perfil)
   const guestNavItemsDesktop: NavItem[] = [
     { label: t("Inicio"),          icon: <Home size={22} />,        onClick: () => router.push("/Cliente/inicio"), href: "/Cliente/inicio" },
-    { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/producto"),       href: "/producto" },
+    { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/Cliente/producto"),       href: "/Cliente/producto" },
     { label: t("Vender mezcal"),   icon: <Store size={22} />,       onClick: handleSellClick },
   ];
 
   // Nav items móvil (bottom nav) para guest — CON "Ingresar"
   const guestNavItems: NavItem[] = [
     { label: t("Inicio"),          icon: <Home size={22} />,        onClick: () => router.push("/Cliente/inicio"), href: "/Cliente/inicio" },
-    { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/producto"),       href: "/producto" },
+    { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/Cliente/producto"),       href: "/Cliente/producto" },
     { label: t("Vender mezcal"),   icon: <Store size={22} />,       onClick: handleSellClick },
     { label: t("Ingresar"),        icon: <User size={22} />,        onClick: () => router.push("/auth/sign-in"),  href: "/auth/sign-in" },
   ];
@@ -156,7 +153,7 @@ export function TiendaHeader() {
   return (
     <>
       {/* Spacer que ocupa el lugar del header fijo */}
-      <div className="h-[57px]" aria-hidden="true" />
+      <div className="h-[70px] md:h-[96px]" aria-hidden="true" />
 
       {/* ══════════════════════════════════════════════════
           HEADER PRINCIPAL
@@ -180,7 +177,7 @@ export function TiendaHeader() {
         }`}
       >
         {/* Logo */}
-        <Link href="/producto" className="flex items-center gap-3 shrink-0">
+        <Link href="/Cliente/producto" className="flex items-center gap-3 shrink-0">
           <Image
             src="/images/logo/tierra_agaves.png"
             width={scrolled ? 70 : 90}
@@ -192,7 +189,10 @@ export function TiendaHeader() {
         </Link>
 
         {/* ── NAV DESKTOP (≥ md) ── */}
-        <nav className="hidden md:flex items-center gap-6 flex-1">
+        <nav className="hidden md:flex items-center flex-1">
+          {/* Left spacer — centra los iconos */}
+          <div className="flex-1" />
+
           {/* Primary Navigation (center) */}
           <div className="flex items-center gap-0.5">
             {desktopNavItems.map((item) => (
@@ -219,10 +219,8 @@ export function TiendaHeader() {
             ))}
           </div>
 
-          {/* Spacer to push account/utilities to the right */}
-          <div className="flex-1" />
-
-          {/* Account & Secondary Controls (right) */}
+          {/* Right spacer + Account (derecha) */}
+          <div className="flex-1 flex justify-end items-center">
           <div className="flex items-center gap-4 border-l border-[rgba(244,240,227,0.15)] pl-4">
             {/* Profile / Guest Auth */}
             {!isAuthenticated ? (
@@ -273,16 +271,11 @@ export function TiendaHeader() {
               </div>
             ) : (
               <div className="shrink-0">
-                <UserInfo />
+                <UserInfo whiteText={true} />
               </div>
             )}
 
-            {/* Utilities (secondary) */}
-            <div className="flex items-center gap-2 border-l border-[rgba(244,240,227,0.15)] pl-4 ml-2">
-              <ThemeToggleSwitch />
-              <CurrencySwitcher />
-              <LanguageSwitcher />
-            </div>
+          </div>
           </div>
         </nav>
 
@@ -327,7 +320,7 @@ export function TiendaHeader() {
               {/* Account Section */}
               <div className="px-4 py-4 border-b border-[rgba(244,240,227,0.15)]">
                 {isAuthenticated ? (
-                  <UserInfo />
+                  <UserInfo whiteText={true} />
                 ) : (
                   <div className="flex flex-col gap-2">
                     <Link
@@ -371,15 +364,6 @@ export function TiendaHeader() {
                 </div>
               )}
 
-              {/* Settings / Utilities */}
-              <div className="px-4 py-4 flex items-center justify-between gap-3">
-                <span className="text-[11px] font-medium tracking-wide opacity-60">{t("Preferencias")}</span>
-                <div className="flex items-center gap-3">
-                  <ThemeToggleSwitch />
-                  <CurrencySwitcher />
-                  <LanguageSwitcher />
-                </div>
-              </div>
             </div>
           </div>
         </>

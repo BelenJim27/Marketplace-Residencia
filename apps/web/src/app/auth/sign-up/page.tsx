@@ -3,11 +3,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { SignUpForm } from "./_components/sign-up-form";
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useTheme } from "next-themes";
 import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
+
+const FEATURES = [
+  "Productores artesanales verificados",
+  "Envíos a todo México y el mundo",
+  "Variedad única de agaves oaxaqueños",
+];
 
 /* ── Wizard steps ─────────────────────────────────────────────────────────── */
 const STEPS = [
@@ -229,59 +234,78 @@ function SignUpContent() {
 
   /* ── Regular sign-up ── */
   return (
-    <div className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
-      <Breadcrumb pageName="Crear Cuenta" />
-
-      <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card">
-        <div className="flex flex-col lg:flex-row items-center">
-          <div className="w-full lg:w-1/2 order-2 lg:order-1">
-            <div className="w-full p-4 sm:p-12.5 xl:p-15">
-              <div className="mb-6 text-center sm:text-left">
-                <h1 className="mb-4 text-2xl font-bold text-dark dark:text-white">
-                  Crear Cuenta
-                </h1>
-                <p className="text-gray-500">
-                  Regístrate para comenzar a comprar
-                </p>
-              </div>
-
-              <SignUpForm />
-
-              <div className="mt-6 text-center">
-                <p>
-                  ¿Ya tienes una cuenta?{" "}
-                  <Link href="/auth/sign-in" className="text-green-600 hover:underline">
-                    Ingresar
-                  </Link>
-                </p>
-              </div>
+    <div className="p-4 md:p-6 2xl:p-10">
+    <div className="overflow-hidden rounded-2xl bg-white shadow-lg dark:bg-gray-dark min-h-[calc(100vh-8rem)]">
+      <div className="flex min-h-[calc(100vh-8rem)]">
+        {/* Left: Form */}
+        <div className="flex w-full flex-col justify-center lg:w-[45%] p-8 sm:p-12 xl:p-16">
+          <div className="mb-8">
+            <div className="mb-4">
+              <Image
+                src="/images/logo/tierra_agaves.png"
+                alt="Tierra Agaves"
+                width={100}
+                height={36}
+                className="object-contain"
+              />
             </div>
+            <h1 className="text-2xl font-bold text-dark dark:text-white">
+              Crea tu cuenta
+            </h1>
+            <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+              Regístrate para comenzar a comprar.
+            </p>
           </div>
 
-          {/* Right side image */}
-          <div className="w-full lg:w-1/2 relative min-h-[200px] sm:min-h-[300px] lg:min-h-[800px] order-1 lg:order-2">
-            <Image
-              src="/images/login/gemmi.png"
-              alt="Login Image"
-              fill
-              priority
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-black/40" />
-            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 sm:p-10">
-              <p className="mb-2 sm:mb-3 text-lg sm:text-xl font-medium text-white">
-                Únete a nuestra tienda
-              </p>
-              <h1 className="mb-3 sm:mb-4 text-xl sm:text-2xl lg:text-3xl font-bold text-white">
-                ¡Bienvenido!
-              </h1>
-              <p className="w-full max-w-[280px] sm:max-w-[375px] text-sm sm:text-base font-medium text-white dark:text-dark-6">
-                Crea una cuenta para acceder a todos nuestros productos
-              </p>
+          <SignUpForm />
+
+          <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+            ¿Ya tienes una cuenta?{" "}
+            <Link
+              href="/auth/sign-in"
+              className="font-semibold text-green-600 underline underline-offset-2 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
+            >
+              Inicia sesión
+            </Link>
+          </p>
+        </div>
+
+        {/* Right: Hero — mismo que sign-in */}
+        <div className="hidden lg:block lg:w-[55%] relative">
+          <Image
+            src="/images/login/gemmi.png"
+            alt="Mezcal Oaxaca"
+            fill
+            priority
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
+          <div className="absolute inset-0 flex flex-col justify-end p-12 pb-16">
+            <p className="text-green-300 text-xs font-semibold tracking-widest uppercase mb-3">
+              Marketplace Artesanal
+            </p>
+            <h2 className="text-5xl font-bold text-white leading-tight mb-4">
+              Mezcal Oaxaqueño<br />
+              <span className="text-green-400">del corazón</span><br />
+              de México
+            </h2>
+            <p className="text-white/60 text-base max-w-xs leading-relaxed mb-8">
+              Conectamos productores artesanales con amantes del buen mezcal en todo el mundo.
+            </p>
+            <div className="flex flex-col gap-2.5">
+              {FEATURES.map((feat) => (
+                <div key={feat} className="flex items-center gap-3">
+                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-500/25 text-green-300 text-xs font-bold">
+                    ✓
+                  </span>
+                  <span className="text-white/75 text-sm">{feat}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

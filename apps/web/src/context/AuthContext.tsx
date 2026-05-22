@@ -257,7 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     removeCookie("usuario");
     setUser(null);
     setProductorResolved(false);
-    window.location.href = "/auth/sign-in";
+    window.location.href = "/Cliente/producto";
   }, []);
 
   const isAdmin = useMemo(

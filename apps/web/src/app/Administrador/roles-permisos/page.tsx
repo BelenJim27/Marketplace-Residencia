@@ -259,7 +259,9 @@ export default function RolesPermisosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-dark-3">
-                {roles.map((rol) => (
+                {roles.length === 0 ? (
+                  <tr><td colSpan={4} className="p-10 text-center text-sm text-gray-400 dark:text-dark-6">No hay roles registrados. Usa el botón "Nuevo Rol" para crear uno.</td></tr>
+                ) : roles.map((rol) => (
                   <tr key={rol.id_rol} className="transition-colors hover:bg-gray-50/50 dark:hover:bg-dark-3/50">
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-sm font-semibold ${getRoleColor(rol.nombre)}`}>
@@ -288,7 +290,11 @@ export default function RolesPermisosPage() {
           </div>
 
           <div className="md:hidden space-y-3">
-            {roles.map((rol) => (
+            {roles.length === 0 ? (
+              <div className="rounded-2xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2 p-8 text-center text-sm text-gray-400 dark:text-dark-6">
+                No hay roles registrados.
+              </div>
+            ) : roles.map((rol) => (
               <div key={rol.id_rol} className="rounded-2xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2 p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <span className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-sm font-semibold ${getRoleColor(rol.nombre)}`}>
@@ -316,6 +322,7 @@ export default function RolesPermisosPage() {
       )}
 
       {/* ── PERMISOS TAB ── */}
+
       {tab === "permisos" && (
         <div className="space-y-4">
           <div className="flex justify-end">

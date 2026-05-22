@@ -367,6 +367,8 @@ export default function ProductCatalogEnhanced() {
   const [ordenar, setOrdenar] = useState<"popular" | "precio_asc" | "precio_desc" | "nombre_az">("popular");
   const [precioMinLocal, setPrecioMinLocal] = useState("");
   const [precioMaxLocal, setPrecioMaxLocal] = useState("");
+  const [paginaActual, setPaginaActual] = useState(1);
+  const PRODUCTOS_POR_PAGINA = 6;
 
   // Restaurar filtros desde URL al montar
   useEffect(() => {
@@ -595,6 +597,15 @@ export default function ProductCatalogEnhanced() {
     return sorted;
   }, [productos, ordenar]);
 
+  const totalPaginas = Math.max(1, Math.ceil(productosMostrados.length / PRODUCTOS_POR_PAGINA));
+  const productosPagina = productosMostrados.slice(
+    (paginaActual - 1) * PRODUCTOS_POR_PAGINA,
+    paginaActual * PRODUCTOS_POR_PAGINA,
+  );
+
+  // Resetear página al cambiar filtros u orden
+  useEffect(() => { setPaginaActual(1); }, [filtros, ordenar]);
+
   const filtrosActivos = (Object.keys(filtros) as (keyof Filtros)[]).filter((k) => {
     if (k === 'busqueda') return false;
     const val = filtros[k];
@@ -793,7 +804,7 @@ export default function ProductCatalogEnhanced() {
               <div className="text-sm" style={{ color: hexFallbacks.textSecondary }}>
                 {!loading && productosMostrados.length > 0 && (
                   <span className="font-semibold">
-                    Mostrando {productosMostrados.length} {productosMostrados.length === 1 ? "producto" : "productos"}
+                    Mostrando {(paginaActual - 1) * PRODUCTOS_POR_PAGINA + 1}–{Math.min(paginaActual * PRODUCTOS_POR_PAGINA, productosMostrados.length)} de {productosMostrados.length} {productosMostrados.length === 1 ? "producto" : "productos"}
                   </span>
                 )}
               </div>
@@ -892,33 +903,98 @@ export default function ProductCatalogEnhanced() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 justify-center animate-in fade-in duration-500" data-grid="productos">
-                {productosMostrados.map((producto, index) => (
-                  <ProductCard
-                    key={String(producto.id_producto)}
-                    producto={producto}
-                    index={index}
-                    isWishlisted={isInWishlist(producto.id_producto)}
-                    onWishlist={() => toggleWishlist(producto)}
-                    onAddCart={() => {
-                      agregarProducto({
-                        id_producto: producto.id_producto,
-                        nombre: producto.nombre,
-                        precio_base: producto.precio_base,
-                        imagen_principal_url: producto.imagen_principal_url,
-                        producto_imagenes: producto.producto_imagenes,
-                        cantidad: 1,
-                      });
-                      setAgregadoId(producto.id_producto);
-                      // P2: Show toast + extend button feedback to 2.5s
-                      addToast("Producto agregado al carrito");
-                      setTimeout(() => setAgregadoId(null), 2500);
-                    }}
-                    isAdded={agregadoId === producto.id_producto}
-                    onViewDetails={() => router.push(`/cliente/producto/${producto.id_producto}`)}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 justify-center animate-in fade-in duration-500" data-grid="productos">
+                  {productosPagina.map((producto, index) => (
+                    <ProductCard
+                      key={String(producto.id_producto)}
+                      producto={producto}
+                      index={(paginaActual - 1) * PRODUCTOS_POR_PAGINA + index}
+                      isWishlisted={isInWishlist(producto.id_producto)}
+                      onWishlist={() => toggleWishlist(producto)}
+                      onAddCart={() => {
+                        agregarProducto({
+                          id_producto: producto.id_producto,
+                          nombre: producto.nombre,
+                          precio_base: producto.precio_base,
+                          imagen_principal_url: producto.imagen_principal_url,
+                          producto_imagenes: producto.producto_imagenes,
+                          cantidad: 1,
+                        });
+                        setAgregadoId(producto.id_producto);
+                        addToast("Producto agregado al carrito");
+                        setTimeout(() => setAgregadoId(null), 2500);
+                      }}
+                      isAdded={agregadoId === producto.id_producto}
+                      onViewDetails={() => router.push(`/cliente/producto/${producto.id_producto}`)}
+                    />
+                  ))}
+                </div>
+
+                {/* ─── PAGINACIÓN ─── */}
+                {totalPaginas > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-10" role="navigation" aria-label="Paginación">
+                    {/* Anterior */}
+                    <button
+                      onClick={() => {
+                        setPaginaActual((p) => Math.max(1, p - 1));
+                        document.querySelector('[data-grid="productos"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                      disabled={paginaActual === 1}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-80 active:scale-95"
+                      style={{ backgroundColor: hexFallbacks.bgSecondary, color: hexFallbacks.textPrimary, border: `1px solid ${hexFallbacks.borderLight}` }}
+                      aria-label="Página anterior"
+                    >
+                      ← Anterior
+                    </button>
+
+                    {/* Números de página */}
+                    {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((num) => {
+                      const isActive = num === paginaActual;
+                      const isNear = Math.abs(num - paginaActual) <= 1 || num === 1 || num === totalPaginas;
+                      if (!isNear) {
+                        const isGap = num === 2 || num === totalPaginas - 1;
+                        return isGap ? (
+                          <span key={num} className="text-sm px-1" style={{ color: hexFallbacks.textMuted }}>…</span>
+                        ) : null;
+                      }
+                      return (
+                        <button
+                          key={num}
+                          onClick={() => {
+                            setPaginaActual(num);
+                            document.querySelector('[data-grid="productos"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }}
+                          className="w-9 h-9 rounded-lg text-sm font-bold transition-all hover:opacity-80 active:scale-95"
+                          style={{
+                            backgroundColor: isActive ? hexFallbacks.brand : hexFallbacks.bgSecondary,
+                            color: isActive ? "white" : hexFallbacks.textPrimary,
+                            border: `1px solid ${isActive ? hexFallbacks.brand : hexFallbacks.borderLight}`,
+                          }}
+                          aria-label={`Página ${num}`}
+                          aria-current={isActive ? "page" : undefined}
+                        >
+                          {num}
+                        </button>
+                      );
+                    })}
+
+                    {/* Siguiente */}
+                    <button
+                      onClick={() => {
+                        setPaginaActual((p) => Math.min(totalPaginas, p + 1));
+                        document.querySelector('[data-grid="productos"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                      disabled={paginaActual === totalPaginas}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-80 active:scale-95"
+                      style={{ backgroundColor: hexFallbacks.bgSecondary, color: hexFallbacks.textPrimary, border: `1px solid ${hexFallbacks.borderLight}` }}
+                      aria-label="Página siguiente"
+                    >
+                      Siguiente →
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -10,8 +10,8 @@ export class PaypalService {
   private webhookId: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.clientId = this.configService.getOrThrow<string>('PAYPAL_CLIENT_ID');
-    this.clientSecret = this.configService.getOrThrow<string>('PAYPAL_CLIENT_SECRET');
+    this.clientId = this.configService.get<string>('PAYPAL_CLIENT_ID') ?? '';
+    this.clientSecret = this.configService.get<string>('PAYPAL_CLIENT_SECRET') ?? '';
     this.mode = (this.configService.get<string>('PAYPAL_MODE') || 'sandbox') as 'sandbox' | 'live';
     this.webhookId = this.configService.get<string>('PAYPAL_WEBHOOK_ID') || '';
   }

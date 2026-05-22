@@ -875,6 +875,10 @@ export const api = {
       const qs = params.toString();
       return fetchJson<any[]>(endpoint(`/admin/productores${qs ? `?${qs}` : ""}`), { headers: headers(token) });
     },
+    getProductos: (token: string, id_productor?: number): Promise<any[]> => {
+      const qs = id_productor ? `?id_productor=${id_productor}` : "";
+      return fetchJson<any[]>(endpoint(`/admin/productos${qs}`), { headers: headers(token) });
+    },
   },
 
   paises: {

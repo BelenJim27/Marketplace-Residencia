@@ -82,40 +82,38 @@ export function Notification() {
   const [isLoading, setIsLoading] = useState(false);
   const isMobile = useIsMobile();
 
+  // Carga DB notifications independientemente del dropdown — mantiene el badge actualizado
+  useEffect(() => {
+    if (!user?.id_usuario) return;
+    let cancelled = false;
+
+    const fetchDbNotifs = async () => {
+      try {
+        const res = await api.notificaciones.getByUser(user.id_usuario!, token);
+        if (!cancelled)
+          setDbNotifs((Array.isArray(res) ? res : []).filter((n) => !n.leido));
+      } catch { /* best-effort */ }
+    };
+
+    fetchDbNotifs();
+    const id = setInterval(fetchDbNotifs, 30_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [user?.id_usuario, token]);
+
+  // Carga alertas de stock solo cuando se abre el dropdown
   useEffect(() => {
     if (!isOpen || !user?.id_usuario) return;
 
     let cancelled = false;
 
-    const loadAlerts = async () => {
+    const loadStockAlerts = async () => {
       setIsLoading(true);
-
       try {
-        // Fetch notificaciones solo del usuario actual
-        let fetchedDbNotifs: DbNotif[] = [];
-        try {
-          const notifRes = await api.notificaciones.getByUser(user.id_usuario!, token);
-          fetchedDbNotifs = (Array.isArray(notifRes) ? notifRes : []).filter((n) => !n.leido);
-        } catch {
-          // best-effort
-        }
-
-        if (cancelled) return;
-        setDbNotifs(fetchedDbNotifs);
-
-        // Alertas de stock: para productor o admin
-        if (isAdmin) {
-          // Admin: no hay alertas de stock locales (las ve en inventario)
+        if (isAdmin || !user?.id_productor) {
           if (!cancelled) setAlerts([]);
           return;
         }
 
-        if (!user?.id_productor) {
-          if (!cancelled) setAlerts([]);
-          return;
-        }
-
-        // Productor: alertas de stock de sus propios productos
         const [productsRes, storesRes] = await Promise.all([
           api.productos.getByProductor(user.id_productor, token),
           api.tiendas.getByProductor(user.id_productor, token),
@@ -149,7 +147,7 @@ export function Notification() {
           return a.producto.localeCompare(b.producto);
         });
 
-        setAlerts(nextAlerts);
+        if (!cancelled) setAlerts(nextAlerts);
       } catch {
         if (!cancelled) setAlerts([]);
       } finally {
@@ -157,7 +155,7 @@ export function Notification() {
       }
     };
 
-    loadAlerts();
+    loadStockAlerts();
     return () => { cancelled = true; };
   }, [isOpen, user?.id_usuario, user?.id_productor, isAdmin, token]);
 

@@ -157,6 +157,82 @@ export class AdminService {
     })));
   }
 
+  async getAllProductos(id_productor?: number) {
+    try {
+      const where: any = { eliminado_en: null };
+      if (id_productor) {
+        where.tiendas = { id_productor };
+      }
+
+      const items = await this.prisma.productos.findMany({
+        where,
+        select: {
+          id_producto: true,
+          nombre: true,
+          descripcion: true,
+          status: true,
+          precio_base: true,
+          moneda_base: true,
+          imagen_principal_url: true,
+          creado_en: true,
+          id_tienda: true,
+          id_lote: true,
+          tiendas: {
+            select: {
+              id_tienda: true,
+              nombre: true,
+              id_productor: true,
+              productores: {
+                select: {
+                  usuarios: {
+                    select: { nombre: true, apellido_paterno: true },
+                  },
+                },
+              },
+            },
+          },
+          inventario: { select: { stock: true } },
+          categorias_productos: {
+            select: {
+              categorias: { select: { id_categoria: true, nombre: true } },
+            },
+          },
+        },
+        orderBy: { creado_en: 'desc' },
+      });
+
+      return serializeBigInts(items.map((item: any) => {
+        const stock = (item.inventario ?? []).reduce((acc: number, i: any) => acc + Number(i.stock ?? 0), 0);
+        const cats = (item.categorias_productos ?? []).map((cp: any) => cp.categorias?.nombre).filter(Boolean);
+        const u = item.tiendas?.productores?.usuarios;
+        const nombreProductor = u ? [u.nombre, u.apellido_paterno].filter(Boolean).join(' ') : null;
+
+        return {
+          id_producto: item.id_producto,
+          nombre: item.nombre,
+          descripcion: item.descripcion ?? null,
+          status: item.status,
+          estado: item.status,
+          precio_base: Number(item.precio_base ?? 0),
+          precio: Number(item.precio_base ?? 0),
+          moneda_base: item.moneda_base ?? 'MXN',
+          moneda: item.moneda_base ?? 'MXN',
+          imagen_url: item.imagen_principal_url ?? null,
+          nombre_tienda: item.tiendas?.nombre ?? null,
+          nombre_productor: nombreProductor,
+          stock,
+          categoria: cats[0] ?? null,
+          categorias: cats,
+          id_tienda: item.id_tienda,
+          id_lote: item.id_lote,
+        };
+      }));
+    } catch (err) {
+      console.error('[AdminService.getAllProductos] Error:', err);
+      throw err;
+    }
+  }
+
   async revisarSolicitud(id_productor: number, dto: RevisarSolicitudDto, revisor_id: string) {
     const productor = await this.prisma.productores.findUnique({ where: { id_productor } });
     if (!productor || productor.eliminado_en) throw new NotFoundException('Solicitud no encontrada');

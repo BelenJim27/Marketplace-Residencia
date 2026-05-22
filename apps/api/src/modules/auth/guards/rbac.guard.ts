@@ -9,7 +9,10 @@ export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.get<string[]>(ROLES_KEY, context.getHandler());
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     if (!requiredRoles) {
       return true;
     }
@@ -21,7 +24,9 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('No tienes acceso a este recurso');
     }
 
-    const hasRole = requiredRoles.some((role) => user.roles.includes(role));
+    const hasRole = requiredRoles.some((role) =>
+      user.roles.some((r: string) => r.toLowerCase() === role.toLowerCase()),
+    );
 
     if (!hasRole) {
       throw new ForbiddenException('No tienes el rol necesario para acceder a este recurso');
@@ -36,7 +41,10 @@ export class PermisosGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredPermisos = this.reflector.get<string[]>(PERMISOS_KEY, context.getHandler());
+    const requiredPermisos = this.reflector.getAllAndOverride<string[]>(PERMISOS_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     if (!requiredPermisos) {
       return true;
     }

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import ModalNuevoProducto from './nuevoProducto';
 import ModalEditarVer from './acciones';
 import { Eye, Pencil, Trash2, Search, Plus } from "lucide-react";
+import { api } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
 import { formatPrice } from "@/lib/format-number";
 
 interface Producto {
@@ -35,13 +37,9 @@ export default function ProductosAdmin() {
 
     const fetchProductos = async () => {
         try {
-            const res = await fetch(`/productos`);
-            if (!res.ok) throw new Error("Failed to fetch");
-            const data = await res.json();
-
-            console.log("Primer producto:", data[0]);
-
-            const formatted = data.map((p: any) => ({
+            const token = getCookie("token") ?? "";
+            const data = await api.admin.getProductos(token);
+            const formatted = (Array.isArray(data) ? data : []).map((p: any) => ({
                 ...p,
                 stock: Number(p.stock) || 0,
                 precio: Number(p.precio_base) || Number(p.precio) || 0,
@@ -202,7 +200,7 @@ export default function ProductosAdmin() {
             </div>
 
             {/* TABLA */}
-            <div className="bg-white dark:bg-dark-2 rounded-xl shadow-sm border border-gray-100 dark:border-dark-3 overflow-hidden">
+            <div className="bg-white dark:bg-dark-2 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-3 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50 dark:bg-dark-3 text-left text-[11px] uppercase font-bold text-gray-400 dark:text-dark-6 tracking-wider">
@@ -343,7 +341,7 @@ export default function ProductosAdmin() {
 
 function Card({ title, value, color }: { title: string; value: number; color: string }) {
     return (
-        <div className="bg-white dark:bg-dark-2 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-dark-3 flex flex-col gap-1">
+        <div className="bg-white dark:bg-dark-2 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-3 flex flex-col gap-1">
             <p className="text-[11px] font-bold text-gray-400 dark:text-dark-6 uppercase tracking-wider">{title}</p>
             <h2 className={`text-3xl font-black ${color}`}>{value}</h2>
         </div>

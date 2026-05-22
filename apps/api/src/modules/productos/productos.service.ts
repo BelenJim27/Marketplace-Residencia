@@ -237,12 +237,9 @@ export class ProductosService {
       );
     }
 
-    // Vista pública: solo productos con lote asociado (que vienen de API externa)
+    // Vista pública: todos los productos activos
     const items = await this.prisma.productos.findMany({
-      where: {
-        ...where,
-        id_lote: { not: null }, // Solo productos vinculados a lotes
-      },
+      where,
       include: productoInclude as any,
       orderBy: { creado_en: 'desc' },
     });

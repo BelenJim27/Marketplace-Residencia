@@ -96,13 +96,10 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
     setLoading(true);
     setError(null);
     try {
-      console.log("Loading productos for productor:", idProductor, "with token:", token);
-      const data = await api.productos.getByProductor(idProductor, token);
-      console.log("Productos data received:", data);
+      const data = await api.admin.getProductos(token, idProductor);
       const normalized = Array.isArray(data)
         ? data.map((item) => normalizeProduct(item as ProductItem))
         : [];
-      console.log("Productos normalized:", normalized);
       setProducts(normalized);
     } catch (err) {
       console.error("Error loading productos:", err);

@@ -820,7 +820,7 @@ export class PedidosService {
         id_pedido_id_productor: { id_pedido, id_productor },
       },
       include: {
-        productores: { select: { stripe_account_id: true, stripe_onboarding_completed: true, id_usuario: true, paypal_email: true } },
+        productores: { select: { stripe_account_id: true, stripe_onboarding_completed: true, id_usuario: true } },
         pedidos: { include: { pagos: { select: { payment_intent_id: true, proveedor: true }, take: 1 } } },
       },
     })) as any;

@@ -8,29 +8,33 @@ type CategoriaProductor = {
 
 const CATEGORIAS_CON_LOTES = ["Bebidas", "Bebidas_mezcal"];
 
-export function useProductorCategorias(token: string) {
+export function useProductorCategorias(token: string, skip = false) {
   const [categorias, setCategorias] = useState<CategoriaProductor[]>([]);
-  const [loadingCategorias, setLoadingCategorias] = useState(true);
+  const [loadingCategorias, setLoadingCategorias] = useState(!skip);
 
   useEffect(() => {
-    if (!token) { setLoadingCategorias(false); return; }
+    if (skip || !token) { setLoadingCategorias(false); return; }
     let cancelled = false;
 
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/productores/mi-solicitud`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => {
+        if (!r.ok) return null;
+        return r.text().then((text) => {
+          if (!text || !text.trim()) return null;
+          try { return JSON.parse(text); } catch { return null; }
+        });
+      })
       .then((data) => {
         if (cancelled) return;
         setCategorias(Array.isArray(data?.categorias) ? data.categorias : []);
       })
-       .catch((err) => {
-    console.error("error mi-solicitud:", err); 
-  })
+      .catch(() => { /* best-effort */ })
       .finally(() => { if (!cancelled) setLoadingCategorias(false); });
 
     return () => { cancelled = true; };
-  }, [token]);
+  }, [token, skip]);
 
   const tieneLotes = useMemo(
     () => categorias.some(
