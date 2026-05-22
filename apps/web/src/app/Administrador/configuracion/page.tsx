@@ -29,6 +29,20 @@ const DEFAULT_CONFIG = {
   bio_color_boton: "#5c3d1e",
   bio_color_boton2: "#8b6914",
   bio_fuente_titulo: "Georgia, serif",
+  // Landing page colors
+  land_color_bg: "#F4F0E3",
+  land_color_bg_accent: "#2E4A33",
+  land_color_heading: "#1F3A2E",
+  land_color_body: "rgba(31,58,46,0.8)",
+  land_color_accent: "#C97A3E",
+  land_color_sage: "#A8C26B",
+  land_color_cta: "#1F3A2E",
+  // Tienda header colors
+  tienda_header_bg: "#FFFFFF",
+  tienda_header_border: "#E6EBF1",
+  // System fonts
+  font_family_ui: "Satoshi, system-ui, -apple-system, sans-serif",
+  font_family_store: "'Playfair Display', Georgia, serif",
 };
 
 type Tab = "colores" | "landing";
@@ -58,6 +72,17 @@ export default function ConfiguracionPage() {
       bio_color_boton: config.bio_color_boton || DEFAULT_CONFIG.bio_color_boton,
       bio_color_boton2: config.bio_color_boton2 || DEFAULT_CONFIG.bio_color_boton2,
       bio_fuente_titulo: config.bio_fuente_titulo || DEFAULT_CONFIG.bio_fuente_titulo,
+      land_color_bg: config.land_color_bg || DEFAULT_CONFIG.land_color_bg,
+      land_color_bg_accent: config.land_color_bg_accent || DEFAULT_CONFIG.land_color_bg_accent,
+      land_color_heading: config.land_color_heading || DEFAULT_CONFIG.land_color_heading,
+      land_color_body: config.land_color_body || DEFAULT_CONFIG.land_color_body,
+      land_color_accent: config.land_color_accent || DEFAULT_CONFIG.land_color_accent,
+      land_color_sage: config.land_color_sage || DEFAULT_CONFIG.land_color_sage,
+      land_color_cta: config.land_color_cta || DEFAULT_CONFIG.land_color_cta,
+      tienda_header_bg: config.tienda_header_bg || DEFAULT_CONFIG.tienda_header_bg,
+      tienda_header_border: config.tienda_header_border || DEFAULT_CONFIG.tienda_header_border,
+      font_family_ui: config.font_family_ui || DEFAULT_CONFIG.font_family_ui,
+      font_family_store: config.font_family_store || DEFAULT_CONFIG.font_family_store,
     }));
   }, [config]);
 
@@ -81,10 +106,18 @@ export default function ConfiguracionPage() {
     setMessage(null);
 
     try {
+      const colorFields = [
+        "color_primario", "color_secundario", "color_acento",
+        "bio_color_fondo", "bio_color_tarjeta", "bio_color_titulo", "bio_color_precio", "bio_color_boton", "bio_color_boton2",
+        "land_color_bg", "land_color_bg_accent", "land_color_heading", "land_color_body", "land_color_accent", "land_color_sage", "land_color_cta",
+        "tienda_header_bg", "tienda_header_border",
+      ];
+      const fontFields = ["font_family_ui", "font_family_store"];
+
       const items = Object.entries(formData).map(([clave, valor]) => ({
         clave,
         valor: String(valor),
-        tipo: ["color_primario", "color_secundario", "color_acento", "bio_color_fondo", "bio_color_tarjeta", "bio_color_titulo", "bio_color_precio", "bio_color_boton", "bio_color_boton2"].includes(clave) ? "color" : "texto",
+        tipo: colorFields.includes(clave) ? "color" : fontFields.includes(clave) ? "texto" : "texto",
       }));
 
       await api.configuracion.bulkUpsert(token, items);
@@ -128,7 +161,7 @@ export default function ConfiguracionPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
                   activeTab === tab.id
-                    ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/10"
+                    ? "border-primary text-primary dark:text-primary bg-primary/5 dark:bg-primary/10"
                     : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
@@ -276,6 +309,133 @@ export default function ConfiguracionPage() {
                 </div>
               </section>
 
+              {/* SECCIÓN: Página de Inicio (Landing) */}
+              <section>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  Colores de la Página de Inicio (Cliente)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  {[
+                    { key: "land_color_bg", label: "Fondo Principal" },
+                    { key: "land_color_bg_accent", label: "Fondo Acento (Stats)" },
+                    { key: "land_color_heading", label: "Color Títulos" },
+                    { key: "land_color_body", label: "Color Texto" },
+                    { key: "land_color_accent", label: "Color Acento (Dorado)" },
+                    { key: "land_color_sage", label: "Verde Salvia" },
+                    { key: "land_color_cta", label: "Botón CTA" },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {label}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          name={key}
+                          value={formData[key as keyof typeof formData]}
+                          onChange={handleChange}
+                          className="h-10 w-20 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={formData[key as keyof typeof formData]}
+                          onChange={handleChange}
+                          name={key}
+                          className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* SECCIÓN: Cabecera de Tienda */}
+              <section>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  Colores de la Cabecera de Tienda
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { key: "tienda_header_bg", label: "Color Fondo Header" },
+                    { key: "tienda_header_border", label: "Color Borde" },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {label}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          name={key}
+                          value={formData[key as keyof typeof formData]}
+                          onChange={handleChange}
+                          className="h-10 w-20 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={formData[key as keyof typeof formData]}
+                          onChange={handleChange}
+                          name={key}
+                          className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* SECCIÓN: Tipografía del Sistema */}
+              <section>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  Tipografía del Sistema
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Fuente Panel Admin/Productor
+                    </label>
+                    <select
+                      name="font_family_ui"
+                      value={formData.font_family_ui}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="Satoshi, system-ui, -apple-system, sans-serif">Satoshi (Default)</option>
+                      <option value="'Playfair Display', Georgia, serif">Playfair Display (Elegante)</option>
+                      <option value="'DM Sans', system-ui, sans-serif">DM Sans (Moderno)</option>
+                      <option value="Georgia, serif">Georgia (Clásico)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Fuente Tienda Cliente
+                    </label>
+                    <select
+                      name="font_family_store"
+                      value={formData.font_family_store}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="'Playfair Display', Georgia, serif">Playfair Display (Default)</option>
+                      <option value="Satoshi, system-ui, -apple-system, sans-serif">Satoshi (Moderno)</option>
+                      <option value="'DM Sans', system-ui, sans-serif">DM Sans (Contemporáneo)</option>
+                      <option value="Georgia, serif">Georgia (Clásico)</option>
+                    </select>
+                  </div>
+                </div>
+                {/* Font preview */}
+                <div className="mt-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Vista previa panel admin:</p>
+                  <p style={{ fontFamily: formData.font_family_ui }} className="text-base">
+                    Esto es una vista previa de la tipografía del panel admin
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 mb-2">Vista previa tienda cliente:</p>
+                  <p style={{ fontFamily: formData.font_family_store }} className="text-base">
+                    Esto es una vista previa de la tipografía de la tienda
+                  </p>
+                </div>
+              </section>
+
               {/* VISTA PREVIA */}
               <section>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
@@ -365,7 +525,7 @@ export default function ConfiguracionPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
+                  className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:bg-primary/50 transition-colors"
                 >
                   <Save size={18} />
                   {saving ? "Guardando..." : "Guardar Cambios"}

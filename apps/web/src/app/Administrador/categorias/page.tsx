@@ -91,7 +91,7 @@ export default function CategoriasAdminPage() {
     }
   };
 
-  const fieldCls  = "mt-1 w-full rounded-lg border border-gray-300 dark:border-dark-3 bg-white dark:bg-dark-3 text-slate-800 dark:text-white px-3 py-2 text-sm outline-none focus:border-green-500";
+  const fieldCls  = "mt-1 w-full rounded-lg border border-stroke dark:border-dark-3 bg-white dark:bg-dark-2 text-dark dark:text-white px-3 py-2 text-sm outline-none focus:border-primary";
   const labelCls  = "block text-sm font-medium text-gray-700 dark:text-dark-7";
 
   return (
@@ -99,13 +99,13 @@ export default function CategoriasAdminPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Gestión de Categorías</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-dark dark:text-white">Gestión de Categorías</h1>
           <p className="mt-0.5 text-sm text-gray-500 dark:text-dark-6">Administra las categorías y subcategorías del sistema.</p>
         </div>
         <button
           type="button"
           onClick={() => openCreateModal()}
-          className="rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
         >
           + Nueva Categoría
         </button>
@@ -152,7 +152,7 @@ export default function CategoriasAdminPage() {
               ) : (
                 filteredCategorias.map((cat) => (
                   <tr key={cat.id_categoria} className="group hover:bg-gray-50/60 dark:hover:bg-dark-3/60">
-                    <td className="p-4 font-semibold text-slate-800 dark:text-white">
+                    <td className="p-4 font-semibold text-dark dark:text-white">
                       {cat.nombre}
                       {cat.categorias && cat.categorias.length > 0 && (
                         <span className="ml-2 text-xs text-gray-400 dark:text-dark-6">({cat.categorias.length} sub)</span>
@@ -184,7 +184,7 @@ export default function CategoriasAdminPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-white dark:bg-dark-2 p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-white">{editingCategoria ? "Editar" : "Nueva"} Categoría</h2>
+              <h2 className="text-lg font-semibold text-dark dark:text-white">{editingCategoria ? "Editar" : "Nueva"} Categoría</h2>
               <button type="button" onClick={() => setShowModal(false)} className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-dark-3 text-gray-500 dark:text-dark-6"><X className="h-5 w-5" /></button>
             </div>
 
@@ -215,7 +215,7 @@ export default function CategoriasAdminPage() {
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <button type="button" onClick={() => setShowModal(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 dark:text-dark-6 hover:bg-gray-100 dark:hover:bg-dark-3">Cancelar</button>
-                <button type="submit" className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Guardar</button>
+                <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">Guardar</button>
               </div>
             </form>
           </div>

@@ -1,13 +1,13 @@
 // components/PedidosUI.tsx
 export default function Pedidos() {
   return (
-    <div className="bg-gray-100 dark:bg-gray-900 min-h-screen w-full">
+    <div className="w-full">
       <div className="w-full py-6">
 
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 px-4 sm:px-6">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-dark dark:text-white tracking-tight">
               Gestión de Pedidos
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">
@@ -15,7 +15,7 @@ export default function Pedidos() {
             </p>
           </div>
 
-          <button className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95 w-full sm:w-auto">
+          <button className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95 w-full sm:w-auto">
             + Nuevo Pedido
           </button>
         </div>
@@ -31,7 +31,7 @@ export default function Pedidos() {
           ].map((item, i) => (
             <div
               key={i}
-              className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-center"
+              className="bg-white dark:bg-gray-dark p-5 rounded-2xl shadow-sm border border-stroke dark:border-dark-3 flex flex-col justify-center"
             >
               <p className="text-gray-400 dark:text-gray-500 text-[10px] font-bold uppercase tracking-widest">
                 {item.label}
@@ -46,24 +46,24 @@ export default function Pedidos() {
           <div className="flex-grow min-w-[300px]">
             <input
               placeholder="Buscar por ID, cliente o producto..."
-              className="w-full border border-gray-200 dark:border-gray-600 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+              className="w-full border border-stroke dark:border-dark-3 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white dark:bg-dark-2 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
             />
           </div>
 
           <div className="flex gap-2">
-            <button className="border border-gray-200 dark:border-gray-600 px-4 py-2.5 rounded-xl text-sm font-medium bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200 flex items-center gap-2">
+            <button className="border border-stroke dark:border-dark-3 px-4 py-2.5 rounded-xl text-sm font-medium bg-white dark:bg-dark-2 hover:bg-gray-50 dark:hover:bg-dark-2/80 transition-colors text-gray-700 dark:text-gray-200 flex items-center gap-2">
               <span>Filtros</span>
             </button>
-            <button className="border border-gray-200 dark:border-gray-600 px-4 py-2.5 rounded-xl text-sm font-medium bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300">
+            <button className="border border-stroke dark:border-dark-3 px-4 py-2.5 rounded-xl text-sm font-medium bg-white dark:bg-dark-2 hover:bg-gray-50 dark:hover:bg-dark-2/80 transition-colors text-gray-600 dark:text-gray-300">
               Exportar CSV
             </button>
           </div>
         </div>
 
         {/* TABLA */}
-        <div className="bg-white dark:bg-gray-800 border-y border-gray-200 dark:border-gray-700 w-full overflow-x-auto">
+        <div className="bg-white dark:bg-gray-dark border-y border-stroke dark:border-dark-3 w-full overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead className="bg-gray-50/50 dark:bg-gray-700/50 text-gray-400 dark:text-gray-300 text-[10px] font-bold uppercase tracking-widest border-b border-gray-100 dark:border-gray-700">
+            <thead className="bg-gray-2 dark:bg-dark-2 text-gray-400 dark:text-gray-300 text-[10px] font-bold uppercase tracking-widest border-b border-stroke dark:border-dark-3">
               <tr>
                 <th className="py-4 px-6">ID Pedido</th>
                 <th className="py-4 px-6">Cliente</th>
@@ -73,7 +73,7 @@ export default function Pedidos() {
                 <th className="py-4 px-6 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+            <tbody className="divide-y divide-stroke dark:divide-dark-3">
 
               {/* FILA 1 */}
               <tr className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors group">

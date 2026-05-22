@@ -36,6 +36,28 @@ const BIO_DARK = {
   "--bio-color-boton2":  "#b45309",
 };
 
+// Landing page colors — LIGHT mode
+const LAND_LIGHT = {
+  "--land-bg-primary":    "#F4F0E3",
+  "--land-bg-accent":     "#2E4A33",
+  "--land-color-heading": "#1F3A2E",
+  "--land-color-body":    "rgba(31,58,46,0.8)",
+  "--land-color-accent":  "#C97A3E",
+  "--land-color-sage":    "#A8C26B",
+  "--land-color-cta-bg":  "#1F3A2E",
+};
+
+// Landing page colors — DARK mode
+const LAND_DARK = {
+  "--land-bg-primary":    "#0D1A10",
+  "--land-bg-accent":     "#162218",
+  "--land-color-heading": "#F4F0E3",
+  "--land-color-body":    "rgba(244,240,227,0.82)",
+  "--land-color-accent":  "#C97A3E",
+  "--land-color-sage":    "#A8C26B",
+  "--land-color-cta-bg":  "#2E4A33",
+};
+
 interface ConfigContextType {
   config: Record<string, string>;
   loading: boolean;
@@ -71,8 +93,9 @@ function applyColors(map: Record<string, string>) {
   // Detectar modo oscuro activo
   const isDark = root.classList.contains("dark");
   const bioTokens = isDark ? BIO_DARK : BIO_LIGHT;
+  const landTokens = isDark ? LAND_DARK : LAND_LIGHT;
 
-  // Aplicar tokens según el tema, permitiendo override desde la config
+  // Aplicar tokens biocultural según el tema, permitiendo override desde la config
   const bioKeyMap: Record<string, string> = {
     bio_color_fondo:   "--bio-color-fondo",
     bio_color_tarjeta: "--bio-color-tarjeta",
@@ -83,12 +106,37 @@ function applyColors(map: Record<string, string>) {
   };
 
   Object.entries(bioTokens).forEach(([cssVar, defaultVal]) => {
-    // Solo usar el valor de la config si NO estamos en modo oscuro
-    // (en oscuro siempre usamos los tokens oscuros para que se vea bien)
     const configKey = Object.keys(bioKeyMap).find((k) => bioKeyMap[k] === cssVar);
     const val = !isDark && configKey && map[configKey] ? map[configKey] : defaultVal;
     root.style.setProperty(cssVar, val);
   });
+
+  // Aplicar tokens de landing page
+  const landKeyMap: Record<string, string> = {
+    land_color_bg:       "--land-bg-primary",
+    land_color_bg_accent: "--land-bg-accent",
+    land_color_heading:  "--land-color-heading",
+    land_color_body:     "--land-color-body",
+    land_color_accent:   "--land-color-accent",
+    land_color_sage:     "--land-color-sage",
+    land_color_cta:      "--land-color-cta-bg",
+  };
+
+  Object.entries(landTokens).forEach(([cssVar, defaultVal]) => {
+    const configKey = Object.keys(landKeyMap).find((k) => landKeyMap[k] === cssVar);
+    const val = !isDark && configKey && map[configKey] ? map[configKey] : defaultVal;
+    root.style.setProperty(cssVar, val);
+  });
+
+  // Aplicar fuentes del sistema
+  root.style.setProperty(
+    "--font-family-ui",
+    map.font_family_ui || "Satoshi, system-ui, -apple-system, sans-serif"
+  );
+  root.style.setProperty(
+    "--font-family-store",
+    map.font_family_store || "'Playfair Display', Georgia, serif"
+  );
 }
 
 export function ConfigProvider({ children }: { children: ReactNode }) {

@@ -85,12 +85,12 @@ export default function AuditoriaUI() {
   };
 
   const selectClass =
-    "px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm";
+    "px-3 py-2 border border-stroke dark:border-dark-3 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-dark-2 text-gray-900 dark:text-gray-100 text-sm";
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -114,7 +114,7 @@ export default function AuditoriaUI() {
 
       {/* Título */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-dark dark:text-white flex items-center gap-2">
           <FileText className="w-6 h-6" />
           Auditoría
         </h1>
@@ -132,7 +132,7 @@ export default function AuditoriaUI() {
             placeholder="Buscar..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm"
+            className="w-full pl-10 pr-4 py-2 border border-stroke dark:border-dark-3 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-dark-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm"
           />
         </div>
 
@@ -163,9 +163,9 @@ export default function AuditoriaUI() {
       </div>
 
       {/* Tabla */}
-      <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+      <div className="overflow-x-auto border border-stroke dark:border-dark-3 rounded-lg">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-700/60">
+          <thead className="bg-gray-2 dark:bg-dark-2">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 <Table className="w-4 h-4 inline mr-1" />
@@ -190,7 +190,7 @@ export default function AuditoriaUI() {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+          <tbody className="divide-y divide-stroke dark:divide-dark-3 bg-white dark:bg-gray-dark">
             {filteredAuditoria.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">

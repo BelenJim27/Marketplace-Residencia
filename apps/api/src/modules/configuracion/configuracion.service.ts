@@ -93,6 +93,20 @@ export class ConfiguracionService {
       { clave: 'bio_color_boton', valor: '#5c3d1e', tipo: 'color', descripcion: 'Botón primario (Agregar al carrito)' },
       { clave: 'bio_color_boton2', valor: '#8b6914', tipo: 'color', descripcion: 'Botón secundario (Comprar ahora)' },
       { clave: 'bio_fuente_titulo', valor: 'Georgia, serif', tipo: 'texto', descripcion: 'Fuente de títulos de producto' },
+      // Landing page colors
+      { clave: 'land_color_bg', valor: '#F4F0E3', tipo: 'color', descripcion: 'Landing: fondo principal' },
+      { clave: 'land_color_bg_accent', valor: '#2E4A33', tipo: 'color', descripcion: 'Landing: fondo acento/stats' },
+      { clave: 'land_color_heading', valor: '#1F3A2E', tipo: 'color', descripcion: 'Landing: color títulos' },
+      { clave: 'land_color_body', valor: 'rgba(31,58,46,0.8)', tipo: 'color', descripcion: 'Landing: color texto cuerpo' },
+      { clave: 'land_color_accent', valor: '#C97A3E', tipo: 'color', descripcion: 'Landing: color acento (dorado/bronce)' },
+      { clave: 'land_color_sage', valor: '#A8C26B', tipo: 'color', descripcion: 'Landing: verde salvia' },
+      { clave: 'land_color_cta', valor: '#1F3A2E', tipo: 'color', descripcion: 'Landing: botón CTA' },
+      // Tienda header colors
+      { clave: 'tienda_header_bg', valor: '#FFFFFF', tipo: 'color', descripcion: 'Header tienda: color fondo' },
+      { clave: 'tienda_header_border', valor: '#E6EBF1', tipo: 'color', descripcion: 'Header tienda: color borde' },
+      // System fonts
+      { clave: 'font_family_ui', valor: 'Satoshi, system-ui, -apple-system, sans-serif', tipo: 'texto', descripcion: 'Fuente del panel admin/productor' },
+      { clave: 'font_family_store', valor: "'Playfair Display', Georgia, serif", tipo: 'texto', descripcion: 'Fuente de la tienda cliente' },
     ];
     const results = [];
     for (const config of bioculturalTokens) {

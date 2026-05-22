@@ -16,9 +16,10 @@ export function RootContent({ children }: PropsWithChildren) {
   const isLoggedIn = isAuthenticated && !!user && (user.roles.length > 0 || (user.permisos?.length ?? 0) > 0);
   const isAdminOrProductor = isAdmin || isProductor;
 
-  const isAuthRoute = pathname.startsWith("/auth/");
-  const isClientOnlyRoute = pathname.startsWith("/tienda/") || pathname.startsWith("/cliente/");
-  const isClientHome = pathname === "/Cliente/inicio";
+  const p = pathname.toLowerCase();
+  const isAuthRoute = p.startsWith("/auth/");
+  const isClientOnlyRoute = p.startsWith("/tienda/") || p.startsWith("/cliente/");
+  const isClientHome = p === "/cliente/inicio";
 
   if (loading) {
     if (user && (isAdmin || isProductor)) {

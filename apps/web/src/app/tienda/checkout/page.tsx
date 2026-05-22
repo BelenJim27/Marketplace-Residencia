@@ -114,7 +114,10 @@ export default function CheckoutPage() {
   if (authLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-green-600">Cargando...</div>
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 size={24} className="animate-spin text-green-600" aria-label="Cargando" />
+          <p className="text-sm text-gray-600 dark:text-gray-400">Cargando tu sesión...</p>
+        </div>
       </div>
     );
   }
@@ -130,7 +133,7 @@ export default function CheckoutPage() {
         Volver al carrito
       </Link>
 
-      <h1 className="mb-6 text-2xl font-bold text-dark dark:text-white">Checkout</h1>
+      <h1 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">Checkout</h1>
 
       {/* Stepper */}
       <div className="mb-8 flex items-center gap-0">
@@ -201,10 +204,12 @@ export default function CheckoutPage() {
                             setMetodoPago('stripe');
                             setErrorMensaje(null);
                           }}
-                          className={`group relative rounded-lg border-2 p-4 text-left transition-all duration-200
+                          aria-pressed={metodoPago === 'stripe'}
+                          aria-label="Seleccionar pago con tarjeta de crédito o débito (Visa, Mastercard, American Express)"
+                          className={`group relative rounded-lg border-2 p-4 text-left transition-all duration-150
                             ${metodoPago === 'stripe'
-                              ? 'border-green-600 bg-green-50 shadow-lg dark:border-green-500 dark:bg-green-900/20'
-                              : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'}`}
+                              ? 'border-green-600 bg-green-50 shadow-md dark:border-green-500 dark:bg-green-900/20'
+                              : 'border-gray-200 hover:border-gray-300 hover:shadow-sm dark:border-gray-700 dark:hover:border-gray-600'}`}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex items-start gap-3">
@@ -232,10 +237,12 @@ export default function CheckoutPage() {
                             setMetodoPago('paypal');
                             setErrorMensaje(null);
                           }}
-                          className={`group relative rounded-lg border-2 p-4 text-left transition-all duration-200
+                          aria-pressed={metodoPago === 'paypal'}
+                          aria-label="Seleccionar pago con PayPal - Rápido y seguro con tu cuenta PayPal"
+                          className={`group relative rounded-lg border-2 p-4 text-left transition-all duration-150
                             ${metodoPago === 'paypal'
-                              ? 'border-blue-500 bg-blue-50 shadow-lg dark:border-blue-500 dark:bg-blue-900/20'
-                              : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'}`}
+                              ? 'border-blue-500 bg-blue-50 shadow-md dark:border-blue-500 dark:bg-blue-900/20'
+                              : 'border-gray-200 hover:border-gray-300 hover:shadow-sm dark:border-gray-700 dark:hover:border-gray-600'}`}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex items-start gap-3">
@@ -261,16 +268,16 @@ export default function CheckoutPage() {
                     {/* Información de beneficios */}
                     {metodoPago === 'stripe' && isStripeConfigured() && (
                       <div className="mt-4 rounded-lg border border-green-100 bg-green-50/50 p-4 text-sm text-gray-700 dark:border-green-900 dark:bg-green-900/10 dark:text-gray-300">
-                        <h4 className="mb-2 font-semibold text-green-900 dark:text-green-400">Ventajas de pagar con tarjeta:</h4>
+                        <h4 className="mb-2 font-semibold text-green-900 dark:text-green-400">Por qué usar tarjeta</h4>
                         <ul className="space-y-1 text-xs">
                           <li className="flex items-center gap-2">
-                            <span className="text-green-600">✓</span> Pago instantáneo
+                            <span className="text-green-600">✓</span> Pago inmediato
                           </li>
                           <li className="flex items-center gap-2">
-                            <span className="text-green-600">✓</span> Protección de comprador garantizada
+                            <span className="text-green-600">✓</span> Stripe protege tu tarjeta
                           </li>
                           <li className="flex items-center gap-2">
-                            <span className="text-green-600">✓</span> Recibe tu confirmación al instante
+                            <span className="text-green-600">✓</span> Confirmación instantánea del pedido
                           </li>
                         </ul>
                       </div>
@@ -278,16 +285,16 @@ export default function CheckoutPage() {
 
                     {metodoPago === 'paypal' && isPaypalConfigured() && (
                       <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/50 p-4 text-sm text-gray-700 dark:border-blue-900 dark:bg-blue-900/10 dark:text-gray-300">
-                        <h4 className="mb-2 font-semibold text-blue-900 dark:text-blue-400">Ventajas de pagar con PayPal:</h4>
+                        <h4 className="mb-2 font-semibold text-blue-900 dark:text-blue-400">Por qué usar PayPal</h4>
                         <ul className="space-y-1 text-xs">
                           <li className="flex items-center gap-2">
-                            <span className="text-blue-600">✓</span> No compartes datos de tarjeta
+                            <span className="text-blue-600">✓</span> Nunca compartimos tu tarjeta
                           </li>
                           <li className="flex items-center gap-2">
-                            <span className="text-blue-600">✓</span> Protección completa de PayPal
+                            <span className="text-blue-600">✓</span> PayPal maneja tu seguridad
                           </li>
                           <li className="flex items-center gap-2">
-                            <span className="text-blue-600">✓</span> Pago rápido con un clic
+                            <span className="text-blue-600">✓</span> Pago de un clic si tienes cuenta
                           </li>
                         </ul>
                       </div>
@@ -312,16 +319,16 @@ export default function CheckoutPage() {
                     )}
                     {stripeConfigured && !dobRequired && !clientSecret && (
                       <div className="space-y-4">
-                        <div className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/20 dark:text-gray-400">
-                          <Loader2 size={16} className="animate-spin" />
-                          Preparando el formulario de pago seguro…
+                        <div className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/20 dark:text-gray-400" role="status" aria-live="polite">
+                          <Loader2 size={16} className="animate-spin" aria-label="Cargando" />
+                          Preparando el formulario de pago con Stripe…
                         </div>
                         <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-300">
                           <div className="flex gap-2">
-                            <Lock size={16} className="shrink-0" />
+                            <Lock size={16} className="shrink-0" aria-hidden="true" />
                             <div>
-                              <p className="font-medium">Pago 100% seguro con Stripe</p>
-                              <p className="mt-1 text-xs">Tu información de tarjeta está encriptada con el más alto nivel de seguridad y nunca se almacena en nuestros servidores.</p>
+                              <p className="font-medium">Pago protegido por Stripe</p>
+                              <p className="mt-1 text-xs">Tu tarjeta nunca se almacena en nuestros servidores. Stripe maneja la encriptación de extremo a extremo.</p>
                             </div>
                           </div>
                         </div>
@@ -365,16 +372,16 @@ export default function CheckoutPage() {
                     )}
                     {isPaypalConfigured() && !dobRequired && !paypalOrderId && (
                       <div className="space-y-4">
-                        <div className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/20 dark:text-gray-400">
-                          <Loader2 size={16} className="animate-spin" />
-                          Preparando la opción de pago con PayPal…
+                        <div className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/20 dark:text-gray-400" role="status" aria-live="polite">
+                          <Loader2 size={16} className="animate-spin" aria-label="Cargando" />
+                          Iniciando sesión con PayPal…
                         </div>
                         <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
                           <div className="flex gap-2">
-                            <Lock size={16} className="shrink-0" />
+                            <Lock size={16} className="shrink-0" aria-hidden="true" />
                             <div>
-                              <p className="font-medium">Pago protegido por PayPal</p>
-                              <p className="mt-1 text-xs">Serás redirigido a PayPal para completar tu pago de forma segura. Nunca compartimos tus datos bancarios.</p>
+                              <p className="font-medium">PayPal maneja tu información bancaria</p>
+                              <p className="mt-1 text-xs">Te redirigiremos a PayPal. Nunca vemos tu número de tarjeta ni datos bancarios.</p>
                             </div>
                           </div>
                         </div>
@@ -383,8 +390,8 @@ export default function CheckoutPage() {
                     {isPaypalConfigured() && !dobRequired && paypalOrderId && paso === "pago" && (
                       <div className="space-y-4">
                         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
-                          <p className="mb-2 font-medium">Haz clic en el botón de PayPal a continuación</p>
-                          <p className="text-xs">Se abrirá una ventana segura para que completes tu pago con PayPal. Ten a mano tu cuenta PayPal lista.</p>
+                          <p className="mb-2 font-medium">Completa tu pago en PayPal</p>
+                          <p className="text-xs">Haz clic en el botón abajo. Te redirigiremos a PayPal de forma segura para que confirmes tu pago.</p>
                         </div>
                         <PaypalCheckoutButton
                           orderId={paypalOrderId}
@@ -418,7 +425,7 @@ export default function CheckoutPage() {
 
             {/* Error */}
             {errorMensaje && (
-              <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+              <p aria-live="polite" role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
                 {errorMensaje}
               </p>
             )}
@@ -428,7 +435,7 @@ export default function CheckoutPage() {
               {paso !== "direccion" ? (
                 <button
                   onClick={retrocederPaso}
-                  className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"
+                  className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800/50"
                 >
                   <ArrowLeft size={16} />
                   Atrás
@@ -444,10 +451,10 @@ export default function CheckoutPage() {
                       (metodoPago === 'paypal' && !paypalOrderId)
                     )
                   }
-                  className={`flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-medium text-white
+                  className={`flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-medium transition-colors
                     ${paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))
-                      ? "cursor-not-allowed bg-gray-400"
-                      : "bg-green-600 hover:bg-green-700"}`}
+                      ? "cursor-not-allowed bg-gray-300 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                      : "bg-green-600 text-white hover:bg-green-700 active:bg-green-800 dark:hover:bg-green-700"}`}
                 >
                   Continuar
                   <ChevronRight size={16} />
@@ -545,14 +552,15 @@ function DireccionStep({
   return (
     <div>
       <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Dirección de envío</h2>
+      <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">Te enviaremos tu pedido a esta dirección.</p>
 
       {direcciones.length > 0 && !mostrarFormDireccion && (
         <div className="mb-4 space-y-3">
           {direcciones.map((dir: any, idx: number) => (
             <label
               key={idx}
-              className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors
-                ${direccionSeleccionada === dir ? "border-green-600 bg-green-50 dark:bg-green-900/20" : "border-gray-200 dark:border-gray-700"}`}
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-all duration-150
+                ${direccionSeleccionada === dir ? "border-green-600 bg-green-50 shadow-sm dark:bg-green-900/20" : "border-gray-200 hover:shadow-sm dark:border-gray-700"}`}
             >
               <input
                 type="radio"
@@ -589,7 +597,7 @@ function DireccionStep({
             onClick={() => setMostrarFormDireccion(true)}
             className="text-sm text-green-600 hover:underline"
           >
-            + Agregar nueva dirección
+            + Agregar otra dirección
           </button>
         </div>
       )}
@@ -597,7 +605,7 @@ function DireccionStep({
       {mostrarFormDireccion && (
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">País *</label>
+            <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">País de envío *</label>
             <select
               value={nuevaDireccion.pais_iso2 || "MX"}
               onChange={(e) => setNuevaDireccion((p: any) => ({
@@ -606,7 +614,7 @@ function DireccionStep({
                 es_internacional: e.target.value !== "MX",
               }))}
               disabled={paisesLoading}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white disabled:opacity-60"
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm transition-colors focus:border-green-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-900/30 dark:disabled:text-gray-500"
             >
               {paisesLoading && <option value="MX">Cargando...</option>}
               {!paisesLoading && paises.length === 0 && <option value="MX">México</option>}
@@ -625,12 +633,12 @@ function DireccionStep({
               value={nuevaDireccion.nombre_destinatario || ""}
               onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, nombre_destinatario: e.target.value }))}
               placeholder="Nombre completo"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Teléfono de contacto</label>
+            <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Teléfono (para entregas)</label>
             <input
               type="tel"
               value={nuevaDireccion.telefono || ""}
@@ -641,9 +649,9 @@ function DireccionStep({
               }}
               placeholder="10 dígitos, ej. 9511234567"
               maxLength={10}
-              className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.telefono ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
+              className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.telefono ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
             />
-            {formErrors.telefono && <p className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
+            {formErrors.telefono && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
           </div>
 
           <div>
@@ -651,9 +659,9 @@ function DireccionStep({
               type="button"
               onClick={handleUsarGPS}
               disabled={gpsLoading}
-              className="flex items-center gap-2 rounded-lg border border-green-500 px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50 disabled:opacity-60 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-900/20"
+              className="flex items-center gap-2 rounded-lg border border-green-500 px-4 py-3 text-sm font-medium text-green-600 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-900/20"
             >
-              {gpsLoading ? <Loader2 size={15} className="animate-spin" /> : <MapPin size={15} />}
+              {gpsLoading ? <Loader2 size={15} className="animate-spin" aria-label="Obteniendo ubicación" /> : <MapPin size={15} />}
               {gpsLoading ? "Obteniendo ubicación..." : "Usar mi ubicación actual"}
             </button>
             {gpsError && <p className="mt-1 text-xs text-red-500">{gpsError}</p>}
@@ -688,11 +696,11 @@ function DireccionStep({
               }}
               placeholder={nuevaDireccion.es_internacional ? "Código postal" : "5 dígitos, ej. 68000"}
               maxLength={nuevaDireccion.es_internacional ? 20 : 5}
-              className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.cp ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
+              className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.cp ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
             />
-            {formErrors.cp && <p className="mt-1 text-xs text-red-500">{formErrors.cp}</p>}
+            {formErrors.cp && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.cp}</p>}
           </div>
-          <Field label="Referencia" value={nuevaDireccion.referencia || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, referencia: v }))} placeholder="Ej. Casa color azul, frente al parque" />
+          <Field label="Referencia (opcional)" value={nuevaDireccion.referencia || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, referencia: v }))} placeholder="Ej. Casa color azul, frente al parque. Ayuda al repartidor." />
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Etiqueta (opcional)" value={nuevaDireccion.nombre_etiqueta || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, nombre_etiqueta: v }))} placeholder="Ej. Casa, Oficina" />
@@ -701,7 +709,7 @@ function DireccionStep({
               <select
                 value={nuevaDireccion.tipo || "hogar"}
                 onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, tipo: e.target.value }))}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               >
                 <option value="hogar">Hogar</option>
                 <option value="trabajo">Trabajo</option>
@@ -725,16 +733,16 @@ function DireccionStep({
           <div className="flex gap-3">
             <button
               onClick={handleGuardar}
-              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+              className="rounded-lg bg-green-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-green-700 active:bg-green-800"
             >
               Guardar dirección
             </button>
             {direcciones.length > 0 && (
               <button
                 onClick={() => setMostrarFormDireccion(false)}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"
+                className="rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800/50"
               >
-                Cancelar
+                Usar otra dirección
               </button>
             )}
           </div>
@@ -772,7 +780,7 @@ function DobCaptureForm({
   return (
     <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-800 dark:bg-amber-900/20">
       <p className="mb-2 font-medium text-amber-900 dark:text-amber-200">
-        Verificación de edad ({edadRequerida}+)
+        Confirmar tu edad ({edadRequerida}+)
       </p>
       <p className="mb-3 text-amber-800 dark:text-amber-300">{message}</p>
       <form onSubmit={handle} className="space-y-3">
@@ -781,14 +789,14 @@ function DobCaptureForm({
           value={dob}
           onChange={(e) => setDob(e.target.value)}
           max={new Date().toISOString().slice(0, 10)}
-          className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none dark:border-amber-700 dark:bg-gray-800 dark:text-white"
+          className="w-full rounded-lg border border-amber-300 px-3 py-3 text-sm focus:border-amber-500 focus:outline-none dark:border-amber-700 dark:bg-gray-800 dark:text-white"
           required
         />
-        {localError && <p className="text-xs text-red-600 dark:text-red-400">{localError}</p>}
+        {localError && <p aria-live="polite" role="alert" className="text-xs text-red-600 dark:text-red-400">{localError}</p>}
         <button
           type="submit"
           disabled={submitting}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white
+          className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white
             ${submitting ? "cursor-not-allowed bg-gray-400" : "bg-amber-600 hover:bg-amber-700"}`}
         >
           {submitting ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
@@ -808,7 +816,7 @@ function Field({ label, value, onChange, placeholder }: { label: string; value: 
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+        className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
       />
     </div>
   );
@@ -818,6 +826,7 @@ function EnvioStep({ cotizaciones, cotizandoLoading, cotizandoError, envioSelecc
   return (
     <div>
       <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Método de envío</h2>
+      <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">Elige cuándo quieres que llegue tu pedido.</p>
       {cotizandoLoading && (
         <div className="flex items-center justify-center rounded-lg border-2 border-gray-200 p-8">
           <div className="text-center">
@@ -832,7 +841,7 @@ function EnvioStep({ cotizaciones, cotizandoLoading, cotizandoError, envioSelecc
       )}
       {!cotizandoLoading && cotizaciones.length === 0 && !cotizandoError && (
         <div className="rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400">
-          No hay opciones de envío disponibles. Verifica la dirección.
+          No hay opciones de envío a esta dirección. Revisa el código postal o selecciona otra dirección.
         </div>
       )}
       <div className="space-y-3">
@@ -843,8 +852,8 @@ function EnvioStep({ cotizaciones, cotizandoLoading, cotizandoError, envioSelecc
           return (
             <label
               key={`${cot.carrier}-${cot.productCode}`}
-              className={`flex cursor-pointer items-center gap-4 rounded-lg border-2 p-4 transition-colors
-                ${isSelected ? "border-green-600 bg-green-50 dark:bg-green-900/20" : "border-gray-200 dark:border-gray-700"}`}
+              className={`flex cursor-pointer items-center gap-4 rounded-lg border-2 p-4 transition-all duration-150
+                ${isSelected ? "border-green-600 bg-green-50 shadow-sm dark:bg-green-900/20" : "border-gray-200 hover:shadow-sm dark:border-gray-700"}`}
             >
               <input
                 type="radio"
@@ -1000,10 +1009,13 @@ function PagoYResumen({
         <button
           onClick={handleConfirm}
           disabled={confirming || !stripe || !elements}
-          className={`mt-2 flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white transition-colors
-            ${confirming || !stripe ? "cursor-not-allowed bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
+          aria-label="Confirmar pago - transacción segura"
+          className={`mt-2 flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-colors
+            ${confirming || !stripe
+              ? "cursor-not-allowed bg-gray-300 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+              : "bg-green-600 text-white hover:bg-green-700 active:bg-green-800 dark:hover:bg-green-700"}`}
         >
-          <Lock size={16} />
+          <Lock size={16} aria-hidden="true" />
           {confirming ? "Procesando..." : "Confirmar pago"}
         </button>
       </div>
@@ -1037,11 +1049,12 @@ function PagoYResumenPaypal({
                   alt={item.nombre}
                   fill
                   sizes="48px"
+                  loading="lazy"
                   className="object-cover"
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-xs text-gray-400">
-                  <ShoppingBag size={16} />
+                  <ShoppingBag size={16} aria-hidden="true" />
                 </div>
               )}
             </div>

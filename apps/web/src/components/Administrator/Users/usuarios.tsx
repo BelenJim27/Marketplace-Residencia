@@ -142,11 +142,11 @@ export default function UsuariosUI() {
   const activeUsers    = usuarios.filter((u) => u.estado === "activo").length;
   const usersWithRoles = usuarios.filter((u) => (u.usuario_rol?.length || 0) > 0).length;
 
-  const inputCls = "w-full rounded-xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-3 text-slate-800 dark:text-white p-3 text-sm outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all placeholder-gray-400 dark:placeholder-dark-6";
+  const inputCls = "w-full rounded-xl border border-stroke dark:border-dark-3 bg-white dark:bg-dark-2 text-dark dark:text-white p-3 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder-gray-400 dark:placeholder-gray-500";
   const labelCls = "mb-2 block text-sm font-medium text-slate-700 dark:text-dark-7";
 
   if (loading) {
-    return <div className="flex min-h-[400px] items-center justify-center"><Loader2 className="animate-spin text-green-600" size={40} /></div>;
+    return <div className="flex min-h-[400px] items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>;
   }
 
   return (
@@ -154,12 +154,12 @@ export default function UsuariosUI() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Gestión de Usuarios</h1>
-          <p className="text-gray-500 dark:text-dark-6 text-sm mt-0.5">Controla los accesos y permisos del personal</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-dark dark:text-white tracking-tight">Gestión de Usuarios</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Controla los accesos y permisos del personal</p>
         </div>
         <button
           onClick={() => { setShowModal(true); setEditingUsuario(null); setUserFormData(DEFAULT_FORM); }}
-          className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95 w-full sm:w-auto"
+          className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95 w-full sm:w-auto"
         >
           <Plus size={18} className="inline mr-2" /> Nuevo Usuario
         </button>
@@ -171,12 +171,12 @@ export default function UsuariosUI() {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Total Usuarios", value: usuarios.length,      color: "text-slate-800 dark:text-white" },
+          { label: "Total Usuarios", value: usuarios.length,      color: "text-dark dark:text-white" },
           { label: "Activos",        value: activeUsers,           color: "text-green-600" },
           { label: "Con Roles",      value: usersWithRoles,        color: "text-indigo-600" },
           { label: "Pendientes",     value: usuarios.length - activeUsers, color: "text-amber-500" },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-white dark:bg-dark-2 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-dark-3">
+          <div key={label} className="bg-white dark:bg-gray-dark p-5 rounded-2xl shadow-sm border border-stroke dark:border-dark-3">
             <p className="text-gray-400 dark:text-dark-6 text-[10px] font-bold uppercase tracking-widest">{label}</p>
             <h2 className={`text-2xl font-black mt-1 ${color}`}>{value}</h2>
           </div>
@@ -190,7 +190,7 @@ export default function UsuariosUI() {
             placeholder="Buscar por nombre o correo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2 text-slate-800 dark:text-white placeholder-gray-400 dark:placeholder-dark-6 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all"
+            className="w-full border border-stroke dark:border-dark-3 bg-white dark:bg-dark-2 text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
           />
         </div>
         <select
@@ -204,7 +204,7 @@ export default function UsuariosUI() {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-dark-2 border border-gray-200 dark:border-dark-3 rounded-2xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-dark border border-stroke dark:border-dark-3 rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead className="bg-gray-50/50 dark:bg-dark-3 text-gray-400 dark:text-dark-6 text-[10px] font-bold uppercase tracking-widest border-b border-gray-100 dark:border-dark-3">
@@ -354,7 +354,7 @@ export default function UsuariosUI() {
                 type="button"
                 onClick={(e) => editingUsuario ? handleUpdateUsuario(e as unknown as React.FormEvent) : handleCreateUsuario(e as unknown as React.FormEvent)}
                 disabled={saving}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 py-3 font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
                 {saving && <Loader2 className="animate-spin" size={16} />}
                 {editingUsuario ? "Actualizar" : "Crear"}

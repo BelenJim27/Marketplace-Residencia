@@ -315,8 +315,11 @@ export function useCheckout() {
 
   const prepararPago = useCallback(async () => {
     if (!user?.id_usuario || !direccionSeleccionada || !envioSeleccionado) return null;
-    if (clientSecret && pedidoIdCreado) {
+    if (metodoPago === 'stripe' && clientSecret && pedidoIdCreado) {
       return { pedidoId: pedidoIdCreado, clientSecret };
+    }
+    if (metodoPago === 'paypal' && paypalOrderId && pedidoIdCreado) {
+      return { pedidoId: pedidoIdCreado, paypalOrderId };
     }
     const token = getCookie("token") || "";
     setCargando(true);
@@ -455,6 +458,7 @@ export function useCheckout() {
     extraerDireccionDestino,
     buildShippingAddressForStripe,
     clientSecret,
+    paypalOrderId,
     pedidoIdCreado,
     metodoPago,
   ]);

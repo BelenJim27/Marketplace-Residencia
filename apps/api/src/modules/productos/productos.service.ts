@@ -242,6 +242,10 @@ export class ProductosService {
       where: {
         ...where,
         id_lote: { not: null }, // Solo productos vinculados a lotes
+        status: 'activo',
+        inventario: {
+          some: { stock: { gt: 0 } },
+        },
       },
       include: productoInclude as any,
       orderBy: { creado_en: 'desc' },

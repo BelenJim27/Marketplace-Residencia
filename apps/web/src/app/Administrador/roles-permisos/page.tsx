@@ -195,15 +195,15 @@ export default function RolesPermisosPage() {
     sin_rol: usuarios.filter((u) => getUserRoles(u).length === 0).length,
   };
 
-  const inputCls      = "w-full rounded-xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-3 text-slate-800 dark:text-white p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 placeholder-gray-400 dark:placeholder-dark-6";
+  const inputCls      = "w-full rounded-xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-3 text-dark dark:text-white p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 placeholder-gray-400 dark:placeholder-dark-6";
   const labelCls      = "mb-2 block text-sm font-medium text-slate-700 dark:text-dark-7";
   const modalWrapCls  = "fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4";
   const modalBoxCls   = "w-full max-w-md rounded-2xl bg-white dark:bg-dark-2 shadow-2xl";
   const modalHdrCls   = "flex items-center justify-between border-b border-gray-100 dark:border-dark-3 p-6";
   const checkboxRowCls= (active: boolean) => `flex cursor-pointer items-center rounded-xl border p-3 transition-colors ${active ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "border-gray-200 dark:border-dark-3 hover:bg-gray-50 dark:hover:bg-dark-3"}`;
-  const checkboxBoxCls= (active: boolean) => `mr-3 flex h-5 w-5 items-center justify-center rounded-md ${active ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-dark-3"}`;
+  const checkboxBoxCls= (active: boolean) => `mr-3 flex h-5 w-5 items-center justify-center rounded-md ${active ? "bg-primary text-white" : "bg-gray-100 dark:bg-dark-3"}`;
   const btnCancel     = "flex-1 rounded-xl border border-gray-200 dark:border-dark-3 py-3 font-medium text-slate-600 dark:text-dark-6 transition-colors hover:bg-gray-50 dark:hover:bg-dark-3";
-  const btnSave       = "flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 py-3 font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50";
+  const btnSave       = "flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50";
 
   if (loading) return <div className="flex min-h-[400px] items-center justify-center"><Loader2 className="animate-spin text-green-600" size={40} /></div>;
 
@@ -212,7 +212,7 @@ export default function RolesPermisosPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Gestión de Roles y Permisos</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-dark dark:text-white">Gestión de Roles y Permisos</h1>
           <p className="mt-0.5 text-sm text-gray-500 dark:text-dark-6">Administra roles, permisos y usuarios del sistema</p>
         </div>
       </div>
@@ -242,7 +242,7 @@ export default function RolesPermisosPage() {
           <div className="flex justify-end">
             <button
               onClick={() => { setEditingRol(null); setFormDataRol({ nombre: "" }); setShowModalRol(true); }}
-              className="flex items-center gap-2 rounded-xl bg-green-600 px-4 sm:px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700"
+              className="flex items-center gap-2 rounded-xl bg-primary px-4 sm:px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary/90"
             >
               <Plus size={18} /> Nuevo Rol
             </button>
@@ -319,7 +319,7 @@ export default function RolesPermisosPage() {
       {tab === "permisos" && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <button onClick={() => { setEditingPermiso(null); setFormDataPermiso({ nombre: "" }); setShowModalPermiso(true); }} className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700">
+            <button onClick={() => { setEditingPermiso(null); setFormDataPermiso({ nombre: "" }); setShowModalPermiso(true); }} className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary/90">
               <Plus size={18} /> Nuevo Permiso
             </button>
           </div>
@@ -333,7 +333,7 @@ export default function RolesPermisosPage() {
                     <button onClick={() => handleDeletePermiso(permiso.id_permiso)} className="rounded-lg p-2 text-gray-300 opacity-0 transition-colors hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"><Trash2 size={16} /></button>
                   </div>
                 </div>
-                <h3 className="mt-3 text-sm font-bold text-slate-800 dark:text-white">{permiso.nombre}</h3>
+                <h3 className="mt-3 text-sm font-bold text-dark dark:text-white">{permiso.nombre}</h3>
                 <p className="mt-1 text-xs text-gray-400 dark:text-dark-6">ID: #{permiso.id_permiso}</p>
               </div>
             ))}
@@ -351,7 +351,7 @@ export default function RolesPermisosPage() {
               <Filter size={15} />
               <span>{usuariosFiltrados.length} usuario{usuariosFiltrados.length !== 1 ? "s" : ""}</span>
             </div>
-            <button onClick={() => setShowModalUsuario(true)} className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700">
+            <button onClick={() => setShowModalUsuario(true)} className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary/90">
               <UserPlus size={18} /> Nuevo Usuario
             </button>
           </div>
@@ -359,9 +359,9 @@ export default function RolesPermisosPage() {
           {/* ── Filtros por rol ── */}
           <div className="flex flex-wrap gap-2">
             {[
-              { key: "todos",         label: "Todos",          color: "bg-gray-100 dark:bg-dark-3 text-gray-700 dark:text-white border-gray-200 dark:border-dark-3",                     activeColor: "bg-slate-800 dark:bg-white text-white dark:text-slate-800 border-slate-800 dark:border-white" },
+              { key: "todos",         label: "Todos",          color: "bg-gray-100 dark:bg-dark-3 text-gray-700 dark:text-white border-gray-200 dark:border-dark-3",                     activeColor: "bg-slate-800 dark:bg-white text-white dark:text-dark border-slate-800 dark:border-white" },
               { key: "administrador", label: "Administrador",  color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800", activeColor: "bg-indigo-600 text-white border-indigo-600" },
-              { key: "cliente",       label: "Cliente",        color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-800",       activeColor: "bg-green-600 text-white border-green-600" },
+              { key: "cliente",       label: "Cliente",        color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-800",       activeColor: "bg-primary text-white border-green-600" },
               { key: "productor",     label: "Productor",      color: "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800",       activeColor: "bg-amber-500 text-white border-amber-500" },
               { key: "sin_rol",       label: "Sin rol",        color: "bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 border-red-100 dark:border-red-800",                   activeColor: "bg-red-500 text-white border-red-500" },
             ].map(({ key, label, color, activeColor }) => (
@@ -399,7 +399,7 @@ export default function RolesPermisosPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-xs font-bold text-green-700 dark:text-green-400">{usuario.nombre?.charAt(0).toUpperCase()}</div>
-                          <span className="font-medium text-slate-800 dark:text-white">{usuario.nombre}</span>
+                          <span className="font-medium text-dark dark:text-white">{usuario.nombre}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 dark:text-dark-6">{usuario.email}</td>
@@ -436,7 +436,7 @@ export default function RolesPermisosPage() {
                       {usuario.nombre?.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-800 dark:text-white text-sm">{usuario.nombre}</p>
+                      <p className="font-semibold text-dark dark:text-white text-sm">{usuario.nombre}</p>
                       <p className="text-xs text-gray-500 dark:text-dark-6">{usuario.email}</p>
                     </div>
                   </div>
@@ -462,7 +462,7 @@ export default function RolesPermisosPage() {
       {showModalRol && (
         <div className={modalWrapCls}><div className={modalBoxCls}>
           <div className={modalHdrCls}>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white">{editingRol ? "Editar Rol" : "Nuevo Rol"}</h3>
+            <h3 className="text-lg font-bold text-dark dark:text-white">{editingRol ? "Editar Rol" : "Nuevo Rol"}</h3>
             <button onClick={() => setShowModalRol(false)} className="text-gray-400 dark:text-dark-6 hover:text-slate-600 dark:hover:text-white"><X size={20} /></button>
           </div>
           <form onSubmit={editingRol ? handleUpdateRol : handleCreateRol} className="p-6">
@@ -482,7 +482,7 @@ export default function RolesPermisosPage() {
       {showModalPermiso && (
         <div className={modalWrapCls}><div className={modalBoxCls}>
           <div className={modalHdrCls}>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white">{editingPermiso ? "Editar Permiso" : "Nuevo Permiso"}</h3>
+            <h3 className="text-lg font-bold text-dark dark:text-white">{editingPermiso ? "Editar Permiso" : "Nuevo Permiso"}</h3>
             <button onClick={() => { setShowModalPermiso(false); setEditingPermiso(null); setFormDataPermiso({ nombre: "" }); }} className="text-gray-400 dark:text-dark-6 hover:text-slate-600 dark:hover:text-white"><X size={20} /></button>
           </div>
           <form onSubmit={editingPermiso ? handleUpdatePermiso : handleCreatePermiso} className="p-6">
@@ -504,7 +504,7 @@ export default function RolesPermisosPage() {
         <div className={modalWrapCls}>
           <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-dark-2 shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className={modalHdrCls}>
-              <div><h3 className="text-lg font-bold text-slate-800 dark:text-white">Asignar Permisos al Rol</h3><p className="text-sm text-gray-500 dark:text-dark-6">{selectedRol.nombre}</p></div>
+              <div><h3 className="text-lg font-bold text-dark dark:text-white">Asignar Permisos al Rol</h3><p className="text-sm text-gray-500 dark:text-dark-6">{selectedRol.nombre}</p></div>
               <button onClick={() => setShowModalPermisosRol(false)} className="text-gray-400 dark:text-dark-6 hover:text-slate-600 dark:hover:text-white"><X size={20} /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-6">
@@ -539,7 +539,7 @@ export default function RolesPermisosPage() {
         <div className={modalWrapCls}>
           <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-dark-2 shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className={modalHdrCls}>
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">{editingUsuario ? "Editar Usuario" : "Nuevo Usuario"}</h3>
+              <h3 className="text-lg font-bold text-dark dark:text-white">{editingUsuario ? "Editar Usuario" : "Nuevo Usuario"}</h3>
               <button onClick={() => { setShowModalUsuario(false); setEditingUsuario(null); setSelectedFotoFile(null); }} className="text-gray-400 dark:text-dark-6 hover:text-slate-600 dark:hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto">
@@ -573,7 +573,7 @@ export default function RolesPermisosPage() {
         <div className={modalWrapCls}>
           <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-dark-2 shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className={modalHdrCls}>
-              <div><h3 className="text-lg font-bold text-slate-800 dark:text-white">Asignar Roles al Usuario</h3><p className="text-sm text-gray-500 dark:text-dark-6">{selectedUser.nombre}</p></div>
+              <div><h3 className="text-lg font-bold text-dark dark:text-white">Asignar Roles al Usuario</h3><p className="text-sm text-gray-500 dark:text-dark-6">{selectedUser.nombre}</p></div>
               <button onClick={() => setShowModalAsignarRoles(false)} className="text-gray-400 dark:text-dark-6 hover:text-slate-600 dark:hover:text-white"><X size={20} /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-6">

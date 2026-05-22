@@ -695,14 +695,18 @@ export default function ProductoDetallePage() {
                   href={`https://www.amazon.com/s?k=${encodeURIComponent(producto.nombre)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-                  style={{ backgroundColor: "#FF9900" }}
+                  className="flex items-center justify-center gap-2 rounded px-4 py-3 sm:px-6 font-semibold transition-all duration-200 hover:shadow-lg hover:brightness-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
+                  style={{ backgroundColor: "#FF9900", color: "white" }}
                   title="Buscar en Amazon"
                 >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 0c6.627 0 12 5.373 12 12s-5.373 12-12 12S0 18.627 0 12 5.373 0 12 0z"/>
-                    <path fill="white" d="M6.5 11c-.828 0-1.5.672-1.5 1.5v1c0 .828.672 1.5 1.5 1.5h11c.828 0 1.5-.672 1.5-1.5v-1c0-.828-.672-1.5-1.5-1.5h-11z"/>
-                    <path fill="white" d="M8 9.5c0 .276.224.5.5.5h7c.276 0 .5-.224.5-.5V8c0-.552-.448-1-1-1H9c-.552 0-1 .448-1 1v1.5z"/>
+                  {/* Amazon logo - stylized "a" and "z" with smile arc */}
+                  <svg className="w-6 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    {/* A */}
+                    <path d="M4 20v-8l4-8h1l4 8v8H12v-2H8v2H4z" fill="currentColor"/>
+                    {/* Z */}
+                    <path d="M16 12h4v2h-4v6h4v2h-6v-2h4v-4h-4v-2h2v-2h2z" fill="currentColor"/>
+                    {/* Smile arc connecting a-z */}
+                    <path d="M8 22Q16 20 20 22" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
                   </svg>
                   <span className="hidden sm:inline">Comprar en Amazon</span>
                   <span className="sm:hidden">Amazon</span>

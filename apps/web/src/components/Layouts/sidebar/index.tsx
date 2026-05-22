@@ -63,7 +63,7 @@ export function Sidebar() {
           backgroundColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.08)",
         }}
         className={cn(
-          "border-r transition-all duration-300 ease-linear overflow-hidden h-screen sticky top-0 dark:border-gray-800 dark:bg-gray-900",
+          "border-r transition-all duration-300 ease-linear overflow-hidden h-screen sticky top-0 dark:border-gray-800 dark:bg-gray-dark",
           isMobile
             ? isOpen
               ? "translate-x-0 fixed bottom-0 top-0 left-0 z-50 w-[280px] max-w-[85vw]"
@@ -233,7 +233,7 @@ export function Sidebar() {
 
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-4 sm:p-6 shadow-2xl dark:bg-gray-900">
+          <div className="w-full max-w-sm rounded-xl bg-white p-4 sm:p-6 shadow-2xl dark:bg-gray-dark">
             <h3 className="text-base sm:text-lg font-semibold text-dark dark:text-white">Cerrar sesión</h3>
             <p className="mt-2 text-sm text-gray-500">¿Estás seguro que deseas cerrar sesión?</p>
 
