@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-export default function ProfileLayout({
+export default function TiendaLayout({
   children,
 }: {
   children: React.ReactNode;

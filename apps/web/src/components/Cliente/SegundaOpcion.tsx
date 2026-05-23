@@ -489,7 +489,7 @@ export default function LandingPageOaxaca() {
           {/* CTA */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
             <button
-              onClick={() => router.push("/Cliente/producto")}
+              onClick={() => router.push("/cliente/producto")}
               style={{
                 display: "flex", alignItems: "center", gap: "8px",
                 fontSize: "14px", fontWeight: 600,
@@ -880,7 +880,7 @@ export default function LandingPageOaxaca() {
 
           {/* CTA */}
           <div style={{ display: "flex", justifyContent: "center", marginTop: isMobile ? "32px" : "40px" }}>
-            <button onClick={() => router.push("/Cliente/producto")} style={{
+            <button onClick={() => router.push("/cliente/producto")} style={{
               display: "flex", alignItems: "center", gap: "8px",
               fontSize: "14px", fontWeight: 600, padding: "13px 28px", borderRadius: "6px",
               background: colorAccent, color: colorHeading,
@@ -1008,7 +1008,7 @@ export default function LandingPageOaxaca() {
               const imgSrc   = prod?.imagen || (cfg[cfgKey] as string);
               const nombre   = prod?.nombre ?? card.nombre;
               const cantidad = prod?.cantidad ?? 0;
-              const href     = prod?.id ? `/Cliente/producto/${prod.id}` : "/Cliente/producto";
+              const href     = prod?.id ? `/cliente/producto/${prod.id}` : "/cliente/producto";
               return (
                 <div
                   key={i}
@@ -1051,7 +1051,7 @@ export default function LandingPageOaxaca() {
         {/* CTA */}
         <div style={{ display: "flex", justifyContent: "center", marginTop: "40px" }}>
           <button
-            onClick={() => router.push("/Cliente/producto")}
+            onClick={() => router.push("/cliente/producto")}
             style={{
               display: "flex", alignItems: "center", gap: "8px",
               fontSize: "14px", fontWeight: 600, padding: "13px 32px",
