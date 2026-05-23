@@ -16,11 +16,21 @@ import { getStripe, isTestMode, isStripeConfigured } from "@/lib/stripe";
 import { isPaypalConfigured, getPaypalClientId } from "@/lib/paypal";
 import PaypalCheckoutButton from "@/components/PaypalCheckoutButton";
 
-const PASOS: { key: CheckoutStep; label: string; icon: React.ReactNode }[] = [
-  { key: "direccion", label: "Dirección", icon: <Truck size={16} /> },
-  { key: "envio", label: "Envío", icon: <Truck size={16} /> },
-  { key: "pago", label: "Pago", icon: <CreditCard size={16} /> },
-  { key: "resumen", label: "Confirmar", icon: <CheckCircle size={16} /> },
+// Paleta de colores similar a productor/solicitar
+const COLOR_PALETTE = {
+  green: "#2E4A33",
+  copper: "#C97A3E",
+  amber: "#C89B4A",
+  cream: "#F4F0E3",
+  white: "#FFFFFF",
+  border: "rgba(46,74,51,0.12)",
+};
+
+const PASOS: { key: CheckoutStep; label: string; icon: React.ReactNode; hint?: string }[] = [
+  { key: "direccion", label: "Dirección", icon: <Truck size={16} />, hint: "Destino" },
+  { key: "envio", label: "Envío", icon: <Truck size={16} />, hint: "Entrega" },
+  { key: "pago", label: "Pago", icon: <CreditCard size={16} />, hint: "Método" },
+  { key: "resumen", label: "Confirmar", icon: <CheckCircle size={16} />, hint: "Resumen" },
 ];
 
 const PASO_INDEX: Record<CheckoutStep, number> = {
@@ -127,38 +137,108 @@ export default function CheckoutPage() {
   const enElements = paso === "pago" || paso === "resumen";
 
   const mainContent = (
-    <main className="mx-auto max-w-screen-lg px-4 py-8 md:px-8">
-      <Link href="/tienda/carrito" className="mb-6 flex items-center gap-2 text-sm text-gray-600 hover:text-green-600">
-        <ArrowLeft size={16} />
-        Volver al carrito
-      </Link>
+    <main style={{ maxWidth: "1000px", margin: "0 auto", padding: "48px 16px 40px", fontFamily: "'Manrope', 'DM Sans', sans-serif" }}>
+      {/* Gold stripe top */}
+      <div style={{ height: "3px", background: `linear-gradient(90deg, ${COLOR_PALETTE.copper}, ${COLOR_PALETTE.amber}, ${COLOR_PALETTE.copper})`, borderRadius: "2px 2px 0 0", marginBottom: "0" }} />
 
-      <h1 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">Checkout</h1>
-
-      {/* Stepper */}
-      <div className="mb-8 flex items-center gap-0">
-        {PASOS.map((p, idx) => (
-          <div key={p.key} className="flex flex-1 items-center">
-            <div className={`flex flex-col items-center gap-1 ${idx <= pasoActualIndex ? "text-green-600" : "text-gray-400"}`}>
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold
-                ${idx < pasoActualIndex ? "border-green-600 bg-green-600 text-white" :
-                  idx === pasoActualIndex ? "border-green-600 text-green-600" :
-                  "border-gray-300 text-gray-400"}`}>
-                {idx < pasoActualIndex ? <CheckCircle size={14} /> : idx + 1}
-              </div>
-              <span className="hidden text-xs sm:block">{p.label}</span>
-            </div>
-            {idx < PASOS.length - 1 && (
-              <div className={`mx-2 h-0.5 flex-1 ${idx < pasoActualIndex ? "bg-green-600" : "bg-gray-200"}`} />
-            )}
-          </div>
-        ))}
+      {/* Header */}
+      <div style={{ background: COLOR_PALETTE.green, borderRadius: "0 0 16px 16px", padding: "clamp(20px, 3vw, 32px)", marginBottom: "24px", position: "relative", overflow: "hidden" }}>
+        <p style={{ fontFamily: "ui-monospace", color: COLOR_PALETTE.copper, fontSize: "10px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", margin: "0 0 8px" }}>
+          Tienda de Mezcal
+        </p>
+        <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: COLOR_PALETTE.cream, fontSize: "clamp(24px, 4vw, 32px)", fontWeight: 400, margin: "0 0 6px", lineHeight: 1.2 }}>
+          Tu Pedido
+        </h1>
+        <p style={{ fontFamily: "'Manrope', 'DM Sans', sans-serif", color: "rgba(244,240,227,0.70)", fontSize: "13px", lineHeight: 1.6, margin: 0 }}>
+          Completa los 4 pasos para finalizar tu compra
+        </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Panel principal */}
-        <div className="lg:col-span-2">
-          <div className="rounded-lg bg-white p-6 shadow-md dark:bg-gray-dark">
+      <div className="mb-8">
+        {/* Stepper — Premium con colores biocultural */}
+        <div className="space-y-4">
+          <div className="flex items-stretch justify-between gap-2 relative">
+            {/* Línea conectora de fondo */}
+            <div style={{ position: "absolute", top: "20px", left: "0", right: "0", height: "2px", background: COLOR_PALETTE.border, zIndex: 0 }} />
+
+            {PASOS.map((p, idx) => (
+              <div key={p.key} className="flex flex-1 flex-col items-center gap-3 relative" style={{ zIndex: 1 }}>
+                {/* Círculo del paso */}
+                <div
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 600,
+                    transition: "all 200ms ease",
+                    background:
+                      idx < pasoActualIndex
+                        ? COLOR_PALETTE.green
+                        : idx === pasoActualIndex
+                        ? COLOR_PALETTE.white
+                        : "#E5E7EB",
+                    color:
+                      idx < pasoActualIndex
+                        ? COLOR_PALETTE.white
+                        : idx === pasoActualIndex
+                        ? COLOR_PALETTE.copper
+                        : "#9CA3AF",
+                    border:
+                      idx === pasoActualIndex
+                        ? `2px solid ${COLOR_PALETTE.copper}`
+                        : "2px solid transparent",
+                    boxShadow: idx === pasoActualIndex ? `0 0 0 3px ${COLOR_PALETTE.amber}20` : "none",
+                  }}
+                >
+                  {idx < pasoActualIndex ? (
+                    <CheckCircle size={20} color={COLOR_PALETTE.white} />
+                  ) : (
+                    <span style={{ fontSize: "14px" }}>{idx + 1}</span>
+                  )}
+                </div>
+
+                {/* Etiquetas */}
+                <div className="text-center">
+                  <p style={{ fontFamily: "'Manrope', 'DM Sans', sans-serif", fontSize: "12px", fontWeight: 700, color: COLOR_PALETTE.copper, textTransform: "uppercase", letterSpacing: "0.05em", margin: "0", lineHeight: 1 }}>
+                    {p.hint}
+                  </p>
+                  <p style={{ fontFamily: "'Manrope', 'DM Sans', sans-serif", fontSize: "13px", fontWeight: 600, color: COLOR_PALETTE.green, margin: "2px 0 0", lineHeight: 1 }} className="hidden sm:block">
+                    {p.label}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Indicador de progreso: Texto y barra */}
+          <div className="flex items-center justify-between pt-2">
+            <p style={{ fontFamily: "'Manrope', 'DM Sans', sans-serif", fontSize: "12px", color: COLOR_PALETTE.green, fontWeight: 600 }}>
+              Paso {pasoActualIndex + 1} de {PASOS.length}
+            </p>
+            <p style={{ fontFamily: "'Manrope', 'DM Sans', sans-serif", fontSize: "12px", color: COLOR_PALETTE.copper, fontWeight: 600 }}>
+              {Math.round(((pasoActualIndex + 1) / PASOS.length) * 100)}%
+            </p>
+          </div>
+          <div style={{ height: "3px", background: COLOR_PALETTE.border, borderRadius: "2px", overflow: "hidden" }}>
+            <div
+              style={{
+                height: "100%",
+                background: `linear-gradient(90deg, ${COLOR_PALETTE.green}, ${COLOR_PALETTE.copper}, ${COLOR_PALETTE.amber})`,
+                transition: "width 300ms ease-out",
+                width: `${((pasoActualIndex + 1) / PASOS.length) * 100}%`,
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* Panel principal — 7 cols en desktop, full en mobile */}
+        <div className="lg:col-span-7">
+          <div style={{ borderRadius: "12px", background: `linear-gradient(135deg, ${COLOR_PALETTE.white} 0%, ${COLOR_PALETTE.cream}08 100%)`, padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", border: `1px solid ${COLOR_PALETTE.border}` }}>
 
             {/* PASO 1: Dirección */}
             {paso === "direccion" && (
@@ -196,8 +276,11 @@ export default function CheckoutPage() {
                 {/* Selector de método de pago (solo en paso "pago") */}
                 {paso === "pago" && (isStripeConfigured() || isPaypalConfigured()) && (
                   <div className="mb-8">
-                    <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Forma de pago</h3>
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="flex items-center gap-2.5 mb-6">
+                      <div style={{ width: "4px", height: "24px", background: `linear-gradient(180deg, ${COLOR_PALETTE.green}, ${COLOR_PALETTE.copper})`, borderRadius: "2px" }} />
+                      <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "24px", fontWeight: 400, color: COLOR_PALETTE.green, margin: 0 }}>Forma de Pago</h3>
+                    </div>
+                    <div className={`grid gap-4 ${isStripeConfigured() && isPaypalConfigured() ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
                       {isStripeConfigured() && (
                         <button
                           onClick={() => {
@@ -206,27 +289,53 @@ export default function CheckoutPage() {
                           }}
                           aria-pressed={metodoPago === 'stripe'}
                           aria-label="Seleccionar pago con tarjeta de crédito o débito (Visa, Mastercard, American Express)"
-                          className={`group relative rounded-lg border-2 p-4 text-left transition-all duration-150
-                            ${metodoPago === 'stripe'
-                              ? 'border-green-600 bg-green-50 shadow-md dark:border-green-500 dark:bg-green-900/20'
-                              : 'border-gray-200 hover:border-gray-300 hover:shadow-sm dark:border-gray-700 dark:hover:border-gray-600'}`}
+                          style={{
+                            border: `2px solid ${metodoPago === 'stripe' ? COLOR_PALETTE.green : '#E5E7EB'}`,
+                            background: metodoPago === 'stripe' ? `${COLOR_PALETTE.green}10` : 'transparent',
+                            borderRadius: "12px",
+                            padding: "16px",
+                            textAlign: "left",
+                            transition: "all 150ms ease",
+                            cursor: "pointer",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (metodoPago !== 'stripe') {
+                              e.currentTarget.style.borderColor = '#D1D5DB';
+                              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (metodoPago !== 'stripe') {
+                              e.currentTarget.style.borderColor = '#E5E7EB';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }
+                          }}
                         >
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3">
-                              <div className={`mt-1 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors
-                                ${metodoPago === 'stripe' ? 'border-green-600 bg-green-600' : 'border-gray-300'}`}>
-                                {metodoPago === 'stripe' && <CheckCircle size={16} className="text-white" />}
+                              <div
+                                style={{
+                                  marginTop: "4px",
+                                  width: "20px",
+                                  height: "20px",
+                                  borderRadius: "50%",
+                                  border: `2px solid ${metodoPago === 'stripe' ? COLOR_PALETTE.green : '#D1D5DB'}`,
+                                  background: metodoPago === 'stripe' ? COLOR_PALETTE.green : 'transparent',
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                  transition: "all 200ms ease",
+                                }}
+                              >
+                                {metodoPago === 'stripe' && <CheckCircle size={12} color={COLOR_PALETTE.white} fill={COLOR_PALETTE.white} />}
                               </div>
                               <div>
-                                <h4 className="font-semibold text-gray-900 dark:text-white">Tarjeta de crédito / débito</h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Visa, Mastercard, American Express</p>
+                                <h4 style={{ fontWeight: 600, color: COLOR_PALETTE.green, margin: 0 }}>Tarjeta de crédito</h4>
+                                <p style={{ fontSize: "12px", color: "#6B7280", margin: "2px 0 0", lineHeight: 1.4 }}>Visa, Mastercard, Amex</p>
                               </div>
                             </div>
-                            <Lock size={16} className="text-gray-400" />
-                          </div>
-                          <div className="mt-3 flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                            <CheckCircle size={14} className="text-green-600" />
-                            <span>Pago seguro con Stripe</span>
+                            <Lock size={16} color={COLOR_PALETTE.green} style={{ flexShrink: 0 }} />
                           </div>
                         </button>
                       )}
@@ -239,64 +348,74 @@ export default function CheckoutPage() {
                           }}
                           aria-pressed={metodoPago === 'paypal'}
                           aria-label="Seleccionar pago con PayPal - Rápido y seguro con tu cuenta PayPal"
-                          className={`group relative rounded-lg border-2 p-4 text-left transition-all duration-150
-                            ${metodoPago === 'paypal'
-                              ? 'border-blue-500 bg-blue-50 shadow-md dark:border-blue-500 dark:bg-blue-900/20'
-                              : 'border-gray-200 hover:border-gray-300 hover:shadow-sm dark:border-gray-700 dark:hover:border-gray-600'}`}
+                          style={{
+                            border: `2px solid ${metodoPago === 'paypal' ? COLOR_PALETTE.copper : '#E5E7EB'}`,
+                            background: metodoPago === 'paypal' ? `${COLOR_PALETTE.amber}15` : 'transparent',
+                            borderRadius: "12px",
+                            padding: "16px",
+                            textAlign: "left",
+                            transition: "all 150ms ease",
+                            cursor: "pointer",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (metodoPago !== 'paypal') {
+                              e.currentTarget.style.borderColor = '#D1D5DB';
+                              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (metodoPago !== 'paypal') {
+                              e.currentTarget.style.borderColor = '#E5E7EB';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }
+                          }}
                         >
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3">
-                              <div className={`mt-1 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors
-                                ${metodoPago === 'paypal' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
-                                {metodoPago === 'paypal' && <CheckCircle size={16} className="text-white" />}
+                              <div
+                                style={{
+                                  marginTop: "4px",
+                                  width: "20px",
+                                  height: "20px",
+                                  borderRadius: "50%",
+                                  border: `2px solid ${metodoPago === 'paypal' ? COLOR_PALETTE.copper : '#D1D5DB'}`,
+                                  background: metodoPago === 'paypal' ? COLOR_PALETTE.copper : 'transparent',
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                  transition: "all 200ms ease",
+                                }}
+                              >
+                                {metodoPago === 'paypal' && <CheckCircle size={12} color={COLOR_PALETTE.white} fill={COLOR_PALETTE.white} />}
                               </div>
                               <div>
-                                <h4 className="font-semibold text-gray-900 dark:text-white">PayPal</h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Rápido y seguro con tu cuenta PayPal</p>
+                                <h4 style={{ fontWeight: 600, color: COLOR_PALETTE.green, margin: 0 }}>PayPal</h4>
+                                <p style={{ fontSize: "12px", color: "#6B7280", margin: "2px 0 0", lineHeight: 1.4 }}>Rápido y seguro con tu cuenta</p>
                               </div>
                             </div>
-                            <Lock size={16} className="text-gray-400" />
-                          </div>
-                          <div className="mt-3 flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                            <CheckCircle size={14} className="text-blue-500" />
-                            <span>Pago protegido por PayPal</span>
+                            <Lock size={16} color={COLOR_PALETTE.copper} style={{ flexShrink: 0 }} />
                           </div>
                         </button>
                       )}
                     </div>
 
-                    {/* Información de beneficios */}
+                    {/* Información de beneficios — Compacta */}
                     {metodoPago === 'stripe' && isStripeConfigured() && (
-                      <div className="mt-4 rounded-lg border border-green-100 bg-green-50/50 p-4 text-sm text-gray-700 dark:border-green-900 dark:bg-green-900/10 dark:text-gray-300">
-                        <h4 className="mb-2 font-semibold text-green-900 dark:text-green-400">Por qué usar tarjeta</h4>
-                        <ul className="space-y-1 text-xs">
-                          <li className="flex items-center gap-2">
-                            <span className="text-green-600">✓</span> Pago inmediato
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-green-600">✓</span> Stripe protege tu tarjeta
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-green-600">✓</span> Confirmación instantánea del pedido
-                          </li>
-                        </ul>
+                      <div style={{ marginTop: "12px", borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.green}33`, background: `${COLOR_PALETTE.green}08`, padding: "12px", fontSize: "12px", color: COLOR_PALETTE.green }}>
+                        <div className="flex gap-2">
+                          <CheckCircle size={14} className="flex-shrink-0 mt-0.5" style={{ color: COLOR_PALETTE.green }} />
+                          <span>Pago seguro con encriptación de extremo a extremo</span>
+                        </div>
                       </div>
                     )}
 
                     {metodoPago === 'paypal' && isPaypalConfigured() && (
-                      <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/50 p-4 text-sm text-gray-700 dark:border-blue-900 dark:bg-blue-900/10 dark:text-gray-300">
-                        <h4 className="mb-2 font-semibold text-blue-900 dark:text-blue-400">Por qué usar PayPal</h4>
-                        <ul className="space-y-1 text-xs">
-                          <li className="flex items-center gap-2">
-                            <span className="text-blue-600">✓</span> Nunca compartimos tu tarjeta
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-blue-600">✓</span> PayPal maneja tu seguridad
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-blue-600">✓</span> Pago de un clic si tienes cuenta
-                          </li>
-                        </ul>
+                      <div style={{ marginTop: "12px", borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.copper}33`, background: `${COLOR_PALETTE.copper}08`, padding: "12px", fontSize: "12px", color: COLOR_PALETTE.copper }}>
+                        <div className="flex gap-2">
+                          <CheckCircle size={14} className="flex-shrink-0 mt-0.5" style={{ color: COLOR_PALETTE.copper }} />
+                          <span>Tu información está protegida por PayPal</span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -319,16 +438,16 @@ export default function CheckoutPage() {
                     )}
                     {stripeConfigured && !dobRequired && !clientSecret && (
                       <div className="space-y-4">
-                        <div className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/20 dark:text-gray-400" role="status" aria-live="polite">
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.green}33`, background: `${COLOR_PALETTE.green}08`, padding: "24px", fontSize: "14px", color: COLOR_PALETTE.green }} role="status" aria-live="polite">
                           <Loader2 size={16} className="animate-spin" aria-label="Cargando" />
                           Preparando el formulario de pago con Stripe…
                         </div>
-                        <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-300">
+                        <div style={{ borderRadius: "8px", background: `${COLOR_PALETTE.green}08`, padding: "16px", fontSize: "14px", color: COLOR_PALETTE.green, border: `1px solid ${COLOR_PALETTE.green}33` }}>
                           <div className="flex gap-2">
-                            <Lock size={16} className="shrink-0" aria-hidden="true" />
+                            <Lock size={16} className="shrink-0" aria-hidden="true" style={{ color: COLOR_PALETTE.green }} />
                             <div>
-                              <p className="font-medium">Pago protegido por Stripe</p>
-                              <p className="mt-1 text-xs">Tu tarjeta nunca se almacena en nuestros servidores. Stripe maneja la encriptación de extremo a extremo.</p>
+                              <p style={{ fontWeight: 600, margin: 0 }}>Pago protegido por Stripe</p>
+                              <p style={{ marginTop: "4px", fontSize: "12px", lineHeight: 1.4, margin: "4px 0 0" }}>Tu tarjeta nunca se almacena en nuestros servidores. Stripe maneja la encriptación de extremo a extremo.</p>
                             </div>
                           </div>
                         </div>
@@ -372,16 +491,16 @@ export default function CheckoutPage() {
                     )}
                     {isPaypalConfigured() && !dobRequired && !paypalOrderId && (
                       <div className="space-y-4">
-                        <div className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/20 dark:text-gray-400" role="status" aria-live="polite">
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.copper}33`, background: `${COLOR_PALETTE.copper}08`, padding: "24px", fontSize: "14px", color: COLOR_PALETTE.copper }} role="status" aria-live="polite">
                           <Loader2 size={16} className="animate-spin" aria-label="Cargando" />
                           Iniciando sesión con PayPal…
                         </div>
-                        <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                        <div style={{ borderRadius: "8px", background: `${COLOR_PALETTE.copper}08`, padding: "16px", fontSize: "14px", color: COLOR_PALETTE.copper, border: `1px solid ${COLOR_PALETTE.copper}33` }}>
                           <div className="flex gap-2">
-                            <Lock size={16} className="shrink-0" aria-hidden="true" />
+                            <Lock size={16} className="shrink-0" aria-hidden="true" style={{ color: COLOR_PALETTE.copper }} />
                             <div>
-                              <p className="font-medium">PayPal maneja tu información bancaria</p>
-                              <p className="mt-1 text-xs">Te redirigiremos a PayPal. Nunca vemos tu número de tarjeta ni datos bancarios.</p>
+                              <p style={{ fontWeight: 600, margin: 0 }}>PayPal maneja tu información bancaria</p>
+                              <p style={{ marginTop: "4px", fontSize: "12px", lineHeight: 1.4, margin: "4px 0 0" }}>Te redirigiremos a PayPal. Nunca vemos tu número de tarjeta ni datos bancarios.</p>
                             </div>
                           </div>
                         </div>
@@ -389,9 +508,9 @@ export default function CheckoutPage() {
                     )}
                     {isPaypalConfigured() && !dobRequired && paypalOrderId && paso === "pago" && (
                       <div className="space-y-4">
-                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
-                          <p className="mb-2 font-medium">Completa tu pago en PayPal</p>
-                          <p className="text-xs">Haz clic en el botón abajo. Te redirigiremos a PayPal de forma segura para que confirmes tu pago.</p>
+                        <div style={{ borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.copper}33`, background: `${COLOR_PALETTE.copper}08`, padding: "16px", fontSize: "14px", color: COLOR_PALETTE.copper }}>
+                          <p style={{ marginBottom: "8px", fontWeight: 600, margin: 0 }}>Completa tu pago en PayPal</p>
+                          <p style={{ fontSize: "12px", marginTop: "4px", lineHeight: 1.4 }}>Haz clic en el botón abajo. Te redirigiremos a PayPal de forma segura para que confirmes tu pago.</p>
                         </div>
                         <PaypalCheckoutButton
                           orderId={paypalOrderId}
@@ -430,12 +549,36 @@ export default function CheckoutPage() {
               </p>
             )}
 
-            {/* Botones de navegación: la "Confirmar pago" del paso resumen vive dentro de PagoYResumen. */}
-            <div className="mt-6 flex justify-between">
+            {/* Botones de navegación mejorados */}
+            <div style={{ marginTop: "32px", display: "flex", gap: "12px", justifyContent: "space-between" }}>
               {paso !== "direccion" ? (
                 <button
                   onClick={retrocederPaso}
-                  className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800/50"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    borderRadius: "12px",
+                    paddingLeft: "20px",
+                    paddingRight: "20px",
+                    paddingTop: "12px",
+                    paddingBottom: "12px",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    border: `1px solid ${COLOR_PALETTE.border}`,
+                    color: COLOR_PALETTE.green,
+                    background: "transparent",
+                    cursor: "pointer",
+                    transition: "all 200ms ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = COLOR_PALETTE.green;
+                    e.currentTarget.style.background = `${COLOR_PALETTE.green}08`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = COLOR_PALETTE.border;
+                    e.currentTarget.style.background = "transparent";
+                  }}
                 >
                   <ArrowLeft size={16} />
                   Atrás
@@ -451,49 +594,94 @@ export default function CheckoutPage() {
                       (metodoPago === 'paypal' && !paypalOrderId)
                     )
                   }
-                  className={`flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-medium transition-colors
-                    ${paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))
-                      ? "cursor-not-allowed bg-gray-300 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
-                      : "bg-green-600 text-white hover:bg-green-700 active:bg-green-800 dark:hover:bg-green-700"}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    borderRadius: "12px",
+                    paddingLeft: "32px",
+                    paddingRight: "32px",
+                    paddingTop: "12px",
+                    paddingBottom: "12px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    transition: "all 200ms ease",
+                    border: "none",
+                    cursor:
+                      paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))
+                        ? "not-allowed"
+                        : "pointer",
+                    background:
+                      paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))
+                        ? "#D1D5DB"
+                        : COLOR_PALETTE.green,
+                    color:
+                      paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))
+                        ? "#6B7280"
+                        : COLOR_PALETTE.white,
+                    boxShadow:
+                      paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))
+                        ? "none"
+                        : "0 1px 2px rgba(0,0,0,0.05)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!(paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))) {
+                      e.currentTarget.style.background = COLOR_PALETTE.green;
+                      e.currentTarget.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
+                      e.currentTarget.style.opacity = "0.9";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!(paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))) {
+                      e.currentTarget.style.background = COLOR_PALETTE.green;
+                      e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
+                      e.currentTarget.style.opacity = "1";
+                    }
+                  }}
                 >
                   Continuar
-                  <ChevronRight size={16} />
+                  <ChevronRight size={18} />
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Resumen lateral */}
-        <div>
-          <div className="rounded-lg bg-white p-5 shadow-md dark:bg-gray-dark">
-            <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">Resumen</h3>
-            <div className="space-y-2 border-b border-gray-200 pb-4 text-sm dark:border-gray-700">
+        {/* Resumen lateral — Sticky en desktop, scroll en mobile */}
+        <div className="lg:col-span-5">
+          <div style={{ position: "relative" }} className="lg:sticky lg:top-8">
+            <div style={{ borderRadius: "12px", background: `linear-gradient(135deg, ${COLOR_PALETTE.white} 0%, ${COLOR_PALETTE.amber}04 100%)`, padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: `1px solid ${COLOR_PALETTE.border}`, backdropFilter: "blur(4px)" }}>
+              <div className="flex items-center gap-2.5 mb-6">
+                <div style={{ width: "4px", height: "24px", background: `linear-gradient(180deg, ${COLOR_PALETTE.copper}, ${COLOR_PALETTE.amber})`, borderRadius: "2px" }} />
+                <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "24px", fontWeight: 400, color: COLOR_PALETTE.green, margin: 0 }}>Resumen</h3>
+              </div>
+            <div style={{ display: "space-y-2", borderBottom: `1px solid ${COLOR_PALETTE.border}`, paddingBottom: "16px", fontSize: "14px" }}>
               {items.slice(0, 3).map((item) => (
-                <div key={item.id_producto} className="flex justify-between text-gray-600 dark:text-gray-300">
-                  <span className="truncate max-w-[140px]">{item.nombre} x{item.cantidad}</span>
-                  <span>${formatPrice(Number(item.precio_base) * item.cantidad, { showCurrency: false })}</span>
+                <div key={item.id_producto} style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px", fontSize: "13px" }}>
+                  <span style={{ truncate: "true", maxWidth: "140px" }}>{item.nombre} x{item.cantidad}</span>
+                  <span style={{ fontWeight: 500 }}>${formatPrice(Number(item.precio_base) * item.cantidad, { showCurrency: false })}</span>
                 </div>
               ))}
               {items.length > 3 && (
-                <p className="text-xs text-gray-400">+{items.length - 3} producto(s) más</p>
+                <p style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "8px" }}>+{items.length - 3} producto(s) más</p>
               )}
             </div>
-            <div className="space-y-2 py-3 text-sm">
-              <div className="flex justify-between text-gray-600 dark:text-gray-300">
+            <div style={{ display: "space-y-2", paddingTop: "12px", paddingBottom: "12px", fontSize: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
                 <span>Subtotal</span>
-                <span>${formatPrice(Math.round(Number(items.reduce((a, i) => a + Number(i.precio_base) * i.cantidad, 0))), { showCurrency: false })}</span>
+                <span style={{ fontWeight: 500 }}>${formatPrice(Number(items.reduce((a, i) => a + Number(i.precio_base) * i.cantidad, 0)), { showCurrency: false })}</span>
               </div>
-              <div className="flex justify-between text-gray-600 dark:text-gray-300">
+              <div style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
                 <span>Envío</span>
-                <span>{envioSeleccionado ? `$${formatPrice(envioSeleccionado.precioTotal, { showCurrency: false })}` : "—"}</span>
+                <span style={{ fontWeight: 500 }}>{envioSeleccionado ? `$${formatPrice(envioSeleccionado.precioTotal, { showCurrency: false })}` : "—"}</span>
               </div>
             </div>
-            <div className="flex justify-between border-t border-gray-200 pt-3 dark:border-gray-700">
-              <span className="font-semibold text-gray-900 dark:text-white">Total</span>
-              <span className="text-lg font-bold text-green-600">
-                ${formatPrice(Math.round(totalConEnvio), { showCurrency: false })} MXN
+            <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${COLOR_PALETTE.border}`, paddingTop: "12px" }}>
+              <span style={{ fontWeight: 600, color: COLOR_PALETTE.green }}>Total</span>
+              <span style={{ fontSize: "18px", fontWeight: 700, color: COLOR_PALETTE.copper }}>
+                ${formatPrice(totalConEnvio, { showCurrency: false })} MXN
               </span>
+            </div>
             </div>
           </div>
         </div>
@@ -552,15 +740,14 @@ function DireccionStep({
   return (
     <div>
       <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Dirección de envío</h2>
-      <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">Te enviaremos tu pedido a esta dirección.</p>
 
       {direcciones.length > 0 && !mostrarFormDireccion && (
-        <div className="mb-4 space-y-3">
+        <div className="mb-6 space-y-3">
           {direcciones.map((dir: any, idx: number) => (
             <label
               key={idx}
-              className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-all duration-150
-                ${direccionSeleccionada === dir ? "border-green-600 bg-green-50 shadow-sm dark:bg-green-900/20" : "border-gray-200 hover:shadow-sm dark:border-gray-700"}`}
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-5 transition-all duration-200
+                ${direccionSeleccionada === dir ? "border-green-600 bg-green-50 shadow-md dark:bg-green-900/20" : "border-gray-200 hover:border-green-300 hover:shadow-sm dark:border-gray-700"}`}
             >
               <input
                 type="radio"
@@ -595,7 +782,7 @@ function DireccionStep({
           ))}
           <button
             onClick={() => setMostrarFormDireccion(true)}
-            className="text-sm text-green-600 hover:underline"
+            className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors dark:text-green-400 dark:hover:text-green-300"
           >
             + Agregar otra dirección
           </button>
@@ -603,7 +790,7 @@ function DireccionStep({
       )}
 
       {mostrarFormDireccion && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div>
             <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">País de envío *</label>
             <select
@@ -614,7 +801,7 @@ function DireccionStep({
                 es_internacional: e.target.value !== "MX",
               }))}
               disabled={paisesLoading}
-              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm transition-colors focus:border-green-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-900/30 dark:disabled:text-gray-500"
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-900/30 dark:disabled:text-gray-500"
             >
               {paisesLoading && <option value="MX">Cargando...</option>}
               {!paisesLoading && paises.length === 0 && <option value="MX">México</option>}
@@ -633,7 +820,7 @@ function DireccionStep({
               value={nuevaDireccion.nombre_destinatario || ""}
               onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, nombre_destinatario: e.target.value }))}
               placeholder="Nombre completo"
-              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none transition-all dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             />
           </div>
 
@@ -709,7 +896,7 @@ function DireccionStep({
               <select
                 value={nuevaDireccion.tipo || "hogar"}
                 onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, tipo: e.target.value }))}
-                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none transition-all dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               >
                 <option value="hogar">Hogar</option>
                 <option value="trabajo">Trabajo</option>
@@ -730,17 +917,17 @@ function DireccionStep({
               Guardar como dirección predeterminada
             </label>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-2">
             <button
               onClick={handleGuardar}
-              className="rounded-lg bg-green-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-green-700 active:bg-green-800"
+              className="rounded-xl bg-green-600 px-6 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-green-700 active:bg-green-800 shadow-sm hover:shadow-md"
             >
               Guardar dirección
             </button>
             {direcciones.length > 0 && (
               <button
                 onClick={() => setMostrarFormDireccion(false)}
-                className="rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800/50"
+                className="rounded-xl border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800/50"
               >
                 Usar otra dirección
               </button>
@@ -816,7 +1003,7 @@ function Field({ label, value, onChange, placeholder }: { label: string; value: 
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+        className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none transition-all dark:border-gray-600 dark:bg-gray-800 dark:text-white"
       />
     </div>
   );
@@ -826,7 +1013,6 @@ function EnvioStep({ cotizaciones, cotizandoLoading, cotizandoError, envioSelecc
   return (
     <div>
       <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Método de envío</h2>
-      <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">Elige cuándo quieres que llegue tu pedido.</p>
       {cotizandoLoading && (
         <div className="flex items-center justify-center rounded-lg border-2 border-gray-200 p-8">
           <div className="text-center">
@@ -1010,7 +1196,7 @@ function PagoYResumen({
           onClick={handleConfirm}
           disabled={confirming || !stripe || !elements}
           aria-label="Confirmar pago - transacción segura"
-          className={`mt-2 flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-colors
+          className={`mt-6 flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-colors
             ${confirming || !stripe
               ? "cursor-not-allowed bg-gray-300 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
               : "bg-green-600 text-white hover:bg-green-700 active:bg-green-800 dark:hover:bg-green-700"}`}

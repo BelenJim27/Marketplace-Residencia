@@ -235,18 +235,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user?.id_usuario, user?.id_productor, productorResolved]);
 
   const login = useCallback((token: string, usuario: Usuario, refreshToken: string, rememberMe = false) => {
-    setCookie("token", token, 7);
-    setCookie("refresh_token", refreshToken, rememberMe ? 30 : 1);
+    setCookie("token", token, rememberMe ? 7 : 1);
+    setCookie("refresh_token", refreshToken, 30);
     const normalizedUser: Usuario = {
       ...usuario,
       id_productor: usuario.id_productor != null ? Number(usuario.id_productor) : undefined,
     };
-    setCookie("usuario", JSON.stringify(normalizedUser), 7);
+    setCookie("usuario", JSON.stringify(normalizedUser), rememberMe ? 7 : 1);
     setUser(normalizedUser);
     setProductorResolved(normalizedUser.id_productor != null && normalizedUser.id_productor !== 0);
   }, []);
 
   const logout = useCallback(async () => {
+    const { signOut } = await import("next-auth/react");
+
     const refreshToken = getCookie("refresh_token");
     if (refreshToken) {
       try {
@@ -255,11 +257,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Error en logout:", error);
       }
     }
+
     removeCookie("token");
     removeCookie("refresh_token");
     removeCookie("usuario");
     setUser(null);
     setProductorResolved(false);
+
+    // Limpiar sesión de NextAuth (si existe)
+    await signOut({ redirect: false });
+
     window.location.href = "/Cliente/producto";
   }, []);
 

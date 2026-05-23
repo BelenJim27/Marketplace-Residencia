@@ -55,6 +55,7 @@ const nextConfig = {
       { source: '/tasas-cambio/:path*', destination: `${apiUrl}/tasas-cambio/:path*` },
       { source: '/comisiones/:path*', destination: `${apiUrl}/comisiones/:path*` },
       { source: '/payouts/:path*', destination: `${apiUrl}/payouts/:path*` },
+      { source: '/estadisticas/:path*', destination: `${apiUrl}/estadisticas/:path*` },
       ],
       fallback: [],
     };

@@ -91,9 +91,7 @@ async function fetchJson<T>(
       console.warn("✅ Token refrescado, reintentandorequest...");
 
       const newHeaders = { ...options?.headers } as Record<string, string>;
-      if (newHeaders["Authorization"]) {
-        newHeaders["Authorization"] = `Bearer ${newAccessToken}`;
-      }
+      newHeaders["Authorization"] = `Bearer ${newAccessToken}`;
 
       const retryResponse = await fetch(url, {
         ...options,

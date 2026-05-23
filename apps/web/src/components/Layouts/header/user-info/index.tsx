@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { LogOutIcon, SettingsIcon, UserIcon } from "./icons";
 import { useAuth } from "@/context/AuthContext";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { MapPin } from "lucide-react";
 
 /* ─── Role badges ─────────────────────────────────────────────────────────── */
@@ -117,11 +117,7 @@ export function UserInfo({ whiteText = false }: { whiteText?: boolean }) {
   /* ── logout ── */
   const handleLogout = async () => {
     setIsOpen(false);
-    if (session) {
-      await signOut({ callbackUrl: "/Cliente/producto" });
-    } else {
-      logout();
-    }
+    logout();
   };
 
   return (
