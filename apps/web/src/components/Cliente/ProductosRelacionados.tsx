@@ -35,7 +35,7 @@ function MiniStars({ promedio }: { promedio: number }) {
 function ProductoMiniCard({ producto }: { producto: ProductoCard }) {
   return (
     <Link
-      href={`/Cliente/producto/${producto.id_producto}`}
+      href={`/cliente/producto/${producto.id_producto}`}
       className="flex flex-col rounded-lg overflow-hidden border border-gray-100 hover:shadow-md transition-shadow bg-white active:scale-95 transition-transform"
     >
       <div className="relative aspect-square bg-gray-50">

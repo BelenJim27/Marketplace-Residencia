@@ -19,12 +19,15 @@ const nextConfig = {
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
       { protocol: "https", hostname: "pub-b7fd9c30cdbf439183b75041f5f71b92.r2.dev" },
       { protocol: "https", hostname: "res.cloudinary.com" },
+      { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
   async rewrites() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    return [
-      { source: '/auth/:path*', destination: `${apiUrl}/auth/:path*` },
+    return {
+      beforeFiles: [],
+      afterFiles: [
+        { source: '/auth/:path*', destination: `${apiUrl}/auth/:path*` },
       { source: '/usuarios/:path*', destination: `${apiUrl}/usuarios/:path*` },
       { source: '/productos/:path*', destination: `${apiUrl}/productos/:path*` },
       { source: '/categorias/:path*', destination: `${apiUrl}/categorias/:path*` },
@@ -52,7 +55,9 @@ const nextConfig = {
       { source: '/tasas-cambio/:path*', destination: `${apiUrl}/tasas-cambio/:path*` },
       { source: '/comisiones/:path*', destination: `${apiUrl}/comisiones/:path*` },
       { source: '/payouts/:path*', destination: `${apiUrl}/payouts/:path*` },
-    ];
+      ],
+      fallback: [],
+    };
   },
 };
 

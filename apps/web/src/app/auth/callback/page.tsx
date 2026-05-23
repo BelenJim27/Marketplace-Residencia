@@ -6,6 +6,7 @@ import { setCookie, getCookie } from "@/lib/cookies";
 import { useSession } from "next-auth/react";
 
 export const dynamic = 'force-dynamic';
+export const prerender = false;
 
 function AuthCallbackContent() {
   const router = useRouter();

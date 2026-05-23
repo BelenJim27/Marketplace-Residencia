@@ -78,8 +78,8 @@ export function TiendaHeader() {
 
   const isClient = isAuthenticated && !isAdmin && !isProductor;
 
-  const handleCartClick = () => router.push(isAuthenticated ? "/tienda/carrito" : "/auth/sign-in");
-  const handleMyPurchasesClick = () => router.push(isAuthenticated ? "/tienda/compras" : "/auth/sign-in");
+  const handleCartClick = () => router.push(isAuthenticated ? "/tienda/carrito" : "/auth/sign-in?redirect=/tienda/carrito");
+  const handleMyPurchasesClick = () => router.push(isAuthenticated ? "/tienda/compras" : "/auth/sign-in?redirect=/tienda/compras");
   const handleSellClick = () => {
     if (!isAuthenticated) router.push("/dashboard/productor/unirse?vender=true");
     else if (user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r))) router.push("/dashboard/productor");
@@ -95,8 +95,8 @@ export function TiendaHeader() {
 
   // ─── Nav items por estado de autenticación ───────────────────
   const clientNavItems: NavItem[] = [
-    { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/Cliente/inicio"),  href: "/Cliente/inicio" },
-    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/Cliente/producto"),        href: "/Cliente/producto" },
+    { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/cliente/inicio"),  href: "/cliente/inicio" },
+    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/cliente/producto"),        href: "/cliente/producto" },
     { label: t("Mis compras"), icon: <Package size={22} />,      onClick: handleMyPurchasesClick,                href: "/tienda/compras" },
     {
       label: t("Favoritos"),
@@ -116,8 +116,8 @@ export function TiendaHeader() {
   ];
 
   const authNavItems: NavItem[] = [
-    { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/Cliente/inicio"),  href: "/Cliente/inicio" },
-    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/Cliente/producto"),        href: "/Cliente/producto" },
+    { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/cliente/inicio"),  href: "/cliente/inicio" },
+    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/cliente/producto"),        href: "/cliente/producto" },
     { label: t("Mis compras"), icon: <Package size={22} />,      onClick: handleMyPurchasesClick,                href: "/tienda/compras" },
     {
       label: t("Carrito"),
@@ -131,15 +131,15 @@ export function TiendaHeader() {
 
   // Nav items desktop para guest — SIN "Ingresar" (va en dropdown Perfil)
   const guestNavItemsDesktop: NavItem[] = [
-    { label: t("Inicio"),          icon: <Home size={22} />,        onClick: () => router.push("/Cliente/inicio"), href: "/Cliente/inicio" },
-    { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/Cliente/producto"),       href: "/Cliente/producto" },
+    { label: t("Inicio"),          icon: <Home size={22} />,        onClick: () => router.push("/cliente/inicio"), href: "/cliente/inicio" },
+    { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/cliente/producto"),       href: "/cliente/producto" },
     { label: t("Vender mezcal"),   icon: <Store size={22} />,       onClick: handleSellClick },
   ];
 
   // Nav items móvil (bottom nav) para guest — CON "Ingresar"
   const guestNavItems: NavItem[] = [
-    { label: t("Inicio"),          icon: <Home size={22} />,        onClick: () => router.push("/Cliente/inicio"), href: "/Cliente/inicio" },
-    { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/Cliente/producto"),       href: "/Cliente/producto" },
+    { label: t("Inicio"),          icon: <Home size={22} />,        onClick: () => router.push("/cliente/inicio"), href: "/cliente/inicio" },
+    { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/cliente/producto"),       href: "/cliente/producto" },
     { label: t("Vender mezcal"),   icon: <Store size={22} />,       onClick: handleSellClick },
     { label: t("Ingresar"),        icon: <User size={22} />,        onClick: () => router.push("/auth/sign-in"),  href: "/auth/sign-in" },
   ];
@@ -177,7 +177,7 @@ export function TiendaHeader() {
         }`}
       >
         {/* Logo */}
-        <Link href="/Cliente/producto" className="flex items-center gap-3 shrink-0">
+        <Link href="/cliente/producto" className="flex items-center gap-3 shrink-0">
           <Image
             src="/images/logo/tierra_agaves.png"
             width={scrolled ? 70 : 90}

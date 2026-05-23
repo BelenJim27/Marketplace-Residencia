@@ -67,7 +67,7 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
 
       const isAdmin = roles.some((rol: string) => ["ADMIN", "administrador", "admin"].includes(rol));
       if (isAdmin) {
-        router.push("/Administrador/dashboard");
+        router.push("/administrador/dashboard");
         return;
       }
 

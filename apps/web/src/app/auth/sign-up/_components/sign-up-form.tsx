@@ -107,7 +107,7 @@ export function SignUpForm() {
       if (isVenderFlow) {
         router.push("/dashboard/productor/solicitar");
       } else {
-        router.push("/Cliente/producto");
+        router.push("/cliente/producto");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al registrar usuario");

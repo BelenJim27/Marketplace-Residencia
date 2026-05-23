@@ -47,9 +47,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
   const [productorResolved, setProductorResolved] = useState(false);
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
 
   const refreshAuth = useCallback(() => {
+    // Wait for NextAuth to finish checking session status before completing auth
+    if (sessionStatus === "loading") return;
+
     if (session?.user) {
       console.log("📋 Usando sesión de NextAuth", session.user.email);
 
@@ -118,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
     }
     setLoading(false);
-  }, [session]);
+  }, [session, sessionStatus]);
 
   useEffect(() => {
     setProductorResolved(false);
