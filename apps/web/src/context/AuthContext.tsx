@@ -9,7 +9,7 @@ import {
   useMemo,
   ReactNode,
 } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
 import { api } from "@/lib/api";
 import { getCookie, setCookie, removeCookie } from "@/lib/cookies";
 
@@ -47,14 +47,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
   const [productorResolved, setProductorResolved] = useState(false);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   const refreshAuth = useCallback(() => {
+    // Esperar a que NextAuth resuelva — evita un flash de isAuthenticated=false
+    if (status === "loading") return;
+
     if (session?.user) {
       console.log("📋 Usando sesión de NextAuth", session.user.email);
 
       const accessToken = (session as any)?.accessToken;
       if (accessToken) setCookie("token", accessToken, 7);
+
+      // Guardar refresh_token en cookie para que api.ts pueda renovar tokens sin redirigir
+      const refreshToken = (session as any)?.refreshToken;
+      if (refreshToken) setCookie("refresh_token", refreshToken, 30);
 
       let storedUser: Partial<Usuario> = {};
 
@@ -118,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
     }
     setLoading(false);
-  }, [session]);
+  }, [session, status]);
 
   useEffect(() => {
     setProductorResolved(false);
@@ -231,9 +238,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user?.id_usuario, user?.id_productor, productorResolved]);
 
+  // Cuando api.ts no puede refrescar el token, limpia la sesión OAuth también
+  useEffect(() => {
+    const handleSessionExpired = async () => {
+      setUser(null);
+      setProductorResolved(false);
+      try {
+        // Cerrar sesión de NextAuth (Google OAuth) para que sign-in no redirija automáticamente
+        await nextAuthSignOut({ redirect: false });
+      } catch {
+        // Si falla el signOut de NextAuth, igual redirigimos
+      }
+      const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+      const redirectParam = currentPath && currentPath !== "/auth/sign-in" ? `?redirect=${encodeURIComponent(currentPath)}` : "";
+      window.location.href = `/auth/sign-in${redirectParam}`;
+    };
+
+    window.addEventListener("auth:session-expired", handleSessionExpired);
+    return () => window.removeEventListener("auth:session-expired", handleSessionExpired);
+  }, []);
+
   const login = useCallback((token: string, usuario: Usuario, refreshToken: string, rememberMe = false) => {
     setCookie("token", token, 7);
-    setCookie("refresh_token", refreshToken, rememberMe ? 30 : 1);
+    setCookie("refresh_token", refreshToken, rememberMe ? 30 : 7);
     const normalizedUser: Usuario = {
       ...usuario,
       id_productor: usuario.id_productor != null ? Number(usuario.id_productor) : undefined,
@@ -257,7 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     removeCookie("usuario");
     setUser(null);
     setProductorResolved(false);
-    window.location.href = "/Cliente/producto";
+    window.location.href = "/producto";
   }, []);
 
   const isAdmin = useMemo(

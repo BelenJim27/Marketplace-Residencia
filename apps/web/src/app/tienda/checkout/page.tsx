@@ -89,9 +89,8 @@ export default function CheckoutPage() {
   };
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push("/auth/sign-in?redirect=/tienda/checkout");
-    }
+    if (authLoading || isAuthenticated) return;
+    router.push("/auth/sign-in?redirect=/tienda/checkout");
   }, [isAuthenticated, authLoading, router]);
 
   useEffect(() => {

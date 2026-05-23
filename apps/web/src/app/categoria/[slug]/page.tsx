@@ -123,7 +123,7 @@ export default function CategoriaPage() {
 
   const toggleWishlist = (producto: ProductoPublico) => {
     if (!isAuthenticated) {
-      router.push("/auth/sign-in?redirect=/cliente/producto");
+      router.push("/auth/sign-in?redirect=/Cliente/producto");
       return;
     }
     if (isInWishlist(producto.id_producto)) {
@@ -341,7 +341,7 @@ export default function CategoriaPage() {
                       className="relative overflow-hidden bg-gray-50"
                       style={{ aspectRatio: "1 / 1" }}
                       onClick={() =>
-                        router.push(`/cliente/producto/${producto.id_producto}`)
+                        router.push(`/Cliente/producto/${producto.id_producto}`)
                       }
                     >
                       {imagenUrl ? (
@@ -404,7 +404,7 @@ export default function CategoriaPage() {
                           color: "var(--bio-color-titulo, #5c3d1e)",
                         }}
                         onClick={() =>
-                          router.push(`/cliente/producto/${producto.id_producto}`)
+                          router.push(`/Cliente/producto/${producto.id_producto}`)
                         }
                       >
                         {producto.nombre}

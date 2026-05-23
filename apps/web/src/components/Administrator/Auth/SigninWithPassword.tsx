@@ -81,7 +81,7 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
         return;
       }
 
-      router.push("/cliente/producto");
+      router.push("/Cliente/producto");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión");
     } finally {

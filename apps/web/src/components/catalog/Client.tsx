@@ -616,7 +616,7 @@ export default function ProductCatalogEnhanced() {
 
   const toggleWishlist = (producto: Producto) => {
     if (!isAuthenticated) {
-      router.push("/auth/sign-in?redirect=/cliente/producto");
+      router.push("/auth/sign-in?redirect=/Cliente/producto");
       return;
     }
     if (isInWishlist(producto.id_producto)) {
@@ -926,7 +926,7 @@ export default function ProductCatalogEnhanced() {
                         setTimeout(() => setAgregadoId(null), 2500);
                       }}
                       isAdded={agregadoId === producto.id_producto}
-                      onViewDetails={() => router.push(`/cliente/producto/${producto.id_producto}`)}
+                      onViewDetails={() => router.push(`/Cliente/producto/${producto.id_producto}`)}
                     />
                   ))}
                 </div>

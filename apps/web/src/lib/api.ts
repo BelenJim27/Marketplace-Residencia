@@ -99,7 +99,7 @@ async function fetchJson<T>(
       }
       return retryResponse.json() as Promise<T>;
     } catch (refreshErr) {
-      // Limpiar cookies y redirigir al login
+      // Limpiar cookies
       console.warn("❌ Refresh falló, limpiando cookies...");
       const cookies = document.cookie.split(";");
       cookies.forEach((cookie) => {
@@ -108,7 +108,8 @@ async function fetchJson<T>(
           document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
         }
       });
-      window.location.href = "/auth/sign-in";
+      // Notificar a AuthContext para que limpie la sesión OAuth también antes de redirigir
+      window.dispatchEvent(new CustomEvent("auth:session-expired"));
       throw new Error("Sesión expirada. Por favor inicia sesión de nuevo.");
     }
 

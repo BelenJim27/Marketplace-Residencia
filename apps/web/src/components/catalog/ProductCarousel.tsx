@@ -276,7 +276,7 @@ export default function ProductCarousel() {
                   fontFamily: "var(--bio-fuente-titulo, Georgia, serif)",
                   color: "var(--bio-color-titulo, #5c3d1e)",
                 }}
-                onClick={() => router.push(`/cliente/producto/${productoActual.id_producto}`)}
+                onClick={() => router.push(`/Cliente/producto/${productoActual.id_producto}`)}
               >
                 {productoActual.nombre}
               </h3>

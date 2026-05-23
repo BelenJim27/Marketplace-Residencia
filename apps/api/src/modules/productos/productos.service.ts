@@ -241,13 +241,7 @@ export class ProductosService {
     const items = await this.prisma.productos.findMany({
       where: {
         ...where,
-        id_lote: { not: null },
         status: 'activo',
-        inventario: {
-          some: {
-            stock: { gt: 0 },
-          },
-        },
       },
       include: productoInclude as any,
       orderBy: { creado_en: 'desc' },

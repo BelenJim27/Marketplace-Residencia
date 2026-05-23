@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Package, ChevronRight, ShoppingBag } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -28,16 +29,20 @@ const ESTADO_COLORES: Record<string, string> = {
 
 export default function MisComprasPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
+    // Esperar a que auth resuelva completamente antes de actuar
     if (authLoading) return;
+
     if (!isAuthenticated) {
-      setCargando(false);
+      router.replace("/auth/sign-in?redirect=/tienda/compras");
       return;
     }
 
+    setCargando(true);
     const token = getCookie("token") || "";
     api.pedidos
       .getMisCompras(token)
@@ -52,9 +57,11 @@ export default function MisComprasPage() {
       })
       .catch(() => setPedidos([]))
       .finally(() => setCargando(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, authLoading]);
 
-  if (cargando) {
+  // Mostrar spinner mientras auth carga
+  if (authLoading || cargando) {
     return (
       <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
         <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white">Mis Compras</h1>
@@ -65,19 +72,6 @@ export default function MisComprasPage() {
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
-        <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white">Mis Compras</h1>
-        <div className="rounded-lg bg-white p-8 text-center shadow-md dark:bg-gray-dark">
-          <p className="mb-4 text-gray-600 dark:text-gray-400">Inicia sesión para ver tu historial de compras.</p>
-          <Link href="/auth/sign-in" className="inline-block rounded-lg bg-green-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-green-700 focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900">
-            Iniciar sesión
-          </Link>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
@@ -87,7 +81,7 @@ export default function MisComprasPage() {
         <div className="flex flex-col items-center gap-4 rounded-lg bg-white p-10 text-center shadow-md dark:bg-gray-dark">
           <ShoppingBag className="h-14 w-14 text-gray-400 dark:text-gray-600" aria-hidden="true" />
           <p className="text-gray-600 dark:text-gray-400">Aún no tienes compras.</p>
-          <Link href="/cliente/producto" className="inline-block rounded-lg bg-green-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-green-700 focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900">
+          <Link href="/Cliente/producto" className="inline-block rounded-lg bg-green-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-green-700 focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900">
             Explorar mezcales
           </Link>
         </div>
