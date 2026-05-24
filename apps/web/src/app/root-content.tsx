@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import type { PropsWithChildren } from "react";
 import { Header } from "@/components/Layouts/header";
 import { Sidebar } from "@/components/Layouts/sidebar";
@@ -15,6 +16,17 @@ export function RootContent({ children }: PropsWithChildren) {
 
   const isLoggedIn = isAuthenticated && !!user && (user.roles.length > 0 || (user.permisos?.length ?? 0) > 0);
   const isAdminOrProductor = isAdmin || isProductor;
+
+  useEffect(() => {
+    if (loading) return;
+    if (isAdmin) {
+      document.title = "Administrador";
+    } else if (isProductor) {
+      document.title = "Productor";
+    } else {
+      document.title = "Mezcales";
+    }
+  }, [isAdmin, isProductor, loading]);
 
   const p = pathname.toLowerCase();
   const isAuthRoute = p.startsWith("/auth/");

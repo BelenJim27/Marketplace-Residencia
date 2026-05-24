@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle, ChevronRight, Truck, CreditCard, ShoppingBag, ArrowLeft, Lock, MapPin, Loader2 } from "lucide-react";
-import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useCheckout, CheckoutStep } from "@/hooks/useCheckout";
 import { useCarrito } from "@/context/CarritoContext";
@@ -466,6 +466,7 @@ export default function CheckoutPage() {
                           direccionSeleccionada={direccionSeleccionada}
                           envioSeleccionado={envioSeleccionado}
                           pedidoId={pedidoIdCreado}
+                          clientSecret={clientSecret!}
                           onError={setErrorMensaje}
                         />
                       </Elements>
@@ -723,12 +724,16 @@ function DireccionStep({
   gpsLoading,
   gpsError,
 }: any) {
-  const [formErrors, setFormErrors] = useState<{ telefono?: string; cp?: string }>({});
+  const [formErrors, setFormErrors] = useState<{ nombre_destinatario?: string; telefono?: string; cp?: string }>({});
+  const NOMBRE_REGEX_CHECKOUT = /[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s'\-]/g;
 
   const handleGuardar = () => {
-    const errors: { telefono?: string; cp?: string } = {};
+    const errors: { nombre_destinatario?: string; telefono?: string; cp?: string } = {};
+    const nombre = (nuevaDireccion.nombre_destinatario ?? "").trim();
+    if (nombre.length > 0 && nombre.length < 2)
+      errors.nombre_destinatario = "El nombre debe tener al menos 2 letras";
     const tel = (nuevaDireccion.telefono ?? "").replace(/\D/g, "");
-    if (tel && tel.length !== 10) errors.telefono = "El teléfono debe tener 10 dígitos";
+    if (tel.length > 0 && tel.length !== 10) errors.telefono = "El teléfono debe tener 10 dígitos";
     const cp = nuevaDireccion.codigo_postal ?? "";
     if (!nuevaDireccion.es_internacional && cp && !/^\d{5}$/.test(cp)) errors.cp = "El código postal debe tener 5 dígitos";
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
@@ -817,10 +822,15 @@ function DireccionStep({
             <input
               type="text"
               value={nuevaDireccion.nombre_destinatario || ""}
-              onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, nombre_destinatario: e.target.value }))}
+              onChange={(e) => {
+                const val = e.target.value.replace(NOMBRE_REGEX_CHECKOUT, "");
+                setNuevaDireccion((p: any) => ({ ...p, nombre_destinatario: val }));
+                setFormErrors((prev) => ({ ...prev, nombre_destinatario: undefined }));
+              }}
               placeholder="Nombre completo"
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none transition-all dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className={`w-full rounded-xl border px-4 py-3 text-sm focus:ring-2 focus:outline-none transition-all dark:bg-gray-800 dark:text-white ${formErrors.nombre_destinatario ? "border-red-400 focus:border-red-400 focus:ring-red-400/20" : "border-gray-300 focus:border-green-500 focus:ring-green-500/20 dark:border-gray-600"}`}
             />
+            {formErrors.nombre_destinatario && <p aria-live="polite" className="mt-1 text-xs text-red-500">{formErrors.nombre_destinatario}</p>}
           </div>
 
           <div>
@@ -1071,6 +1081,7 @@ function PagoYResumen({
   direccionSeleccionada,
   envioSeleccionado,
   pedidoId,
+  clientSecret,
   onError,
 }: {
   paso: CheckoutStep;
@@ -1078,15 +1089,40 @@ function PagoYResumen({
   direccionSeleccionada: any;
   envioSeleccionado: any;
   pedidoId: string | null;
+  clientSecret: string;
   onError: (msg: string | null) => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
   const [confirming, setConfirming] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({ numero: "", expiracion: "", cvc: "" });
+
+  // Stripe element base style — adapta el color al tema del proyecto
+  const elementStyle = {
+    style: {
+      base: {
+        fontSize: "15px",
+        color: "#1f2937",
+        fontFamily: "'Manrope', 'DM Sans', sans-serif",
+        fontSmoothing: "antialiased",
+        "::placeholder": { color: "#9CA3AF" },
+      },
+      invalid: { color: "#ef4444", iconColor: "#ef4444" },
+    },
+  };
+
+  const fieldWrapper =
+    "rounded-xl border border-gray-200 px-4 py-3.5 transition-all focus-within:border-green-500 focus-within:ring-2 focus-within:ring-green-500/20 dark:border-gray-600 dark:bg-gray-800";
+  const labelCls = "mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300";
 
   const handleConfirm = async () => {
     if (!stripe || !elements) {
       onError("Stripe aún se está cargando. Inténtalo de nuevo.");
+      return;
+    }
+    const cardElement = elements.getElement(CardNumberElement);
+    if (!cardElement) {
+      onError("No se pudo acceder a los datos de la tarjeta.");
       return;
     }
     setConfirming(true);
@@ -1095,32 +1131,108 @@ function PagoYResumen({
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const returnUrl = `${origin}/tienda/checkout/pago-exitoso${pedidoId ? `?pedido=${pedidoId}` : ""}`;
 
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: returnUrl },
+    // confirmCardPayment — usa elementos individuales; CVC queda enmascarado
+    const { error } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: { card: cardElement },
+      return_url: returnUrl,
     });
 
     if (error) {
       onError(error.message ?? "El pago no se pudo procesar.");
       setConfirming(false);
     }
-    // En éxito, Stripe redirige a return_url y la página actual se desmonta.
+    // En éxito, Stripe redirige a return_url y la página se desmonta.
   };
 
   return (
     <>
-      {/* PaymentElement siempre montado en pago/resumen para conservar estado del form. */}
+      {/* Formulario de tarjeta — siempre montado para conservar datos al cambiar de paso */}
       <div className={paso === "pago" ? "" : "hidden"}>
         <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">Forma de pago</h2>
         {isTestMode() && (
           <div className="mb-4 flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
             <Lock size={12} />
-            Modo de pruebas — usa la tarjeta 4242 4242 4242 4242 para simular un pago.
+            Modo de pruebas — usa la tarjeta 4242 4242 4242 4242, cualquier fecha futura y cualquier CVV.
           </div>
         )}
-        <PaymentElement options={{ layout: "tabs" }} />
+
+        <div className="mt-4 space-y-4">
+          {/* Número de tarjeta */}
+          <div>
+            <label className={labelCls}>Número de tarjeta</label>
+            <div className={fieldWrapper}>
+              <CardNumberElement
+                options={{ ...elementStyle, showIcon: true }}
+                onChange={(e) =>
+                  setFieldErrors((prev) => ({ ...prev, numero: e.error?.message ?? "" }))
+                }
+              />
+            </div>
+            {fieldErrors.numero && (
+              <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.numero}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Vencimiento */}
+            <div>
+              <label className={labelCls}>Vencimiento</label>
+              <div className={fieldWrapper}>
+                <CardExpiryElement
+                  options={elementStyle}
+                  onChange={(e) =>
+                    setFieldErrors((prev) => ({ ...prev, expiracion: e.error?.message ?? "" }))
+                  }
+                />
+              </div>
+              {fieldErrors.expiracion && (
+                <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.expiracion}</p>
+              )}
+            </div>
+
+            {/* Código de seguridad — CardCvcElement enmascara los dígitos con ••• al escribir */}
+            <div>
+              <label className={labelCls}>
+                Código de seguridad
+                <span
+                  className="ml-1 inline-flex cursor-default items-center align-middle"
+                  title="Los 3 o 4 dígitos al reverso de tu tarjeta. Por seguridad los dígitos no son visibles al escribirlos."
+                >
+                  <svg
+                    width="13" height="13" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" strokeWidth="2"
+                    aria-hidden="true" className="text-gray-400"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4M12 8h.01" />
+                  </svg>
+                </span>
+              </label>
+              <div className={fieldWrapper}>
+                <CardCvcElement
+                  options={elementStyle}
+                  onChange={(e) =>
+                    setFieldErrors((prev) => ({ ...prev, cvc: e.error?.message ?? "" }))
+                  }
+                />
+              </div>
+              {fieldErrors.cvc ? (
+                <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.cvc}</p>
+              ) : (
+                <p className="mt-1 text-xs text-gray-400">3 o 4 dígitos al reverso</p>
+              )}
+            </div>
+          </div>
+
+          {/* Nota de seguridad */}
+          <div className="flex items-center gap-2 rounded-lg border border-green-100 bg-green-50 px-3 py-2.5 text-xs text-green-700 dark:border-green-900/30 dark:bg-green-900/10 dark:text-green-400">
+            <Lock size={12} className="shrink-0" aria-hidden="true" />
+            <span>Pago cifrado — los datos de tu tarjeta nunca se almacenan en nuestros servidores</span>
+          </div>
+        </div>
       </div>
 
+      {/* Paso resumen — revisión del pedido + botón confirmar */}
       <div className={paso === "resumen" ? "" : "hidden"}>
         <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Confirmar pedido</h2>
         <div className="mb-4 space-y-3 border-b border-gray-200 pb-4 dark:border-gray-700">

@@ -22,13 +22,8 @@ export default function CarritoPage() {
           <ShoppingBag className="h-16 w-16 text-gray-300" />
           <p className="text-gray-600 dark:text-gray-400">Tu carrito está vacío</p>
           <Link
-<<<<<<< HEAD
-            href="/Cliente/producto"
-            className="mt-4 flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2 text-white transition-colors hover:bg-green-700"
-=======
             href="/cliente/producto"
             className="mt-4 rounded-lg bg-black px-6 py-2 text-white transition-colors hover:bg-gray-800"
->>>>>>> f4cb150a1c2c48f30cbd77acc51acea025d91efc
           >
             Seguir comprando
           </Link>
@@ -73,40 +68,6 @@ export default function CarritoPage() {
               >
                 {/* Product Image and Info */}
                 <Link
-<<<<<<< HEAD
-                  href={`/Cliente/producto/${item.id_producto}`}
-                  className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md bg-gray-100"
-                >
-                  {item.producto_imagenes?.[0] ? (
-                    <Image
-                      src={item.producto_imagenes[0].url}
-                      alt={item.nombre}
-                      fill
-                      sizes="96px"
-                      className="object-cover"
-                    />
-                  ) : item.imagen_principal_url ? (
-                    <Image
-                      src={item.imagen_principal_url}
-                      alt={item.nombre}
-                      fill
-                      sizes="96px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-xs text-gray-400">
-                      Sin imagen
-                    </div>
-                  )}
-                </Link>
-
-                <div className="flex flex-1 flex-col justify-between">
-                  <div>
-                    <Link
-                      href={`/Cliente/producto/${item.id_producto}`}
-                      className="font-medium text-gray-900 hover:text-green-600 dark:text-white"
-                    >
-=======
                   href={`/cliente/producto/${item.id_producto}`}
                   className="col-span-2 mb-4 flex gap-3 lg:mb-0"
                 >
@@ -129,13 +90,12 @@ export default function CarritoPage() {
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-gray-400">
-                        No image
+                        Sin imagen
                       </div>
                     )}
                   </div>
                   <div className="flex flex-col justify-center">
                     <h3 className="font-medium text-gray-900 dark:text-white hover:text-green-600">
->>>>>>> f4cb150a1c2c48f30cbd77acc51acea025d91efc
                       {item.nombre}
                     </h3>
                     <p className="text-xs text-gray-500">
@@ -185,15 +145,9 @@ export default function CarritoPage() {
             ))}
           </div>
 
-<<<<<<< HEAD
-          <Link
-            href="/Cliente/producto"
-            className="mt-4 flex items-center gap-2 text-sm text-green-600 hover:text-green-700"
-=======
           <button
             onClick={() => router.push("/cliente/producto")}
             className="mt-6 inline-flex items-center gap-2 rounded-lg bg-black px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
->>>>>>> f4cb150a1c2c48f30cbd77acc51acea025d91efc
           >
             ← Seguir comprando
           </button>

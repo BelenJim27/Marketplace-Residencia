@@ -21,7 +21,7 @@ export default function WishlistPage() {
           <Heart className="h-16 w-16 text-gray-300" />
           <p className="text-gray-500">Tu lista de deseos está vacía</p>
           <Link
-            href="/Cliente/producto"
+            href="/cliente/producto"
             className="mt-4 flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2 text-white transition-colors hover:bg-green-700"
           >
             Ver productos
@@ -113,7 +113,7 @@ export default function WishlistPage() {
       </div>
 
       <Link
-        href="/Cliente/producto"
+        href="/cliente/producto"
         className="mt-8 inline-flex items-center gap-2 text-sm text-green-600 hover:text-green-700"
       >
         <ArrowRight size={16} className="rotate-180" />

@@ -373,13 +373,14 @@ export default function LandingPageOaxaca() {
   const statsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (!mounted) return;
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setStatsVisible(true); },
       { threshold: 0.1 }
     );
     if (statsRef.current) observer.observe(statsRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [mounted]);
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
   const bgPrimary = getCSSVar("--land-bg-primary", "#F4F0E3");

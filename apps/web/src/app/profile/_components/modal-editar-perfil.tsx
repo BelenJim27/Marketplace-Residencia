@@ -93,10 +93,13 @@ function Spinner() {
   return <Loader2 className="h-4 w-4 animate-spin" />;
 }
 
+const NOMBRE_REGEX = /[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s'\-]/g;
+
 export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPerfilProps) {
   const { user: authUser, refreshAuth } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [photoPreview, setPhotoPreview] = useState("");
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -133,7 +136,14 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    let processed = value;
+    if (name === "telefono") {
+      processed = value.replace(/\D/g, "").slice(0, 10);
+    } else if (["nombre", "apellido_paterno", "apellido_materno"].includes(name)) {
+      processed = value.replace(NOMBRE_REGEX, "");
+    }
+    setForm((prev) => ({ ...prev, [name]: processed }));
+    setFormErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,8 +164,24 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+
+    const errors: Record<string, string> = {};
+    if (!form.nombre.trim() || form.nombre.trim().length < 2)
+      errors.nombre = "Ingresa un nombre válido (mínimo 2 letras)";
+    if (form.apellido_paterno.trim().length > 0 && form.apellido_paterno.trim().length < 2)
+      errors.apellido_paterno = "El apellido debe tener al menos 2 letras";
+    if (form.apellido_materno.trim().length > 0 && form.apellido_materno.trim().length < 2)
+      errors.apellido_materno = "El apellido debe tener al menos 2 letras";
+    const tel = form.telefono.replace(/\D/g, "");
+    if (tel.length > 0 && tel.length !== 10)
+      errors.telefono = "El teléfono debe tener exactamente 10 dígitos";
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const token = getCookie("token");
@@ -255,7 +281,9 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
                 onChange={handleChange}
                 required
                 placeholder="Tu nombre"
+                className={formErrors.nombre ? "border-red-400 focus:border-red-400" : ""}
               />
+              {formErrors.nombre && <p aria-live="polite" className="mt-1 text-xs text-red-500">{formErrors.nombre}</p>}
             </Field>
 
             <Field label="Apellido Paterno">
@@ -265,7 +293,9 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
                 value={form.apellido_paterno}
                 onChange={handleChange}
                 placeholder="Apellido paterno"
+                className={formErrors.apellido_paterno ? "border-red-400 focus:border-red-400" : ""}
               />
+              {formErrors.apellido_paterno && <p aria-live="polite" className="mt-1 text-xs text-red-500">{formErrors.apellido_paterno}</p>}
             </Field>
 
             <Field label="Apellido Materno">
@@ -275,7 +305,9 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
                 value={form.apellido_materno}
                 onChange={handleChange}
                 placeholder="Apellido materno"
+                className={formErrors.apellido_materno ? "border-red-400 focus:border-red-400" : ""}
               />
+              {formErrors.apellido_materno && <p aria-live="polite" className="mt-1 text-xs text-red-500">{formErrors.apellido_materno}</p>}
             </Field>
 
             <Field label="Teléfono">
@@ -284,8 +316,14 @@ export function ModalEditarPerfil({ isOpen, onClose, onSuccess }: ModalEditarPer
                 name="telefono"
                 value={form.telefono}
                 onChange={handleChange}
-                placeholder="+52 123 456 7890"
+                placeholder="10 dígitos, ej. 9511234567"
+                maxLength={10}
+                inputMode="numeric"
+                className={formErrors.telefono ? "border-red-400 focus:border-red-400" : ""}
               />
+              {formErrors.telefono
+                ? <p aria-live="polite" className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>
+                : <p className="mt-1 text-xs text-gray-400">Solo números, 10 dígitos</p>}
             </Field>
 
             <Field label="Idioma Preferido">

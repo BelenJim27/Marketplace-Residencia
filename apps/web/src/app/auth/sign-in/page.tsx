@@ -40,7 +40,7 @@ function SignInContent() {
       router.replace(redirectUrl);
       return;
     }
-    router.replace("/Cliente/producto");
+    router.replace("/cliente/producto");
   }, [isAuthenticated, loading, isVenderFlow, isAdmin, isProductor, router, searchParams]);
 
   if (isVenderFlow) {

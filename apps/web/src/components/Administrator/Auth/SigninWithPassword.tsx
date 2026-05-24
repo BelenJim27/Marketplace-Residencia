@@ -67,7 +67,7 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
 
       const isAdmin = roles.some((rol: string) => ["ADMIN", "administrador", "admin"].includes(rol));
       if (isAdmin) {
-        router.push("/administrador/dashboard");
+        router.push("/Administrador/dashboard");
         return;
       }
 
@@ -81,7 +81,7 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
         return;
       }
 
-      router.push("/Cliente/producto");
+      router.push("/cliente/producto");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión");
     } finally {

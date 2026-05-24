@@ -12,10 +12,10 @@ export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | MARKETPLACE RESIDENCIA",
-    default: "Administrador",
+    template: "%s | Mezcales",
+    default: "Mezcales",
   },
-  description: "Interfaz de administración MAESTRO",
+  description: "Marketplace de mezcales artesanales de Oaxaca",
 };
 
 export default function RootLayout({ children }: PropsWithChildren) {

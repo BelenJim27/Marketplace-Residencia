@@ -14,7 +14,7 @@ export default function GoogleSigninButton({ text, redirectUrl }: { text: string
       setError(null);
       console.log("🔵 Iniciando sesión con Google...");
       
-      const callbackUrl = redirectUrl || "/Cliente/producto";
+      const callbackUrl = redirectUrl || "/cliente/producto";
       
       signIn("google", {
         callbackUrl,

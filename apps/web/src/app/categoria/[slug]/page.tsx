@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { ShoppingCart, Heart, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
@@ -36,6 +36,7 @@ const TIPOS_MEZCAL = [
 export default function CategoriaPage() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const { agregarProducto } = useCarrito();
   const {
     isInWishlist,
@@ -123,7 +124,7 @@ export default function CategoriaPage() {
 
   const toggleWishlist = (producto: ProductoPublico) => {
     if (!isAuthenticated) {
-      router.push("/auth/sign-in?redirect=/Cliente/producto");
+      router.push(`/auth/sign-in?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
     if (isInWishlist(producto.id_producto)) {

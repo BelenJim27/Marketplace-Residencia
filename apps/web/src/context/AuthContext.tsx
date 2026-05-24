@@ -107,7 +107,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = getCookie("token");
     const usuarioStr = getCookie("usuario");
 
-    if (token && usuarioStr) {
+    const refreshToken = getCookie("refresh_token");
+
+    // Restaurar usuario si hay perfil guardado Y al menos uno de los tokens es válido.
+    // Cuando token expira pero refresh_token sigue activo, la llamada API obtiene un
+    // nuevo access_token automáticamente (via api.ts), sin forzar un re-login.
+    if (usuarioStr && (token || refreshToken)) {
       try {
         const usuario = JSON.parse(usuarioStr);
         setUser({
@@ -133,6 +138,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshAuth();
   }, [refreshAuth, session]);
+
+  // Cuando usuario cookie expiró pero refresh_token sigue vigente,
+  // llama al endpoint para obtener tokens + perfil frescos sin forzar re-login.
+  useEffect(() => {
+    if (loading) return;        // esperar a que refreshAuth termine
+    if (user !== null) return;  // ya hay sesión, nada que hacer
+    if (session?.user) return;  // NextAuth maneja la sesión
+
+    const refreshToken = getCookie("refresh_token");
+    if (!refreshToken) return;
+
+    let cancelled = false;
+    setLoading(true);
+
+    fetch("/auth/refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        if (data.tokens?.access_token) {
+          setCookie("token", data.tokens.access_token, 7);
+        }
+        if (data.tokens?.refresh_token) {
+          setCookie("refresh_token", data.tokens.refresh_token, 30);
+        }
+        if (data.user) {
+          const usuario: Usuario = {
+            ...data.user,
+            roles: Array.isArray(data.user.roles) ? data.user.roles : [],
+            permisos: Array.isArray(data.user.permisos) ? data.user.permisos : [],
+            id_productor: data.user.id_productor != null ? Number(data.user.id_productor) : undefined,
+            biografia: data.user.biografia ?? null,
+          };
+          setCookie("usuario", JSON.stringify(usuario), 30);
+          setUser(usuario);
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [loading, user, session]);
 
   // Productor resolution in background — does NOT block layout rendering
   useEffect(() => {
@@ -264,7 +314,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...usuario,
       id_productor: usuario.id_productor != null ? Number(usuario.id_productor) : undefined,
     };
-    setCookie("usuario", JSON.stringify(normalizedUser), rememberMe ? 7 : 1);
+    setCookie("usuario", JSON.stringify(normalizedUser), 30);
     setUser(normalizedUser);
     setProductorResolved(normalizedUser.id_productor != null && normalizedUser.id_productor !== 0);
   }, []);

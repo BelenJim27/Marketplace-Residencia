@@ -616,7 +616,7 @@ export default function ProductCatalogEnhanced() {
 
   const toggleWishlist = (producto: Producto) => {
     if (!isAuthenticated) {
-      router.push("/auth/sign-in?redirect=/Cliente/producto");
+      addToast("Inicia sesión para guardar favoritos");
       return;
     }
     if (isInWishlist(producto.id_producto)) {

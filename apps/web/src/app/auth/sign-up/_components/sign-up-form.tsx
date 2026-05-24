@@ -13,9 +13,18 @@ export function SignUpForm() {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const isVenderFlow = searchParams.get("vender") === "true";
+
+  const NOMBRE_REGEX = /[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s'\-]/g;
+
+  const handleNombreChange = (field: string, value: string) => {
+    const filtered = value.replace(NOMBRE_REGEX, "");
+    setFormData((prev) => ({ ...prev, [field]: filtered }));
+    setFieldErrors((prev) => ({ ...prev, [field]: "" }));
+  };
 
   const [formData, setFormData] = useState({
     nombre_usuario: "",
@@ -65,6 +74,18 @@ export function SignUpForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const errors: Record<string, string> = {};
+    if (!formData.nombre.trim() || formData.nombre.trim().length < 2)
+      errors.nombre = "Ingresa un nombre válido (mínimo 2 letras)";
+    if (!formData.apellido_paterno.trim() || formData.apellido_paterno.trim().length < 2)
+      errors.apellido_paterno = "Ingresa un apellido válido (mínimo 2 letras)";
+    if (formData.apellido_materno.trim().length > 0 && formData.apellido_materno.trim().length < 2)
+      errors.apellido_materno = "El apellido debe tener al menos 2 letras";
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
 
     if (!allPasswordValid) {
       setError("La contraseña no cumple con los requisitos");
@@ -156,11 +177,12 @@ export function SignUpForm() {
           <input
             type="text"
             required
-            className="w-full rounded-lg border border-green-200 bg-white p-3 outline-none focus:border-green-400 dark:bg-gray-dark"
+            className={`w-full rounded-lg border bg-white p-3 outline-none dark:bg-gray-dark ${fieldErrors.nombre ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
             placeholder="Ingresa tu nombre"
             value={formData.nombre}
-            onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+            onChange={(e) => handleNombreChange("nombre", e.target.value)}
           />
+          {fieldErrors.nombre && <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.nombre}</p>}
         </div>
 
         {/* APELLIDO PATERNO */}
@@ -171,11 +193,12 @@ export function SignUpForm() {
           <input
             type="text"
             required
-            className="w-full rounded-lg border border-green-200 bg-white p-3 outline-none focus:border-green-400 dark:bg-gray-dark"
+            className={`w-full rounded-lg border bg-white p-3 outline-none dark:bg-gray-dark ${fieldErrors.apellido_paterno ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
             placeholder="Ingresa tu apellido paterno"
             value={formData.apellido_paterno}
-            onChange={(e) => setFormData({ ...formData, apellido_paterno: e.target.value })}
+            onChange={(e) => handleNombreChange("apellido_paterno", e.target.value)}
           />
+          {fieldErrors.apellido_paterno && <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.apellido_paterno}</p>}
         </div>
 
         {/* APELLIDO MATERNO */}
@@ -185,12 +208,12 @@ export function SignUpForm() {
           </label>
           <input
             type="text"
-            required
-            className="w-full rounded-lg border border-green-200 bg-white p-3 outline-none focus:border-green-400 dark:bg-gray-dark"
+            className={`w-full rounded-lg border bg-white p-3 outline-none dark:bg-gray-dark ${fieldErrors.apellido_materno ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
             placeholder="Ingresa tu apellido materno"
             value={formData.apellido_materno}
-            onChange={(e) => setFormData({ ...formData, apellido_materno: e.target.value })}
+            onChange={(e) => handleNombreChange("apellido_materno", e.target.value)}
           />
+          {fieldErrors.apellido_materno && <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.apellido_materno}</p>}
         </div>
 
         {/* EMAIL */}

@@ -88,29 +88,6 @@ export default function MisComprasPage() {
     );
   }
 
-<<<<<<< HEAD
-=======
-  if (!isAuthenticated) {
-    return (
-      <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
-        <div style={{ marginBottom: "32px" }}>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "36px", fontWeight: "700", background: `linear-gradient(90deg, ${COLOR_PALETTE.green} 0%, ${COLOR_PALETTE.copper} 100%)`, backgroundClip: "text", color: "transparent", marginBottom: "8px" }}>
-            Mis Compras
-          </h1>
-          <p style={{ fontSize: "14px", color: COLOR_PALETTE.copper, fontWeight: "500", marginTop: "8px" }}>
-            Tu historial de pedidos
-          </p>
-        </div>
-        <div style={{ borderRadius: "12px", background: `linear-gradient(135deg, ${COLOR_PALETTE.white} 0%, ${COLOR_PALETTE.cream}08 100%)`, padding: "32px", textAlign: "center", border: `1px solid ${COLOR_PALETTE.border}` }}>
-          <p style={{ marginBottom: "16px", color: "#666666", fontSize: "15px" }}>Inicia sesión para ver tu historial de compras.</p>
-          <Link href="/auth/sign-in" style={{ display: "inline-block", borderRadius: "8px", background: COLOR_PALETTE.green, color: COLOR_PALETTE.white, padding: "12px 24px", fontSize: "14px", fontWeight: "600", transition: "all 200ms ease", textDecoration: "none" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#1f3a25"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(46,74,51,0.2)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = COLOR_PALETTE.green; e.currentTarget.style.boxShadow = "none"; }}>
-            Iniciar sesión
-          </Link>
-        </div>
-      </main>
-    );
-  }
->>>>>>> f4cb150a1c2c48f30cbd77acc51acea025d91efc
 
   return (
     <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
@@ -124,17 +101,10 @@ export default function MisComprasPage() {
       </div>
 
       {pedidos.length === 0 ? (
-<<<<<<< HEAD
-        <div className="flex flex-col items-center gap-4 rounded-lg bg-white p-10 text-center shadow-md dark:bg-gray-dark">
-          <ShoppingBag className="h-14 w-14 text-gray-400 dark:text-gray-600" aria-hidden="true" />
-          <p className="text-gray-600 dark:text-gray-400">Aún no tienes compras.</p>
-          <Link href="/Cliente/producto" className="inline-block rounded-lg bg-green-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-green-700 focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900">
-=======
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", borderRadius: "12px", background: `linear-gradient(135deg, ${COLOR_PALETTE.white} 0%, ${COLOR_PALETTE.cream}08 100%)`, padding: "40px", textAlign: "center", border: `1px solid ${COLOR_PALETTE.border}` }}>
           <ShoppingBag size={56} style={{ color: COLOR_PALETTE.border }} aria-hidden="true" />
           <p style={{ color: "#666666", fontSize: "15px" }}>Aún no tienes compras.</p>
           <Link href="/cliente/producto" style={{ display: "inline-block", borderRadius: "8px", background: COLOR_PALETTE.green, color: COLOR_PALETTE.white, padding: "12px 24px", fontSize: "14px", fontWeight: "600", transition: "all 200ms ease", textDecoration: "none", marginTop: "8px" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#1f3a25"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(46,74,51,0.2)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = COLOR_PALETTE.green; e.currentTarget.style.boxShadow = "none"; }}>
->>>>>>> f4cb150a1c2c48f30cbd77acc51acea025d91efc
             Explorar mezcales
           </Link>
         </div>

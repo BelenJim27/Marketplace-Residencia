@@ -38,7 +38,7 @@ function ProductorLandingContent() {
   }
 
   if (isAuthenticated && isAdmin) {
-    router.push("/administrador");
+    router.push("/Administrador/dashboard");
     return null;
   }
 
