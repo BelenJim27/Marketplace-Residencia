@@ -1,22 +1,17 @@
 "use client";
 
-import { Search, HelpCircle, X } from "lucide-react";
-import { useState, useCallback, useEffect } from "react";
-import { api } from "@/lib/api";
+import { Search, HelpCircle } from "lucide-react";
+import { useState } from "react";
 
 interface SidebarFiltersProps {
   filtrosPendientes: {
     busqueda: string;
     maguey: string[];
-    destilacion: string[];
-    molienda: string[];
     precio_min: string;
     precio_max: string;
-    maestro_mezcalero: string;
   };
   onBusquedaChange: (value: string) => void;
   onFiltroToggle: (field: string, value: string) => void;
-  onMaestroChange: (value: string) => void;
   searchFocus: boolean;
   onSearchFocus: (focused: boolean) => void;
   precioMinLocal: string;
@@ -25,8 +20,6 @@ interface SidebarFiltersProps {
   onPrecioMaxChange: (value: string) => void;
   onAplicarPrecio: () => void;
   TIPOS_MAGUEY: string[];
-  TIPOS_DESTILACION: string[];
-  TIPOS_MOLIENDA: string[];
 }
 
 function FilterCheckbox({
@@ -140,131 +133,6 @@ function FilterSection({
   );
 }
 
-// P4: Combobox component for Maestro with autocomplete
-interface Productor {
-  id: number;
-  nombre: string;
-  usuario?: { nombre?: string; apellido_paterno?: string };
-}
-
-function MaestroCombobox({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<Productor[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const fetchSuggestions = useCallback(
-    async (query: string) => {
-      if (query.length < 2) {
-        setSuggestions([]);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const data = await api.productores.getAll({ busqueda: query, limit: 8 });
-        setSuggestions((data as unknown as Productor[]).slice(0, 8));
-        setIsOpen(true);
-      } catch (err) {
-        setSuggestions([]);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    []
-  );
-
-  const debouncedFetch = useCallback(() => {
-    const timer = setTimeout(() => fetchSuggestions(value), 300);
-    return () => clearTimeout(timer);
-  }, [value, fetchSuggestions]);
-
-  useEffect(() => {
-    return debouncedFetch();
-  }, [debouncedFetch]);
-
-  const handleSelect = (productor: Productor) => {
-    onChange(productor.nombre);
-    setIsOpen(false);
-  };
-
-  const handleClear = () => {
-    onChange("");
-    setSuggestions([]);
-    setIsOpen(false);
-  };
-
-  return (
-    <div className="relative pt-1">
-      <div className="relative">
-        <input
-          type="text"
-          placeholder="Nombre..."
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => value.length >= 2 && setIsOpen(true)}
-          onBlur={() => setTimeout(() => setIsOpen(false), 150)}
-          className="w-full rounded-lg py-2 px-3 text-sm outline-none pr-8"
-          style={{
-            backgroundColor: "#f5ede5",
-            border: "1px solid #e8dcc8",
-            color: "#5c3d1e",
-          }}
-          aria-autocomplete="list"
-          aria-expanded={isOpen}
-        />
-        {value && (
-          <button
-            onClick={handleClear}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 hover:opacity-70 transition-opacity"
-            aria-label="Limpiar"
-          >
-            <X size={14} style={{ color: "#c97a49" }} />
-          </button>
-        )}
-      </div>
-
-      {/* Dropdown suggestions */}
-      {isOpen && (
-        <div
-          className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border z-50 max-h-40 overflow-y-auto"
-          style={{ borderColor: "#e8dcc8" }}
-          role="listbox"
-        >
-          {isLoading ? (
-            <div className="p-3 text-xs text-gray-500 text-center">Buscando...</div>
-          ) : suggestions.length > 0 ? (
-            suggestions.map((productor, index) => (
-              <button
-                key={productor.id || `productor-${index}`}
-                onClick={() => handleSelect(productor)}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 transition-colors"
-                style={{ color: "#5c3d1e" }}
-                role="option"
-              >
-                <div className="font-medium">{productor.nombre}</div>
-                {productor.usuario?.nombre && (
-                  <div className="text-xs opacity-70">
-                    {productor.usuario.nombre} {productor.usuario.apellido_paterno}
-                  </div>
-                )}
-              </button>
-            ))
-          ) : (
-            <div className="p-3 text-xs text-gray-500 text-center">
-              {value.length < 2 ? "Escribe al menos 2 caracteres" : "No encontrado"}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function PriceRangeSlider({
   minValue,
   maxValue,
@@ -341,7 +209,6 @@ export function SidebarFiltersComponent({
   filtrosPendientes,
   onBusquedaChange,
   onFiltroToggle,
-  onMaestroChange,
   searchFocus,
   onSearchFocus,
   precioMinLocal,
@@ -350,8 +217,6 @@ export function SidebarFiltersComponent({
   onPrecioMaxChange,
   onAplicarPrecio,
   TIPOS_MAGUEY,
-  TIPOS_DESTILACION,
-  TIPOS_MOLIENDA,
 }: SidebarFiltersProps) {
   return (
     <div className="space-y-1">
@@ -395,37 +260,6 @@ export function SidebarFiltersComponent({
         </div>
       </FilterSection>
 
-      <FilterSection
-        title="Destilación"
-        tooltip="Método de destilación: Alambique (cobre, lento, suave), Artefacto (eficiente), Cambio (híbrido)."
-      >
-        <div className="space-y-0.5 px-1">
-          {TIPOS_DESTILACION.map((d) => (
-            <FilterCheckbox
-              key={d}
-              label={d}
-              active={filtrosPendientes.destilacion.includes(d)}
-              onClick={() => onFiltroToggle("destilacion", d)}
-            />
-          ))}
-        </div>
-      </FilterSection>
-
-      <FilterSection
-        title="Molienda"
-        tooltip="Cómo se muele el agave: Tahona (piedra), Molino de piedra, Molino mecánico, Manual."
-      >
-        <div className="space-y-0.5 px-1">
-          {TIPOS_MOLIENDA.map((m) => (
-            <FilterCheckbox
-              key={m}
-              label={m}
-              active={filtrosPendientes.molienda.includes(m)}
-              onClick={() => onFiltroToggle("molienda", m)}
-            />
-          ))}
-        </div>
-      </FilterSection>
 
       <FilterSection
         title="Rango de Precio"
@@ -440,18 +274,6 @@ export function SidebarFiltersComponent({
         />
       </FilterSection>
 
-      <FilterSection
-        title="Maestro Mezcalero"
-        defaultOpen={false}
-        tooltip="Productor artesanal que hace este mezcal."
-      >
-        <div className="px-1 pt-1">
-          <MaestroCombobox
-            value={filtrosPendientes.maestro_mezcalero}
-            onChange={onMaestroChange}
-          />
-        </div>
-      </FilterSection>
     </div>
   );
 }

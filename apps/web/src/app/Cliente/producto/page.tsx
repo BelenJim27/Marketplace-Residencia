@@ -1,28 +1,23 @@
 import { Metadata } from "next";
-import ProductCatalogClient from "@/components/catalog/Client";
-import ProductCarousel from "@/components/catalog/ProductCarousel";
+import { HeroMezcal } from "@/components/catalog/HeroMezcal";
+import ProductCatalogEnhanced from "@/components/catalog/Client";
 import TrustCards from "@/components/catalog/TrustCards";
 
 export const metadata: Metadata = {
-  title: { absolute: "Productos" },
+  title: { absolute: "Catálogo de Mezcales" },
 };
 
 export default function ProductoPage() {
   return (
-    <div className="space-y-8">
-      {/* ── CARRUSEL DE PRODUCTOS DESTACADOS ── */}
-      <div id="carousel">
-        <ProductCarousel />
-      </div>
+    <div className="w-full">
+      {/* ── HERO IMPACTANTE CON PARALLAX ── */}
+      <HeroMezcal />
 
-      {/* ── CARDS DE CONFIANZA Y VALORES ── */}
-      <div id="trust-cards">
-        <TrustCards />
-      </div>
+     
 
       {/* ── CATÁLOGO DE PRODUCTOS ── */}
       <div id="catalogo">
-        <ProductCatalogClient />
+        <ProductCatalogEnhanced />
       </div>
     </div>
   );
