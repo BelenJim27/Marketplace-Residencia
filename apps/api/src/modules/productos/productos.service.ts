@@ -237,7 +237,7 @@ export class ProductosService {
       );
     }
 
-    // Vista pública: todos los productos activos
+    // Vista pública: todos los productos activos (con o sin lote de trazabilidad)
     const items = await this.prisma.productos.findMany({
       where: {
         ...where,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import Image from "next/image";
@@ -10,6 +10,7 @@ import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/format-number";
 import { semanticColors, hexFallbacks } from "@/lib/colors";
+import { catalogColors } from "@/lib/colors-catalog";
 import { SidebarFiltersComponent } from "./SidebarFilters";
 
 interface Producto {
@@ -44,9 +45,6 @@ interface Filtros {
   maguey: string[];
   precio_min: string;
   precio_max: string;
-  destilacion: string[];
-  molienda: string[];
-  maestro_mezcalero: string;
 }
 
 interface Toast {
@@ -61,15 +59,11 @@ const FILTROS_VACIOS: Filtros = {
   maguey: [],
   precio_min: "",
   precio_max: "",
-  destilacion: [],
-  molienda: [],
-  maestro_mezcalero: "",
 };
 
 const TIPOS_MEZCAL = ["Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueño", "Cuishe", "Coyote", "Litrea", "Garabatillo", "Anejo"];
 const TIPOS_MAGUEY = ["Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueño", "Cuishe", "Coyote", "Litrea", "Garabatillo"];
-const TIPOS_DESTILACION = ["Alambique", "Artefacto", "Cambio"];
-const TIPOS_MOLIENDA = ["Tahona", "Molino de piedra", "Molino mecánico", "Manual"];
+
 
 // Two-color strategy (Restrained): neutrals + brand accent
 // Use index % 2 to alternate: 0 = neutral (default), 1 = brand (featured)
@@ -83,9 +77,9 @@ const CARD_COLORS = [
 function StarRating({ rating = 5, reviews = 47, cardColor }: { rating?: number; reviews?: number; cardColor?: typeof CARD_COLORS[0] }) {
   const fullStars = Math.floor(rating);
   const isNeutralCard = cardColor?.bg === hexFallbacks.bgSecondary;
-  const starColor = isNeutralCard ? hexFallbacks.brand : hexFallbacks.bgSecondary;
-  const emptyStarColor = isNeutralCard ? "#e0d5c7" : "rgba(255, 255, 255, 0.3)";
-  const textColor = isNeutralCard ? hexFallbacks.brand : "rgb(255 255 255 / 0.9)";
+  const starColor = isNeutralCard ? catalogColors.rating.full : hexFallbacks.bgSecondary;
+  const emptyStarColor = isNeutralCard ? catalogColors.rating.empty : catalogColors.rating.emptyDark;
+  const textColor = isNeutralCard ? catalogColors.rating.full : "rgb(255 255 255 / 0.9)";
   const ratingLabel = `${rating.toFixed(1)} de 5 estrellas (${reviews} ${reviews === 1 ? "reseña" : "reseñas"})`;
 
   return (
@@ -104,7 +98,7 @@ function StarRating({ rating = 5, reviews = 47, cardColor }: { rating?: number; 
         ))}
       </div>
       <span className="text-xs font-semibold" style={{ color: textColor }} aria-hidden="true">{rating.toFixed(1)}</span>
-      <span className="text-[11px]" style={{ color: isNeutralCard ? hexFallbacks.textMuted : "rgb(255 255 255 / 0.8)" }} aria-hidden="true">({reviews})</span>
+      <span className="text-[11px]" style={{ color: isNeutralCard ? catalogColors.card.text.muted : "rgb(255 255 255 / 0.8)" }} aria-hidden="true">({reviews})</span>
     </div>
   );
 }
@@ -134,8 +128,205 @@ function FilterBadge({ label, onRemove }: { label: string; onRemove: () => void 
   );
 }
 
-// ProductCard Component
-function ProductCard({
+// ProductCard Component - Responsive design (móvil vertical, desktop horizontal)
+const ProductCard = memo(function ProductCard({
+  producto,
+  index,
+  isWishlisted,
+  onWishlist,
+  onAddCart,
+  isAdded,
+  onViewDetails,
+}: {
+  producto: Producto;
+  index: number;
+  isWishlisted: boolean;
+  onWishlist: () => void;
+  onAddCart: () => void;
+  isAdded: boolean;
+  onViewDetails: () => void;
+}) {
+  const imagenUrl = producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
+  const maguey = producto.lotes?.datos_api?.maguey || "Espadin";
+  const alcohol = producto.lotes?.datos_api?.grado_alcohol || producto.lotes?.datos_api?.alcohol || "46";
+  const maestro = producto.nombre_productor || producto.tiendas?.nombre || "Productor artesanal";
+  const rating = 4.8;
+
+  const coloresCategoria: Record<string, string> = {
+    artesanal: catalogColors.card.category.artesanal,
+    ancestral: catalogColors.card.category.ancestral,
+    mezcal: catalogColors.card.category.mezcal,
+  };
+
+  const bgColor = coloresCategoria.mezcal;
+
+  return (
+    <div
+      className="cursor-pointer"
+      onClick={onViewDetails}
+      role="article"
+      aria-label={`Producto: ${producto.nombre}`}
+    >
+      {/* Móvil: flex-col | SM+: flex-row */}
+      <div
+        className="flex flex-col sm:flex-row gap-0 bg-white overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-2 border border-black/6 h-full"
+      >
+        {/* BOTTLE SECTION - Responsive */}
+        <div
+          className="w-full h-48 sm:w-[140px] sm:h-auto md:w-[180px] flex-shrink-0 relative p-4 sm:p-6 flex flex-col justify-center items-center gap-4 transition-all hover:scale-105"
+          style={{ backgroundColor: bgColor }}
+        >
+          <div className="relative w-full h-full flex items-center justify-center sm:h-60">
+            {imagenUrl && (
+              <Image
+                src={imagenUrl}
+                alt={producto.nombre}
+                width={120}
+                height={280}
+                className="h-full w-auto object-contain transition-transform duration-300"
+                priority
+                style={{ filter: "drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))" }}
+              />
+            )}
+          </div>
+          <div
+            className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 right-2 sm:right-3 text-white text-center text-xs font-bold uppercase tracking-wider p-1 sm:p-1.5 rounded"
+            style={{
+              background: "rgba(0, 0, 0, 0.15)",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            Mezcal
+          </div>
+        </div>
+
+        {/* INFO SECTION - Responsive padding */}
+        <div
+          className="flex-1 p-4 sm:p-5 flex flex-col justify-between"
+          style={{
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+          }}
+        >
+          <div className="space-y-3 sm:space-y-4">
+            <h3
+              className="text-base sm:text-lg font-semibold text-gray-900 leading-tight"
+              style={{ fontFamily: 'var(--font-family-store)' }}
+            >
+              {producto.nombre}
+            </h3>
+
+            <div className="space-y-1.5 sm:space-y-2">
+              <div className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                Agave
+              </div>
+              <div className="text-sm font-medium text-gray-900">{maguey}</div>
+            </div>
+
+            <div className="space-y-1.5 sm:space-y-2">
+              <div className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                Origen
+              </div>
+              <div className="text-sm font-medium text-gray-900">{maestro}</div>
+            </div>
+
+            <div
+              className="flex gap-2 sm:gap-3 py-2 sm:py-3 border-t border-b text-xs"
+              style={{ borderColor: "rgba(0, 0, 0, 0.06)" }}
+            >
+              <div className="flex flex-col gap-1 flex-1">
+                <span className="font-bold uppercase tracking-wider text-gray-400">
+                  Alcohol
+                </span>
+                <span className="font-semibold text-amber-700">{alcohol}%</span>
+              </div>
+              <div style={{ width: "1px", background: "rgba(0, 0, 0, 0.1)" }}></div>
+              <div className="flex flex-col gap-1 flex-1">
+                <span className="font-bold uppercase tracking-wider text-gray-400">
+                  Rating
+                </span>
+                <div className="flex gap-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <span
+                      key={i}
+                      className="text-sm"
+                      style={{
+                        color: i < Math.round(rating) ? catalogColors.rating.full : catalogColors.rating.empty,
+                      }}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="flex flex-col gap-2 sm:gap-3 pt-3 sm:pt-4 border-t"
+            style={{ borderColor: "rgba(0, 0, 0, 0.06)" }}
+          >
+            <div className="flex items-baseline gap-1">
+              <span className="text-xs text-gray-500 font-semibold">$</span>
+              <span className="text-xl sm:text-2xl font-bold text-amber-700" style={{ fontFamily: "Courier New, monospace" }}>
+                {formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
+              </span>
+              <span className="text-xs text-gray-500 font-semibold">MXN</span>
+            </div>
+
+            <button
+              className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded transition-all hover:opacity-90 active:scale-95 w-full"
+              style={{
+                backgroundColor: hexFallbacks.brand,
+                border: "none",
+                cursor: "pointer",
+              }}
+              disabled={isAdded}
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddCart();
+              }}
+            >
+              {isAdded ? (
+                <>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    width="14"
+                    height="14"
+                  >
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                  </svg>
+                  <span className="hidden sm:inline">Listo</span>
+                  <span className="sm:hidden text-[9px]">✓</span>
+                </>
+              ) : (
+                <>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    width="14"
+                    height="14"
+                  >
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                  </svg>
+                  <span className="hidden sm:inline">Agregar</span>
+                  <span className="sm:hidden">+</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// Padding placeholder to maintain original structure
+const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
   producto,
   index,
   isWishlisted,
@@ -161,18 +352,19 @@ function ProductCard({
 
   return (
     <div
-      className="w-full relative rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 max-w-[280px] sm:max-w-[290px] mx-auto flex flex-col h-[520px]"
+      className="w-full relative rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 max-w-[280px] sm:max-w-[290px] mx-auto flex flex-col h-[480px]"
       style={{ backgroundColor: cardColor.bg, border: `1px solid ${hexFallbacks.borderLight}` }}
       role="article"
       aria-label={`Producto: ${producto.nombre}`}
     >
-      <div className="relative flex items-center justify-center overflow-hidden h-[280px] w-full group" style={{ backgroundColor: hexFallbacks.bgPrimary }}>
+      <div className="relative flex items-center justify-center overflow-hidden h-[240px] w-full group" style={{ backgroundColor: hexFallbacks.bgPrimary }}>
         {imagenUrl && (
           <Image
             src={imagenUrl}
             alt={producto.nombre}
             width={200}
             height={280}
+            loading="lazy"
             className="object-contain w-auto h-auto max-h-[95%] p-2 transition-transform duration-300 group-hover:scale-105"
           />
         )}
@@ -200,21 +392,22 @@ function ProductCard({
       </div>
 
       <div
-        className="p-3 sm:p-4 flex flex-col justify-between flex-grow"
+        className="p-2.5 sm:p-3 flex flex-col justify-between flex-grow"
         style={{
           backgroundColor: cardColor.bg,
           color: cardColor.text
         }}
       >
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           {maestro && (
-            <div className="space-y-0.5 min-w-0">
+            <div className="min-w-0 flex-1">
               <p
-                className="text-[10px] font-bold uppercase tracking-wider truncate"
+                className="text-[9px] font-bold uppercase tracking-wider truncate"
                 style={{
                   color: cardColor.bg === hexFallbacks.bgSecondary ? hexFallbacks.textPrimary : "rgb(255 255 255 / 0.95)"
                 }}
                 title={maestro}
+                aria-label={`Productor: ${maestro}`}
               >
                 {maestro}
               </p>
@@ -242,7 +435,7 @@ function ProductCard({
           </div>
           {maguey && (
             <p
-              className="text-[10px] sm:text-xs italic uppercase tracking-wider"
+              className="text-[8px] sm:text-[9px] italic uppercase tracking-wider"
               style={{
                 color: cardColor.bg === hexFallbacks.bgSecondary ? hexFallbacks.textSecondary : "rgb(255 255 255 / 0.9)"
               }}
@@ -253,7 +446,7 @@ function ProductCard({
           <h3
             className="text-sm sm:text-base lg:text-lg font-bold leading-tight line-clamp-2 break-words"
             style={{
-              fontFamily: "Georgia, serif",
+              fontFamily: 'var(--font-family-store)',
               color: cardColor.text,
               overflowWrap: "break-word",
             }}
@@ -264,21 +457,23 @@ function ProductCard({
           <StarRating cardColor={cardColor} />
           {producto.descripcion && (
             <p
-              className="text-[9px] sm:text-xs leading-relaxed line-clamp-2 break-words"
+              className="text-[9px] sm:text-xs leading-relaxed line-clamp-2 break-words min-w-0"
               style={{
                 color: cardColor.bg === hexFallbacks.bgSecondary ? hexFallbacks.textMuted : "rgb(255 255 255 / 0.8)",
+                wordBreak: "break-word",
                 overflowWrap: "break-word",
               }}
               title={producto.descripcion}
+              aria-label={`Descripción: ${producto.descripcion}`}
             >
               {producto.descripcion}
             </p>
           )}
         </div>
 
-        <div className="flex gap-1.5 mt-3">
+        <div className="space-y-1.5 mt-2">
           <button
-            className="flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 rounded-full font-bold uppercase text-[9px] sm:text-[10px] tracking-wider transition-all hover:opacity-90 active:scale-95"
+            className="w-full flex items-center justify-center gap-0.5 py-1.5 sm:py-2 rounded-lg font-bold uppercase text-[8px] sm:text-[9px] tracking-wider transition-all hover:opacity-90 active:scale-95"
             style={{
               backgroundColor: isAdded ? hexFallbacks.textPrimary : (cardColor.bg === hexFallbacks.bgSecondary ? hexFallbacks.brand : hexFallbacks.bgSecondary),
               color: isAdded ? "white" : (cardColor.bg === hexFallbacks.bgSecondary ? "white" : hexFallbacks.textPrimary),
@@ -289,12 +484,13 @@ function ProductCard({
               onAddCart();
             }}
           >
-            <ShoppingCart size={11} />
-            <span>{isAdded ? "¡Listo!" : "Agregar"}</span>
+            <ShoppingCart size={10} />
+            <span className="hidden sm:inline">{isAdded ? "¡Listo!" : "Agregar"}</span>
+            <span className="sm:hidden">{isAdded ? "✓" : "+"}</span>
           </button>
 
           <button
-            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-offset-1 hover:opacity-80 active:scale-95 shadow-sm"
+            className="w-full flex items-center justify-center rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 hover:opacity-80 active:scale-95 py-1 sm:py-1.5 text-[8px] sm:text-[9px] font-semibold"
             style={{
               backgroundColor: cardColor.bg === hexFallbacks.bgSecondary ? `${hexFallbacks.brand}1f` : "rgba(255,255,255,0.15)",
               color: cardColor.bg === hexFallbacks.bgSecondary ? hexFallbacks.brand : "white",
@@ -307,13 +503,13 @@ function ProductCard({
             aria-label={`Ver detalles de ${producto.nombre}`}
             title="Ver detalles del producto"
           >
-            <ChevronRight size={14} aria-hidden="true" />
+            Ver detalles
           </button>
         </div>
       </div>
 
       <div
-        className="absolute right-2 top-[280px] -translate-y-1/2 rounded-full flex flex-col items-center justify-center z-30 shadow-md flex-shrink-0"
+        className="absolute right-2 top-[240px] -translate-y-1/2 rounded-full flex flex-col items-center justify-center z-30 shadow-md flex-shrink-0"
         style={{
           backgroundColor: hexFallbacks.bgSecondary,
           border: `2.5px solid ${hexFallbacks.bgTertiary}`,
@@ -330,7 +526,7 @@ function ProductCard({
         <span
           className="text-xs font-black leading-none"
           style={{
-            fontFamily: "Georgia, serif",
+            fontFamily: 'var(--font-family-store)',
             color: hexFallbacks.brand,
           }}
         >
@@ -342,7 +538,7 @@ function ProductCard({
       </div>
     </div>
   );
-}
+});
 
 export default function ProductCatalogEnhanced() {
   const router = useRouter();
@@ -368,7 +564,7 @@ export default function ProductCatalogEnhanced() {
   const [precioMinLocal, setPrecioMinLocal] = useState("");
   const [precioMaxLocal, setPrecioMaxLocal] = useState("");
   const [paginaActual, setPaginaActual] = useState(1);
-  const PRODUCTOS_POR_PAGINA = 6;
+  const PRODUCTOS_POR_PAGINA = 12;
 
   // Restaurar filtros desde URL al montar
   useEffect(() => {
@@ -376,31 +572,22 @@ export default function ProductCatalogEnhanced() {
 
     const busqueda = searchParams.get('q') || '';
     const maguey = searchParams.getAll('maguey');
-    const destilacion = searchParams.getAll('destilacion');
-    const molienda = searchParams.getAll('molienda');
     const precio_min = searchParams.get('precio_min') || '';
     const precio_max = searchParams.get('precio_max') || '';
-    const maestro = searchParams.get('maestro') || '';
 
     setFiltros({
       busqueda,
       maguey,
-      destilacion,
-      molienda,
       precio_min,
       precio_max,
-      maestro_mezcalero: maestro,
       tipo_mezcal: searchParams.getAll('tipo_mezcal'),
     });
 
     setFiltrosPendientes({
       busqueda,
       maguey,
-      destilacion,
-      molienda,
       precio_min,
       precio_max,
-      maestro_mezcalero: maestro,
       tipo_mezcal: searchParams.getAll('tipo_mezcal'),
     });
 
@@ -419,9 +606,6 @@ export default function ProductCatalogEnhanced() {
       if (f.maguey.length > 0) params.maguey = f.maguey.join(',');
       if (f.precio_min) params.precio_min = f.precio_min;
       if (f.precio_max) params.precio_max = f.precio_max;
-      if (f.destilacion.length > 0) params.destilacion = f.destilacion.join(',');
-      if (f.molienda.length > 0) params.molienda = f.molienda.join(',');
-      if (f.maestro_mezcalero) params.maestro_mezcalero = f.maestro_mezcalero;
 
       const data = await api.productos.getAll(params);
       setProductos(data as unknown as Producto[]);
@@ -438,11 +622,8 @@ export default function ProductCatalogEnhanced() {
     if (f.busqueda) params.set('q', f.busqueda);
     f.tipo_mezcal.forEach(v => params.append('tipo_mezcal', v));
     f.maguey.forEach(v => params.append('maguey', v));
-    f.destilacion.forEach(v => params.append('destilacion', v));
-    f.molienda.forEach(v => params.append('molienda', v));
     if (f.precio_min) params.set('precio_min', f.precio_min);
     if (f.precio_max) params.set('precio_max', f.precio_max);
-    if (f.maestro_mezcalero) params.set('maestro', f.maestro_mezcalero);
 
     const query = params.toString();
     const url = query ? `?${query}` : '';
@@ -455,6 +636,42 @@ export default function ProductCatalogEnhanced() {
     fetchProductos(filtros);
     syncURL(filtros);
   }, [filtros, fetchProductos, isInitialized, syncURL]);
+
+  // Sincronizar búsqueda automáticamente en desktop (debounced)
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const timer = setTimeout(() => {
+      if (filtrosPendientes.busqueda !== filtros.busqueda) {
+        setFiltros((prev) => ({ ...prev, busqueda: filtrosPendientes.busqueda }));
+      }
+    }, 300); // Pequeño debounce para no hacer fetches excesivos
+
+    return () => clearTimeout(timer);
+  }, [filtrosPendientes.busqueda, filtros.busqueda, isInitialized]);
+
+  // Sincronizar filtros de maguey y precio automáticamente en desktop
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const timer = setTimeout(() => {
+      const changed =
+        JSON.stringify(filtrosPendientes.maguey) !== JSON.stringify(filtros.maguey) ||
+        filtrosPendientes.precio_min !== filtros.precio_min ||
+        filtrosPendientes.precio_max !== filtros.precio_max;
+
+      if (changed) {
+        setFiltros((prev) => ({
+          ...prev,
+          maguey: filtrosPendientes.maguey,
+          precio_min: filtrosPendientes.precio_min,
+          precio_max: filtrosPendientes.precio_max,
+        }));
+      }
+    }, 500); // Debounce de 500ms para filtros más lentos
+
+    return () => clearTimeout(timer);
+  }, [filtrosPendientes.maguey, filtrosPendientes.precio_min, filtrosPendientes.precio_max, filtros, isInitialized]);
 
   // P1: Preview count when filtrosPendientes change (debounced, silent fetch)
   useEffect(() => {
@@ -472,9 +689,6 @@ export default function ProductCatalogEnhanced() {
         if (filtrosPendientes.maguey.length > 0) params.maguey = filtrosPendientes.maguey.join(',');
         if (filtrosPendientes.precio_min) params.precio_min = filtrosPendientes.precio_min;
         if (filtrosPendientes.precio_max) params.precio_max = filtrosPendientes.precio_max;
-        if (filtrosPendientes.destilacion.length > 0) params.destilacion = filtrosPendientes.destilacion.join(',');
-        if (filtrosPendientes.molienda.length > 0) params.molienda = filtrosPendientes.molienda.join(',');
-        if (filtrosPendientes.maestro_mezcalero) params.maestro_mezcalero = filtrosPendientes.maestro_mezcalero;
 
         const data = await api.productos.getAll(params);
         setPreviewCount((data as unknown as Producto[]).length);
@@ -484,7 +698,7 @@ export default function ProductCatalogEnhanced() {
       } finally {
         setPreviewLoading(false);
       }
-    }, 300); // Debounce preview fetch
+    }, 150); // Debounce preview fetch for better UX
 
     return () => clearTimeout(timer);
   }, [filtrosPendientes, isInitialized, showMobileFilters, productos.length]);
@@ -523,9 +737,6 @@ export default function ProductCatalogEnhanced() {
       maguey: filtrosPendientes.maguey,
       precio_min: filtrosPendientes.precio_min,
       precio_max: filtrosPendientes.precio_max,
-      destilacion: filtrosPendientes.destilacion,
-      molienda: filtrosPendientes.molienda,
-      maestro_mezcalero: filtrosPendientes.maestro_mezcalero,
     });
 
     // Close modal
@@ -542,9 +753,6 @@ export default function ProductCatalogEnhanced() {
 
   const handleBusquedaChange = (valor: string) =>
     setFiltrosPendientes((prev) => ({ ...prev, busqueda: valor }));
-
-  const handleMaestroChange = (valor: string) =>
-    setFiltrosPendientes((prev) => ({ ...prev, maestro_mezcalero: valor }));
 
   const handleFiltroToggle = (campo: string, valor: string) => {
     setFiltrosPendientes((prev) => {
@@ -576,7 +784,7 @@ export default function ProductCatalogEnhanced() {
         [campo]: (prev[campo] as string[]).filter(v => v !== valor),
       }));
     } else {
-      const nuevos = { ...filtros, [campo]: campo.includes('maestro') ? "" : [] };
+      const nuevos = { ...filtros, [campo]: [] };
       setFiltros(nuevos);
       setFiltrosPendientes(nuevos);
     }
@@ -643,99 +851,9 @@ export default function ProductCatalogEnhanced() {
 
   return (
     <div style={{ backgroundColor: hexFallbacks.bgPrimary, minHeight: "100vh" }} className="font-sans">
-      {/* ─── HEADER MEJORADO ─── */}
-      <header className="border-b relative overflow-hidden" style={{ borderColor: hexFallbacks.borderLight, backgroundColor: hexFallbacks.bgSecondary }} role="banner">
-        {/* Decorative background elements */}
-        <div
-          className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-5 pointer-events-none"
-          style={{ backgroundColor: hexFallbacks.brand }}
-        />
-        <div
-          className="absolute bottom-0 left-0 w-72 h-72 rounded-full opacity-5 pointer-events-none"
-          style={{ backgroundColor: hexFallbacks.brand }}
-        />
-
-        <div className="max-w-7xl mx-auto px-4 py-10 sm:py-14 relative z-10">
-          <div className="text-center mb-6">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <Sparkles size={20} style={{ color: hexFallbacks.brand }} />
-              <p className="text-xs sm:text-sm font-semibold uppercase tracking-widest" style={{ color: hexFallbacks.brand, fontFamily: "Georgia, serif" }}>
-                Artesanía Pura
-              </p>
-              <Sparkles size={20} style={{ color: hexFallbacks.brand }} />
-            </div>
-            <h1
-              className="text-3xl sm:text-5xl font-black mb-3 leading-tight"
-              style={{ fontFamily: "Georgia, serif", color: hexFallbacks.textPrimary }}
-            >
-              Nuestros Mezcales
-            </h1>
-            <p className="text-sm sm:text-base max-w-2xl mx-auto" style={{ color: hexFallbacks.textSecondary }}>
-              Descubre una colección curada de los mejores mezcales artesanales, cada uno con su historia única
-            </p>
-            <div className="w-16 h-1 rounded-full mx-auto mt-4" style={{ backgroundColor: hexFallbacks.brand }} />
-          </div>
-
-          {/* Filtros activos con mejor diseño */}
-          {(filtros.busqueda || cantidadFiltros > 0) && (
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-6 border-t" style={{ borderColor: hexFallbacks.borderLight }}>
-              {filtros.busqueda && (
-                <FilterBadge
-                  label={`"${filtros.busqueda}"`}
-                  onRemove={() => quitarFiltro("busqueda")}
-                />
-              )}
-              {filtrosActivos.flatMap((campo) => {
-                const val = filtros[campo];
-                if (campo === 'busqueda') return [];
-                if (campo === 'precio_min' || campo === 'precio_max') {
-                  return (
-                    <FilterBadge
-                      key={campo}
-                      label={`$${Number(val as string).toLocaleString("es-MX")}`}
-                      onRemove={() => quitarFiltro(campo)}
-                    />
-                  );
-                }
-                if (Array.isArray(val)) {
-                  return val.map(v => (
-                    <FilterBadge
-                      key={`${campo}-${v}`}
-                      label={v}
-                      onRemove={() => quitarFiltro(campo, v)}
-                    />
-                  ));
-                }
-                if (campo === 'maestro_mezcalero' && val) {
-                  return (
-                    <FilterBadge
-                      key={campo}
-                      label={val}
-                      onRemove={() => quitarFiltro(campo)}
-                    />
-                  );
-                }
-                return [];
-              })}
-              {cantidadFiltros > 0 && (
-                <button
-                  onClick={limpiarTodo}
-                  className="text-xs font-bold transition-all hover:opacity-70 underline underline-offset-2 focus:outline-none focus:ring-1 focus:ring-offset-1 px-2 py-1 rounded"
-                  style={{ color: hexFallbacks.brand, "--tw-ring-color": hexFallbacks.brand } as React.CSSProperties}
-                  aria-label="Limpiar todos los filtros"
-                  title="Limpiar todos los filtros"
-                >
-                  Limpiar todo
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </header>
-
       {/* ─── CONTENIDO PRINCIPAL ─── */}
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:py-10">
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+      <main className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+        <div className="flex flex-col lg:flex-row gap-5 lg:gap-6">
           {/* ─── SIDEBAR ─── */}
           <aside className="hidden lg:block lg:w-72 shrink-0">
             <div
@@ -747,7 +865,7 @@ export default function ProductCatalogEnhanced() {
             >
               <div className="flex items-center gap-2 mb-4">
                 <Filter size={18} style={{ color: hexFallbacks.brand }} />
-                <h2 className="text-lg font-bold" style={{ fontFamily: "Georgia, serif", color: hexFallbacks.textPrimary }}>
+                <h2 className="text-lg font-bold" style={{ fontFamily: 'var(--font-family-store)', color: hexFallbacks.textPrimary }}>
                   Filtros
                 </h2>
                 {cantidadFiltros > 0 && (
@@ -763,7 +881,6 @@ export default function ProductCatalogEnhanced() {
                 filtrosPendientes={filtrosPendientes}
                 onBusquedaChange={handleBusquedaChange}
                 onFiltroToggle={handleFiltroToggle}
-                onMaestroChange={handleMaestroChange}
                 searchFocus={searchFocus}
                 onSearchFocus={setSearchFocus}
                 precioMinLocal={precioMinLocal}
@@ -772,8 +889,6 @@ export default function ProductCatalogEnhanced() {
                 onPrecioMaxChange={setPrecioMaxLocal}
                 onAplicarPrecio={handleAplicarPrecio}
                 TIPOS_MAGUEY={TIPOS_MAGUEY}
-                TIPOS_DESTILACION={TIPOS_DESTILACION}
-                TIPOS_MOLIENDA={TIPOS_MOLIENDA}
               />
             </div>
           </aside>
@@ -782,7 +897,7 @@ export default function ProductCatalogEnhanced() {
           <div className="lg:hidden">
             <button
               onClick={() => setShowMobileFilters(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-95 shadow-sm relative overflow-hidden group focus:outline-none focus:ring-2 focus:ring-offset-2"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-95 shadow-sm relative overflow-hidden group focus:outline-none focus:ring-2 focus:ring-offset-2"
               style={{
                 backgroundColor: hexFallbacks.brand,
                 color: "white",
@@ -800,7 +915,7 @@ export default function ProductCatalogEnhanced() {
           {/* ─── LISTADO DE PRODUCTOS ─── */}
           <div className="flex-1 w-full">
             {/* Ordenamiento mejorado */}
-            <div className="mb-6 flex justify-between items-center gap-4">
+            <div className="mb-4 flex justify-between items-center gap-4">
               <div className="text-sm" style={{ color: hexFallbacks.textSecondary }}>
                 {!loading && productosMostrados.length > 0 && (
                   <span className="font-semibold">
@@ -824,6 +939,7 @@ export default function ProductCatalogEnhanced() {
                     cursor: "pointer",
                     "--tw-ring-color": hexFallbacks.brand,
                   } as React.CSSProperties}
+                  aria-label="Ordenar productos por"
                 >
                   <option value="popular">Popularidad</option>
                   <option value="precio_asc">Precio: menor a mayor</option>
@@ -852,7 +968,7 @@ export default function ProductCatalogEnhanced() {
                 </div>
               </div>
             ) : error ? (
-              <div className="flex min-h-96 items-center justify-center" role="alert" aria-live="assertive">
+              <div className="flex min-h-96 items-center justify-center" role="alert" aria-live="assertive" aria-label="Error al cargar productos">
                 <div
                   className="text-center p-6 rounded-2xl max-w-md"
                   style={{
@@ -861,22 +977,25 @@ export default function ProductCatalogEnhanced() {
                   }}
                 >
                   <p className="text-sm font-semibold mb-2" style={{ color: hexFallbacks.errorColor }}>
-                    ⚠️ Error al cargar productos
+                    ⚠️ No pudimos cargar los productos
                   </p>
                   <p className="text-xs mb-4" style={{ color: hexFallbacks.textSecondary }}>
-                    {error || "No fue posible cargar los productos. Por favor, intenta más tarde."}
+                    {error && typeof error === 'string'
+                      ? error
+                      : "Parece que hay un problema con la conexión. Por favor, verifica tu conexión a internet e intenta de nuevo."}
                   </p>
                   <button
                     onClick={() => fetchProductos(filtros)}
                     className="w-full px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-1"
                     style={{ backgroundColor: hexFallbacks.brand, "--tw-ring-color": hexFallbacks.brand } as React.CSSProperties}
+                    aria-label="Reintentar cargar productos"
                   >
                     Reintentar
                   </button>
                 </div>
               </div>
             ) : productosMostrados.length === 0 ? (
-              <div className="flex min-h-96 items-center justify-center" role="status" aria-live="polite">
+              <div className="flex min-h-96 items-center justify-center" role="status" aria-live="polite" aria-label="No se encontraron productos">
                 <div
                   className="text-center p-8 rounded-2xl max-w-md"
                   style={{
@@ -886,10 +1005,12 @@ export default function ProductCatalogEnhanced() {
                 >
                   <div className="text-4xl mb-3" aria-hidden="true">🔍</div>
                   <p className="text-sm font-semibold mb-2" style={{ color: hexFallbacks.textPrimary }}>
-                    No encontramos lotes
+                    No encontramos mezcales que coincidan
                   </p>
                   <p className="text-xs mb-6" style={{ color: hexFallbacks.textSecondary }}>
-                    No hay mezcales que coincidan con estas especificaciones. Intenta ajustar los filtros o {cantidadFiltros > 0 || filtros.busqueda ? "restablecerlos." : "usa la búsqueda."}
+                    {cantidadFiltros > 0 ? "Tus filtros son muy restrictivos. " : ""}
+                    {filtros.busqueda ? `"${filtros.busqueda}" no encontró resultados. ` : ""}
+                    Intenta ajustar los criterios de búsqueda.
                   </p>
                   {(cantidadFiltros > 0 || filtros.busqueda) && (
                     <button
@@ -904,7 +1025,7 @@ export default function ProductCatalogEnhanced() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 justify-center animate-in fade-in duration-500" data-grid="productos">
+                <div className="grid gap-6 animate-in fade-in duration-500 grid-cols-1 md:grid-cols-2" data-grid="productos">
                   {productosPagina.map((producto, index) => (
                     <ProductCard
                       key={String(producto.id_producto)}
@@ -933,7 +1054,7 @@ export default function ProductCatalogEnhanced() {
 
                 {/* ─── PAGINACIÓN ─── */}
                 {totalPaginas > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-10" role="navigation" aria-label="Paginación">
+                  <div className="flex items-center justify-center gap-2 mt-8" role="navigation" aria-label="Paginación">
                     {/* Anterior */}
                     <button
                       onClick={() => {
@@ -941,7 +1062,7 @@ export default function ProductCatalogEnhanced() {
                         document.querySelector('[data-grid="productos"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
                       }}
                       disabled={paginaActual === 1}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-80 active:scale-95"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-80 active:scale-95"
                       style={{ backgroundColor: hexFallbacks.bgSecondary, color: hexFallbacks.textPrimary, border: `1px solid ${hexFallbacks.borderLight}` }}
                       aria-label="Página anterior"
                     >
@@ -955,7 +1076,7 @@ export default function ProductCatalogEnhanced() {
                       if (!isNear) {
                         const isGap = num === 2 || num === totalPaginas - 1;
                         return isGap ? (
-                          <span key={num} className="text-sm px-1" style={{ color: hexFallbacks.textMuted }}>…</span>
+                          <span key={num} className="text-xs px-1" style={{ color: hexFallbacks.textMuted }}>…</span>
                         ) : null;
                       }
                       return (
@@ -965,7 +1086,7 @@ export default function ProductCatalogEnhanced() {
                             setPaginaActual(num);
                             document.querySelector('[data-grid="productos"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
                           }}
-                          className="w-9 h-9 rounded-lg text-sm font-bold transition-all hover:opacity-80 active:scale-95"
+                          className="w-8 h-8 rounded-lg text-xs font-bold transition-all hover:opacity-80 active:scale-95"
                           style={{
                             backgroundColor: isActive ? hexFallbacks.brand : hexFallbacks.bgSecondary,
                             color: isActive ? "white" : hexFallbacks.textPrimary,
@@ -986,7 +1107,7 @@ export default function ProductCatalogEnhanced() {
                         document.querySelector('[data-grid="productos"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
                       }}
                       disabled={paginaActual === totalPaginas}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-80 active:scale-95"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-80 active:scale-95"
                       style={{ backgroundColor: hexFallbacks.bgSecondary, color: hexFallbacks.textPrimary, border: `1px solid ${hexFallbacks.borderLight}` }}
                       aria-label="Página siguiente"
                     >
@@ -1024,10 +1145,10 @@ export default function ProductCatalogEnhanced() {
             }}
           >
             {/* Header */}
-            <div className="p-5 border-b sticky top-0 z-10" style={{ borderColor: hexFallbacks.borderLight, backgroundColor: hexFallbacks.bgPrimary }}>
+            <div className="p-4 border-b sticky top-0 z-10" style={{ borderColor: hexFallbacks.borderLight, backgroundColor: hexFallbacks.bgPrimary }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 id="filters-modal-title" className="text-lg font-bold" style={{ fontFamily: "Georgia, serif", color: hexFallbacks.textPrimary }}>
+                  <h2 id="filters-modal-title" className="text-lg font-bold" style={{ fontFamily: 'var(--font-family-store)', color: hexFallbacks.textPrimary }}>
                     Filtros
                   </h2>
                 </div>
@@ -1043,13 +1164,30 @@ export default function ProductCatalogEnhanced() {
               </div>
             </div>
 
+            {/* Buscador en modal */}
+            <div className="px-4 pt-4 pb-2 border-b" style={{ borderColor: hexFallbacks.borderLight }}>
+              <input
+                type="text"
+                placeholder="Buscar productos..."
+                value={filtrosPendientes.busqueda}
+                onChange={(e) => handleBusquedaChange(e.target.value)}
+                onFocus={() => setSearchFocus(true)}
+                onBlur={() => setSearchFocus(false)}
+                className="w-full px-3 py-2 rounded-lg border transition-all"
+                style={{
+                  borderColor: searchFocus ? hexFallbacks.brand : hexFallbacks.borderLight,
+                  backgroundColor: hexFallbacks.bgSecondary,
+                  color: hexFallbacks.textPrimary,
+                }}
+              />
+            </div>
+
             {/* Scrollable filters */}
-            <div className="flex-1 overflow-y-auto p-5">
+            <div className="flex-1 overflow-y-auto p-4">
               <SidebarFiltersComponent
                 filtrosPendientes={filtrosPendientes}
                 onBusquedaChange={handleBusquedaChange}
                 onFiltroToggle={handleFiltroToggle}
-                onMaestroChange={handleMaestroChange}
                 searchFocus={searchFocus}
                 onSearchFocus={setSearchFocus}
                 precioMinLocal={precioMinLocal}
@@ -1058,14 +1196,12 @@ export default function ProductCatalogEnhanced() {
                 onPrecioMaxChange={setPrecioMaxLocal}
                 onAplicarPrecio={handleAplicarPrecio}
                 TIPOS_MAGUEY={TIPOS_MAGUEY}
-                TIPOS_DESTILACION={TIPOS_DESTILACION}
-                TIPOS_MOLIENDA={TIPOS_MOLIENDA}
               />
             </div>
 
             {/* P1: Sticky footer with dynamic "Apply" button */}
             <div
-              className="border-t p-4 sticky bottom-0"
+              className="border-t p-3 sticky bottom-0"
               style={{ borderColor: hexFallbacks.borderLight, backgroundColor: hexFallbacks.bgPrimary }}
             >
               {/* P4: Price validation error */}

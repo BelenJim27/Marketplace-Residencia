@@ -1,0 +1,194 @@
+/* MEZCAL CATALOG - GLOBAL STYLES */
+
+@import './mezcal-vars.css';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: linear-gradient(135deg, #f7f5f2 0%, #f2f7f4 100%);
+  color: var(--text-primary);
+  font-family: 'Segoe UI', Trebuchet MS, sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ============================================
+   HERO SECTION
+   ============================================ */
+
+.hero {
+  position: relative;
+  background: linear-gradient(135deg, #8b7445 0%, #6f5b38 50%, #55472d 100%);
+  color: #f7f5f2;
+  padding: 100px 40px;
+  overflow: hidden;
+  border-bottom: 2px solid rgba(83, 146, 109, 0.3);
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(242, 247, 244, 0.03) 35px, rgba(242, 247, 244, 0.03) 70px),
+    radial-gradient(circle at 20% 80%, rgba(83, 146, 109, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(207, 116, 79, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 60px;
+  align-items: center;
+}
+
+.heroText h1 {
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  font-weight: 300;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.2);
+  line-height: 1.1;
+  font-family: 'Georgia', 'Times New Roman', serif;
+}
+
+.heroSubtitle {
+  font-size: 1.3rem;
+  font-weight: 300;
+  letter-spacing: 1px;
+  color: rgba(242, 247, 244, 0.9);
+  margin-bottom: 20px;
+  font-style: italic;
+}
+
+.heroDescription {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: rgba(242, 247, 244, 0.8);
+  max-width: 500px;
+  font-weight: 300;
+}
+
+.heroDecor {
+  position: relative;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.decorLine {
+  width: 2px;
+  height: 80px;
+  background: linear-gradient(to bottom, rgba(242, 247, 244, 0.6), transparent);
+  animation: slideDown 1.2s ease-out 0.3s both;
+}
+
+.decorPattern {
+  font-size: 3rem;
+  color: rgba(83, 146, 109, 0.4);
+  animation: fadeInScale 1.2s ease-out 0.6s both;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* FOOTER NOTE */
+
+.footerNote {
+  background: linear-gradient(135deg, var(--earth-dark) 0%, var(--nature-accent) 100%);
+  color: #f7f5f2;
+  text-align: center;
+  padding: 40px;
+  font-style: italic;
+  font-size: 1.1rem;
+  line-height: 1.8;
+  border-top: 2px solid rgba(83, 146, 109, 0.3);
+}
+
+/* ANIMATIONS */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 768px) {
+  .heroContent {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .heroDecor {
+    display: none;
+  }
+
+  .hero {
+    padding: 60px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .heroText h1 {
+    font-size: 2rem;
+  }
+
+  .heroSubtitle {
+    font-size: 1rem;
+  }
+}

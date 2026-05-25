@@ -14,7 +14,7 @@ export default function CarritoPage() {
   if (items.length === 0) {
     return (
       <main className="mx-auto max-w-screen-xl px-4 py-12 md:px-8">
-        <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white">
+        <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white" style={{ fontFamily: 'var(--font-family-store)' }}>
           Mi Carrito
         </h1>
 
@@ -23,7 +23,7 @@ export default function CarritoPage() {
           <p className="text-gray-600 dark:text-gray-400">Tu carrito está vacío</p>
           <Link
             href="/cliente/producto"
-            className="mt-4 rounded-lg bg-black px-6 py-2 text-white transition-colors hover:bg-gray-800"
+            className="mt-4 rounded-lg bg-[#3D6B3F] px-6 py-2 text-white transition-colors hover:bg-[#1F3A2E]"
           >
             Seguir comprando
           </Link>
@@ -36,7 +36,7 @@ export default function CarritoPage() {
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 md:px-8">
-      <h1 className="mb-8 text-4xl font-bold text-dark dark:text-white">
+      <h1 className="mb-8 text-4xl font-bold text-dark dark:text-white" style={{ fontFamily: 'var(--font-family-store)' }}>
         Mi Carrito
       </h1>
 
@@ -147,7 +147,7 @@ export default function CarritoPage() {
 
           <button
             onClick={() => router.push("/cliente/producto")}
-            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-black px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#3D6B3F] px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1F3A2E]"
           >
             ← Seguir comprando
           </button>
@@ -208,7 +208,7 @@ export default function CarritoPage() {
             {/* Checkout Button */}
             <button
               onClick={() => router.push("/tienda/checkout")}
-              className="mt-6 w-full rounded-lg bg-black py-3 font-semibold text-white transition-colors hover:bg-gray-800"
+              className="mt-6 w-full rounded-lg bg-[#3D6B3F] py-3 font-semibold text-white transition-colors hover:bg-[#1F3A2E]"
             >
               Proceder al Pago
             </button>

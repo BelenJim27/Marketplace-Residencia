@@ -233,6 +233,7 @@ export const colorVars = {
 
 // ─── HEX FALLBACKS (for quick reference, light mode)
 export const hexFallbacks = {
+<<<<<<< HEAD
   brand: "#306B3F",
   brandLight: "#A8C26B",
   brandDark: "#1F3A2E",
@@ -255,4 +256,26 @@ export const hexFallbacks = {
   errorColor: "#dc2626",
   warningColor: "#ea580c",
   infoColor: "#2563eb",
+=======
+  brand: "#C97A3E",           // Cobre Mezcalero
+  brandLight: "#D4956D",      // Lighter variant
+  brandDark: "#A0633C",       // Darker variant
+
+  textPrimary: "#1F3A2E",     // Verde Tobalá
+  textSecondary: "#3D6B3F",   // Verde Silvestre
+  textTertiary: "#A8C26B",    // Verde Hoja Nueva
+  textMuted: "#C5CFB0",       // Verde Musgo
+
+  bgPrimary: "#F4F0E3",       // Hueso Agave
+  bgSecondary: "#FFFFFF",     // Pure white
+  bgTertiary: "#C5CFB0",      // Verde Musgo
+
+  borderLight: "#C5CFB0",     // Verde Musgo
+  borderDefault: "#A8C26B",   // Verde Hoja Nueva
+
+  successColor: "#16a34a",    // Green
+  errorColor: "#dc2626",      // Red
+  warningColor: "#ea580c",    // Orange
+  infoColor: "#2563eb",       // Blue
+>>>>>>> abfa8786126fdf5ec135e0bc23e58e5bebe023c1
 } as const;

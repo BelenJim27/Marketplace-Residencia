@@ -20,19 +20,19 @@ interface Pedido {
 }
 
 const COLOR_PALETTE = {
-  green: "#2E4A33",
+  green: "#3D6B3F",
   copper: "#C97A3E",
-  amber: "#C89B4A",
+  amber: "#A8C26B",
   cream: "#F4F0E3",
   white: "#FFFFFF",
-  border: "rgba(46,74,51,0.12)",
+  border: "rgba(61,107,63,0.12)",
 };
 
 const ESTADO_COLORES: Record<string, { bg: string; text: string; border: string }> = {
   pendiente: { bg: "rgba(201,122,62,0.08)", text: "#C97A3E", border: "rgba(201,122,62,0.2)" },
-  pagado: { bg: "rgba(46,74,51,0.08)", text: "#2E4A33", border: "rgba(46,74,51,0.2)" },
-  enviado: { bg: "rgba(200,155,74,0.08)", text: "#C89B4A", border: "rgba(200,155,74,0.2)" },
-  entregado: { bg: "rgba(46,74,51,0.12)", text: "#2E4A33", border: "rgba(46,74,51,0.3)" },
+  pagado: { bg: "rgba(61,107,63,0.08)", text: "#3D6B3F", border: "rgba(61,107,63,0.2)" },
+  enviado: { bg: "rgba(168,194,107,0.08)", text: "#A8C26B", border: "rgba(168,194,107,0.2)" },
+  entregado: { bg: "rgba(61,107,63,0.12)", text: "#3D6B3F", border: "rgba(61,107,63,0.3)" },
   cancelado: { bg: "rgba(100,100,100,0.08)", text: "#666666", border: "rgba(100,100,100,0.2)" },
 };
 
@@ -74,7 +74,7 @@ export default function MisComprasPage() {
     return (
       <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
         <div style={{ marginBottom: "32px" }}>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "36px", fontWeight: "700", background: `linear-gradient(90deg, ${COLOR_PALETTE.green} 0%, ${COLOR_PALETTE.copper} 100%)`, backgroundClip: "text", color: "transparent", marginBottom: "8px" }}>
+          <h1 style={{ fontFamily: "var(--font-family-store)", fontSize: "36px", fontWeight: "700", background: `linear-gradient(90deg, ${COLOR_PALETTE.green} 0%, ${COLOR_PALETTE.copper} 100%)`, backgroundClip: "text", color: "transparent", marginBottom: "8px" }}>
             Mis Compras
           </h1>
           <p style={{ fontSize: "14px", color: COLOR_PALETTE.copper, fontWeight: "500", marginTop: "8px" }}>
@@ -88,11 +88,34 @@ export default function MisComprasPage() {
     );
   }
 
+<<<<<<< HEAD
+=======
+  if (!isAuthenticated) {
+    return (
+      <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
+        <div style={{ marginBottom: "32px" }}>
+          <h1 style={{ fontFamily: "var(--font-family-store)", fontSize: "36px", fontWeight: "700", background: `linear-gradient(90deg, ${COLOR_PALETTE.green} 0%, ${COLOR_PALETTE.copper} 100%)`, backgroundClip: "text", color: "transparent", marginBottom: "8px" }}>
+            Mis Compras
+          </h1>
+          <p style={{ fontSize: "14px", color: COLOR_PALETTE.copper, fontWeight: "500", marginTop: "8px" }}>
+            Tu historial de pedidos
+          </p>
+        </div>
+        <div style={{ borderRadius: "12px", background: `linear-gradient(135deg, ${COLOR_PALETTE.white} 0%, ${COLOR_PALETTE.cream}08 100%)`, padding: "32px", textAlign: "center", border: `1px solid ${COLOR_PALETTE.border}` }}>
+          <p style={{ marginBottom: "16px", color: "#666666", fontSize: "15px" }}>Inicia sesión para ver tu historial de compras.</p>
+          <Link href="/auth/sign-in" style={{ display: "inline-block", borderRadius: "8px", background: COLOR_PALETTE.green, color: COLOR_PALETTE.white, padding: "12px 24px", fontSize: "14px", fontWeight: "600", transition: "all 200ms ease", textDecoration: "none" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#1f3a25"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(46,74,51,0.2)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = COLOR_PALETTE.green; e.currentTarget.style.boxShadow = "none"; }}>
+            Iniciar sesión
+          </Link>
+        </div>
+      </main>
+    );
+  }
+>>>>>>> abfa8786126fdf5ec135e0bc23e58e5bebe023c1
 
   return (
     <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
       <div style={{ marginBottom: "32px" }}>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "36px", fontWeight: "700", background: `linear-gradient(90deg, ${COLOR_PALETTE.green} 0%, ${COLOR_PALETTE.copper} 100%)`, backgroundClip: "text", color: "transparent", marginBottom: "8px" }}>
+        <h1 style={{ fontFamily: "var(--font-family-store)", fontSize: "36px", fontWeight: "700", background: `linear-gradient(90deg, ${COLOR_PALETTE.green} 0%, ${COLOR_PALETTE.copper} 100%)`, backgroundClip: "text", color: "transparent", marginBottom: "8px" }}>
           Mis Compras
         </h1>
         <p style={{ fontSize: "14px", color: COLOR_PALETTE.copper, fontWeight: "500", marginTop: "8px" }}>

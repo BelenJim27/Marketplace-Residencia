@@ -121,21 +121,21 @@
 }
 /* Tienda Header - variables modo oscuro */
 :root {
-  --tienda-header-bg: rgba(45, 122, 62, 0.08);
-  --tienda-header-border: rgba(45, 122, 62, 0.25);
+  --tienda-header-bg: rgba(61, 107, 63, 0.08);
+  --tienda-header-border: rgba(61, 107, 63, 0.25);
   --tienda-header-bg-scrolled: rgba(255, 255, 255, 0.97);
-  --tienda-nav-color: #15803d;
+  --tienda-nav-color: #3D6B3F;
   --tienda-dropdown-bg: #ffffff;
-  --tienda-dropdown-border: #bbf7d0;
+  --tienda-dropdown-border: #A8C26B;
 }
 
 .dark {
   --tienda-header-bg: rgba(2, 13, 26, 0.95);
-  --tienda-header-border: rgba(45, 122, 62, 0.3);
+  --tienda-header-border: rgba(61, 107, 63, 0.3);
   --tienda-header-bg-scrolled: rgba(2, 13, 26, 0.98);
-  --tienda-nav-color: #4ade80;
+  --tienda-nav-color: #A8C26B;
   --tienda-dropdown-bg: #0f172a;
-  --tienda-dropdown-border: #166534;
+  --tienda-dropdown-border: #A8C26B;
 }
 /* ── Landing Page Oaxaca ── */
 :root {

@@ -39,12 +39,12 @@ interface Pedido {
 }
 
 const COLOR_PALETTE = {
-  green: "#2E4A33",
+  green: "#3D6B3F",
   copper: "#C97A3E",
-  amber: "#C89B4A",
+  amber: "#A8C26B",
   cream: "#F4F0E3",
   white: "#FFFFFF",
-  border: "rgba(46,74,51,0.12)",
+  border: "rgba(61,107,63,0.12)",
 };
 
 /* ── Timeline config ─────────────────────────────────────────────────────── */
@@ -59,10 +59,10 @@ const ESTADO_INDEX: Record<string, number> = {
 
 const ESTADO_BADGE: Record<string, { label: string; bg: string; text: string; dot: string; pulse: boolean }> = {
   pendiente:  { label: "Pendiente",  bg: "rgba(201,122,62,0.08)", text: "#C97A3E", dot: "#C97A3E",  pulse: true  },
-  pagado:     { label: "Pagado",     bg: "rgba(46,74,51,0.08)", text: "#2E4A33", dot: "#2E4A33",    pulse: false },
-  preparando: { label: "Preparando", bg: "rgba(200,155,74,0.08)", text: "#C89B4A", dot: "#C89B4A", pulse: true  },
-  enviado:    { label: "Enviado",    bg: "rgba(46,74,51,0.08)", text: "#2E4A33", dot: "#2E4A33", pulse: true  },
-  entregado:  { label: "Entregado", bg: "rgba(46,74,51,0.08)", text: "#2E4A33", dot: "#2E4A33", pulse: false },
+  pagado:     { label: "Pagado",     bg: "rgba(61,107,63,0.08)", text: "#3D6B3F", dot: "#3D6B3F",    pulse: false },
+  preparando: { label: "Preparando", bg: "rgba(168,194,107,0.08)", text: "#A8C26B", dot: "#A8C26B", pulse: true  },
+  enviado:    { label: "Enviado",    bg: "rgba(61,107,63,0.08)", text: "#3D6B3F", dot: "#3D6B3F", pulse: true  },
+  entregado:  { label: "Entregado", bg: "rgba(61,107,63,0.08)", text: "#3D6B3F", dot: "#3D6B3F", pulse: false },
   cancelado:  { label: "Cancelado", bg: "rgba(100,100,100,0.08)", text: "#666666", dot: "#999999",   pulse: false },
 };
 
@@ -225,7 +225,7 @@ export default function DetallePedidoPage() {
       <div className="fade-in mb-6" style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", borderBottom: `1px solid ${COLOR_PALETTE.border}`, paddingBottom: "24px" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <h1 style={{ fontSize: "24px", fontWeight: "700", letterSpacing: "-0.5px", color: COLOR_PALETTE.green, margin: 0 }}>
+            <h1 style={{ fontFamily: 'var(--font-family-store)', fontSize: "24px", fontWeight: "700", letterSpacing: "-0.5px", color: COLOR_PALETTE.green, margin: 0 }}>
               Pedido <span style={{ fontFamily: "monospace", color: COLOR_PALETTE.copper }}>#{id}</span>
             </h1>
             <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "20px", padding: "6px 12px", fontSize: "11px", fontWeight: "700", background: badge.bg, color: badge.text, border: `1px solid rgba(201,122,62,0.2)` }}>

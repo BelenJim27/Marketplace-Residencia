@@ -320,10 +320,10 @@ export default function ProductoDetallePage() {
       )}
 
       {/* ── Grid principal ─────────────────────────────────────────────────── */}
-      <div className="grid gap-10 lg:gap-14 lg:grid-cols-2">
+      <div className="grid gap-8 lg:gap-10 lg:grid-cols-2">
 
         {/* Columna izquierda — Imágenes */}
-        <div className="space-y-8">
+        <div className="space-y-6">
           <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 shadow-sm">
             {todasImagenes[imagenSeleccionada] ? (
               <Image
@@ -341,9 +341,9 @@ export default function ProductoDetallePage() {
           </div>
 
           {todasImagenes.length > 1 && (
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Vistas del producto</p>
-              <div className="flex gap-3 overflow-x-auto pb-2">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Vistas</p>
+              <div className="flex gap-2 overflow-x-auto pb-2">
                 {todasImagenes.map((img, idx) => (
                   <button
                     key={idx}
@@ -365,7 +365,7 @@ export default function ProductoDetallePage() {
 
           {/* Trazabilidad QR */}
           {loteData && (
-            <div className="rounded-lg p-7 sm:p-8">
+            <div className="rounded-lg p-5 sm:p-6">
               <h2
                 className="text-lg sm:text-xl font-semibold mb-3"
                 style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
@@ -419,14 +419,14 @@ export default function ProductoDetallePage() {
 
           {/* Specifications Accordion - detailed specs */}
           {Object.entries(filteredGroups).length > 0 && (
-            <div className="space-y-4 mt-10 pt-10 border-t border-gray-200 dark:border-gray-700">
+            <div className="space-y-3 mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Detalles Técnicos</p>
               {Object.entries(filteredGroups).map(([groupName, specs]) =>
                 specs.length > 0 ? (
                   <div key={groupName} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                     <button
                       onClick={() => setExpandedGroup(expandedGroup === groupName ? null : groupName)}
-                      className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-inset"
+                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-inset"
                       style={{
                         backgroundColor: expandedGroup === groupName ? "#F4F0E3" : "transparent",
                         outlineColor: "#306B3F"
@@ -445,7 +445,7 @@ export default function ProductoDetallePage() {
                     {expandedGroup === groupName && (
                       <div
                         id={`specs-${groupName}`}
-                        className="px-4 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 space-y-4"
+                        className="px-3 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 space-y-3"
                         role="region"
                         aria-labelledby={`specs-${groupName}-title`}
                       >
@@ -470,10 +470,10 @@ export default function ProductoDetallePage() {
         </div>
 
         {/* Columna derecha — Info */}
-        <div className="space-y-9 lg:space-y-10">
+        <div className="space-y-7 lg:space-y-8">
 
           {/* Nombre y precio */}
-          <div className="space-y-4">
+          <div className="space-y-2">
             <h1
               className="text-3xl sm:text-4xl font-bold break-words leading-tight"
               style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
@@ -481,8 +481,13 @@ export default function ProductoDetallePage() {
               {producto.nombre}
             </h1>
             <p
+<<<<<<< HEAD:apps/web/src/app/cliente/producto/[id]/page.tsx
               className="text-3xl sm:text-4xl font-bold"
               style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#306B3F" }}
+=======
+              className="text-2xl sm:text-3xl font-bold"
+              style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}
+>>>>>>> abfa8786126fdf5ec135e0bc23e58e5bebe023c1:apps/web/src/app/Cliente/producto/[id]/page.tsx
             >
               ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
             </p>
@@ -499,9 +504,15 @@ export default function ProductoDetallePage() {
 
           {/* Hero Specs - Key characteristics first */}
           {(magueySpec || categoriaSpec || abvSpec) && (
+<<<<<<< HEAD:apps/web/src/app/cliente/producto/[id]/page.tsx
             <div className="space-y-4 rounded-lg p-6 sm:p-7" style={{ backgroundColor: "#e5eedc", border: "2px solid #306B3F" }}>
               <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#306B3F" }}>Lo Importante</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+=======
+            <div className="space-y-3 rounded-lg p-4 sm:p-5" style={{ backgroundColor: "var(--bio-color-fondo-sec, #f0ebe0)", border: "1px solid #e8dcc8" }}>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--bio-color-precio, #8b6914)" }}>Características</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+>>>>>>> abfa8786126fdf5ec135e0bc23e58e5bebe023c1:apps/web/src/app/Cliente/producto/[id]/page.tsx
                 {magueySpec && (
                   <div className="space-y-2">
                     <span className="block text-xs text-gray-600 dark:text-gray-400">Maguey</span>
@@ -525,7 +536,7 @@ export default function ProductoDetallePage() {
           )}
 
           {/* Producer + Store info - simplified grouping */}
-          <div className="space-y-5 pt-6 pb-8 border-b border-gray-200 dark:border-gray-700">
+          <div className="space-y-4 pt-5 pb-6 border-b border-gray-200 dark:border-gray-700">
             {/* Maestro Productor */}
             {productor && (
               <div className="space-y-2">
@@ -593,7 +604,7 @@ export default function ProductoDetallePage() {
           </div>
 
           {/* Cantidad + acciones */}
-          <div className="space-y-6 pt-8 border-t border-gray-200 dark:border-gray-700">
+          <div className="space-y-5 pt-6 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-6">
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Cantidad</label>
@@ -622,10 +633,17 @@ export default function ProductoDetallePage() {
             </div>
 
             {/* Envío */}
+<<<<<<< HEAD:apps/web/src/app/cliente/producto/[id]/page.tsx
             <div className="rounded-lg p-4 sm:p-5" style={{ border: "1px solid #ddd8c4", backgroundColor: "#edf5e5" }}>
               <div className="flex items-center gap-2 mb-3">
                 <Truck size={16} style={{ color: "#306B3F" }} />
                 <span className="text-sm font-semibold" style={{ color: "#1F3A2E" }}>Envío</span>
+=======
+            <div className="rounded-lg p-3 sm:p-4" style={{ border: "1px solid #e8dcc8", backgroundColor: "#fdf7ee" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <Truck size={16} style={{ color: "var(--bio-color-precio, #8b6914)" }} />
+                <span className="text-sm font-semibold" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>Envío</span>
+>>>>>>> abfa8786126fdf5ec135e0bc23e58e5bebe023c1:apps/web/src/app/Cliente/producto/[id]/page.tsx
               </div>
               <p className="text-sm text-gray-700 dark:text-gray-300">
                 Te mostraremos el costo cuando ingreses tu dirección. Enviamos a todo el país.
@@ -633,8 +651,8 @@ export default function ProductoDetallePage() {
             </div>
 
             {/* Botones */}
-            <div className="flex flex-col gap-3">
-              <div className="flex gap-3 sm:gap-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2 sm:gap-3">
                 <button
                   onClick={() => {
                     if (!producto) return;
@@ -680,7 +698,7 @@ export default function ProductoDetallePage() {
                   <span className="sm:hidden">{agregado ? "✓" : "+"}</span>
                 </button>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <button
                   onClick={handleComprarAhora}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
@@ -719,14 +737,14 @@ export default function ProductoDetallePage() {
       </div>
 
       {/* ── Reseñas ────────────────────────────────────────────────────────── */}
-      <div className="mt-28 border-t border-gray-300 dark:border-gray-700 pt-16">
+      <div className="mt-20 border-t border-gray-300 dark:border-gray-700 pt-12">
         <Suspense fallback={<div className="py-12 text-center text-gray-500 dark:text-gray-400">Cargando reseñas...</div>}>
           <ResenasSeccion productoId={productoId} />
         </Suspense>
       </div>
 
       {/* ── Productos relacionados ─────────────────────────────────────────── */}
-      <div className="mt-28 border-t border-gray-300 dark:border-gray-700 pt-16 space-y-24">
+      <div className="mt-20 border-t border-gray-300 dark:border-gray-700 pt-12 space-y-20">
         <Suspense fallback={<div className="py-12 text-center text-gray-500 dark:text-gray-400">Cargando productos similares...</div>}>
           <ProductosSimilares productoId={productoId} />
         </Suspense>

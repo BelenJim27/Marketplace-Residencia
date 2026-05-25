@@ -170,7 +170,7 @@ export default function VentasPage() {
   if (loading) {
     return (
       <div className="flex min-h-[320px] items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#3D6B3F] border-t-transparent" />
       </div>
     );
   }
@@ -380,7 +380,7 @@ export default function VentasPage() {
                   <DetailRow label="Cantidad" value={String(ventaSeleccionada.cantidad)} />
                   <div className="pt-2">
                     <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</p>
-                    <p className="text-2xl font-bold text-green-600">{formatCurrency(ventaSeleccionada.total, ventaSeleccionada.moneda)}</p>
+                    <p className="text-2xl font-bold text-[#3D6B3F]">{formatCurrency(ventaSeleccionada.total, ventaSeleccionada.moneda)}</p>
                   </div>
                 </div>
               </div>
@@ -429,7 +429,7 @@ export default function VentasPage() {
                 <>
                   <button
                     type="button"
-                    className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600"
+                    className="rounded-lg bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white hover:bg-[#1F3A2E]"
                   >
                     Marcar como completada
                   </button>
@@ -441,7 +441,7 @@ export default function VentasPage() {
                   </button>
                 </>
               ) : isCompletedStatus(ventaSeleccionada.status) ? (
-                <p className="text-sm font-medium text-green-600">✓ Venta completada</p>
+                <p className="text-sm font-medium text-[#3D6B3F]">✓ Venta completada</p>
               ) : (
                 <p className="text-sm font-medium text-red-600">✗ Venta cancelada</p>
               )}
@@ -465,9 +465,9 @@ function Card({ title, value }: { title: string; value: number | string }) {
  function Badge({ status }: { status: string }) {
   const normalized = normalizeStatus(status);
   const className = isCompletedStatus(normalized)
-    ? "bg-green-50 text-green-700"
+    ? "bg-[#C5CFB0]/40 text-[#1F3A2E]"
     : normalized === "pendiente"
-      ? "bg-amber-50 text-amber-700"
+      ? "bg-[#C97A3E]/10 text-[#C97A3E]"
       : isCancelledStatus(normalized)
         ? "bg-red-50 text-red-700"
         : "bg-slate-100 text-slate-700";
@@ -500,9 +500,9 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function SaleStatusBadge({ status }: { status: string }) {
   const normalized = normalizeStatus(status);
   const className = isCompletedStatus(normalized)
-    ? "bg-green-100 text-green-700"
+    ? "bg-[#C5CFB0]/60 text-[#1F3A2E]"
     : normalized === "pendiente"
-      ? "bg-amber-100 text-amber-700"
+      ? "bg-[#C97A3E]/20 text-[#C97A3E]"
       : isCancelledStatus(normalized)
         ? "bg-red-100 text-red-700"
         : "bg-slate-100 text-slate-700";
@@ -527,14 +527,14 @@ function TimelineStep({
     <div className="flex items-start gap-3">
       <div className="flex flex-col items-center">
         <div
-          className={`grid size-8 place-items-center rounded-full border ${done ? "border-green-500 bg-green-500 text-white" : active ? "border-gray-400 bg-gray-200 text-gray-600 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-200" : "border-gray-300 bg-gray-100 text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500"}`}
+          className={`grid size-8 place-items-center rounded-full border ${done ? "border-[#3D6B3F] bg-[#3D6B3F] text-white" : active ? "border-gray-400 bg-gray-200 text-gray-600 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-200" : "border-gray-300 bg-gray-100 text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500"}`}
         >
           {done ? "✓" : active ? "🔄" : "○"}
         </div>
         <div className="mt-1 h-8 w-px bg-gray-200 dark:bg-gray-600" />
       </div>
       <div>
-        <p className={`font-medium ${done ? "text-green-600" : "text-gray-700 dark:text-gray-200"}`}>{title}</p>
+        <p className={`font-medium ${done ? "text-[#3D6B3F]" : "text-gray-700 dark:text-gray-200"}`}>{title}</p>
         {date ? <p className="text-xs text-gray-500 dark:text-gray-400">{date}</p> : null}
       </div>
     </div>

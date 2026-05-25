@@ -134,6 +134,7 @@ export class FedexService implements ICarrierService {
           },
           // Cambio sugerido: DROPOFF es más estable en Sandbox
           pickupType: 'DROPOFF_AT_FEDEX_LOCATION',
+          packagingType: 'YOUR_PACKAGING',
           shippingChargesPayment: {
             paymentType: 'SENDER',
             payor: {

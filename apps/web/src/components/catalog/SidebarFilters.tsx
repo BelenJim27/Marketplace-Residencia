@@ -1,22 +1,17 @@
 "use client";
 
-import { Search, HelpCircle, X } from "lucide-react";
-import { useState, useCallback, useEffect } from "react";
-import { api } from "@/lib/api";
+import { Search, HelpCircle } from "lucide-react";
+import { useState } from "react";
 
 interface SidebarFiltersProps {
   filtrosPendientes: {
     busqueda: string;
     maguey: string[];
-    destilacion: string[];
-    molienda: string[];
     precio_min: string;
     precio_max: string;
-    maestro_mezcalero: string;
   };
   onBusquedaChange: (value: string) => void;
   onFiltroToggle: (field: string, value: string) => void;
-  onMaestroChange: (value: string) => void;
   searchFocus: boolean;
   onSearchFocus: (focused: boolean) => void;
   precioMinLocal: string;
@@ -25,8 +20,6 @@ interface SidebarFiltersProps {
   onPrecioMaxChange: (value: string) => void;
   onAplicarPrecio: () => void;
   TIPOS_MAGUEY: string[];
-  TIPOS_DESTILACION: string[];
-  TIPOS_MOLIENDA: string[];
 }
 
 function FilterCheckbox({
@@ -43,15 +36,15 @@ function FilterCheckbox({
       onClick={onClick}
       className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all hover:bg-white/50 text-left w-full"
       style={{
-        color: active ? "#306B3F" : "#1F3A2E",
+        color: active ? "#C97A3E" : "#3D6B3F",
         fontWeight: active ? 600 : 500,
       }}
     >
       <div
         className="w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
         style={{
-          borderColor: active ? "#306B3F" : "#A8C26B",
-          backgroundColor: active ? "#306B3F" : "transparent",
+          borderColor: active ? "#C97A3E" : "#A8C26B",
+          backgroundColor: active ? "#C97A3E" : "transparent",
         }}
       >
         {active && <span className="text-white text-xs">✓</span>}
@@ -85,7 +78,7 @@ function Tooltip({
         <div
           className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border p-2.5 text-xs z-50 animate-in fade-in duration-150"
           style={{
-            borderColor: "#ddd8c4",
+            borderColor: "#C5CFB0",
             color: "#1F3A2E",
             maxWidth: "200px",
             minWidth: "150px",
@@ -95,7 +88,7 @@ function Tooltip({
           {text}
           <div
             className="absolute top-full left-3 w-2 h-2 bg-white transform rotate-45"
-            style={{ borderRight: "1px solid #ddd8c4", borderBottom: "1px solid #ddd8c4" }}
+            style={{ borderRight: "1px solid #C5CFB0", borderBottom: "1px solid #C5CFB0" }}
           />
         </div>
       )}
@@ -117,7 +110,7 @@ function FilterSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b py-3" style={{ borderColor: "#ddd8c4" }}>
+    <div className="border-b py-3" style={{ borderColor: "#C5CFB0" }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex w-full items-center justify-between px-1 py-1.5 text-sm font-bold transition-colors hover:text-opacity-80"
@@ -127,7 +120,7 @@ function FilterSection({
           <span>{title}</span>
           {tooltip && (
             <Tooltip text={tooltip}>
-              <HelpCircle size={14} style={{ color: "#306B3F", opacity: 0.7 }} />
+              <HelpCircle size={14} style={{ color: "#C97A3E", opacity: 0.7 }} />
             </Tooltip>
           )}
         </div>
@@ -136,131 +129,6 @@ function FilterSection({
         </span>
       </button>
       {isOpen && <div className="pt-2">{children}</div>}
-    </div>
-  );
-}
-
-// P4: Combobox component for Maestro with autocomplete
-interface Productor {
-  id: number;
-  nombre: string;
-  usuario?: { nombre?: string; apellido_paterno?: string };
-}
-
-function MaestroCombobox({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<Productor[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const fetchSuggestions = useCallback(
-    async (query: string) => {
-      if (query.length < 2) {
-        setSuggestions([]);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const data = await api.productores.getAll({ busqueda: query, limit: 8 });
-        setSuggestions((data as unknown as Productor[]).slice(0, 8));
-        setIsOpen(true);
-      } catch (err) {
-        setSuggestions([]);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    []
-  );
-
-  const debouncedFetch = useCallback(() => {
-    const timer = setTimeout(() => fetchSuggestions(value), 300);
-    return () => clearTimeout(timer);
-  }, [value, fetchSuggestions]);
-
-  useEffect(() => {
-    return debouncedFetch();
-  }, [debouncedFetch]);
-
-  const handleSelect = (productor: Productor) => {
-    onChange(productor.nombre);
-    setIsOpen(false);
-  };
-
-  const handleClear = () => {
-    onChange("");
-    setSuggestions([]);
-    setIsOpen(false);
-  };
-
-  return (
-    <div className="relative pt-1">
-      <div className="relative">
-        <input
-          type="text"
-          placeholder="Nombre..."
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => value.length >= 2 && setIsOpen(true)}
-          onBlur={() => setTimeout(() => setIsOpen(false), 150)}
-          className="w-full rounded-lg py-2 px-3 text-sm outline-none pr-8"
-          style={{
-            backgroundColor: "#F4F0E3",
-            border: "1px solid #ddd8c4",
-            color: "#1F3A2E",
-          }}
-          aria-autocomplete="list"
-          aria-expanded={isOpen}
-        />
-        {value && (
-          <button
-            onClick={handleClear}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 hover:opacity-70 transition-opacity"
-            aria-label="Limpiar"
-          >
-            <X size={14} style={{ color: "#306B3F" }} />
-          </button>
-        )}
-      </div>
-
-      {/* Dropdown suggestions */}
-      {isOpen && (
-        <div
-          className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border z-50 max-h-40 overflow-y-auto"
-          style={{ borderColor: "#ddd8c4" }}
-          role="listbox"
-        >
-          {isLoading ? (
-            <div className="p-3 text-xs text-gray-500 text-center">Buscando...</div>
-          ) : suggestions.length > 0 ? (
-            suggestions.map((productor, index) => (
-              <button
-                key={productor.id || `productor-${index}`}
-                onClick={() => handleSelect(productor)}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 transition-colors"
-                style={{ color: "#1F3A2E" }}
-                role="option"
-              >
-                <div className="font-medium">{productor.nombre}</div>
-                {productor.usuario?.nombre && (
-                  <div className="text-xs opacity-70">
-                    {productor.usuario.nombre} {productor.usuario.apellido_paterno}
-                  </div>
-                )}
-              </button>
-            ))
-          ) : (
-            <div className="p-3 text-xs text-gray-500 text-center">
-              {value.length < 2 ? "Escribe al menos 2 caracteres" : "No encontrado"}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -326,7 +194,7 @@ function PriceRangeSlider({
         disabled={hasError}
         className="w-full py-2 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95"
         style={{
-          backgroundColor: hasError ? "#d0d0d0" : "#306B3F",
+          backgroundColor: hasError ? "#d0d0d0" : "#C97A3E",
           cursor: hasError ? "not-allowed" : "pointer",
           opacity: hasError ? 0.6 : 1,
         }}
@@ -341,7 +209,6 @@ export function SidebarFiltersComponent({
   filtrosPendientes,
   onBusquedaChange,
   onFiltroToggle,
-  onMaestroChange,
   searchFocus,
   onSearchFocus,
   precioMinLocal,
@@ -350,34 +217,16 @@ export function SidebarFiltersComponent({
   onPrecioMaxChange,
   onAplicarPrecio,
   TIPOS_MAGUEY,
-  TIPOS_DESTILACION,
-  TIPOS_MOLIENDA,
 }: SidebarFiltersProps) {
   return (
-    <div className="space-y-1">
-      <div className="mb-4 pb-4 border-b" style={{ borderColor: "#ddd8c4" }}>
-        <div className="relative group">
-          <Search
-            size={18}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200"
-            style={{ color: searchFocus ? "#306B3F" : "#A8C26B" }}
-          />
-          <input
-            type="text"
-            placeholder="Buscar mezcal..."
-            value={filtrosPendientes.busqueda}
-            onChange={(e) => onBusquedaChange(e.target.value)}
-            onFocus={() => onSearchFocus(true)}
-            onBlur={() => onSearchFocus(false)}
-            className="w-full rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none font-medium transition-all duration-200"
-            style={{
-              backgroundColor: searchFocus ? "#f0f8ec" : "#F4F0E3",
-              border: searchFocus ? "1.5px solid #306B3F" : "1.5px solid #ddd8c4",
-              color: "#1F3A2E",
-            }}
-          />
-        </div>
-      </div>
+    <div className="space-y-4">
+      {/* Buscador */}
+      <SearchBarComponent
+        busqueda={filtrosPendientes.busqueda}
+        onBusquedaChange={onBusquedaChange}
+        searchFocus={searchFocus}
+        onSearchFocus={onSearchFocus}
+      />
 
       <FilterSection
         title="Maguey"
@@ -395,37 +244,6 @@ export function SidebarFiltersComponent({
         </div>
       </FilterSection>
 
-      <FilterSection
-        title="Destilación"
-        tooltip="Método de destilación: Alambique (cobre, lento, suave), Artefacto (eficiente), Cambio (híbrido)."
-      >
-        <div className="space-y-0.5 px-1">
-          {TIPOS_DESTILACION.map((d) => (
-            <FilterCheckbox
-              key={d}
-              label={d}
-              active={filtrosPendientes.destilacion.includes(d)}
-              onClick={() => onFiltroToggle("destilacion", d)}
-            />
-          ))}
-        </div>
-      </FilterSection>
-
-      <FilterSection
-        title="Molienda"
-        tooltip="Cómo se muele el agave: Tahona (piedra), Molino de piedra, Molino mecánico, Manual."
-      >
-        <div className="space-y-0.5 px-1">
-          {TIPOS_MOLIENDA.map((m) => (
-            <FilterCheckbox
-              key={m}
-              label={m}
-              active={filtrosPendientes.molienda.includes(m)}
-              onClick={() => onFiltroToggle("molienda", m)}
-            />
-          ))}
-        </div>
-      </FilterSection>
 
       <FilterSection
         title="Rango de Precio"
@@ -440,18 +258,60 @@ export function SidebarFiltersComponent({
         />
       </FilterSection>
 
-      <FilterSection
-        title="Maestro Mezcalero"
-        defaultOpen={false}
-        tooltip="Productor artesanal que hace este mezcal."
-      >
-        <div className="px-1 pt-1">
-          <MaestroCombobox
-            value={filtrosPendientes.maestro_mezcalero}
-            onChange={onMaestroChange}
-          />
+    </div>
+  );
+}
+
+export function SearchBarComponent({
+  busqueda,
+  onBusquedaChange,
+  searchFocus,
+  onSearchFocus,
+}: {
+  busqueda: string;
+  onBusquedaChange: (value: string) => void;
+  searchFocus: boolean;
+  onSearchFocus: (focused: boolean) => void;
+}) {
+  return (
+    <div className="relative group">
+      {/* Shadow effect on focus */}
+      <div
+        className="absolute inset-0 rounded-2xl opacity-0 transition-all duration-300 pointer-events-none"
+        style={{
+          backgroundColor: "#C97A3E",
+          opacity: searchFocus ? 0.1 : 0,
+          filter: "blur(8px)",
+        }}
+      />
+
+      <Search
+        size={20}
+        className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-200 z-10"
+        style={{ color: searchFocus ? "#C97A3E" : "#A8C26B" }}
+      />
+      <input
+        type="text"
+        placeholder="Buscar por nombre, región, tipo..."
+        value={busqueda}
+        onChange={(e) => onBusquedaChange(e.target.value)}
+        onFocus={() => onSearchFocus(true)}
+        onBlur={() => onSearchFocus(false)}
+        className="w-full rounded-2xl py-3 sm:py-3.5 pl-13 pr-4 text-sm sm:text-base outline-none font-medium transition-all duration-300"
+        style={{
+          backgroundColor: searchFocus ? "#F4F0E3" : "#F4F0E3",
+          border: searchFocus ? "2px solid #C97A3E" : "1.5px solid #C5CFB0",
+          color: "#1F3A2E",
+          boxShadow: searchFocus ? "0 4px 12px rgba(201, 122, 73, 0.1)" : "0 2px 4px rgba(0, 0, 0, 0.05)",
+        }}
+      />
+
+      {/* Placeholder hint */}
+      {!busqueda && !searchFocus && (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none hidden sm:block">
+
         </div>
-      </FilterSection>
+      )}
     </div>
   );
 }

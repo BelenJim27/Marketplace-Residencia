@@ -356,13 +356,13 @@ export class PagosService {
         },
       },
     });
-    const re = /mezcal|alcohol|destilad|licor|spirit|tequila|wine|vino|cerveza|beer/i;
+    // Detectar si hay productos con restricción de edad (mayores de 18)
     for (const d of detalles) {
       for (const link of d.productos?.categorias_productos ?? []) {
         const cat = link.categorias;
         if (!cat) continue;
         const minAge = cat.requiere_edad_minima ?? 0;
-        if (minAge >= 18 && re.test(cat.nombre ?? '')) return true;
+        if (minAge >= 18) return true;
       }
     }
     return false;

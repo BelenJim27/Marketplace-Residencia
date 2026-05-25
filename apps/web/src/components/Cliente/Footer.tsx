@@ -20,23 +20,23 @@ export default function Footer() {
     <footer
       className="w-full py-8 px-6"
       style={{
-        background: isDark ? "#0D1A10" : "#2E4A33",
+        background: isDark ? "#0D1A10" : "#1F3A2E",
         borderTop: "1px solid rgba(200, 169, 122, 0.2)",
       }}
     >
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
 
         <div className="space-y-2">
-          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "15px" }}>
+          <h3 style={{ fontFamily: "Georgia, serif", color: "#A8C26B", fontSize: "15px" }}>
             {t("Guardianas del Mezcal")}
           </h3>
-          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", color: "#c8a97a", fontSize: "12px", lineHeight: "1.6" }}>
+          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", color: "#C5CFB0", fontSize: "12px", lineHeight: "1.6" }}>
             {t("Honrando la tierra, el fuego y las manos que transforman el agave en espíritu puro.")}
           </p>
         </div>
 
         <div className="space-y-2 lg:col-span-2">
-          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "15px" }}>
+          <h3 style={{ fontFamily: "Georgia, serif", color: "#A8C26B", fontSize: "15px" }}>
             {t("Asociaciones")}
           </h3>
           <ul className="space-y-3">
@@ -55,10 +55,10 @@ export default function Footer() {
               },
             ].map((asoc) => (
               <li key={asoc.nombre}>
-                <p style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "12px", fontWeight: 600, margin: "0 0 2px" }}>
+                <p style={{ fontFamily: "Georgia, serif", color: "#A8C26B", fontSize: "12px", fontWeight: 600, margin: "0 0 2px" }}>
                   {t(asoc.nombre)}
                 </p>
-                <p style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "11.5px", lineHeight: "1.55", margin: 0 }}>
+                <p style={{ fontFamily: "Georgia, serif", color: "#C5CFB0", fontSize: "11.5px", lineHeight: "1.55", margin: 0 }}>
                   {t(asoc.desc)}
                 </p>
               </li>
@@ -67,7 +67,7 @@ export default function Footer() {
         </div>
 
         <div className="space-y-2">
-          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "15px" }}>
+          <h3 style={{ fontFamily: "Georgia, serif", color: "#A8C26B", fontSize: "15px" }}>
             {t("Explorar")}
           </h3>
           <ul className="space-y-1.5">
@@ -75,7 +75,7 @@ export default function Footer() {
               <li key={item}>
                 <a
                   href="#"
-                  style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "12px", textDecoration: "none" }}
+                  style={{ fontFamily: "Georgia, serif", color: "#C5CFB0", fontSize: "12px", textDecoration: "none" }}
                   className="hover:opacity-75 transition-opacity"
                 >
                   {t(item)}
@@ -86,7 +86,7 @@ export default function Footer() {
         </div>
 
         <div className="space-y-2">
-          <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "15px" }}>
+          <h3 style={{ fontFamily: "Georgia, serif", color: "#A8C26B", fontSize: "15px" }}>
             {t("Legal")}
           </h3>
           <ul className="space-y-1.5">
@@ -94,7 +94,7 @@ export default function Footer() {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "12px", textDecoration: "none" }}
+                  style={{ fontFamily: "Georgia, serif", color: "#C5CFB0", fontSize: "12px", textDecoration: "none" }}
                   className="hover:opacity-75 transition-opacity"
                 >
                   {t(item.label)}
@@ -103,7 +103,7 @@ export default function Footer() {
             ))}
           </ul>
           <div className="pt-1 space-y-1">
-            <h3 style={{ fontFamily: "Georgia, serif", color: "#e8c060", fontSize: "15px" }}>
+            <h3 style={{ fontFamily: "Georgia, serif", color: "#A8C26B", fontSize: "15px" }}>
               {t("Contacto")}
             </h3>
             {[
@@ -111,7 +111,7 @@ export default function Footer() {
               "9512578906",
               "Santa Maria Zaquiltán, Oaxaca",
             ].map((item) => (
-              <p key={item} style={{ fontFamily: "Georgia, serif", color: "#c8a97a", fontSize: "12px", margin: 0 }}>
+              <p key={item} style={{ fontFamily: "Georgia, serif", color: "#C5CFB0", fontSize: "12px", margin: 0 }}>
                 {t(item)}
               </p>
             ))}

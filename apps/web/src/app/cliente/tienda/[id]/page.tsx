@@ -62,7 +62,7 @@ export default function TiendaPage() {
     setLoading(true);
     setError(null);
     try {
-      const tiendaData = await api.tiendas.getOne(Number(id));
+      const tiendaData = (await api.tiendas.getOne(Number(id))) as Tienda | null;
       if (!tiendaData) {
         setError("Tienda no encontrada");
         return;
@@ -74,7 +74,7 @@ export default function TiendaPage() {
         api.productos.getByProductor(tiendaData.id_productor),
       ]);
 
-      const productorData = (productoresData as any[]).find((p) => p.id_productor === tiendaData.id_productor);
+      const productorData = (productoresData as Productor[]).find((p: Productor) => p.id_productor === tiendaData.id_productor);
       setProductor(productorData || null);
 
       const filtrados = (productosData as Producto[]).filter(
