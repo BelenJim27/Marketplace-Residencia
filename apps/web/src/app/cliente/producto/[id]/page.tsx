@@ -201,7 +201,7 @@ export default function ProductoDetallePage() {
       { label: "Región de Origen", value: region, help: "Estado o región donde se produjo" },
       { label: "Tipo de Maguey", value: producto?.maguey, help: "La planta base del mezcal" },
       { label: "Clasificación", value: producto?.tipo_mezcal, help: "Artesanal, ancestral, o industrial" },
-      { label: "Maestro Productor", value: producto?.maestro_mezcalero, help: "Productor responsable" },
+      { label: "Maestro Productor", value: producto?.maestro_mezcalero || nombreProductor, help: "Productor responsable" },
     ],
     "Cómo se Hace": [
       { label: "Tipo de Horno", value: producto?.destilacion, help: "Método de cocción del maguey" },
@@ -215,13 +215,16 @@ export default function ProductoDetallePage() {
     ],
   } as const;
 
-  // Filter out empty specs
+  // Filter out empty specs, but keep at least one group visible with fallback message
   const filteredGroups = Object.fromEntries(
     Object.entries(specGroups).map(([group, specs]) => [
       group,
       specs.filter((spec) => spec.value),
     ])
   );
+
+  // Show specs section if there's at least ONE value across all groups
+  const hasAnySpec = Object.values(filteredGroups).some((specs) => specs.length > 0);
 
   // Hero specs (always show if populated)
   const magueySpec = producto?.maguey;
@@ -322,41 +325,90 @@ export default function ProductoDetallePage() {
       {/* ── Grid principal ─────────────────────────────────────────────────── */}
       <div className="grid gap-8 lg:gap-10 lg:grid-cols-2">
 
-        {/* Columna izquierda — Imágenes */}
+        {/* Columna izquierda — Imágenes con galería flexible */}
         <div className="space-y-6">
-          <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 shadow-sm">
+          {/* Contenedor principal — Flexible, se adapta a cualquier tamaño de imagen */}
+          <div className="relative bg-gray-100 dark:bg-gray-900 rounded-lg overflow-hidden shadow-sm w-full" style={{ aspectRatio: "auto", minHeight: "400px", maxHeight: "500px" }}>
             {todasImagenes[imagenSeleccionada] ? (
               <Image
                 src={todasImagenes[imagenSeleccionada]}
                 alt={producto.nombre}
                 fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 70vw, 50vw"
+                className="object-contain"
                 priority={imagenSeleccionada === 0}
                 loading={imagenSeleccionada === 0 ? "eager" : "lazy"}
+                quality={90}
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-gray-400">Sin imagen</div>
+              <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-600 p-8">
+                <div className="text-5xl mb-3">📦</div>
+                <p className="text-sm text-center">Sin imagen disponible</p>
+              </div>
+            )}
+
+            {/* Contador e indicadores de progreso — flotante arriba a la derecha */}
+            {todasImagenes.length > 1 && (
+              <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-2 rounded-lg text-xs font-semibold">
+                {imagenSeleccionada + 1} / {todasImagenes.length}
+              </div>
+            )}
+
+            {/* Botones de navegación — visible solo en múltiples imágenes */}
+            {todasImagenes.length > 1 && (
+              <>
+                <button
+                  onClick={() => setImagenSeleccionada((prev) => (prev === 0 ? todasImagenes.length - 1 : prev - 1))}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-700 rounded-full p-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 z-10"
+                  style={{ outlineColor: "var(--bio-color-precio, #8b6914)" }}
+                  aria-label="Imagen anterior"
+                  title="Imagen anterior"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setImagenSeleccionada((prev) => (prev === todasImagenes.length - 1 ? 0 : prev + 1))}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-700 rounded-full p-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 z-10"
+                  style={{ outlineColor: "var(--bio-color-precio, #8b6914)" }}
+                  aria-label="Imagen siguiente"
+                  title="Imagen siguiente"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </>
             )}
           </div>
 
+          {/* Galería de miniaturas — lateral en desktop, horizontal en móvil */}
           {todasImagenes.length > 1 && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Vistas</p>
-              <div className="flex gap-2 overflow-x-auto pb-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Vistas ({todasImagenes.length})</p>
+              <div className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-x-visible">
                 {todasImagenes.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setImagenSeleccionada(idx)}
-                    className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1"
+                    className="relative h-20 w-20 lg:h-24 lg:w-full flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 hover:opacity-100 duration-150"
                     style={{
                       borderColor: idx === imagenSeleccionada ? "#306B3F" : "transparent",
                       opacity: idx === imagenSeleccionada ? 1 : 0.6
+
                     }}
                     aria-label={`Ver imagen ${idx + 1} de ${todasImagenes.length}`}
                     aria-current={idx === imagenSeleccionada ? "true" : "false"}
                   >
-                    <Image src={img} alt={`${producto.nombre} vista ${idx + 1}`} fill sizes="80px" className="object-cover" loading="lazy" />
+                    <Image
+                      src={img}
+                      alt={`${producto.nombre} vista ${idx + 1}`}
+                      fill
+                      sizes="(max-width: 768px) 80px, 100%"
+                      className="object-cover"
+                      loading="lazy"
+                    />
                   </button>
                 ))}
               </div>
@@ -417,11 +469,11 @@ export default function ProductoDetallePage() {
             </div>
           )}
 
-          {/* Specifications Accordion - detailed specs */}
-          {Object.entries(filteredGroups).length > 0 && (
-            <div className="space-y-3 mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Detalles Técnicos</p>
-              {Object.entries(filteredGroups).map(([groupName, specs]) =>
+          {/* Specifications Accordion - detailed specs - ALWAYS SHOW */}
+          <div className="space-y-3 mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Detalles Técnicos</p>
+            {hasAnySpec ? (
+              Object.entries(filteredGroups).map(([groupName, specs]) =>
                 specs.length > 0 ? (
                   <div key={groupName} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                     <button
@@ -464,9 +516,15 @@ export default function ProductoDetallePage() {
                     )}
                   </div>
                 ) : null
-              )}
-            </div>
-          )}
+              )
+            ) : (
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Los detalles técnicos de este producto aún no han sido completados. Contáctanos o revisa con el productor para más información.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Columna derecha — Info */}
@@ -527,7 +585,7 @@ export default function ProductoDetallePage() {
           {/* Producer + Store info - simplified grouping */}
           <div className="space-y-4 pt-5 pb-6 border-b border-gray-200 dark:border-gray-700">
             {/* Maestro Productor */}
-            {productor && (
+            {(productor || nombreProductor) && (
               <div className="space-y-2">
                 <h3
                   className="text-sm font-semibold"
@@ -547,7 +605,7 @@ export default function ProductoDetallePage() {
                   ) : (
                     <p className="font-medium">{nombreProductor}</p>
                   )}
-                  {productor.biografia && <p className="text-xs text-gray-600 dark:text-gray-400">{productor.biografia}</p>}
+                  {productor?.biografia && <p className="text-xs text-gray-600 dark:text-gray-400">{productor.biografia}</p>}
                 </div>
               </div>
             )}

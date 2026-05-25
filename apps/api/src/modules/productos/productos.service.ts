@@ -398,6 +398,13 @@ export class ProductosService {
     if (dto.alto_cm !== undefined) data.alto_cm = dto.alto_cm ? new Prisma.Decimal(dto.alto_cm) : null;
     if (dto.ancho_cm !== undefined) data.ancho_cm = dto.ancho_cm ? new Prisma.Decimal(dto.ancho_cm) : null;
     if (dto.largo_cm !== undefined) data.largo_cm = dto.largo_cm ? new Prisma.Decimal(dto.largo_cm) : null;
+    if (dto.id_lote !== undefined) {
+      if (dto.id_lote) {
+        data.lotes = { connect: { id_lote: Number(dto.id_lote) } };
+      } else {
+        data.lotes = { disconnect: true };
+      }
+    }
 
     const producto = await this.prisma.productos.update({
       where: { id_producto: BigInt(id) },
@@ -476,6 +483,54 @@ export class ProductosService {
         tienda: p.tiendas?.nombre || 'N/A',
         productor: p.tiendas?.productores?.usuarios?.nombre || 'N/A',
       })),
+    };
+  }
+
+  async assignLotesMatching() {
+    const productosSinLote = await this.prisma.productos.findMany({
+      where: { id_lote: null },
+      include: { tiendas: { include: { productores: true } } },
+    });
+
+    let asignados = 0;
+    let skipped = 0;
+
+    for (const producto of productosSinLote) {
+      const tienda = producto.tiendas;
+      if (!tienda) {
+        skipped++;
+        continue;
+      }
+
+      const productor = tienda.productores;
+      if (!productor) {
+        skipped++;
+        continue;
+      }
+
+      const lote = await this.prisma.lotes.findFirst({
+        where: { id_productor: productor.id_productor },
+        orderBy: { creado_en: 'desc' },
+      });
+
+      if (!lote) {
+        skipped++;
+        continue;
+      }
+
+      await this.prisma.productos.update({
+        where: { id_producto: producto.id_producto },
+        data: { id_lote: lote.id_lote },
+      });
+
+      asignados++;
+    }
+
+    return {
+      exito: true,
+      asignados,
+      omitidos: skipped,
+      total: asignados + skipped,
     };
   }
 }

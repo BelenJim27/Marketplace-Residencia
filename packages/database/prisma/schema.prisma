@@ -513,6 +513,7 @@ model productores {
   paypal_email                String?               @db.VarChar(254)
   asociacion                  String?               @db.VarChar(150)
   nombre_marca                String?               @db.VarChar(150)
+  certificado_url             String?               @db.VarChar(500)
   comisiones                  comisiones[]
   detalle_pedido              detalle_pedido[]
   lotes                       lotes[]
