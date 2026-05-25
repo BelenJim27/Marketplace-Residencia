@@ -58,16 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const accessToken = (session as any)?.accessToken;
       if (accessToken) setCookie("token", accessToken, 7);
 
-<<<<<<< HEAD
-      // Guardar refresh_token en cookie para que api.ts pueda renovar tokens sin redirigir
-      const refreshToken = (session as any)?.refreshToken;
-      if (refreshToken) setCookie("refresh_token", refreshToken, 30);
-=======
       const sessionRefreshToken = (session as any)?.refreshToken;
       if (sessionRefreshToken && !getCookie("refresh_token")) {
         setCookie("refresh_token", sessionRefreshToken, 30);
       }
->>>>>>> 9a957e2b4046a51d45e9f3e65b7b3fb93c9b58da
 
       let storedUser: Partial<Usuario> = {};
 
