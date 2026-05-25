@@ -1,9 +1,26 @@
-import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
-import { uploadToCloudinary } from '../shared/cloudinary';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { mkdirSync, unlinkSync } from 'fs';
+import { randomBytes } from 'crypto';
 import { CreateProductoDto, UpdateProductoDto } from './dto/productos.dto';
 import { ProductosService } from './productos.service';
+import { AuthGuard } from '../auth/guards/auth.guard';
+import { RolesGuard } from '../auth/guards/rbac.guard';
+import { Roles } from '../auth/guards/roles.decorator';
+
+const UPLOADS_DIR = join(process.cwd(), 'uploads', 'productos');
+mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const productosStorage = diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename: (_req, file, cb) => {
+    const ext = extname(file.originalname).toLowerCase();
+    const name = `${Date.now()}-${randomBytes(8).toString('hex')}${ext}`;
+    cb(null, name);
+  },
+});
 
 @Controller('productos')
 export class ProductosController {
@@ -41,13 +58,15 @@ export class ProductosController {
   }
 
   @Post()
-  @UseInterceptors(FileInterceptor('imagen', { storage: memoryStorage() }))
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('productor', 'administrador')
+  @UseInterceptors(FileInterceptor('imagen', { storage: productosStorage }))
   async create(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() dto: CreateProductoDto
   ) {
     if (file) {
-      const imageUrl = await uploadToCloudinary(file.buffer, 'productos');
+      const imageUrl = `/uploads/productos/${file.filename}`;
       dto.imagen_url = imageUrl;
       dto.imagen_principal_url = imageUrl;
     }
@@ -55,14 +74,16 @@ export class ProductosController {
   }
 
   @Patch(':id')
-  @UseInterceptors(FileInterceptor('imagen', { storage: memoryStorage() }))
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('productor', 'administrador')
+  @UseInterceptors(FileInterceptor('imagen', { storage: productosStorage }))
   async update(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() dto: UpdateProductoDto
   ) {
     if (file) {
-      const imageUrl = await uploadToCloudinary(file.buffer, 'productos');
+      const imageUrl = `/uploads/productos/${file.filename}`;
       dto.imagen_url = imageUrl;
       dto.imagen_principal_url = imageUrl;
     }
@@ -70,6 +91,8 @@ export class ProductosController {
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('productor', 'administrador')
   remove(@Param('id') id: string) {
     return this.service.remove(id);
   }

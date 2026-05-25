@@ -58,9 +58,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const accessToken = (session as any)?.accessToken;
       if (accessToken) setCookie("token", accessToken, 7);
 
+<<<<<<< HEAD
       // Guardar refresh_token en cookie para que api.ts pueda renovar tokens sin redirigir
       const refreshToken = (session as any)?.refreshToken;
       if (refreshToken) setCookie("refresh_token", refreshToken, 30);
+=======
+      const sessionRefreshToken = (session as any)?.refreshToken;
+      if (sessionRefreshToken && !getCookie("refresh_token")) {
+        setCookie("refresh_token", sessionRefreshToken, 30);
+      }
+>>>>>>> 9a957e2b4046a51d45e9f3e65b7b3fb93c9b58da
 
       let storedUser: Partial<Usuario> = {};
 
@@ -356,7 +363,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       user,
-      loading,
+      loading: loading || sessionStatus === "loading",
       isAuthenticated: !!user,
       isAdmin,
       isProductor,
@@ -364,7 +371,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       refreshAuth,
     }),
-    [user, loading, isAdmin, isProductor, login, logout, refreshAuth],
+    [user, loading, sessionStatus, isAdmin, isProductor, login, logout, refreshAuth],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

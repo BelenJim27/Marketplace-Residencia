@@ -157,6 +157,48 @@ async function main() {
       }
     }
 
+    console.log('\n=== Assigning Permisos to Productor Role ===');
+    const productorRole = await prisma.roles.findUnique({ where: { nombre: 'productor' } });
+    const PERMISOS_PRODUCTOR = [
+      'panel_productor',
+      'ver_productos',
+      'crear_producto',
+      'editar_producto',
+      'eliminar_producto',
+      'ver_inventario',
+      'crear_inventario',
+      'editar_inventario',
+      'ver_pedidos',
+      'editar_pedido',
+      'ver_tienda',
+      'crear_tienda',
+      'editar_tienda',
+    ];
+
+    if (productorRole) {
+      for (const nombrePerm of PERMISOS_PRODUCTOR) {
+        let permiso = await prisma.permisos.findUnique({ where: { nombre: nombrePerm } });
+        if (!permiso) {
+          permiso = await prisma.permisos.create({ data: { nombre: nombrePerm } });
+          console.log(`  ✓ Created permiso: ${nombrePerm}`);
+        } else {
+          console.log(`  ✓ Permiso already exists: ${nombrePerm}`);
+        }
+
+        const existing = await prisma.rol_permiso.findUnique({
+          where: { id_rol_id_permiso: { id_rol: productorRole.id_rol, id_permiso: permiso.id_permiso } },
+        });
+        if (existing) {
+          console.log(`  ✓ Already linked: productor → ${nombrePerm}`);
+        } else {
+          await prisma.rol_permiso.create({
+            data: { id_rol: productorRole.id_rol, id_permiso: permiso.id_permiso },
+          });
+          console.log(`  ✓ Linked: productor → ${nombrePerm}`);
+        }
+      }
+    }
+
     console.log('\n✅ Roles seed completed successfully!');
   } catch (error) {
     console.error('\n❌ Error during seed:', error);

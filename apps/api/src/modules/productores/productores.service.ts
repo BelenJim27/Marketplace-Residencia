@@ -508,6 +508,16 @@ export class ProductoresService {
           },
         });
       }
+
+      // Ensure the productor role has panel_productor permission
+      const panelPerm = await this.prisma.permisos.findUnique({ where: { nombre: 'panel_productor' } });
+      if (rolProductor && panelPerm) {
+        await this.prisma.rol_permiso.upsert({
+          where: { id_rol_id_permiso: { id_rol: rolProductor.id_rol, id_permiso: panelPerm.id_permiso } },
+          update: {},
+          create: { id_rol: rolProductor.id_rol, id_permiso: panelPerm.id_permiso },
+        });
+      }
     }
 
     const actualizado = await this.prisma.productores.update({

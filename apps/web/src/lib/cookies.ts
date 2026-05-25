@@ -9,7 +9,7 @@ export function setCookie(name: string, value: string, days?: number): void {
   }
 
   const secure = window.location.protocol === "https:" ? " secure" : "";
-  document.cookie = `${name}=${value}${expires}; path=/; SameSite=Lax${secure}`;
+  document.cookie = `${name}=${encodeURIComponent(value)}${expires}; path=/; SameSite=Lax${secure}`;
 }
 
 export function getCookie(name: string): string | null {
@@ -21,7 +21,12 @@ export function getCookie(name: string): string | null {
   for (let i = 0; i < cookies.length; i++) {
     let cookie = cookies[i].trim();
     if (cookie.indexOf(nameEQ) === 0) {
-      return cookie.substring(nameEQ.length);
+      const raw = cookie.substring(nameEQ.length);
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        return raw;
+      }
     }
   }
 
@@ -59,5 +64,5 @@ export function setCookieWithOptions(
     expires = `; expires=${date.toUTCString()}`;
   }
 
-  document.cookie = `${name}=${value}${expires}; path=${path}; SameSite=${sameSite}${secure ? "; secure" : ""}`;
+  document.cookie = `${name}=${encodeURIComponent(value)}${expires}; path=${path}; SameSite=${sameSite}${secure ? "; secure" : ""}`;
 }
