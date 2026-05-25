@@ -106,6 +106,11 @@ export class FedexService implements ICarrierService {
       throw new Error('FEDEX_NOT_CONFIGURED');
     }
 
+    // Domestic MX: PRIORITY_OVERNIGHT and STANDARD_OVERNIGHT are the Express services for Mexico.
+    // FEDEX_EXPRESS_SAVER and FEDEX_2_DAY are US-domestic only and fail for MX routes.
+    const MX_DOMESTIC_SERVICES = ['PRIORITY_OVERNIGHT', 'STANDARD_OVERNIGHT'];
+    const isInternational = dto.destino.pais !== 'MX';
+
     try {
       const token = await this.getAccessToken();
 
@@ -114,7 +119,7 @@ export class FedexService implements ICarrierService {
       const stateKey = stateRaw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       const stateOrProvinceCode = (this.MX_STATE_CODES[stateKey] ?? stateRaw.substring(0, 2).toUpperCase()) || undefined;
 
-      const body: any = {
+      const baseBody: any = {
         accountNumber: { value: this.accountNumber },
         requestedShipment: {
           shipper: {
@@ -132,16 +137,9 @@ export class FedexService implements ICarrierService {
               residential: false,
             },
           },
-          // Cambio sugerido: DROPOFF es más estable en Sandbox
           pickupType: 'DROPOFF_AT_FEDEX_LOCATION',
-          packagingType: 'YOUR_PACKAGING',
           shippingChargesPayment: {
             paymentType: 'SENDER',
-            payor: {
-              responsibleParty: {
-                accountNumber: { value: this.accountNumber }
-              }
-            }
           },
           requestedPackageLineItems: [
             {
@@ -154,13 +152,13 @@ export class FedexService implements ICarrierService {
               },
             },
           ],
-          rateRequestType: ['LIST', 'PREFERRED'],
+          rateRequestType: ['LIST'],
         },
       };
 
       // Manejo de Aduanas para Internacional
-      if (dto.destino.pais !== 'MX') {
-        body.requestedShipment.customsClearanceDetail = {
+      if (isInternational) {
+        baseBody.requestedShipment.customsClearanceDetail = {
           dutiesPayment: {
             paymentType: 'SENDER',
             payor: { responsibleParty: { accountNumber: { value: this.accountNumber } } }
@@ -179,37 +177,108 @@ export class FedexService implements ICarrierService {
       }
 
       if (adultSignature) {
-        body.requestedShipment.specialServicesRequested = {
+        baseBody.requestedShipment.specialServicesRequested = {
           specialServiceTypes: ['ADULT_SIGNATURE_REQUIRED'],
         };
       }
 
-      const response = await firstValueFrom(
-        this.http.post(`${this.baseUrl}/rate/v1/rates/quotes`, body, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'X-locale': 'es_MX',
-          },
-        })
-      );
+      const quotes: ShippingQuote[] = [];
+      let lastError = '';
+      const rateHeaders = {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-locale': 'es_MX',
+      };
 
-      if (!response?.data) return [];
-      return this.mapFedexResponse(response.data, dto.destino.pais);
+      if (isInternational) {
+        // International: single request with no serviceType — FedEx returns all available
+        // services for the route. Specifying serviceType for international from MX triggers
+        // "service type missing or invalid" in sandbox.
+        const body = JSON.parse(JSON.stringify(baseBody));
+        body.requestedShipment.packagingType = 'YOUR_PACKAGING';
+        try {
+          const response = await firstValueFrom(
+            this.http.post(`${this.baseUrl}/rate/v1/rates/quotes`, body, { headers: rateHeaders })
+          );
+          if (response?.data) {
+            quotes.push(...this.mapFedexResponse(response.data, dto.destino.pais));
+            this.logger.debug(`FedEx Rate international success: ${quotes.length} quotes`);
+          }
+        } catch (err: any) {
+          const fedexErrors = err?.response?.data?.errors;
+          const code = fedexErrors?.[0]?.code || '';
+          lastError = fedexErrors?.[0]?.message || err?.message || '';
+          this.logger.warn(`FedEx Rate international [${err?.response?.status}] (${code}): ${lastError}`);
+        }
+      } else {
+        // Domestic MX: parallel per-service to isolate packaging combination failures.
+        const results = await Promise.allSettled(
+          MX_DOMESTIC_SERVICES.map((serviceType) => {
+            const body = JSON.parse(JSON.stringify(baseBody));
+            body.requestedShipment.serviceType = serviceType;
+            body.requestedShipment.packagingType = 'YOUR_PACKAGING';
+            return firstValueFrom(
+              this.http.post(`${this.baseUrl}/rate/v1/rates/quotes`, body, { headers: rateHeaders })
+            );
+          })
+        );
+
+        for (let i = 0; i < results.length; i++) {
+          const result = results[i];
+          if (result.status === 'fulfilled' && result.value?.data) {
+            this.logger.debug(`FedEx Rate success for ${MX_DOMESTIC_SERVICES[i]}`);
+            quotes.push(...this.mapFedexResponse(result.value.data, dto.destino.pais));
+          } else if (result.status === 'rejected') {
+            const error = result.reason;
+            const fedexErrors = error?.response?.data?.errors;
+            const code = fedexErrors?.[0]?.code || '';
+            const apiMsg = fedexErrors?.[0]?.message || error?.message || '';
+            this.logger.warn(`FedEx Rate skipped ${MX_DOMESTIC_SERVICES[i]} [${error?.response?.status}] (${code}): ${apiMsg}`);
+            lastError = apiMsg;
+          }
+        }
+      }
+
+      if (quotes.length === 0) {
+        // Sandbox fallback: FedEx sandbox has limited coverage for Mexico routes.
+        // Return mock rates so the checkout flow can be tested in development.
+        const isSandbox = this.config.get('FEDEX_ENV', 'sandbox') === 'sandbox';
+        if (isSandbox) {
+          if (isInternational) {
+            this.logger.warn('FedEx sandbox returned no international quotes — using development mock rates');
+            return [
+              { productCode: 'FEDEX_INTERNATIONAL_PRIORITY', productName: 'FedEx International Priority', carrier: 'fedex', tipo: 'internacional' as const, precioTotal: 85, moneda: 'USD', fechaEntregaEstimada: '', diasHabilesEstimados: 3 },
+              { productCode: 'FEDEX_INTERNATIONAL_ECONOMY', productName: 'FedEx International Economy', carrier: 'fedex', tipo: 'internacional' as const, precioTotal: 55, moneda: 'USD', fechaEntregaEstimada: '', diasHabilesEstimados: 6 },
+            ];
+          }
+          this.logger.warn('FedEx sandbox returned no MX domestic quotes — using development mock rates');
+          return [
+            { productCode: 'PRIORITY_OVERNIGHT', productName: 'FedEx Priority Overnight', carrier: 'fedex', tipo: 'nacional' as const, precioTotal: 450, moneda: 'MXN', fechaEntregaEstimada: '', diasHabilesEstimados: 1 },
+            { productCode: 'STANDARD_OVERNIGHT', productName: 'FedEx Standard Overnight', carrier: 'fedex', tipo: 'nacional' as const, precioTotal: 320, moneda: 'MXN', fechaEntregaEstimada: '', diasHabilesEstimados: 1 },
+          ];
+        }
+        if (lastError) {
+          throw new HttpException(`FedEx dice: ${lastError}`, HttpStatus.BAD_REQUEST);
+        }
+        throw new HttpException('FedEx dice: Sin cotizaciones disponibles', HttpStatus.BAD_REQUEST);
+      }
+
+      return quotes;
 
     } catch (error: any) {
+      if (error instanceof HttpException) throw error;
       const status = error.response?.status;
       const fedexErrors = error.response?.data?.errors;
-      
+
       this.logger.error(`FedEx Rate API error [${status}]:`, fedexErrors || error.message);
-      
+
       if (status === 403) {
         throw new HttpException(
           'Acceso Prohibido (403): Tu API Key no tiene permisos para la Rate API o el número de cuenta no está vinculado al proyecto.',
           HttpStatus.FORBIDDEN
         );
       }
-      
+
       const apiMsg = fedexErrors?.[0]?.message || error.message;
       throw new HttpException(`FedEx dice: ${apiMsg}`, HttpStatus.BAD_REQUEST);
     }

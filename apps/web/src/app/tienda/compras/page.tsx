@@ -47,6 +47,7 @@ export default function MisComprasPage() {
       return;
     }
 
+    setCargando(true);
     const token = getCookie("token") || "";
     api.pedidos
       .getMisCompras(token)
