@@ -564,7 +564,7 @@ export default function ProductCatalogEnhanced() {
   const [precioMinLocal, setPrecioMinLocal] = useState("");
   const [precioMaxLocal, setPrecioMaxLocal] = useState("");
   const [paginaActual, setPaginaActual] = useState(1);
-  const PRODUCTOS_POR_PAGINA = 12;
+  const PRODUCTOS_POR_PAGINA = 6;
 
   // Restaurar filtros desde URL al montar
   useEffect(() => {
@@ -852,7 +852,7 @@ export default function ProductCatalogEnhanced() {
   return (
     <div style={{ backgroundColor: hexFallbacks.bgPrimary, minHeight: "100vh" }} className="font-sans">
       {/* ─── CONTENIDO PRINCIPAL ─── */}
-      <main className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+      <main className="w-full px-4 py-6 sm:py-8">
         <div className="flex flex-col lg:flex-row gap-5 lg:gap-6">
           {/* ─── SIDEBAR ─── */}
           <aside className="hidden lg:block lg:w-72 shrink-0">
@@ -1025,7 +1025,7 @@ export default function ProductCatalogEnhanced() {
               </div>
             ) : (
               <>
-                <div className="grid gap-6 animate-in fade-in duration-500 grid-cols-1 md:grid-cols-2" data-grid="productos">
+                <div className="grid gap-6 animate-in fade-in duration-500 grid-cols-1 sm:grid-cols-2" data-grid="productos">
                   {productosPagina.map((producto, index) => (
                     <ProductCard
                       key={String(producto.id_producto)}

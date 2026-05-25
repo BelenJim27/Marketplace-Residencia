@@ -88,8 +88,6 @@ export default function MisComprasPage() {
     );
   }
 
-<<<<<<< HEAD
-=======
   if (!isAuthenticated) {
     return (
       <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
@@ -110,7 +108,6 @@ export default function MisComprasPage() {
       </main>
     );
   }
->>>>>>> abfa8786126fdf5ec135e0bc23e58e5bebe023c1
 
   return (
     <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">

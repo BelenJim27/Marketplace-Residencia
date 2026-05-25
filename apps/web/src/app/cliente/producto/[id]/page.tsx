@@ -481,13 +481,8 @@ export default function ProductoDetallePage() {
               {producto.nombre}
             </h1>
             <p
-<<<<<<< HEAD:apps/web/src/app/cliente/producto/[id]/page.tsx
-              className="text-3xl sm:text-4xl font-bold"
-              style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#306B3F" }}
-=======
               className="text-2xl sm:text-3xl font-bold"
               style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}
->>>>>>> abfa8786126fdf5ec135e0bc23e58e5bebe023c1:apps/web/src/app/Cliente/producto/[id]/page.tsx
             >
               ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
             </p>
@@ -504,15 +499,9 @@ export default function ProductoDetallePage() {
 
           {/* Hero Specs - Key characteristics first */}
           {(magueySpec || categoriaSpec || abvSpec) && (
-<<<<<<< HEAD:apps/web/src/app/cliente/producto/[id]/page.tsx
-            <div className="space-y-4 rounded-lg p-6 sm:p-7" style={{ backgroundColor: "#e5eedc", border: "2px solid #306B3F" }}>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#306B3F" }}>Lo Importante</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-=======
             <div className="space-y-3 rounded-lg p-4 sm:p-5" style={{ backgroundColor: "var(--bio-color-fondo-sec, #f0ebe0)", border: "1px solid #e8dcc8" }}>
               <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--bio-color-precio, #8b6914)" }}>Características</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
->>>>>>> abfa8786126fdf5ec135e0bc23e58e5bebe023c1:apps/web/src/app/Cliente/producto/[id]/page.tsx
                 {magueySpec && (
                   <div className="space-y-2">
                     <span className="block text-xs text-gray-600 dark:text-gray-400">Maguey</span>
@@ -633,17 +622,10 @@ export default function ProductoDetallePage() {
             </div>
 
             {/* Envío */}
-<<<<<<< HEAD:apps/web/src/app/cliente/producto/[id]/page.tsx
-            <div className="rounded-lg p-4 sm:p-5" style={{ border: "1px solid #ddd8c4", backgroundColor: "#edf5e5" }}>
-              <div className="flex items-center gap-2 mb-3">
-                <Truck size={16} style={{ color: "#306B3F" }} />
-                <span className="text-sm font-semibold" style={{ color: "#1F3A2E" }}>Envío</span>
-=======
             <div className="rounded-lg p-3 sm:p-4" style={{ border: "1px solid #e8dcc8", backgroundColor: "#fdf7ee" }}>
               <div className="flex items-center gap-2 mb-2">
                 <Truck size={16} style={{ color: "var(--bio-color-precio, #8b6914)" }} />
                 <span className="text-sm font-semibold" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>Envío</span>
->>>>>>> abfa8786126fdf5ec135e0bc23e58e5bebe023c1:apps/web/src/app/Cliente/producto/[id]/page.tsx
               </div>
               <p className="text-sm text-gray-700 dark:text-gray-300">
                 Te mostraremos el costo cuando ingreses tu dirección. Enviamos a todo el país.

@@ -94,10 +94,11 @@ export function RootContent({ children }: PropsWithChildren) {
 
   // Rutas de cliente (/tienda/ y /cliente/) — CON footer
   if (isClientOnlyRoute) {
+    const isCatalogo = p === "/cliente/producto";
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        <main className="flex-1 mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
+        <main className={`flex-1 w-full overflow-hidden ${isCatalogo ? "" : "mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10"}`}>
           {children}
         </main>
         <Footer />

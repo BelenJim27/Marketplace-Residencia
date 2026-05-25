@@ -73,13 +73,8 @@ export default function WishlistPage() {
 
             <div className="flex flex-1 flex-col p-4">
               <Link
-<<<<<<< HEAD
-                href={`/Cliente/producto/${item.id_producto}`}
-                className="mb-1 block text-base font-semibold leading-snug text-gray-900 hover:text-green-600 dark:text-white line-clamp-2"
-=======
                 href={`/cliente/producto/${item.id_producto}`}
                 className="mb-1 block text-base font-semibold leading-snug text-gray-900 hover:text-[#3D6B3F] dark:text-white line-clamp-2"
->>>>>>> abfa8786126fdf5ec135e0bc23e58e5bebe023c1
               >
                 {item.producto.nombre}
               </Link>
