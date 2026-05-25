@@ -233,21 +233,21 @@ export const colorVars = {
 
 // ─── HEX FALLBACKS (for quick reference, light mode)
 export const hexFallbacks = {
-  brand: "#c97a49",           // Primary brand
-  brandLight: "#d4956d",      // Lighter variant
-  brandDark: "#a0633c",       // Darker variant
+  brand: "#C97A3E",           // Cobre Mezcalero
+  brandLight: "#D4956D",      // Lighter variant
+  brandDark: "#A0633C",       // Darker variant
 
-  textPrimary: "#1a1410",     // Dark brown/black
-  textSecondary: "#5c5450",   // Medium brown
-  textTertiary: "#8b7d72",    // Light brown
-  textMuted: "#a89f96",       // Muted brown
+  textPrimary: "#1F3A2E",     // Verde Tobalá
+  textSecondary: "#3D6B3F",   // Verde Silvestre
+  textTertiary: "#A8C26B",    // Verde Hoja Nueva
+  textMuted: "#C5CFB0",       // Verde Musgo
 
-  bgPrimary: "#faf8f4",       // Off-white warm
-  bgSecondary: "#ffffff",     // Pure white
-  bgTertiary: "#f0ede8",      // Light warm gray
+  bgPrimary: "#F4F0E3",       // Hueso Agave
+  bgSecondary: "#FFFFFF",     // Pure white
+  bgTertiary: "#C5CFB0",      // Verde Musgo
 
-  borderLight: "#e8dcc8",     // Light border
-  borderDefault: "#d4c4b0",   // Default border
+  borderLight: "#C5CFB0",     // Verde Musgo
+  borderDefault: "#A8C26B",   // Verde Hoja Nueva
 
   successColor: "#16a34a",    // Green
   errorColor: "#dc2626",      // Red

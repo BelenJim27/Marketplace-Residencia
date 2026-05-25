@@ -210,7 +210,7 @@ const ProductCard = memo(function ProductCard({
           <div className="space-y-3 sm:space-y-4">
             <h3
               className="text-base sm:text-lg font-semibold text-gray-900 leading-tight"
-              style={{ fontFamily: "Georgia, serif" }}
+              style={{ fontFamily: 'var(--font-family-store)' }}
             >
               {producto.nombre}
             </h3>
@@ -262,7 +262,7 @@ const ProductCard = memo(function ProductCard({
           </div>
 
           <div
-            className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t"
+            className="flex flex-col gap-2 sm:gap-3 pt-3 sm:pt-4 border-t"
             style={{ borderColor: "rgba(0, 0, 0, 0.06)" }}
           >
             <div className="flex items-baseline gap-1">
@@ -274,7 +274,7 @@ const ProductCard = memo(function ProductCard({
             </div>
 
             <button
-              className="flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-3.5 py-2 sm:py-2.5 text-white text-xs font-bold uppercase tracking-wider rounded transition-all hover:opacity-90 active:scale-95 w-full sm:w-auto"
+              className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded transition-all hover:opacity-90 active:scale-95 w-full"
               style={{
                 backgroundColor: hexFallbacks.brand,
                 border: "none",
@@ -291,13 +291,13 @@ const ProductCard = memo(function ProductCard({
                   <svg
                     viewBox="0 0 24 24"
                     fill="currentColor"
-                    width="16"
-                    height="16"
+                    width="14"
+                    height="14"
                   >
                     <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                   </svg>
-                  <span className="hidden sm:inline">En carrito</span>
-                  <span className="sm:hidden">Agregado</span>
+                  <span className="hidden sm:inline">Listo</span>
+                  <span className="sm:hidden text-[9px]">✓</span>
                 </>
               ) : (
                 <>
@@ -306,15 +306,15 @@ const ProductCard = memo(function ProductCard({
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
-                    width="16"
-                    height="16"
+                    width="14"
+                    height="14"
                   >
                     <circle cx="9" cy="21" r="1"></circle>
                     <circle cx="20" cy="21" r="1"></circle>
                     <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                    <path d="M12 9v6M9 12h6"></path>
                   </svg>
-                  Agregar
+                  <span className="hidden sm:inline">Agregar</span>
+                  <span className="sm:hidden">+</span>
                 </>
               )}
             </button>
@@ -446,7 +446,7 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
           <h3
             className="text-sm sm:text-base lg:text-lg font-bold leading-tight line-clamp-2 break-words"
             style={{
-              fontFamily: "Georgia, serif",
+              fontFamily: 'var(--font-family-store)',
               color: cardColor.text,
               overflowWrap: "break-word",
             }}
@@ -471,9 +471,9 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
           )}
         </div>
 
-        <div className="flex gap-1 mt-2">
+        <div className="space-y-1.5 mt-2">
           <button
-            className="flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 rounded-full font-bold uppercase text-[9px] sm:text-[10px] tracking-wider transition-all hover:opacity-90 active:scale-95"
+            className="w-full flex items-center justify-center gap-0.5 py-1.5 sm:py-2 rounded-lg font-bold uppercase text-[8px] sm:text-[9px] tracking-wider transition-all hover:opacity-90 active:scale-95"
             style={{
               backgroundColor: isAdded ? hexFallbacks.textPrimary : (cardColor.bg === hexFallbacks.bgSecondary ? hexFallbacks.brand : hexFallbacks.bgSecondary),
               color: isAdded ? "white" : (cardColor.bg === hexFallbacks.bgSecondary ? "white" : hexFallbacks.textPrimary),
@@ -484,12 +484,13 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
               onAddCart();
             }}
           >
-            <ShoppingCart size={11} />
-            <span>{isAdded ? "¡Listo!" : "Agregar"}</span>
+            <ShoppingCart size={10} />
+            <span className="hidden sm:inline">{isAdded ? "¡Listo!" : "Agregar"}</span>
+            <span className="sm:hidden">{isAdded ? "✓" : "+"}</span>
           </button>
 
           <button
-            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-offset-1 hover:opacity-80 active:scale-95 shadow-sm"
+            className="w-full flex items-center justify-center rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 hover:opacity-80 active:scale-95 py-1 sm:py-1.5 text-[8px] sm:text-[9px] font-semibold"
             style={{
               backgroundColor: cardColor.bg === hexFallbacks.bgSecondary ? `${hexFallbacks.brand}1f` : "rgba(255,255,255,0.15)",
               color: cardColor.bg === hexFallbacks.bgSecondary ? hexFallbacks.brand : "white",
@@ -502,7 +503,7 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
             aria-label={`Ver detalles de ${producto.nombre}`}
             title="Ver detalles del producto"
           >
-            <ChevronRight size={14} aria-hidden="true" />
+            Ver detalles
           </button>
         </div>
       </div>
@@ -525,7 +526,7 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
         <span
           className="text-xs font-black leading-none"
           style={{
-            fontFamily: "Georgia, serif",
+            fontFamily: 'var(--font-family-store)',
             color: hexFallbacks.brand,
           }}
         >
@@ -635,6 +636,42 @@ export default function ProductCatalogEnhanced() {
     fetchProductos(filtros);
     syncURL(filtros);
   }, [filtros, fetchProductos, isInitialized, syncURL]);
+
+  // Sincronizar búsqueda automáticamente en desktop (debounced)
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const timer = setTimeout(() => {
+      if (filtrosPendientes.busqueda !== filtros.busqueda) {
+        setFiltros((prev) => ({ ...prev, busqueda: filtrosPendientes.busqueda }));
+      }
+    }, 300); // Pequeño debounce para no hacer fetches excesivos
+
+    return () => clearTimeout(timer);
+  }, [filtrosPendientes.busqueda, filtros.busqueda, isInitialized]);
+
+  // Sincronizar filtros de maguey y precio automáticamente en desktop
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const timer = setTimeout(() => {
+      const changed =
+        JSON.stringify(filtrosPendientes.maguey) !== JSON.stringify(filtros.maguey) ||
+        filtrosPendientes.precio_min !== filtros.precio_min ||
+        filtrosPendientes.precio_max !== filtros.precio_max;
+
+      if (changed) {
+        setFiltros((prev) => ({
+          ...prev,
+          maguey: filtrosPendientes.maguey,
+          precio_min: filtrosPendientes.precio_min,
+          precio_max: filtrosPendientes.precio_max,
+        }));
+      }
+    }, 500); // Debounce de 500ms para filtros más lentos
+
+    return () => clearTimeout(timer);
+  }, [filtrosPendientes.maguey, filtrosPendientes.precio_min, filtrosPendientes.precio_max, filtros, isInitialized]);
 
   // P1: Preview count when filtrosPendientes change (debounced, silent fetch)
   useEffect(() => {
@@ -814,67 +851,6 @@ export default function ProductCatalogEnhanced() {
 
   return (
     <div style={{ backgroundColor: hexFallbacks.bgPrimary, minHeight: "100vh" }} className="font-sans">
-      {/* ─── HEADER MEJORADO ─── */}
-      <header className="border-b relative overflow-hidden" style={{ borderColor: hexFallbacks.borderLight, backgroundColor: hexFallbacks.bgSecondary }} role="banner">
-        {/* Decorative background elements */}
-        <div
-          className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-5 pointer-events-none"
-          style={{ backgroundColor: hexFallbacks.brand }}
-        />
-        <div
-          className="absolute bottom-0 left-0 w-72 h-72 rounded-full opacity-5 pointer-events-none"
-          style={{ backgroundColor: hexFallbacks.brand }}
-        />
-
-        <div className="max-w-7xl mx-auto px-4 py-4 relative z-10">
-          {/* Filtros activos con mejor diseño */}
-          {(filtros.busqueda || cantidadFiltros > 0) && (
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-6 border-t" style={{ borderColor: hexFallbacks.borderLight }}>
-              {filtros.busqueda && (
-                <FilterBadge
-                  label={`"${filtros.busqueda}"`}
-                  onRemove={() => quitarFiltro("busqueda")}
-                />
-              )}
-              {filtrosActivos.flatMap((campo) => {
-                const val = filtros[campo];
-                if (campo === 'busqueda') return [];
-                if (campo === 'precio_min' || campo === 'precio_max') {
-                  return (
-                    <FilterBadge
-                      key={campo}
-                      label={`$${Number(val as string).toLocaleString("es-MX")}`}
-                      onRemove={() => quitarFiltro(campo)}
-                    />
-                  );
-                }
-                if (Array.isArray(val)) {
-                  return val.map(v => (
-                    <FilterBadge
-                      key={`${campo}-${v}`}
-                      label={v}
-                      onRemove={() => quitarFiltro(campo, v)}
-                    />
-                  ));
-                }
-                return [];
-              })}
-              {cantidadFiltros > 0 && (
-                <button
-                  onClick={limpiarTodo}
-                  className="text-xs font-bold transition-all hover:opacity-70 underline underline-offset-2 focus:outline-none focus:ring-1 focus:ring-offset-1 px-2 py-1 rounded"
-                  style={{ color: hexFallbacks.brand, "--tw-ring-color": hexFallbacks.brand } as React.CSSProperties}
-                  aria-label="Limpiar todos los filtros"
-                  title="Limpiar todos los filtros"
-                >
-                  Limpiar todo
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </header>
-
       {/* ─── CONTENIDO PRINCIPAL ─── */}
       <main className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
         <div className="flex flex-col lg:flex-row gap-5 lg:gap-6">
@@ -889,7 +865,7 @@ export default function ProductCatalogEnhanced() {
             >
               <div className="flex items-center gap-2 mb-4">
                 <Filter size={18} style={{ color: hexFallbacks.brand }} />
-                <h2 className="text-lg font-bold" style={{ fontFamily: "Georgia, serif", color: hexFallbacks.textPrimary }}>
+                <h2 className="text-lg font-bold" style={{ fontFamily: 'var(--font-family-store)', color: hexFallbacks.textPrimary }}>
                   Filtros
                 </h2>
                 {cantidadFiltros > 0 && (
@@ -1172,7 +1148,7 @@ export default function ProductCatalogEnhanced() {
             <div className="p-4 border-b sticky top-0 z-10" style={{ borderColor: hexFallbacks.borderLight, backgroundColor: hexFallbacks.bgPrimary }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 id="filters-modal-title" className="text-lg font-bold" style={{ fontFamily: "Georgia, serif", color: hexFallbacks.textPrimary }}>
+                  <h2 id="filters-modal-title" className="text-lg font-bold" style={{ fontFamily: 'var(--font-family-store)', color: hexFallbacks.textPrimary }}>
                     Filtros
                   </h2>
                 </div>
@@ -1186,6 +1162,24 @@ export default function ProductCatalogEnhanced() {
                   <X size={22} style={{ color: hexFallbacks.textPrimary }} aria-hidden="true" />
                 </button>
               </div>
+            </div>
+
+            {/* Buscador en modal */}
+            <div className="px-4 pt-4 pb-2 border-b" style={{ borderColor: hexFallbacks.borderLight }}>
+              <input
+                type="text"
+                placeholder="Buscar productos..."
+                value={filtrosPendientes.busqueda}
+                onChange={(e) => handleBusquedaChange(e.target.value)}
+                onFocus={() => setSearchFocus(true)}
+                onBlur={() => setSearchFocus(false)}
+                className="w-full px-3 py-2 rounded-lg border transition-all"
+                style={{
+                  borderColor: searchFocus ? hexFallbacks.brand : hexFallbacks.borderLight,
+                  backgroundColor: hexFallbacks.bgSecondary,
+                  color: hexFallbacks.textPrimary,
+                }}
+              />
             </div>
 
             {/* Scrollable filters */}

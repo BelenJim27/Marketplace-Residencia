@@ -487,23 +487,24 @@ input[type="search"]::-webkit-search-cancel-button {
 
 /* ── Tienda – variables bio modo claro/oscuro ── */
 :root {
-  --bio-color-fondo: #faf8f4;
-  --bio-color-titulo: #5c3d1e;
-  --bio-color-precio: #8b6914;
-  --bio-color-boton: #5c3d1e;
-  --bio-color-boton-hover: #3d2510;
-  --bio-color-tarjeta: #f0ebe0;
+  --bio-color-fondo: #F4F0E3;
+  --bio-color-titulo: #1F3A2E;
+  --bio-color-precio: #C97A3E;
+  --bio-color-boton: #3D6B3F;
+  --bio-color-boton-hover: #1F3A2E;
+  --bio-color-tarjeta: #C5CFB0;
   --font-family-ui: "Satoshi", system-ui, -apple-system, sans-serif;
   --font-family-store: "Playfair Display", Georgia, serif;
+  --bio-fuente-titulo: "Playfair Display", Georgia, serif;
 }
 
 .dark {
-  --bio-color-fondo: #0f172a;
-  --bio-color-titulo: #e2c98a;
-  --bio-color-precio: #f0b429;
-  --bio-color-boton: #92400e;
-  --bio-color-boton-hover: #78350f;
-  --bio-color-tarjeta: #1e293b;
+  --bio-color-fondo: #0f1a10;
+  --bio-color-titulo: #A8C26B;
+  --bio-color-precio: #C97A3E;
+  --bio-color-boton: #3D6B3F;
+  --bio-color-boton-hover: #A8C26B;
+  --bio-color-tarjeta: #1F3A2E;
 }
 
 /* ── Landing Page Oaxaca ── */
@@ -515,8 +516,8 @@ input[type="search"]::-webkit-search-cancel-button {
   --land-text-mid: #5C6B5E;
   --land-stat-bg: #ffffff;
   --land-stat-border: #E5E5E1;
-  --land-text-italic: #3c1c08;
-  --land-text-annotation: #5c2a0a;
+  --land-text-italic: #C97A3E;
+  --land-text-annotation: #C97A3E;
 }
 
 .dark {

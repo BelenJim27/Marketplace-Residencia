@@ -58,12 +58,12 @@ export default function ClientePerfilPage() {
 
   const isDark = mounted && theme === "dark";
   const colors = {
-    bgPage: isDark ? "#121212" : "#F9F8F4",
+    bgPage: isDark ? "#121212" : "#F4F0E3",
     bgCard: isDark ? "#1E1E1E" : "#fff",
     border: isDark ? "#333333" : "#E5E5E1",
     textMain: isDark ? "#E0E0E0" : "#1A241E",
     textSub: isDark ? "#A0A0A0" : "#5C6B5E",
-    inputBg: isDark ? "#2C2C2C" : "#F9F8F4",
+    inputBg: isDark ? "#2C2C2C" : "#F4F0E3",
   };
 
   const inputStyle: React.CSSProperties = {
@@ -236,8 +236,8 @@ export default function ClientePerfilPage() {
       <div style={{ maxWidth: "820px", margin: "0 auto" }}>
         
         <div style={{ marginBottom: "28px" }}>
-          <p style={{ fontSize: "11px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#1A5D3B", marginBottom: "4px" }}>{t("Mi cuenta")}</p>
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: "28px", fontWeight: 700, color: colors.textMain, margin: 0 }}>{t("Perfil")}</h1>
+          <p style={{ fontSize: "11px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#3D6B3F", marginBottom: "4px" }}>{t("Mi cuenta")}</p>
+          <h1 style={{ fontFamily: "var(--font-family-store)", fontSize: "28px", fontWeight: 700, color: colors.textMain, margin: 0 }}>{t("Perfil")}</h1>
         </div>
 
         {msg && (
@@ -251,9 +251,9 @@ export default function ClientePerfilPage() {
             <div style={{ width: "88px", height: "88px", borderRadius: "50%", overflow: "hidden", background: isDark ? "#2D3731" : "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {uploadingFoto ? <Loader2 className="animate-spin text-green-700" size={32} /> :
               user?.foto_url ? <img src={getMediaUrl(user.foto_url)} alt="foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : 
-              <span style={{ fontSize: "26px", fontWeight: 700, color: "#1A5D3B" }}>{initials || <User size={32} />}</span>}
+              <span style={{ fontSize: "26px", fontWeight: 700, color: "#3D6B3F" }}>{initials || <User size={32} />}</span>}
             </div>
-            <button onClick={() => fileInputRef.current?.click()} disabled={uploadingFoto} style={{ position: "absolute", bottom: 0, right: 0, width: "28px", height: "28px", borderRadius: "50%", background: "#1A5D3B", border: "2px solid #fff", color: "#fff", cursor: uploadingFoto ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: uploadingFoto ? 0.6 : 1 }}>
+            <button onClick={() => fileInputRef.current?.click()} disabled={uploadingFoto} style={{ position: "absolute", bottom: 0, right: 0, width: "28px", height: "28px", borderRadius: "50%", background: "#3D6B3F", border: "2px solid #fff", color: "#fff", cursor: uploadingFoto ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: uploadingFoto ? 0.6 : 1 }}>
               {uploadingFoto ? <Loader2 className="animate-spin" size={13}/> : <Camera size={13} />}
             </button>
             <input ref={fileInputRef} type="file" style={{ display: "none" }} onChange={handleFotoChange} />
@@ -266,7 +266,7 @@ export default function ClientePerfilPage() {
               </span>
             </div>
             <p style={{ fontSize: "13px", color: colors.textSub, marginBottom: "10px" }}>{user?.email}</p>
-            <button onClick={() => router.push("/tienda/compras")} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: "#1A5D3B", background: "rgba(26,93,59,0.08)", padding: "5px 14px", borderRadius: "999px", cursor: "pointer", border: "none" }}>
+            <button onClick={() => router.push("/tienda/compras")} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: "#3D6B3F", background: "rgba(26,93,59,0.08)", padding: "5px 14px", borderRadius: "999px", cursor: "pointer", border: "none" }}>
               <ShoppingBag size={13} /> {t("Ver mis compras")} <ChevronRight size={13} />
             </button>
           </div>
@@ -274,7 +274,7 @@ export default function ClientePerfilPage() {
 
         <div style={{ display: "flex", gap: "6px", background: colors.bgCard, padding: "6px", borderRadius: "12px", border: `1px solid ${colors.border}`, marginBottom: "16px" }}>
           {TABS.map((tb) => (
-            <button key={tb.id} onClick={() => setTab(tb.id)} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", cursor: "pointer", fontSize: "13px", background: tab === tb.id ? "#1A5D3B" : "transparent", color: tab === tb.id ? "#fff" : colors.textSub, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "all 0.2s", fontWeight: tab === tb.id ? "bold" : "normal" }}>
+            <button key={tb.id} onClick={() => setTab(tb.id)} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", cursor: "pointer", fontSize: "13px", background: tab === tb.id ? "#3D6B3F" : "transparent", color: tab === tb.id ? "#fff" : colors.textSub, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "all 0.2s", fontWeight: tab === tb.id ? "bold" : "normal" }}>
               {tb.icon} {tb.label}
             </button>
           ))}
@@ -327,7 +327,7 @@ export default function ClientePerfilPage() {
                 </div>
               </div>
               <div style={{display: "flex", justifyContent: "flex-end", marginTop: "24px"}}>
-                <button onClick={handleSavePerfil} disabled={savingProfile} style={{ background: savingProfile ? "#A7C5B1" : "#1A5D3B", color: "#fff", padding: "10px 24px", borderRadius: "8px", border: "none", cursor: savingProfile ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "14px", display: "inline-flex", gap: "8px", alignItems: "center" }}>
+                <button onClick={handleSavePerfil} disabled={savingProfile} style={{ background: savingProfile ? "#C5CFB0" : "#3D6B3F", color: "#fff", padding: "10px 24px", borderRadius: "8px", border: "none", cursor: savingProfile ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "14px", display: "inline-flex", gap: "8px", alignItems: "center" }}>
                   {savingProfile ? <Loader2 className="animate-spin" size={15}/> : <Pencil size={15} />}
                   {savingProfile ? t("Guardando...") : t("Guardar cambios")}
                 </button>
@@ -378,7 +378,7 @@ export default function ClientePerfilPage() {
                 </div>
               </div>
               <div style={{display: "flex", justifyContent: "flex-end", marginTop: "24px"}}>
-                <button onClick={handleSavePassword} disabled={savingPassword} style={{ background: savingPassword ? "#A7C5B1" : "#1A5D3B", color: "#fff", padding: "10px 24px", borderRadius: "8px", border: "none", cursor: savingPassword ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "14px", display: "inline-flex", gap: "8px", alignItems: "center" }}>
+                <button onClick={handleSavePassword} disabled={savingPassword} style={{ background: savingPassword ? "#C5CFB0" : "#3D6B3F", color: "#fff", padding: "10px 24px", borderRadius: "8px", border: "none", cursor: savingPassword ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "14px", display: "inline-flex", gap: "8px", alignItems: "center" }}>
                     {savingPassword ? <Loader2 className="animate-spin" size={15}/> : <Lock size={15} />}
                     {savingPassword ? t("Guardando...") : t("Cambiar contraseña")}
                 </button>
@@ -392,12 +392,12 @@ export default function ClientePerfilPage() {
               
               <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${colors.border}`, background: colors.inputBg }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                  <Globe size={18} color="#1A5D3B" />
+                  <Globe size={18} color="#3D6B3F" />
                   <span style={{ fontSize: "14px", fontWeight: 600, color: colors.textMain }}>{t("Idioma")}</span>
                 </div>
                 <div style={{ display: "flex", gap: "8px" }}>
                   {[{ v: "es", l: "🇲🇽 Español" }, { v: "en", l: "🇺🇸 English" }].map((tm) => (
-                    <button key={tm.v} onClick={() => setPrefs({...prefs, idioma: tm.v})} style={{ padding: "8px 16px", borderRadius: "8px", border: prefs.idioma === tm.v ? "1.5px solid #1A5D3B" : `1px solid ${colors.border}`, background: prefs.idioma === tm.v ? "rgba(26,93,59,0.1)" : colors.bgCard, color: prefs.idioma === tm.v ? "#1A5D3B" : colors.textSub, cursor: "pointer", fontSize: "14px", fontWeight: "medium" }}>
+                    <button key={tm.v} onClick={() => setPrefs({...prefs, idioma: tm.v})} style={{ padding: "8px 16px", borderRadius: "8px", border: prefs.idioma === tm.v ? "1.5px solid #3D6B3F" : `1px solid ${colors.border}`, background: prefs.idioma === tm.v ? "rgba(26,93,59,0.1)" : colors.bgCard, color: prefs.idioma === tm.v ? "#3D6B3F" : colors.textSub, cursor: "pointer", fontSize: "14px", fontWeight: "medium" }}>
                       {tm.l}
                     </button>
                   ))}
@@ -406,12 +406,12 @@ export default function ClientePerfilPage() {
 
               <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${colors.border}`, background: colors.inputBg }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                  <DollarSign size={18} color="#1A5D3B" />
+                  <DollarSign size={18} color="#3D6B3F" />
                   <span style={{ fontSize: "14px", fontWeight: 600, color: colors.textMain }}>{t("Moneda Preferida")}</span>
                 </div>
                 <div style={{ display: "flex", gap: "8px" }}>
                   {MONEDAS.map((m) => (
-                    <button key={m.value} onClick={() => setPrefs({...prefs, moneda: m.value})} style={{ padding: "8px 16px", borderRadius: "8px", border: prefs.moneda === m.value ? "1.5px solid #1A5D3B" : `1px solid ${colors.border}`, background: prefs.moneda === m.value ? "rgba(26,93,59,0.1)" : colors.bgCard, color: prefs.moneda === m.value ? "#1A5D3B" : colors.textSub, cursor: "pointer", fontSize: "14px", fontWeight: "medium" }}>
+                    <button key={m.value} onClick={() => setPrefs({...prefs, moneda: m.value})} style={{ padding: "8px 16px", borderRadius: "8px", border: prefs.moneda === m.value ? "1.5px solid #3D6B3F" : `1px solid ${colors.border}`, background: prefs.moneda === m.value ? "rgba(26,93,59,0.1)" : colors.bgCard, color: prefs.moneda === m.value ? "#3D6B3F" : colors.textSub, cursor: "pointer", fontSize: "14px", fontWeight: "medium" }}>
                       {m.label}
                     </button>
                   ))}
@@ -420,12 +420,12 @@ export default function ClientePerfilPage() {
 
               <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${colors.border}`, background: colors.inputBg }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                  {isDark ? <Moon size={18} color="#1A5D3B" /> : <Sun size={18} color="#1A5D3B" />}
+                  {isDark ? <Moon size={18} color="#3D6B3F" /> : <Sun size={18} color="#3D6B3F" />}
                   <span style={{ fontSize: "14px", fontWeight: 600, color: colors.textMain }}>{t("Tema")}</span>
                 </div>
                 <div style={{ display: "flex", gap: "8px" }}>
                   {[{ v: "light", l: "☀️ Claro" }, { v: "dark", l: "🌙 Oscuro" }].map((tm) => (
-                    <button key={tm.v} onClick={() => setTheme(tm.v)} style={{ padding: "8px 16px", borderRadius: "8px", border: theme === tm.v ? "1.5px solid #1A5D3B" : `1px solid ${colors.border}`, background: theme === tm.v ? "rgba(26,93,59,0.1)" : colors.bgCard, color: theme === tm.v ? "#1A5D3B" : colors.textSub, cursor: "pointer", fontSize: "14px", fontWeight: "medium" }}>
+                    <button key={tm.v} onClick={() => setTheme(tm.v)} style={{ padding: "8px 16px", borderRadius: "8px", border: theme === tm.v ? "1.5px solid #3D6B3F" : `1px solid ${colors.border}`, background: theme === tm.v ? "rgba(26,93,59,0.1)" : colors.bgCard, color: theme === tm.v ? "#3D6B3F" : colors.textSub, cursor: "pointer", fontSize: "14px", fontWeight: "medium" }}>
                       {tm.l}
                     </button>
                   ))}
@@ -433,7 +433,7 @@ export default function ClientePerfilPage() {
               </div>
               
               <div style={{display: "flex", justifyContent: "flex-end", marginTop: "24px"}}>
-                <button onClick={handleSavePrefs} disabled={savingPrefs} style={{ background: savingPrefs ? "#A7C5B1" : "#1A5D3B", color: "#fff", padding: "10px 24px", borderRadius: "8px", border: "none", cursor: savingPrefs ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "14px", display: "inline-flex", gap: "8px", alignItems: "center" }}>
+                <button onClick={handleSavePrefs} disabled={savingPrefs} style={{ background: savingPrefs ? "#C5CFB0" : "#3D6B3F", color: "#fff", padding: "10px 24px", borderRadius: "8px", border: "none", cursor: savingPrefs ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "14px", display: "inline-flex", gap: "8px", alignItems: "center" }}>
                     {savingPrefs ? <Loader2 className="animate-spin" size={15}/> : <Settings size={15} />}
                     {savingPrefs ? t("Guardando...") : t("Guardar preferencias")}
                 </button>

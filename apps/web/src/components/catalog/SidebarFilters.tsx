@@ -36,15 +36,15 @@ function FilterCheckbox({
       onClick={onClick}
       className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all hover:bg-white/50 text-left w-full"
       style={{
-        color: active ? "#c97a49" : "#8b6914",
+        color: active ? "#C97A3E" : "#3D6B3F",
         fontWeight: active ? 600 : 500,
       }}
     >
       <div
         className="w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
         style={{
-          borderColor: active ? "#c97a49" : "#d4a574",
-          backgroundColor: active ? "#c97a49" : "transparent",
+          borderColor: active ? "#C97A3E" : "#A8C26B",
+          backgroundColor: active ? "#C97A3E" : "transparent",
         }}
       >
         {active && <span className="text-white text-xs">✓</span>}
@@ -78,8 +78,8 @@ function Tooltip({
         <div
           className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border p-2.5 text-xs z-50 animate-in fade-in duration-150"
           style={{
-            borderColor: "#e8dcc8",
-            color: "#5c3d1e",
+            borderColor: "#C5CFB0",
+            color: "#1F3A2E",
             maxWidth: "200px",
             minWidth: "150px",
           }}
@@ -88,7 +88,7 @@ function Tooltip({
           {text}
           <div
             className="absolute top-full left-3 w-2 h-2 bg-white transform rotate-45"
-            style={{ borderRight: "1px solid #e8dcc8", borderBottom: "1px solid #e8dcc8" }}
+            style={{ borderRight: "1px solid #C5CFB0", borderBottom: "1px solid #C5CFB0" }}
           />
         </div>
       )}
@@ -110,17 +110,17 @@ function FilterSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b py-3" style={{ borderColor: "#e8dcc8" }}>
+    <div className="border-b py-3" style={{ borderColor: "#C5CFB0" }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex w-full items-center justify-between px-1 py-1.5 text-sm font-bold transition-colors hover:text-opacity-80"
-        style={{ color: "#5c3d1e" }}
+        style={{ color: "#1F3A2E" }}
       >
         <div className="flex items-center gap-1.5">
           <span>{title}</span>
           {tooltip && (
             <Tooltip text={tooltip}>
-              <HelpCircle size={14} style={{ color: "#c97a49", opacity: 0.7 }} />
+              <HelpCircle size={14} style={{ color: "#C97A3E", opacity: 0.7 }} />
             </Tooltip>
           )}
         </div>
@@ -194,7 +194,7 @@ function PriceRangeSlider({
         disabled={hasError}
         className="w-full py-2 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95"
         style={{
-          backgroundColor: hasError ? "#d0d0d0" : "#c97a49",
+          backgroundColor: hasError ? "#d0d0d0" : "#C97A3E",
           cursor: hasError ? "not-allowed" : "pointer",
           opacity: hasError ? 0.6 : 1,
         }}
@@ -219,30 +219,14 @@ export function SidebarFiltersComponent({
   TIPOS_MAGUEY,
 }: SidebarFiltersProps) {
   return (
-    <div className="space-y-1">
-      <div className="mb-4 pb-4 border-b" style={{ borderColor: "#e8dcc8" }}>
-        <div className="relative group">
-          <Search
-            size={18}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200"
-            style={{ color: searchFocus ? "#c97a49" : "#d4a574" }}
-          />
-          <input
-            type="text"
-            placeholder="Buscar mezcal..."
-            value={filtrosPendientes.busqueda}
-            onChange={(e) => onBusquedaChange(e.target.value)}
-            onFocus={() => onSearchFocus(true)}
-            onBlur={() => onSearchFocus(false)}
-            className="w-full rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none font-medium transition-all duration-200"
-            style={{
-              backgroundColor: searchFocus ? "#fffbf8" : "#fff8f3",
-              border: searchFocus ? "1.5px solid #c97a49" : "1.5px solid #e8dcc8",
-              color: "#5c3d1e",
-            }}
-          />
-        </div>
-      </div>
+    <div className="space-y-4">
+      {/* Buscador */}
+      <SearchBarComponent
+        busqueda={filtrosPendientes.busqueda}
+        onBusquedaChange={onBusquedaChange}
+        searchFocus={searchFocus}
+        onSearchFocus={onSearchFocus}
+      />
 
       <FilterSection
         title="Maguey"
@@ -274,6 +258,60 @@ export function SidebarFiltersComponent({
         />
       </FilterSection>
 
+    </div>
+  );
+}
+
+export function SearchBarComponent({
+  busqueda,
+  onBusquedaChange,
+  searchFocus,
+  onSearchFocus,
+}: {
+  busqueda: string;
+  onBusquedaChange: (value: string) => void;
+  searchFocus: boolean;
+  onSearchFocus: (focused: boolean) => void;
+}) {
+  return (
+    <div className="relative group">
+      {/* Shadow effect on focus */}
+      <div
+        className="absolute inset-0 rounded-2xl opacity-0 transition-all duration-300 pointer-events-none"
+        style={{
+          backgroundColor: "#C97A3E",
+          opacity: searchFocus ? 0.1 : 0,
+          filter: "blur(8px)",
+        }}
+      />
+
+      <Search
+        size={20}
+        className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-200 z-10"
+        style={{ color: searchFocus ? "#C97A3E" : "#A8C26B" }}
+      />
+      <input
+        type="text"
+        placeholder="Buscar por nombre, región, tipo..."
+        value={busqueda}
+        onChange={(e) => onBusquedaChange(e.target.value)}
+        onFocus={() => onSearchFocus(true)}
+        onBlur={() => onSearchFocus(false)}
+        className="w-full rounded-2xl py-3 sm:py-3.5 pl-13 pr-4 text-sm sm:text-base outline-none font-medium transition-all duration-300"
+        style={{
+          backgroundColor: searchFocus ? "#F4F0E3" : "#F4F0E3",
+          border: searchFocus ? "2px solid #C97A3E" : "1.5px solid #C5CFB0",
+          color: "#1F3A2E",
+          boxShadow: searchFocus ? "0 4px 12px rgba(201, 122, 73, 0.1)" : "0 2px 4px rgba(0, 0, 0, 0.05)",
+        }}
+      />
+
+      {/* Placeholder hint */}
+      {!busqueda && !searchFocus && (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none hidden sm:block">
+          
+        </div>
+      )}
     </div>
   );
 }

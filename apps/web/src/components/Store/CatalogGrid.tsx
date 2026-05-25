@@ -189,8 +189,8 @@ export function CatalogGrid({ products, onAddToCart, isLoading = false }: Catalo
 
       {/* Load more button (optional) */}
       {filteredProducts.length > 0 && filteredProducts.length % 12 === 0 && (
-        <div className="flex justify-center py-8">
-          <button className="px-8 py-3 border-2 border-terracotta-600 text-terracotta-600 hover:bg-terracotta-50 font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-terracotta-500">
+        <div className="flex justify-center py-4 sm:py-6 px-4">
+          <button className="px-6 sm:px-8 py-2.5 sm:py-3 border-2 border-terracotta-600 text-terracotta-600 hover:bg-terracotta-50 font-semibold text-sm sm:text-base rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-terracotta-500">
             {t('loadMore', 'Cargar más')}
           </button>
         </div>

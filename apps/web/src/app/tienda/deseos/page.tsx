@@ -14,7 +14,7 @@ export default function WishlistPage() {
   if (items.length === 0) {
     return (
       <main className="mx-auto max-w-screen-xl px-4 py-8 md:px-8">
-        <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white">
+        <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white" style={{ fontFamily: 'var(--font-family-store)' }}>
           Lista de Deseos
         </h1>
         <div className="flex flex-col items-center justify-center gap-4 rounded-lg bg-white p-8 text-center shadow-md dark:bg-gray-dark">
@@ -22,7 +22,7 @@ export default function WishlistPage() {
           <p className="text-gray-500">Tu lista de deseos está vacía</p>
           <Link
             href="/cliente/producto"
-            className="mt-4 flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2 text-white transition-colors hover:bg-green-700"
+            className="mt-4 flex items-center gap-2 rounded-lg bg-[#3D6B3F] px-6 py-2 text-white transition-colors hover:bg-[#1F3A2E]"
           >
             Ver productos
           </Link>
@@ -33,7 +33,7 @@ export default function WishlistPage() {
 
   return (
     <main className="mx-auto max-w-screen-xl px-4 py-8 md:px-8">
-      <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white">
+      <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white" style={{ fontFamily: 'var(--font-family-store)' }}>
         Lista de Deseos ({items.length})
       </h1>
 
@@ -74,12 +74,12 @@ export default function WishlistPage() {
             <div className="flex flex-1 flex-col p-4">
               <Link
                 href={`/cliente/producto/${item.id_producto}`}
-                className="mb-1 block text-base font-semibold leading-snug text-gray-900 hover:text-green-600 dark:text-white line-clamp-2"
+                className="mb-1 block text-base font-semibold leading-snug text-gray-900 hover:text-[#3D6B3F] dark:text-white line-clamp-2"
               >
                 {item.producto.nombre}
               </Link>
 
-              <p className="mb-4 mt-auto pt-2 text-xl font-bold text-green-600">
+              <p className="mb-4 mt-auto pt-2 text-xl font-bold text-[#3D6B3F]">
                 ${formatPrice(Number(item.producto.precio_base), { showCurrency: false })}
               </p>
 
@@ -95,7 +95,7 @@ export default function WishlistPage() {
                       cantidad: 1,
                     })
                   }
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 active:scale-95"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1F3A2E] active:scale-95"
                 >
                   <ShoppingBag size={16} />
                   Agregar al carrito
@@ -114,7 +114,7 @@ export default function WishlistPage() {
 
       <Link
         href="/cliente/producto"
-        className="mt-8 inline-flex items-center gap-2 text-sm text-green-600 hover:text-green-700"
+        className="mt-8 inline-flex items-center gap-2 text-sm text-[#3D6B3F] hover:text-[#1F3A2E]"
       >
         <ArrowRight size={16} className="rotate-180" />
         Continuar viendo productos

@@ -169,7 +169,7 @@ export function ProductCard({
         <button
           onClick={handleAddToCart}
           disabled={isAdding || (stock !== undefined && stock === 0)}
-          className={`w-full py-2 sm:py-2.5 px-3 rounded-lg font-semibold text-sm sm:text-base text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-terracotta-500 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`w-full py-2 px-2.5 sm:px-3 rounded-lg font-semibold text-xs sm:text-sm text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-terracotta-500 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
             isAdding
               ? 'bg-terracotta-600'
               : stock === 0
@@ -179,16 +179,17 @@ export function ProductCard({
           aria-label={t('addToCart', `Agregar ${name} al carrito`)}
         >
           {isAdding ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span className="flex items-center justify-center gap-1">
+              <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              {t('adding', 'Agregando...')}
+              <span className="hidden sm:inline">{t('adding', 'Agregando...')}</span>
+              <span className="sm:hidden text-[10px]">{t('adding', 'Agr...')}</span>
             </span>
           ) : stock === 0 ? (
-            t('outOfStock', 'Agotado')
+            <span className="line-clamp-1">{t('outOfStock', 'Agotado')}</span>
           ) : (
-            t('addToCart', 'Agregar al Carrito')
+            <span className="line-clamp-1">{t('addToCart', 'Agregar al Carrito')}</span>
           )}
         </button>
 
