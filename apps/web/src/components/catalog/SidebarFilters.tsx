@@ -43,15 +43,15 @@ function FilterCheckbox({
       onClick={onClick}
       className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all hover:bg-white/50 text-left w-full"
       style={{
-        color: active ? "#c97a49" : "#8b6914",
+        color: active ? "#306B3F" : "#1F3A2E",
         fontWeight: active ? 600 : 500,
       }}
     >
       <div
         className="w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
         style={{
-          borderColor: active ? "#c97a49" : "#d4a574",
-          backgroundColor: active ? "#c97a49" : "transparent",
+          borderColor: active ? "#306B3F" : "#A8C26B",
+          backgroundColor: active ? "#306B3F" : "transparent",
         }}
       >
         {active && <span className="text-white text-xs">✓</span>}
@@ -85,8 +85,8 @@ function Tooltip({
         <div
           className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border p-2.5 text-xs z-50 animate-in fade-in duration-150"
           style={{
-            borderColor: "#e8dcc8",
-            color: "#5c3d1e",
+            borderColor: "#ddd8c4",
+            color: "#1F3A2E",
             maxWidth: "200px",
             minWidth: "150px",
           }}
@@ -95,7 +95,7 @@ function Tooltip({
           {text}
           <div
             className="absolute top-full left-3 w-2 h-2 bg-white transform rotate-45"
-            style={{ borderRight: "1px solid #e8dcc8", borderBottom: "1px solid #e8dcc8" }}
+            style={{ borderRight: "1px solid #ddd8c4", borderBottom: "1px solid #ddd8c4" }}
           />
         </div>
       )}
@@ -117,17 +117,17 @@ function FilterSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b py-3" style={{ borderColor: "#e8dcc8" }}>
+    <div className="border-b py-3" style={{ borderColor: "#ddd8c4" }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex w-full items-center justify-between px-1 py-1.5 text-sm font-bold transition-colors hover:text-opacity-80"
-        style={{ color: "#5c3d1e" }}
+        style={{ color: "#1F3A2E" }}
       >
         <div className="flex items-center gap-1.5">
           <span>{title}</span>
           {tooltip && (
             <Tooltip text={tooltip}>
-              <HelpCircle size={14} style={{ color: "#c97a49", opacity: 0.7 }} />
+              <HelpCircle size={14} style={{ color: "#306B3F", opacity: 0.7 }} />
             </Tooltip>
           )}
         </div>
@@ -210,9 +210,9 @@ function MaestroCombobox({
           onBlur={() => setTimeout(() => setIsOpen(false), 150)}
           className="w-full rounded-lg py-2 px-3 text-sm outline-none pr-8"
           style={{
-            backgroundColor: "#f5ede5",
-            border: "1px solid #e8dcc8",
-            color: "#5c3d1e",
+            backgroundColor: "#F4F0E3",
+            border: "1px solid #ddd8c4",
+            color: "#1F3A2E",
           }}
           aria-autocomplete="list"
           aria-expanded={isOpen}
@@ -223,7 +223,7 @@ function MaestroCombobox({
             className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 hover:opacity-70 transition-opacity"
             aria-label="Limpiar"
           >
-            <X size={14} style={{ color: "#c97a49" }} />
+            <X size={14} style={{ color: "#306B3F" }} />
           </button>
         )}
       </div>
@@ -232,7 +232,7 @@ function MaestroCombobox({
       {isOpen && (
         <div
           className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border z-50 max-h-40 overflow-y-auto"
-          style={{ borderColor: "#e8dcc8" }}
+          style={{ borderColor: "#ddd8c4" }}
           role="listbox"
         >
           {isLoading ? (
@@ -242,8 +242,8 @@ function MaestroCombobox({
               <button
                 key={productor.id || `productor-${index}`}
                 onClick={() => handleSelect(productor)}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 transition-colors"
-                style={{ color: "#5c3d1e" }}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 transition-colors"
+                style={{ color: "#1F3A2E" }}
                 role="option"
               >
                 <div className="font-medium">{productor.nombre}</div>
@@ -296,7 +296,7 @@ function PriceRangeSlider({
           step="50"
           value={minValue}
           onChange={(e) => onMinChange(e.target.value)}
-          className="w-full accent-orange-400"
+          className="w-full accent-green-600"
           style={{ borderColor: hasError ? "#e74c3c" : undefined }}
         />
       </div>
@@ -311,7 +311,7 @@ function PriceRangeSlider({
           step="50"
           value={maxValue}
           onChange={(e) => onMaxChange(e.target.value)}
-          className="w-full accent-orange-400"
+          className="w-full accent-green-600"
           style={{ borderColor: hasError ? "#e74c3c" : undefined }}
         />
       </div>
@@ -326,7 +326,7 @@ function PriceRangeSlider({
         disabled={hasError}
         className="w-full py-2 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95"
         style={{
-          backgroundColor: hasError ? "#d0d0d0" : "#c97a49",
+          backgroundColor: hasError ? "#d0d0d0" : "#306B3F",
           cursor: hasError ? "not-allowed" : "pointer",
           opacity: hasError ? 0.6 : 1,
         }}
@@ -355,12 +355,12 @@ export function SidebarFiltersComponent({
 }: SidebarFiltersProps) {
   return (
     <div className="space-y-1">
-      <div className="mb-4 pb-4 border-b" style={{ borderColor: "#e8dcc8" }}>
+      <div className="mb-4 pb-4 border-b" style={{ borderColor: "#ddd8c4" }}>
         <div className="relative group">
           <Search
             size={18}
             className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200"
-            style={{ color: searchFocus ? "#c97a49" : "#d4a574" }}
+            style={{ color: searchFocus ? "#306B3F" : "#A8C26B" }}
           />
           <input
             type="text"
@@ -371,9 +371,9 @@ export function SidebarFiltersComponent({
             onBlur={() => onSearchFocus(false)}
             className="w-full rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none font-medium transition-all duration-200"
             style={{
-              backgroundColor: searchFocus ? "#fffbf8" : "#fff8f3",
-              border: searchFocus ? "1.5px solid #c97a49" : "1.5px solid #e8dcc8",
-              color: "#5c3d1e",
+              backgroundColor: searchFocus ? "#f0f8ec" : "#F4F0E3",
+              border: searchFocus ? "1.5px solid #306B3F" : "1.5px solid #ddd8c4",
+              color: "#1F3A2E",
             }}
           />
         </div>

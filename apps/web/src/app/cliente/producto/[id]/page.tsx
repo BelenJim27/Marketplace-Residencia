@@ -256,7 +256,7 @@ export default function ProductoDetallePage() {
             <button
               onClick={() => router.back()}
               className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-              style={{ border: "1px solid #e8dcc8", color: "var(--bio-color-precio, #8b6914)" }}
+              style={{ border: "1px solid #ddd8c4", color: "#306B3F" }}
             >
               <ArrowLeft size={18} />
               Volver
@@ -264,7 +264,7 @@ export default function ProductoDetallePage() {
             <Link
               href="/cliente/producto"
               className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-              style={{ backgroundColor: "var(--bio-color-boton, #5c3d1e)" }}
+              style={{ backgroundColor: "#1F3A2E" }}
             >
               Ver catálogo
             </Link>
@@ -280,7 +280,7 @@ export default function ProductoDetallePage() {
   return (
     <div
       className="mx-auto max-w-screen-xl px-4 py-8 md:px-8"
-      style={{ backgroundColor: "var(--bio-color-fondo, #faf8f4)", minHeight: "100vh" }}
+      style={{ backgroundColor: "#F4F0E3", minHeight: "100vh" }}
     >
       <AgeGate
         edadMinima={edadMinimaProducto}
@@ -294,7 +294,7 @@ export default function ProductoDetallePage() {
       <button
         onClick={() => router.back()}
         className="mb-8 flex items-center gap-2 hover:opacity-70 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-lg p-2 -ml-2"
-        style={{ color: "var(--bio-color-precio, #8b6914)" }}
+        style={{ color: "#306B3F" }}
         aria-label="Volver a la página anterior"
       >
         <ArrowLeft size={20} />
@@ -310,7 +310,7 @@ export default function ProductoDetallePage() {
                 key={cat}
                 href={`/categoria/${encodeURIComponent(cat)}`}
                 className="text-xs font-medium rounded-full px-3 py-2 hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[32px] flex items-center"
-                style={{ backgroundColor: "#f0ebe0", color: "var(--bio-color-precio, #8b6914)", border: "1px solid #e8dcc8" }}
+                style={{ backgroundColor: "#e5eedc", color: "#306B3F", border: "1px solid #ddd8c4" }}
               >
                 {cat}
               </Link>
@@ -350,7 +350,7 @@ export default function ProductoDetallePage() {
                     onClick={() => setImagenSeleccionada(idx)}
                     className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1"
                     style={{
-                      borderColor: idx === imagenSeleccionada ? "var(--bio-color-precio, #8b6914)" : "transparent",
+                      borderColor: idx === imagenSeleccionada ? "#306B3F" : "transparent",
                       opacity: idx === imagenSeleccionada ? 1 : 0.6
                     }}
                     aria-label={`Ver imagen ${idx + 1} de ${todasImagenes.length}`}
@@ -368,7 +368,7 @@ export default function ProductoDetallePage() {
             <div className="rounded-lg p-7 sm:p-8">
               <h2
                 className="text-lg sm:text-xl font-semibold mb-3"
-                style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+                style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
               >
                 Rastreo y Autenticidad
               </h2>
@@ -399,7 +399,7 @@ export default function ProductoDetallePage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-all duration-200 hover:shadow-md hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-                        style={{ backgroundColor: "var(--bio-color-boton, #5c3d1e)" }}
+                        style={{ backgroundColor: "#1F3A2E" }}
                       >
                         Verifica aquí
                         <span>→</span>
@@ -428,8 +428,8 @@ export default function ProductoDetallePage() {
                       onClick={() => setExpandedGroup(expandedGroup === groupName ? null : groupName)}
                       className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-inset"
                       style={{
-                        backgroundColor: expandedGroup === groupName ? "var(--bio-color-fondo, #faf8f4)" : "transparent",
-                        outlineColor: "var(--bio-color-precio, #8b6914)"
+                        backgroundColor: expandedGroup === groupName ? "#F4F0E3" : "transparent",
+                        outlineColor: "#306B3F"
                       }}
                       aria-expanded={expandedGroup === groupName}
                       aria-controls={`specs-${groupName}`}
@@ -438,7 +438,7 @@ export default function ProductoDetallePage() {
                       <ChevronDown
                         size={18}
                         className={`transition-transform flex-shrink-0 ml-2 ${expandedGroup === groupName ? "rotate-180" : ""}`}
-                        style={{ color: "var(--bio-color-precio, #8b6914)" }}
+                        style={{ color: "#306B3F" }}
                         aria-hidden="true"
                       />
                     </button>
@@ -476,13 +476,13 @@ export default function ProductoDetallePage() {
           <div className="space-y-4">
             <h1
               className="text-3xl sm:text-4xl font-bold break-words leading-tight"
-              style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+              style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
             >
               {producto.nombre}
             </h1>
             <p
               className="text-3xl sm:text-4xl font-bold"
-              style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}
+              style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#306B3F" }}
             >
               ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
             </p>
@@ -499,25 +499,25 @@ export default function ProductoDetallePage() {
 
           {/* Hero Specs - Key characteristics first */}
           {(magueySpec || categoriaSpec || abvSpec) && (
-            <div className="space-y-4 rounded-lg p-6 sm:p-7" style={{ backgroundColor: "var(--bio-color-fondo-sec, #f0ebe0)", border: "2px solid var(--bio-color-precio, #8b6914)" }}>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--bio-color-precio, #8b6914)" }}>Lo Importante</p>
+            <div className="space-y-4 rounded-lg p-6 sm:p-7" style={{ backgroundColor: "#e5eedc", border: "2px solid #306B3F" }}>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#306B3F" }}>Lo Importante</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 {magueySpec && (
                   <div className="space-y-2">
                     <span className="block text-xs text-gray-600 dark:text-gray-400">Maguey</span>
-                    <p className="font-semibold text-base break-words" style={{ color: "var(--bio-color-titulo, #5c3d1e)", fontFamily: "var(--bio-fuente-titulo, Georgia, serif)" }}>{magueySpec}</p>
+                    <p className="font-semibold text-base break-words" style={{ color: "#1F3A2E", fontFamily: "'Playfair Display', Georgia, serif" }}>{magueySpec}</p>
                   </div>
                 )}
                 {categoriaSpec && (
                   <div className="space-y-2">
                     <span className="block text-xs text-gray-600 dark:text-gray-400">Categoría</span>
-                    <p className="font-semibold text-base break-words" style={{ color: "var(--bio-color-titulo, #5c3d1e)", fontFamily: "var(--bio-fuente-titulo, Georgia, serif)" }}>{categoriaSpec}</p>
+                    <p className="font-semibold text-base break-words" style={{ color: "#1F3A2E", fontFamily: "'Playfair Display', Georgia, serif" }}>{categoriaSpec}</p>
                   </div>
                 )}
                 {abvSpec && (
                   <div className="space-y-2">
                     <span className="block text-xs text-gray-600 dark:text-gray-400">ABV</span>
-                    <p className="font-semibold text-base break-words" style={{ color: "var(--bio-color-titulo, #5c3d1e)", fontFamily: "var(--bio-fuente-titulo, Georgia, serif)" }}>{abvSpec}</p>
+                    <p className="font-semibold text-base break-words" style={{ color: "#1F3A2E", fontFamily: "'Playfair Display', Georgia, serif" }}>{abvSpec}</p>
                   </div>
                 )}
               </div>
@@ -531,16 +531,16 @@ export default function ProductoDetallePage() {
               <div className="space-y-2">
                 <h3
                   className="text-sm font-semibold"
-                  style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+                  style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
                 >
                   Maestro Productor
                 </h3>
                 <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
                   {loteData?.id_productor ? (
                     <Link
-                      href={`/Cliente/productor/${loteData.id_productor}`}
+                      href={`/cliente/productor/${loteData.id_productor}`}
                       className="font-medium hover:opacity-70 transition-opacity block"
-                      style={{ color: "var(--bio-color-precio, #8b6914)" }}
+                      style={{ color: "#306B3F" }}
                     >
                       {nombreProductor} →
                     </Link>
@@ -557,16 +557,16 @@ export default function ProductoDetallePage() {
               <div className="space-y-2">
                 <h3
                   className="text-sm font-semibold"
-                  style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
+                  style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
                 >
                   Tienda
                 </h3>
                 <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
                   {producto.id_tienda ? (
                     <Link
-                      href={`/Cliente/tienda/${producto.id_tienda}`}
+                      href={`/cliente/tienda/${producto.id_tienda}`}
                       className="font-medium hover:opacity-70 transition-opacity block"
-                      style={{ color: "var(--bio-color-precio, #8b6914)" }}
+                      style={{ color: "#306B3F" }}
                     >
                       {tiendaData.nombre} →
                     </Link>
@@ -601,17 +601,17 @@ export default function ProductoDetallePage() {
                   <button
                     onClick={() => setCantidad(Math.max(1, cantidad - 1))}
                     className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 active:scale-95"
-                    style={{ border: "1px solid #e8dcc8", backgroundColor: "#f0ebe0", color: "var(--bio-color-titulo, #5c3d1e)" }}
+                    style={{ border: "1px solid #ddd8c4", backgroundColor: "#e5eedc", color: "#1F3A2E" }}
                     title="Disminuir cantidad"
                     aria-label="Restar una botella"
                   >
                     −
                   </button>
-                  <span className="w-10 text-center font-semibold text-base" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>{cantidad}</span>
+                  <span className="w-10 text-center font-semibold text-base" style={{ color: "#1F3A2E" }}>{cantidad}</span>
                   <button
                     onClick={() => setCantidad(cantidad + 1)}
                     className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 active:scale-95"
-                    style={{ border: "1px solid #e8dcc8", backgroundColor: "#f0ebe0", color: "var(--bio-color-titulo, #5c3d1e)" }}
+                    style={{ border: "1px solid #ddd8c4", backgroundColor: "#e5eedc", color: "#1F3A2E" }}
                     title="Aumentar cantidad"
                     aria-label="Agregar una botella"
                   >
@@ -622,10 +622,10 @@ export default function ProductoDetallePage() {
             </div>
 
             {/* Envío */}
-            <div className="rounded-lg p-4 sm:p-5" style={{ border: "1px solid #e8dcc8", backgroundColor: "#fdf7ee" }}>
+            <div className="rounded-lg p-4 sm:p-5" style={{ border: "1px solid #ddd8c4", backgroundColor: "#edf5e5" }}>
               <div className="flex items-center gap-2 mb-3">
-                <Truck size={16} style={{ color: "var(--bio-color-precio, #8b6914)" }} />
-                <span className="text-sm font-semibold" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>Envío</span>
+                <Truck size={16} style={{ color: "#306B3F" }} />
+                <span className="text-sm font-semibold" style={{ color: "#1F3A2E" }}>Envío</span>
               </div>
               <p className="text-sm text-gray-700 dark:text-gray-300">
                 Te mostraremos el costo cuando ingreses tu dirección. Enviamos a todo el país.
@@ -639,7 +639,7 @@ export default function ProductoDetallePage() {
                   onClick={() => {
                     if (!producto) return;
                     if (!isAuthenticated) {
-                      router.push(`/auth/sign-in?redirect=/Cliente/producto/${producto.id_producto}`);
+                      router.push(`/auth/sign-in?redirect=/cliente/producto/${producto.id_producto}`);
                       return;
                     }
                     if (isInWishlist(producto.id_producto)) {
@@ -656,9 +656,9 @@ export default function ProductoDetallePage() {
                   }}
                   className="flex items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-medium transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px] active:scale-95"
                   style={{
-                    backgroundColor: isInWishlist(producto.id_producto) ? "#fdf7ee" : "transparent",
-                    color: isInWishlist(producto.id_producto) ? "var(--bio-color-precio, #8b6914)" : "var(--bio-color-titulo, #5c3d1e)",
-                    border: "1px solid #e8dcc8",
+                    backgroundColor: isInWishlist(producto.id_producto) ? "#edf5e5" : "transparent",
+                    color: isInWishlist(producto.id_producto) ? "#306B3F" : "#1F3A2E",
+                    border: "1px solid #ddd8c4",
                   }}
                   aria-label={isInWishlist(producto.id_producto) ? "Remover de mi lista" : "Agregar a mi lista"}
                   aria-pressed={isInWishlist(producto.id_producto)}
@@ -672,7 +672,7 @@ export default function ProductoDetallePage() {
                   onClick={handleAgregar}
                   disabled={agregado}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-medium transition-all duration-200 text-white hover:shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-                  style={{ backgroundColor: "var(--bio-color-boton, #5c3d1e)" }}
+                  style={{ backgroundColor: "#1F3A2E" }}
                   aria-busy={agregado}
                 >
                   <ShoppingCart size={20} aria-hidden="true" />
@@ -684,7 +684,7 @@ export default function ProductoDetallePage() {
                 <button
                   onClick={handleComprarAhora}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-                  style={{ backgroundColor: "var(--bio-color-boton2, #8b6914)" }}
+                  style={{ backgroundColor: "#306B3F" }}
                   title="Ir al carrito y completar tu compra"
                 >
                   <Zap size={20} aria-hidden="true" />

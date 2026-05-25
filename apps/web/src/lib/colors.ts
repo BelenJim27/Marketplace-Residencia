@@ -233,24 +233,26 @@ export const colorVars = {
 
 // ─── HEX FALLBACKS (for quick reference, light mode)
 export const hexFallbacks = {
-  brand: "#c97a49",           // Primary brand
-  brandLight: "#d4956d",      // Lighter variant
-  brandDark: "#a0633c",       // Darker variant
-
-  textPrimary: "#1a1410",     // Dark brown/black
-  textSecondary: "#5c5450",   // Medium brown
-  textTertiary: "#8b7d72",    // Light brown
-  textMuted: "#a89f96",       // Muted brown
-
-  bgPrimary: "#faf8f4",       // Off-white warm
-  bgSecondary: "#ffffff",     // Pure white
-  bgTertiary: "#f0ede8",      // Light warm gray
-
-  borderLight: "#e8dcc8",     // Light border
-  borderDefault: "#d4c4b0",   // Default border
-
-  successColor: "#16a34a",    // Green
-  errorColor: "#dc2626",      // Red
-  warningColor: "#ea580c",    // Orange
-  infoColor: "#2563eb",       // Blue
+  brand: "#306B3F",
+  brandLight: "#A8C26B",
+  brandDark: "#1F3A2E",
+  cobre: "#C97A3E",
+  verdeSilvestre: "#306B3F",
+  verdeTobala: "#1F3A2E",
+  verdeHoja: "#A8C26B",
+  verdeMusgo: "#C5CFB0",
+  hueso: "#F4F0E3",
+  textPrimary: "#1F3A2E",
+  textSecondary: "#4a6355",
+  textTertiary: "#7a9080",
+  textMuted: "#C5CFB0",
+  bgPrimary: "#F4F0E3",
+  bgSecondary: "#ffffff",
+  bgTertiary: "#e8e4d4",
+  borderLight: "#ddd8c4",
+  borderDefault: "#ddd8c4",
+  successColor: "#16a34a",
+  errorColor: "#dc2626",
+  warningColor: "#ea580c",
+  infoColor: "#2563eb",
 } as const;

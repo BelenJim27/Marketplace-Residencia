@@ -94,7 +94,7 @@ export default function TiendaPage() {
 
   const toggleWishlist = (producto: Producto) => {
     if (!isAuthenticated) {
-      router.push("/auth/sign-in?redirect=/Cliente/producto");
+      router.push("/auth/sign-in?redirect=/cliente/producto");
       return;
     }
     if (isInWishlist(producto.id_producto)) {
@@ -140,19 +140,19 @@ export default function TiendaPage() {
     : "";
 
   return (
-    <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8" style={{ backgroundColor: "var(--bio-color-fondo, #faf8f4)", minHeight: "100vh" }}>
+    <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8" style={{ backgroundColor: "#F4F0E3", minHeight: "100vh" }}>
       <button
         onClick={() => router.back()}
         className="mb-6 flex items-center gap-2 hover:opacity-80 transition-opacity"
-        style={{ color: "var(--bio-color-precio, #8b6914)" }}
+        style={{ color: "#306B3F" }}
       >
         <ArrowLeft size={20} />
         Volver
       </button>
 
       {/* Header Tienda */}
-      <div className="mb-12 rounded-lg p-8" style={{ backgroundColor: "white", border: "1px solid #e8dcc8" }}>
-        <h1 className="text-4xl font-bold mb-4" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+      <div className="mb-12 rounded-lg p-8" style={{ backgroundColor: "white", border: "1px solid #ddd8c4" }}>
+        <h1 className="text-4xl font-bold mb-4" style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}>
           {tienda.nombre}
         </h1>
 
@@ -161,7 +161,7 @@ export default function TiendaPage() {
         <div className="space-y-2">
           {(tienda.ciudad_origen || tienda.estado_origen) && (
             <p className="flex items-center gap-2 text-gray-600">
-              <MapPin size={18} style={{ color: "var(--bio-color-precio, #8b6914)" }} />
+              <MapPin size={18} style={{ color: "#306B3F" }} />
               <span>{[tienda.ciudad_origen, tienda.estado_origen].filter(Boolean).join(", ")}</span>
             </p>
           )}
@@ -184,15 +184,15 @@ export default function TiendaPage() {
       {/* Card Productor */}
       {productor && (
         <div className="mb-12">
-          <h2 className="mb-4 text-2xl font-bold" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+          <h2 className="mb-4 text-2xl font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}>
             Productor
           </h2>
           <div
             className="rounded-lg p-6 cursor-pointer hover:shadow-md transition-shadow"
-            style={{ backgroundColor: "white", border: "1px solid #e8dcc8" }}
-            onClick={() => router.push(`/Cliente/productor/${productor.id_productor}`)}
+            style={{ backgroundColor: "white", border: "1px solid #ddd8c4" }}
+            onClick={() => router.push(`/cliente/productor/${productor.id_productor}`)}
           >
-            <h3 className="text-xl font-semibold mb-2" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>
+            <h3 className="text-xl font-semibold mb-2" style={{ color: "#1F3A2E" }}>
               {nombreProductor}
             </h3>
             {productor.biografia && <p className="text-gray-600">{productor.biografia}</p>}
@@ -202,7 +202,7 @@ export default function TiendaPage() {
 
       {/* Productos */}
       <div>
-        <h2 className="mb-6 text-2xl font-bold" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
+        <h2 className="mb-6 text-2xl font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}>
           Productos de esta tienda
         </h2>
 
@@ -218,13 +218,13 @@ export default function TiendaPage() {
                 <div
                   key={String(producto.id_producto)}
                   className="group rounded-xl overflow-hidden border hover:shadow-md transition-shadow cursor-pointer"
-                  style={{ borderColor: "#e8dcc8", backgroundColor: "var(--bio-color-fondo, #faf8f4)" }}
+                  style={{ borderColor: "#ddd8c4", backgroundColor: "#F4F0E3" }}
                 >
                   {/* Image */}
                   <div
                     className="relative overflow-hidden bg-gray-50"
                     style={{ aspectRatio: "1 / 1" }}
-                    onClick={() => router.push(`/Cliente/producto/${producto.id_producto}`)}
+                    onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
                   >
                     {imagenUrl ? (
                       <Image
@@ -241,7 +241,7 @@ export default function TiendaPage() {
                     {tipoMezcal && (
                       <span
                         className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-semibold"
-                        style={{ backgroundColor: "#f0ebe0", color: "var(--bio-color-precio, #8b6914)", border: "1px solid #e8dcc8" }}
+                        style={{ backgroundColor: "#e5eedc", color: "#306B3F", border: "1px solid #ddd8c4" }}
                       >
                         {tipoMezcal}
                       </span>
@@ -250,8 +250,8 @@ export default function TiendaPage() {
                     <button
                       className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110"
                       style={{
-                        backgroundColor: isInWishlist(producto.id_producto) ? "#fdf7ee" : "rgba(250,248,244,0.9)",
-                        color: isInWishlist(producto.id_producto) ? "#b07850" : "#c8a97a",
+                        backgroundColor: isInWishlist(producto.id_producto) ? "#edf5e5" : "rgba(244,240,227,0.9)",
+                        color: isInWishlist(producto.id_producto) ? "#306B3F" : "#A8C26B",
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -266,15 +266,15 @@ export default function TiendaPage() {
                   <div className="p-4">
                     <h3
                       className="font-semibold text-sm line-clamp-2 mb-2 leading-snug cursor-pointer hover:opacity-80"
-                      style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
-                      onClick={() => router.push(`/Cliente/producto/${producto.id_producto}`)}
+                      style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
+                      onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
                     >
                       {producto.nombre}
                     </h3>
                     <div className="flex items-center justify-between mt-2">
                       <span
                         className="font-bold text-base"
-                        style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}
+                        style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#306B3F" }}
                       >
                         ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })} MXN
                       </span>
@@ -282,7 +282,7 @@ export default function TiendaPage() {
                     <button
                       className="w-full mt-3 flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-medium text-white transition-all hover:opacity-90 active:scale-95"
                       style={{
-                        backgroundColor: agregadoId === producto.id_producto ? "var(--bio-color-boton-hover, #3d2510)" : "var(--bio-color-boton, #5c3d1e)",
+                        backgroundColor: agregadoId === producto.id_producto ? "#163020" : "#1F3A2E",
                       }}
                       disabled={agregadoId === producto.id_producto}
                       onClick={() => {

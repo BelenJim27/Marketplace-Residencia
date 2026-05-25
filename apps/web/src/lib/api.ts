@@ -361,7 +361,7 @@ export const api = {
       const qs = params.toString();
       return fetchJson<any[]>(endpoint(`/productores${qs ? `?${qs}` : ""}`));
     },
-    getOne: (id: number) => fetchJson(endpoint(`/productores/${id}`)),
+    getOne: <T = any>(id: number) => fetchJson<T>(endpoint(`/productores/${id}`)),
     getByUsuario: (id_usuario: string) =>
       fetchJson(endpoint(`/productores/by-usuario/${id_usuario}`)),
     getByUbicacion: (ubicacion: string) =>
