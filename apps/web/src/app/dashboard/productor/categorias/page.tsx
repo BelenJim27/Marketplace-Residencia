@@ -62,84 +62,77 @@ export default function CategoriasProductorPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">
-            Categorías
-          </h1>
-          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-            Explora las categorías disponibles del sistema.
-          </p>
-        </div>
+      {/* Header */}
+      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Categorías</h1>
+        <p className="text-sm text-[#3D6B3F]/70">Explora las categorías disponibles del sistema.</p>
       </div>
 
       {notice && (
-        <div
-          className={`rounded-2xl border px-4 py-3 text-sm ${
-            notice.type === "success"
-              ? "border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-700 dark:text-green-400"
-              : "border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 text-red-700 dark:text-red-400"
-          }`}
-        >
+        <div className={`rounded-2xl border px-4 py-3 text-sm ${
+          notice.type === "success"
+            ? "border-green-200 bg-green-50 text-green-700"
+            : "border-red-200 bg-red-50 text-red-700"
+        }`}>
           {notice.message}
         </div>
       )}
 
-      <div className="rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-gray-dark p-6 shadow-sm">
+      {/* Search */}
+      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#3D6B3F]/40" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar categorías..."
-            className="w-full rounded-xl border border-gray-100 dark:border-dark-3 bg-gray-50 dark:bg-dark-2 py-3 pl-12 pr-4 text-sm text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+            className="w-full rounded-xl border border-[#C5CFB0] bg-transparent py-3 pl-12 pr-4 text-sm text-[#1F3A2E] placeholder:text-[#3D6B3F]/40 outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20"
           />
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-gray-dark shadow-sm">
+      {/* Table */}
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[600px] text-left">
-            <thead className="bg-gray-50 dark:bg-dark-2 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-              <tr>
-                <th className="p-4">Nombre</th>
-                <th className="p-4">Descripción</th>
-                <th className="p-4">Tipo</th>
-                <th className="p-4 text-center">Orden</th>
+            <thead className="bg-[#1F3A2E]">
+              <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white">
+                <th className="px-5 py-4">Nombre</th>
+                <th className="px-5 py-4">Descripción</th>
+                <th className="px-5 py-4">Tipo</th>
+                <th className="px-5 py-4 text-center">Orden</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-dark-3">
+            <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="p-10 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={4} className="px-5 py-10 text-center text-[#3D6B3F]/60">
                     Cargando...
                   </td>
                 </tr>
               ) : filteredCategorias.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-10 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={4} className="px-5 py-10 text-center text-[#3D6B3F]/60">
                     No hay categorías.
                   </td>
                 </tr>
               ) : (
                 filteredCategorias.map((cat) => (
-                  <tr
-                    key={cat.id_categoria}
-                    className="group hover:bg-gray-50/60 dark:hover:bg-white/5"
-                  >
-                    <td className="p-4 font-semibold text-slate-800 dark:text-white">
+                  <tr key={cat.id_categoria}
+                    className="border-t border-[#C5CFB0]/30 bg-white text-sm transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20">
+                    <td className="px-5 py-4 font-medium text-[#1F3A2E]">
                       {cat.nombre}
                       {cat.categorias && cat.categorias.length > 0 && (
-                        <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
+                        <span className="ml-2 text-xs text-[#3D6B3F]/50">
                           ({cat.categorias.length} subcategorías)
                         </span>
                       )}
                     </td>
-                    <td className="p-4 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-5 py-4 text-sm text-[#3D6B3F]/70">
                       {cat.descripcion || "—"}
                     </td>
-                    <td className="p-4 text-sm text-gray-500 dark:text-gray-400">{cat.tipo}</td>
-                    <td className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">{cat.orden}</td>
+                    <td className="px-5 py-4 text-sm text-[#3D6B3F]/70">{cat.tipo}</td>
+                    <td className="px-5 py-4 text-center text-sm text-[#3D6B3F]/70">{cat.orden}</td>
                   </tr>
                 ))
               )}

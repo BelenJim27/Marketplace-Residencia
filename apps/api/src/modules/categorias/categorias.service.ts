@@ -12,7 +12,7 @@ export class CategoriasService {
   async findAll() {
     return serializeBigInts(
       await this.prisma.categorias.findMany({
-        include: { categorias: true },
+        include: { other_categorias: { orderBy: { nombre: 'asc' } } },
         orderBy: { nombre: 'asc' },
       }),
     );
@@ -21,7 +21,7 @@ export class CategoriasService {
   async findOne(id_categoria: number) {
     const item = await this.prisma.categorias.findUnique({
       where: { id_categoria },
-      include: { categorias: true },
+      include: { other_categorias: { orderBy: { nombre: 'asc' } } },
     });
     if (!item) throw new NotFoundException('Categoria no encontrada');
     return serializeBigInts(item);
@@ -33,21 +33,27 @@ export class CategoriasService {
         ? null
         : dto.id_padre;
     try {
-      return serializeBigInts(
-        await this.prisma.categorias.create({
-          data: {
-            id_padre: idPadre,
-            nombre: dto.nombre.trim(),
-            slug: dto.slug.trim(),
-            descripcion: dto.descripcion ?? null,
-            tipo: dto.tipo?.trim() ?? 'general',
-            imagen_url: dto.imagen_url ?? null,
-            activo: dto.activo ?? true,
-          },
-        }),
-      );
+      const categoria = await this.prisma.categorias.create({
+        data: {
+          id_padre: idPadre,
+          nombre: dto.nombre.trim(),
+          slug: dto.slug.trim(),
+          descripcion: dto.descripcion ?? null,
+          tipo: dto.tipo?.trim() ?? 'general',
+          imagen_url: dto.imagen_url ?? null,
+          activo: dto.activo ?? true,
+        },
+      });
+      await this.prisma.auditoria.create({
+        data: {
+          accion: 'crear_categoria',
+          tabla_afectada: 'categorias',
+          registro_id: String(categoria.id_categoria),
+          valor_nuevo: { nombre: categoria.nombre, slug: categoria.slug } as any,
+        },
+      });
+      return serializeBigInts(categoria);
     } catch (error) {
-      // ✅ Prisma.PrismaClientKnownRequestError en lugar del nombre suelto
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
         throw new ConflictException('Slug ya existe');
       throw error;
@@ -63,28 +69,45 @@ export class CategoriasService {
         : dto.id_padre === null || dto.id_padre === 0
           ? null
           : dto.id_padre;
-    return serializeBigInts(
-      await this.prisma.categorias.update({
-        where: { id_categoria },
-        data: {
-          id_padre: idPadre,
-          nombre: dto.nombre?.trim(),
-          slug: dto.slug?.trim(),
-          descripcion: dto.descripcion,
-          tipo: dto.tipo?.trim(),
-          imagen_url: dto.imagen_url,
-          activo: dto.activo,
-        },
-      }),
-    );
+    const updated = await this.prisma.categorias.update({
+      where: { id_categoria },
+      data: {
+        id_padre: idPadre,
+        nombre: dto.nombre?.trim(),
+        slug: dto.slug?.trim(),
+        descripcion: dto.descripcion,
+        tipo: dto.tipo?.trim(),
+        imagen_url: dto.imagen_url,
+        activo: dto.activo,
+      },
+    });
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'actualizar_categoria',
+        tabla_afectada: 'categorias',
+        registro_id: String(id_categoria),
+        valor_anterior: { nombre: current.nombre, slug: current.slug, activo: current.activo } as any,
+        valor_nuevo: { nombre: dto.nombre, slug: dto.slug, activo: dto.activo } as any,
+      },
+    });
+    return serializeBigInts(updated);
   }
 
   async remove(id_categoria: number) {
+    const current = await this.prisma.categorias.findUnique({ where: { id_categoria } });
     await this.prisma.categorias.updateMany({
       where: { id_padre: id_categoria },
       data: { id_padre: null },
     });
     await this.prisma.categorias.delete({ where: { id_categoria } });
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'eliminar_categoria',
+        tabla_afectada: 'categorias',
+        registro_id: String(id_categoria),
+        valor_anterior: { nombre: current?.nombre, slug: current?.slug } as any,
+      },
+    });
     return { message: 'Categoria eliminada' };
   }
 }

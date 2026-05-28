@@ -49,16 +49,16 @@ const IMAGE_KEYS: LandingKey[] = [
 function Seccion({ titulo, children, defaultOpen = true }: { titulo: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+    <div className="rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)] overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-5 py-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
+        className="w-full flex items-center justify-between px-5 py-4 bg-[#1F3A2E]/5 hover:bg-[#C5CFB0]/20 transition-all duration-200 text-left"
       >
-        <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{titulo}</span>
-        {open ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
+        <span className="text-sm font-semibold text-[#1F3A2E] [font-family:'DM_Sans',sans-serif]">{titulo}</span>
+        {open ? <ChevronUp size={16} className="text-[#3D6B3F]/50" /> : <ChevronDown size={16} className="text-[#3D6B3F]/50" />}
       </button>
-      {open && <div className="p-5 space-y-4 bg-white dark:bg-gray-900">{children}</div>}
+      {open && <div className="p-5 space-y-4 bg-[#F4F0E3]">{children}</div>}
     </div>
   );
 }
@@ -71,23 +71,23 @@ function Campo({ label, name, value, onChange, multiline = false, hint }: {
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">{label}</label>
+      <label className="block text-sm font-medium text-[#1F3A2E] mb-1">{label}</label>
       {multiline ? (
         <textarea
           value={value}
           onChange={(e) => onChange(name, e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none"
+          className="w-full rounded-lg border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/30 resize-none"
         />
       ) : (
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(name, e.target.value)}
-          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+          className="w-full rounded-lg border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/30"
         />
       )}
-      {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-[#3D6B3F]/50">{hint}</p>}
     </div>
   );
 }
@@ -125,10 +125,10 @@ function ImageUpload({ label, name, value, onUploaded }: {
 
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-[#1F3A2E] mb-1">{label}</label>
       <div className="flex gap-3 items-start">
         {/* Preview */}
-        <div className="relative w-24 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex-shrink-0">
+        <div className="relative w-24 h-20 rounded-lg overflow-hidden border border-[#C5CFB0] bg-[#C5CFB0]/20 flex-shrink-0">
           {value ? (
             <img
               src={value}
@@ -138,7 +138,7 @@ function ImageUpload({ label, name, value, onUploaded }: {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <ImageIcon size={24} className="text-gray-400" />
+              <ImageIcon size={24} className="text-[#3D6B3F]/40" />
             </div>
           )}
           {uploading && (
@@ -154,7 +154,7 @@ function ImageUpload({ label, name, value, onUploaded }: {
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium border border-[#C5CFB0] rounded-lg hover:bg-[#C5CFB0]/20 text-[#1F3A2E] transition-all duration-200 disabled:opacity-50"
           >
             <Upload size={13} />
             {uploading ? "Subiendo..." : "Subir imagen"}
@@ -166,7 +166,7 @@ function ImageUpload({ label, name, value, onUploaded }: {
             className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
           />
-          <p className="text-xs text-gray-400 truncate max-w-[200px]" title={value}>{value || "Sin imagen"}</p>
+          <p className="text-xs text-[#3D6B3F]/50 truncate max-w-[200px]" title={value}>{value || "Sin imagen"}</p>
           {error && <p className="text-xs text-red-500">{error}</p>}
         </div>
       </div>
@@ -230,28 +230,28 @@ export default function LandingConfigSection() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
-        <span className="ml-3 text-sm text-gray-500">Cargando configuración...</span>
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#C5CFB0] border-t-[#3D6B3F]" />
+        <span className="ml-3 text-sm text-[#3D6B3F]/70">Cargando configuración...</span>
       </div>
     );
   }
 
   return (
     <section className="space-y-6">
-      <div className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700">
-        <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-          <Type size={20} className="text-amber-600" />
+      <div className="flex items-center gap-3 pb-3 border-b border-[#C5CFB0]">
+        <div className="p-2 bg-[#A8C26B]/20 rounded-lg">
+          <Type size={20} className="text-[#3D6B3F]" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Página de Inicio</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <h3 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Página de Inicio</h3>
+          <p className="text-xs text-[#3D6B3F]/70">
             Edita los textos e imágenes que aparecen en la página principal
           </p>
         </div>
       </div>
 
       {message && (
-        <div className={`rounded-lg p-4 text-sm ${message.type === "success" ? "bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-300" : "bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300"}`}>
+        <div className={`rounded-xl p-4 text-sm border ${message.type === "success" ? "bg-[#A8C26B]/15 text-[#3D6B3F] border-[#A8C26B]/30" : "bg-red-50 text-red-700 border-red-200"}`}>
           {message.text}
         </div>
       )}
@@ -282,7 +282,7 @@ export default function LandingConfigSection() {
 
         {/* ── Sobre el Mezcal – Imágenes ── */}
         <Seccion titulo="🖼️ Sección «Sobre el Mezcal» — Imágenes (grid de 5 fotos)" defaultOpen={false}>
-          <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/10 rounded-lg p-3 border border-amber-100 dark:border-amber-800">
+          <p className="text-xs text-[#C97A3E] bg-[#C97A3E]/8 rounded-lg p-3 border border-[#C97A3E]/20">
             💡 Estas 5 imágenes forman el mosaico fotográfico junto al texto. Tamaño máximo 2 MB por imagen.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -300,14 +300,14 @@ export default function LandingConfigSection() {
             <Campo label="Título de la sección" name="landing_stats_titulo" value={formData.landing_stats_titulo} onChange={handleChange} />
             <Campo label="Subtítulo" name="landing_stats_subtitulo" value={formData.landing_stats_subtitulo} onChange={handleChange} />
           </div>
-          <p className="text-xs text-gray-400 bg-blue-50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100 dark:border-blue-800">
+          <p className="text-xs text-[#3D6B3F]/70 bg-[#3D6B3F]/5 rounded-lg p-3 border border-[#3D6B3F]/10">
             ℹ️ Los números (productores, productos, ingresos) se calculan automáticamente desde la base de datos.
           </p>
         </Seccion>
 
         {/* ── Productos destacados – Imágenes fallback ── */}
         <Seccion titulo="🍶 Productos Destacados — Imágenes de fallback" defaultOpen={false}>
-          <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/10 rounded-lg p-3 border border-amber-100 dark:border-amber-800">
+          <p className="text-xs text-[#C97A3E] bg-[#C97A3E]/8 rounded-lg p-3 border border-[#C97A3E]/20">
             💡 Estas imágenes se muestran cuando un producto no tiene foto propia. Normalmente se usan las imágenes de los productos más vendidos cargadas desde la tienda.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -326,7 +326,7 @@ export default function LandingConfigSection() {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-6 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white rounded-lg font-medium text-sm transition-colors"
+          className="flex items-center gap-2 px-6 py-2.5 bg-[#3D6B3F] text-white text-sm font-medium rounded-xl hover:bg-[#1F3A2E] disabled:opacity-50 transition-all duration-200"
         >
           <Save size={16} />
           {saving ? "Guardando..." : "Guardar página de inicio"}

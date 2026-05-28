@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
 interface PedidoProductor {
   id_pedido: number;
@@ -18,11 +17,32 @@ interface PedidoProductor {
   detalles: any[];
 }
 
+const ESTADOS = ["todos", "pendiente", "confirmado", "preparando", "enviado", "entregado"];
+const PAGE_SIZE = 10;
+
+function estadoBadgeCls(estado: string) {
+  switch (estado) {
+    case "entregado": return "bg-[#A8C26B]/20 text-[#3D6B3F]";
+    case "enviado": return "bg-blue-100 text-blue-800";
+    case "preparando": return "bg-amber-100 text-amber-800";
+    case "confirmado": return "bg-[#C5CFB0]/40 text-[#1F3A2E]";
+    default: return "bg-[#C97A3E]/15 text-[#C97A3E]";
+  }
+}
+
+function getPageNumbers(current: number, total: number): (number | "...")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
+  if (current >= total - 3) return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  return [1, "...", current - 1, current, current + 1, "...", total];
+}
+
 export default function PedidosProductor() {
   const { user, isProductor } = useAuth();
   const [pedidos, setPedidos] = useState<PedidoProductor[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (!isProductor || !user?.id_productor) {
@@ -45,108 +65,148 @@ export default function PedidosProductor() {
     fetchPedidos();
   }, [user, isProductor]);
 
-  const pedidosFiltrados = pedidos.filter((p) =>
-    filtroEstado === "todos" ? true : p.estado_productor === filtroEstado
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filtroEstado]);
+
+  const pedidosFiltrados = useMemo(
+    () => pedidos.filter((p) => filtroEstado === "todos" || p.estado_productor === filtroEstado),
+    [pedidos, filtroEstado],
   );
 
+  const totalPages = Math.max(1, Math.ceil(pedidosFiltrados.length / PAGE_SIZE));
+
+  const pedidosPaginados = useMemo(
+    () => pedidosFiltrados.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [pedidosFiltrados, currentPage],
+  );
+
+  const from = pedidosFiltrados.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const to = Math.min(currentPage * PAGE_SIZE, pedidosFiltrados.length);
+
   if (!isProductor) {
-    return <div className="p-4">No tienes acceso a esta página.</div>;
+    return <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">No tienes acceso a esta página.</div>;
   }
 
-  return (
-    <div>
-      <Breadcrumb pageName="Mis Pedidos" />
-      <div className="max-w-screen-2xl mx-auto p-4">
-        <div className="mb-6 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Mis Pedidos</h1>
-          <div className="flex gap-2">
-            {["todos", "pendiente", "confirmado", "preparando", "enviado", "entregado"].map((estado) => (
-              <button
-                key={estado}
-                onClick={() => setFiltroEstado(estado)}
-                className={`px-3 py-2 rounded text-sm font-medium ${
-                  filtroEstado === estado
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                {estado.charAt(0).toUpperCase() + estado.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
+  const btnPageBase = "rounded-lg border border-[#C5CFB0] px-3 py-1.5 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/20 disabled:cursor-not-allowed disabled:opacity-40";
 
-        {loading ? (
-          <div className="text-center py-8">Cargando pedidos...</div>
-        ) : pedidosFiltrados.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            {filtroEstado === "todos"
-              ? "No tienes pedidos aún"
-              : `No hay pedidos en estado "${filtroEstado}"`}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Pedido ID</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Cliente</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Productos</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Total</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Estado</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Fecha</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pedidosFiltrados.map((pedido) => (
-                  <tr key={pedido.id_pedido} className="hover:bg-gray-50">
-                    <td className="border border-gray-300 px-4 py-2">#{pedido.id_pedido}</td>
-                    <td className="border border-gray-300 px-4 py-2">
-                      <div className="text-sm">
-                        <div className="font-medium">{pedido.cliente.nombre}</div>
-                        <div className="text-gray-600">{pedido.cliente.email}</div>
-                      </div>
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2 text-sm">
-                      {pedido.detalles.length} producto{pedido.detalles.length !== 1 ? "s" : ""}
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2 font-medium">
-                      {pedido.total_parcial.toFixed(2)} {pedido.moneda}
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2">
-                      <span
-                        className={`px-2 py-1 rounded text-sm font-medium ${
-                          pedido.estado_productor === "entregado"
-                            ? "bg-green-100 text-green-800"
-                            : pedido.estado_productor === "enviado"
-                            ? "bg-blue-100 text-blue-800"
-                            : pedido.estado_productor === "preparando"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {pedido.estado_productor}
-                      </span>
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2 text-sm">
-                      {new Date(pedido.fecha_creacion).toLocaleDateString("es-MX")}
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2">
-                      <Link
-                        href={`/dashboard/productor/pedidos/${pedido.id_pedido}`}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        Ver detalle
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Mis Pedidos</h1>
+        <p className="text-sm text-[#3D6B3F]/70">Gestiona y consulta los pedidos de tus tiendas.</p>
       </div>
+
+      {/* Filtros de estado */}
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        {ESTADOS.map((estado) => (
+          <button
+            key={estado}
+            onClick={() => setFiltroEstado(estado)}
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+              filtroEstado === estado
+                ? "bg-[#3D6B3F] text-white"
+                : "border border-[#C5CFB0] text-[#1F3A2E] hover:bg-[#C5CFB0]/20"
+            }`}
+          >
+            {estado.charAt(0).toUpperCase() + estado.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex min-h-[200px] items-center justify-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#C5CFB0] border-t-[#3D6B3F]" />
+        </div>
+      ) : pedidosFiltrados.length === 0 ? (
+        <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] px-5 py-10 text-center text-[#3D6B3F]/60">
+          {filtroEstado === "todos" ? "No tienes pedidos aún" : `No hay pedidos en estado "${filtroEstado}"`}
+        </div>
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[700px] text-left">
+                <thead className="bg-[#1F3A2E]">
+                  <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white">
+                    <th className="px-5 py-4">Pedido ID</th>
+                    <th className="px-5 py-4">Cliente</th>
+                    <th className="px-5 py-4">Productos</th>
+                    <th className="px-5 py-4">Total</th>
+                    <th className="px-5 py-4">Estado</th>
+                    <th className="px-5 py-4">Fecha</th>
+                    <th className="px-5 py-4 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pedidosPaginados.map((pedido) => (
+                    <tr key={pedido.id_pedido}
+                      className="border-t border-[#C5CFB0]/30 bg-white text-sm transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20">
+                      <td className="px-5 py-4 font-medium text-[#1F3A2E]">#{pedido.id_pedido}</td>
+                      <td className="px-5 py-4">
+                        <div className="font-medium text-[#1F3A2E]">{pedido.cliente.nombre}</div>
+                        <div className="text-xs text-[#3D6B3F]/60">{pedido.cliente.email}</div>
+                      </td>
+                      <td className="px-5 py-4 text-[#3D6B3F]/70">
+                        {pedido.detalles.length} producto{pedido.detalles.length !== 1 ? "s" : ""}
+                      </td>
+                      <td className="px-5 py-4 font-medium text-[#1F3A2E]">
+                        {pedido.total_parcial.toFixed(2)} {pedido.moneda}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${estadoBadgeCls(pedido.estado_productor)}`}>
+                          {pedido.estado_productor}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-[#3D6B3F]/60">
+                        {new Date(pedido.fecha_creacion).toLocaleDateString("es-MX")}
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <Link
+                          href={`/dashboard/productor/pedidos/${pedido.id_pedido}`}
+                          className="rounded-xl border border-[#C5CFB0] px-3 py-1.5 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/20"
+                        >
+                          Ver detalle
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Paginación */}
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] px-5 py-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)] sm:flex-row sm:justify-between">
+            <p className="text-sm text-[#3D6B3F]/70">
+              {from}–{to} de {pedidosFiltrados.length} pedido{pedidosFiltrados.length !== 1 ? "s" : ""}
+            </p>
+            <div className="flex items-center gap-1">
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)} className={btnPageBase}>‹</button>
+              {getPageNumbers(currentPage, totalPages).map((p, i) =>
+                p === "..." ? (
+                  <span key={`el-${i}`} className="px-2 text-sm text-[#3D6B3F]/50">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setCurrentPage(p as number)}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                      p === currentPage
+                        ? "bg-[#3D6B3F] text-white"
+                        : "border border-[#C5CFB0] text-[#1F3A2E] hover:bg-[#C5CFB0]/20"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)} className={btnPageBase}>›</button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

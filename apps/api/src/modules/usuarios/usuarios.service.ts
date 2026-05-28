@@ -44,6 +44,14 @@ export class UsuariosService {
     };
 
     const user = await this.prisma.usuarios.create({ data });
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'crear_usuario',
+        tabla_afectada: 'usuarios',
+        registro_id: user.id_usuario,
+        valor_nuevo: { email: user.email, nombre: user.nombre } as any,
+      },
+    });
     return serializeBigInts(user);
   }
 
@@ -72,6 +80,17 @@ export class UsuariosService {
       }),
     });
 
+    await this.prisma.auditoria.create({
+      data: {
+        id_usuario,
+        accion: 'actualizar_usuario',
+        tabla_afectada: 'usuarios',
+        registro_id: id_usuario,
+        valor_anterior: { nombre: current.nombre, email: current.email, telefono: current.telefono } as any,
+        valor_nuevo: { nombre: dto.nombre, email: dto.email, telefono: dto.telefono } as any,
+      },
+    });
+
     return serializeBigInts(user);
   }
 
@@ -92,13 +111,21 @@ export class UsuariosService {
       data: { revocado_en: new Date() },
     });
 
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'eliminar_usuario',
+        tabla_afectada: 'usuarios',
+        registro_id: id_usuario,
+        valor_anterior: { nombre: current.nombre, email: current.email } as any,
+      },
+    });
+
     return serializeBigInts(updated);
   }
 
   async addRole(id_usuario: string, id_rol: number) {
     await this.ensureUserExists(id_usuario);
 
-    // Verificar si el rol que se está asignando es "productor"
     const rol = await this.prisma.roles.findUnique({ where: { id_rol } });
     if (rol?.nombre === 'productor') {
       const pedidosComoCliente = await this.prisma.pedidos.count({
@@ -116,25 +143,43 @@ export class UsuariosService {
       create: { id_usuario, id_rol },
       update: { estado: 'activo' },
     });
+
+    await this.prisma.auditoria.create({
+      data: {
+        id_usuario,
+        accion: 'asignar_rol',
+        tabla_afectada: 'usuario_rol',
+        registro_id: id_usuario,
+        valor_nuevo: { id_rol, nombre_rol: rol?.nombre } as any,
+      },
+    });
+
     return serializeBigInts(relation);
   }
 
   async removeRole(id_usuario: string, id_rol: number) {
-    // Verificar si el rol que se remueve es "productor"
     const rol = await this.prisma.roles.findUnique({ where: { id_rol } });
 
     await this.prisma.usuario_rol.delete({
       where: { id_usuario_id_rol: { id_usuario, id_rol } },
     });
 
-    // Si era productor, marcar su registro como inactivo
-    // Esto hace que el frontend limpie id_productor y oculte el panel
     if (rol?.nombre === 'productor') {
       await this.prisma.productores.updateMany({
         where: { id_usuario, eliminado_en: null },
         data: { estado: 'inactivo' },
       });
     }
+
+    await this.prisma.auditoria.create({
+      data: {
+        id_usuario,
+        accion: 'quitar_rol',
+        tabla_afectada: 'usuario_rol',
+        registro_id: id_usuario,
+        valor_anterior: { id_rol, nombre_rol: rol?.nombre } as any,
+      },
+    });
 
     return { message: 'Rol removido del usuario' };
   }

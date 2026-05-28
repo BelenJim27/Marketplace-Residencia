@@ -1,329 +1,251 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
-import { Users, MapPin, ShoppingCart, Heart, ArrowLeft } from "lucide-react";
-import { api } from "@/lib/api";
-import type { ProductItem } from "@/types/producer";
-import { useCarrito } from "@/context/CarritoContext";
-import { useWishlist } from "@/context/WishlistContext";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { formatPrice } from "@/lib/format-number";
+import { api } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
+import { AdminCharts } from "@/components/Administrator/dashboard/AdminCharts";
 
-interface Producto extends ProductItem {
-  producto_imagenes?: { url: string }[];
-  categorias?: string[];
-  nombre_productor?: string;
-  lotes?: { datos_api?: Record<string, string> };
-}
+type Stats = {
+  totalUsuarios: number;
+  totalProductores: number;
+  totalPedidos: number;
+  totalIngresos: number;
+  pedidosPendientes: number;
+  productoresActivos: number;
+};
 
-interface Productor {
-  id_productor: number;
-  usuarios?: { nombre: string; apellido_paterno?: string; apellido_materno?: string };
-  biografia?: string;
-  regiones?: { nombre: string };
-  lotes?: any[];
-  tiendas?: Array<{ id_tienda: number; nombre: string; descripcion?: string; ciudad_origen?: string; estado_origen?: string }>;
-}
+export function AdminDashboard() {
+  const { loading: authLoading } = useAuth();
+  const token = getCookie("token");
 
-export default function ProductorPage() {
-  const params = useParams();
-  const router = useRouter();
-  const { agregarProducto } = useCarrito();
-  const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
-  const { isAuthenticated } = useAuth();
-
-  const [productor, setProductor] = useState<Productor | null>(null);
-  const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [agregadoId, setAgregadoId] = useState<number | null>(null);
-
-  const fetchData = useCallback(async () => {
-    const id = params.id;
-    if (!id) return;
-
-    setLoading(true);
-    setError(null);
-    try {
-      const productorData = await api.productores.getOne<Productor>(Number(id));
-      const productosData = await api.productos.getByProductor(Number(id));
-
-      if (!productorData) {
-        setError("Productor no encontrado");
-        return;
-      }
-
-      setProductor(productorData);
-      const filtrados = (productosData as Producto[]).filter(
-        (p) => p.categorias && p.categorias.length > 0
-      );
-      setProductos(filtrados);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar datos");
-    } finally {
-      setLoading(false);
-    }
-  }, [params.id]);
+  const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (authLoading) return;
+    let cancelled = false;
 
-  const toggleWishlist = (producto: Producto) => {
-    if (!isAuthenticated) {
-      router.push("/auth/sign-in?redirect=/cliente/producto");
-      return;
-    }
-    if (isInWishlist(producto.id_producto)) {
-      eliminarWishlist(producto.id_producto);
-    } else {
-      agregarWishlist({
-        id_producto: producto.id_producto,
-        nombre: producto.nombre,
-        precio_base: producto.precio_base == null ? "0" : String(producto.precio_base),
-        imagen_principal_url: producto.imagen_principal_url ?? undefined,
-        producto_imagenes: producto.producto_imagenes,
-      });
-    }
-  };
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const statsRes = await api.admin.getStats(token ?? undefined);
+        if (!cancelled) setStats(statsRes as Stats);
+      } catch (err) {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Error al cargar el dashboard");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, token]);
+
+  const productoresInactivos = useMemo(() => {
+    if (!stats) return 0;
+    return Math.max(0, stats.totalProductores - stats.productoresActivos);
+  }, [stats]);
 
   if (loading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-green-600">Cargando productor...</div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-gray-200 border-t-gray-900 dark:border-gray-700 dark:border-t-white" />
+          <p className="text-sm text-gray-400 dark:text-gray-500">Cargando dashboard...</p>
+        </div>
       </div>
     );
   }
 
-  if (error || !productor) {
+  if (error) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
-        <div className="text-red-500">Error: {error || "Productor no encontrado"}</div>
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white"
-        >
-          <ArrowLeft size={18} />
-          Volver
-        </button>
+      <div className="m-6 flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 dark:border-red-900/30 dark:bg-red-950/20">
+        <span className="text-red-500">⚠</span>
+        <p className="text-sm font-medium text-red-600 dark:text-red-400">Error: {error}</p>
       </div>
     );
   }
-
-  const nombreCompleto = [
-    productor.usuarios?.nombre,
-    productor.usuarios?.apellido_paterno,
-    productor.usuarios?.apellido_materno,
-  ]
-    .filter(Boolean)
-    .join(" ");
 
   return (
-    <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8" style={{ backgroundColor: "#F4F0E3", minHeight: "100vh" }}>
-      <button
-        onClick={() => router.back()}
-        className="mb-6 flex items-center gap-2 hover:opacity-80 transition-opacity"
-        style={{ color: "#306B3F" }}
-      >
-        <ArrowLeft size={20} />
-        Volver
-      </button>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
 
-      {/* Hero Productor */}
-      <div className="mb-12 rounded-lg p-8" style={{ backgroundColor: "white", border: "1px solid #ddd8c4" }}>
-        <div className="grid gap-8 md:grid-cols-3">
-          {/* Avatar placeholder */}
-          <div className="flex items-center justify-center">
-            <div
-              className="h-40 w-40 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: "#e5eedc" }}
-            >
-              <Users size={60} style={{ color: "#306B3F" }} />
-            </div>
-          </div>
-
-          {/* Información */}
-          <div className="col-span-2 space-y-4">
-            <h1 className="text-4xl font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}>
-              {nombreCompleto}
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+              Dashboard
             </h1>
-
-            {productor.regiones && (
-              <p className="flex items-center gap-2 text-gray-600">
-                <MapPin size={18} style={{ color: "#306B3F" }} />
-                <span className="font-medium">{(productor.regiones as any)?.nombre}</span>
-              </p>
-            )}
-
-            {productor.biografia && (
-              <p className="text-gray-700 leading-relaxed">{productor.biografia}</p>
-            )}
-
-            {/* Badges stats */}
-            <div className="flex flex-wrap gap-4 pt-4">
-              <div className="flex flex-col items-center rounded-lg p-3" style={{ backgroundColor: "#e5eedc" }}>
-                <span className="text-2xl font-bold" style={{ color: "#306B3F" }}>
-                  {productor.lotes?.length || 0}
-                </span>
-                <span className="text-xs text-gray-600">Lotes</span>
-              </div>
-              <div className="flex flex-col items-center rounded-lg p-3" style={{ backgroundColor: "#e5eedc" }}>
-                <span className="text-2xl font-bold" style={{ color: "#306B3F" }}>
-                  {productor.tiendas?.length || 0}
-                </span>
-                <span className="text-xs text-gray-600">Tiendas</span>
-              </div>
-              <div className="flex flex-col items-center rounded-lg p-3" style={{ backgroundColor: "#e5eedc" }}>
-                <span className="text-2xl font-bold" style={{ color: "#306B3F" }}>
-                  {productos.length}
-                </span>
-                <span className="text-xs text-gray-600">Productos</span>
-              </div>
-            </div>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Resumen general del sistema
+            </p>
+          </div>
+          {/* Fecha actual */}
+          <div className="hidden sm:flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5" />
+            </svg>
+            {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}
           </div>
         </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="Total usuarios"
+            value={stats?.totalUsuarios ?? 0}
+            color="default"
+            icon={
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+            }
+          />
+          <StatCard
+            label="Total productores"
+            value={stats?.totalProductores ?? 0}
+            color="blue"
+            icon={
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+              </svg>
+            }
+          />
+          <StatCard
+            label="Productores activos"
+            value={stats?.productoresActivos ?? 0}
+            color="green"
+            icon={
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            }
+          />
+          <StatCard
+            label="Productores inactivos"
+            value={productoresInactivos}
+            color="orange"
+            icon={
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            }
+          />
+        </div>
+
+        {/* Divider + section header */}
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+              Análisis y estadísticas
+            </h2>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              Datos actualizados en tiempo real
+            </p>
+          </div>
+          <div className="h-px flex-1 bg-gray-100 dark:bg-gray-800" />
+        </div>
+
+        {/* Charts */}
+        <div className="rounded-2xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900 p-6">
+          <AdminCharts />
+        </div>
+
       </div>
+    </div>
+  );
+}
 
-      {/* Tiendas */}
-      {productor.tiendas && productor.tiendas.length > 0 && (
-        <div className="mb-12">
-          <h2 className="mb-6 text-2xl font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}>
-            Sus tiendas
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {productor.tiendas.map((tienda) => (
-              <div
-                key={tienda.id_tienda}
-                className="rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
-                style={{ backgroundColor: "white", border: "1px solid #ddd8c4" }}
-                onClick={() => router.push(`/cliente/tienda/${tienda.id_tienda}`)}
-              >
-                <h3 className="font-semibold mb-2" style={{ color: "#1F3A2E" }}>
-                  {tienda.nombre}
-                </h3>
-                {tienda.descripcion && <p className="text-sm text-gray-600 mb-2">{tienda.descripcion}</p>}
-                {(tienda.ciudad_origen || tienda.estado_origen) && (
-                  <p className="text-xs flex items-center gap-1 text-gray-500">
-                    <MapPin size={12} />
-                    {[tienda.ciudad_origen, tienda.estado_origen].filter(Boolean).join(", ")}
-                  </p>
-                )}
-              </div>
-            ))}
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type StatColor = "default" | "green" | "blue" | "orange" | "purple";
+
+const colorConfig: Record<
+  StatColor,
+  { value: string; icon: string; badge: string; dot: string }
+> = {
+  default: {
+    value: "text-gray-900 dark:text-white",
+    icon: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
+    badge: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
+    dot: "bg-gray-400",
+  },
+  green: {
+    value: "text-emerald-600 dark:text-emerald-400",
+    icon: "bg-emerald-50 text-emerald-500 dark:bg-emerald-900/30 dark:text-emerald-400",
+    badge: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
+    dot: "bg-emerald-400",
+  },
+  blue: {
+    value: "text-blue-600 dark:text-blue-400",
+    icon: "bg-blue-50 text-blue-500 dark:bg-blue-900/30 dark:text-blue-400",
+    badge: "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
+    dot: "bg-blue-400",
+  },
+  orange: {
+    value: "text-orange-500 dark:text-orange-400",
+    icon: "bg-orange-50 text-orange-400 dark:bg-orange-900/30 dark:text-orange-400",
+    badge: "bg-orange-50 text-orange-500 dark:bg-orange-900/30 dark:text-orange-400",
+    dot: "bg-orange-400",
+  },
+  purple: {
+    value: "text-purple-600 dark:text-purple-400",
+    icon: "bg-purple-50 text-purple-500 dark:bg-purple-900/30 dark:text-purple-400",
+    badge: "bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400",
+    dot: "bg-purple-400",
+  },
+};
+
+// ─── StatCard ─────────────────────────────────────────────────────────────────
+
+function StatCard({
+  label,
+  value,
+  color = "default",
+  icon,
+}: {
+  label: string;
+  value: number | string;
+  color?: StatColor;
+  icon?: React.ReactNode;
+}) {
+  const c = colorConfig[color];
+
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 dark:border-gray-800 dark:bg-gray-900">
+      {/* Top row: icon + dot indicator */}
+      <div className="flex items-center justify-between mb-4">
+        {icon ? (
+          <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${c.icon}`}>
+            {icon}
           </div>
-        </div>
-      )}
-
-      {/* Productos */}
-      <div>
-        <h2 className="mb-6 text-2xl font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}>
-          Sus productos
-        </h2>
-
-        {productos.length === 0 ? (
-          <p className="text-gray-500">No hay productos disponibles.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-            {productos.map((producto) => {
-              const imagenUrl = producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
-              const tipoMezcal = producto.lotes?.datos_api?.tipo_mezcal ?? "";
-
-              return (
-                <div
-                  key={String(producto.id_producto)}
-                  className="group rounded-xl overflow-hidden border hover:shadow-md transition-shadow cursor-pointer"
-                  style={{ borderColor: "#ddd8c4", backgroundColor: "#F4F0E3" }}
-                >
-                  {/* Image */}
-                  <div
-                    className="relative overflow-hidden bg-gray-50"
-                    style={{ aspectRatio: "1 / 1" }}
-                    onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
-                  >
-                    {imagenUrl ? (
-                      <Image
-                        src={imagenUrl}
-                        alt={producto.nombre}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-gray-400 text-sm">Sin imagen</div>
-                    )}
-
-                    {tipoMezcal && (
-                      <span
-                        className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-semibold"
-                        style={{ backgroundColor: "#e5eedc", color: "#306B3F", border: "1px solid #ddd8c4" }}
-                      >
-                        {tipoMezcal}
-                      </span>
-                    )}
-
-                    <button
-                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110"
-                      style={{
-                        backgroundColor: isInWishlist(producto.id_producto) ? "#edf5e5" : "rgba(244,240,227,0.9)",
-                        color: isInWishlist(producto.id_producto) ? "#306B3F" : "#A8C26B",
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleWishlist(producto);
-                      }}
-                    >
-                      <Heart className="h-3.5 w-3.5" fill={isInWishlist(producto.id_producto) ? "currentColor" : "none"} />
-                    </button>
-                  </div>
-
-                  {/* Text Zone */}
-                  <div className="p-4">
-                    <h3
-                      className="font-semibold text-sm line-clamp-2 mb-2 leading-snug cursor-pointer hover:opacity-80"
-                      style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
-                      onClick={() => router.push(`/cliente/producto/${producto.id_producto}`)}
-                    >
-                      {producto.nombre}
-                    </h3>
-                    <div className="flex items-center justify-between mt-2">
-                      <span
-                        className="font-bold text-base"
-                        style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#306B3F" }}
-                      >
-                        ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })} MXN
-                      </span>
-                    </div>
-                    <button
-                      className="w-full mt-3 flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-medium text-white transition-all hover:opacity-90 active:scale-95"
-                      style={{
-                        backgroundColor: agregadoId === producto.id_producto ? "#163020" : "#1F3A2E",
-                      }}
-                      disabled={agregadoId === producto.id_producto}
-                      onClick={() => {
-                        agregarProducto({
-                          id_producto: producto.id_producto,
-                          nombre: producto.nombre,
-                          precio_base: producto.precio_base == null ? "0" : String(producto.precio_base),
-                          imagen_principal_url: producto.imagen_principal_url ?? undefined,
-                          producto_imagenes: producto.producto_imagenes,
-                          cantidad: 1,
-                        });
-                        setAgregadoId(producto.id_producto);
-                        setTimeout(() => setAgregadoId(null), 1500);
-                      }}
-                    >
-                      <ShoppingCart className="h-3.5 w-3.5" />
-                      {agregadoId === producto.id_producto ? "¡Agregado!" : "Agregar al carrito"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <div className={`h-2 w-2 rounded-full ${c.dot}`} />
         )}
+        <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${c.badge}`}>
+          <span className={`inline-block h-1.5 w-1.5 rounded-full ${c.dot}`} />
+          Activo
+        </span>
       </div>
+
+      {/* Value */}
+      <p className={`text-3xl font-bold tabular-nums tracking-tight ${c.value}`}>
+        {typeof value === "number" ? value.toLocaleString("es-MX") : value}
+      </p>
+
+      {/* Label */}
+      <p className="mt-1 text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+        {label}
+      </p>
+
+      {/* Subtle bottom accent line */}
+      <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${c.dot} opacity-0 transition-opacity duration-200 group-hover:opacity-100`} />
     </div>
   );
 }

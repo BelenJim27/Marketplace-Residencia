@@ -103,9 +103,9 @@ export function ProductoresTabla() {
   }, [idFilter, productores, query, regionFilter, statusFilter, asociacionFilter, marcaFilter]);
 
   const stats = [
-    { label: "Total Productores", value: productores.length, color: "text-slate-800 dark:text-white" },
-    { label: "Activos", value: productores.filter((p) => p.status === "ACTIVO").length, color: "text-green-600" },
-    { label: "Inactivos", value: productores.filter((p) => p.status === "PAUSADO").length, color: "text-amber-500" },
+    { label: "Total Productores", value: productores.length, color: "text-[#1F3A2E]" },
+    { label: "Activos", value: productores.filter((p) => p.status === "ACTIVO").length, color: "text-[#3D6B3F]" },
+    { label: "Inactivos", value: productores.filter((p) => p.status === "PAUSADO").length, color: "text-[#C97A3E]" },
   ];
 
   function clearFilters() {
@@ -140,14 +140,14 @@ export function ProductoresTabla() {
   }
   function closeModal() { setActiveMode(null); setSelectedProductor(null); }
 
-  const inputCls = "w-full rounded-xl border border-gray-100 dark:border-dark-3 bg-gray-50 dark:bg-dark-3 py-3 pl-12 pr-4 text-sm text-slate-700 dark:text-white placeholder-gray-400 dark:placeholder-dark-6 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20";
-  const selectCls = "rounded-xl border border-gray-100 dark:border-dark-3 bg-gray-50 dark:bg-dark-3 px-4 py-3 text-sm text-slate-700 dark:text-white outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20";
+  const inputCls = "w-full rounded-xl border border-[#C5CFB0] bg-white py-3 pl-12 pr-4 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/50 outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20";
+  const selectCls = "rounded-xl border border-[#C5CFB0] bg-white px-4 py-3 text-sm text-[#1F3A2E] outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20";
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Gestión de Productores</h1>
-        <p className="mt-0.5 text-sm text-gray-500 dark:text-dark-6">Administra productores y el estado operativo.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Gestión de Productores</h1>
+        <p className="mt-0.5 text-sm text-[#3D6B3F]/70">Administra productores y el estado operativo.</p>
       </div>
 
       {notice && (
@@ -158,15 +158,15 @@ export function ProductoresTabla() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {stats.map((item) => (
-          <div key={item.label} className="rounded-2xl border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2 p-5 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-dark-6">{item.label}</p>
-            <h2 className={`mt-1 text-2xl font-black ${item.color}`}>{item.value}</h2>
+          <div key={item.label} className="bg-[#F4F0E3] rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 flex flex-col gap-1">
+            <p className="text-sm font-semibold text-[#3D6B3F]/70 uppercase tracking-wider">{item.label}</p>
+            <h2 className={`mt-1 text-2xl font-bold [font-family:'DM_Sans',sans-serif] ${item.color}`}>{item.value}</h2>
           </div>
         ))}
       </div>
 
       {/* Filters — cascading: Asociación → Marca → Productor */}
-      <div className="rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-dark-2 p-6 shadow-sm space-y-3">
+      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)] space-y-3">
         {/* Row 1: cascading hierarchy */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <select
@@ -197,7 +197,7 @@ export function ProductoresTabla() {
         {/* Row 2: text search + region + ID + clear */}
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-dark-6" />
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#3D6B3F]/50" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nombre..." className={inputCls} />
           </div>
           <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)} className={selectCls}>
@@ -205,53 +205,53 @@ export function ProductoresTabla() {
             {regionOptions.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
           <input value={idFilter} onChange={(e) => setIdFilter(e.target.value)} placeholder="Buscar por ID..."
-            className="rounded-xl border border-gray-100 dark:border-dark-3 bg-gray-50 dark:bg-dark-3 px-4 py-3 text-sm text-slate-700 dark:text-white placeholder-gray-400 dark:placeholder-dark-6 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+            className="rounded-xl border border-[#C5CFB0] bg-white px-4 py-3 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/50 outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20"
           />
           <button type="button" onClick={clearFilters}
-            className="rounded-xl border border-gray-200 dark:border-dark-3 px-4 py-3 text-sm font-semibold text-gray-600 dark:text-dark-6 transition-colors hover:bg-gray-50 dark:hover:bg-dark-3"
+            className="rounded-xl border border-[#C5CFB0] px-4 py-3 text-sm font-semibold text-[#1F3A2E] transition-all duration-200 hover:bg-[#C5CFB0]/30"
           >
             Limpiar filtros
           </button>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-dark-2 shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1000px] text-left">
-            <thead className="bg-gray-50 dark:bg-dark-3 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-dark-6">
+            <thead className="bg-[#1F3A2E] text-xs font-semibold text-white uppercase tracking-wider">
               <tr>
-                <th className="p-4">ID</th>
-                <th className="p-4">Nombre</th>
-                <th className="p-4">Región</th>
-                <th className="p-4">Asociación</th>
-                <th className="p-4 text-center">Marca</th>
-                <th className="p-4 text-center">Status</th>
-                <th className="p-4 text-center">Acciones</th>
+                <th className="px-4 py-3 text-left">ID</th>
+                <th className="px-4 py-3 text-left">Nombre</th>
+                <th className="px-4 py-3 text-left">Región</th>
+                <th className="px-4 py-3 text-left">Asociación</th>
+                <th className="px-4 py-3 text-center">Marca</th>
+                <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3 text-center">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-dark-3">
+            <tbody className="divide-y divide-[#C5CFB0]/30">
               {loading ? (
-                <tr><td colSpan={7} className="p-10 text-center text-sm text-gray-500 dark:text-dark-6">Cargando productores...</td></tr>
+                <tr><td colSpan={7} className="p-10 text-center text-sm text-[#3D6B3F]/70 bg-white">Cargando productores...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="p-10 text-center text-sm text-gray-500 dark:text-dark-6">No hay productores para mostrar.</td></tr>
+                <tr><td colSpan={7} className="p-10 text-center text-sm text-[#3D6B3F]/70 bg-white">No hay productores para mostrar.</td></tr>
               ) : (
                 filtered.map((p) => (
-                  <tr key={p.id} className="group transition-colors hover:bg-gray-50/60 dark:hover:bg-dark-3/60">
-                    <td className="p-4 font-mono text-xs text-gray-400 dark:text-dark-6">#PR-{String(p.id).padStart(4, "0")}</td>
-                    <td className="p-4 font-semibold text-slate-800 dark:text-white">{`${p.nombre} ${p.apellido_paterno} ${p.apellido_materno}`.trim()}</td>
-                    <td className="p-4 text-sm text-slate-600 dark:text-dark-6">{p.region}</td>
-                    <td className="p-4 text-sm text-slate-600 dark:text-dark-6">
+                  <tr key={p.id} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200 group">
+                    <td className="px-4 py-3 font-mono text-xs text-[#3D6B3F]/70">#PR-{String(p.id).padStart(4, "0")}</td>
+                    <td className="px-4 py-3 font-semibold text-[#1F3A2E]">{`${p.nombre} ${p.apellido_paterno} ${p.apellido_materno}`.trim()}</td>
+                    <td className="px-4 py-3 text-sm text-[#1F3A2E]">{p.region}</td>
+                    <td className="px-4 py-3 text-sm text-[#1F3A2E]">
                       {p.asociacion ? (
-                        <span className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">{p.asociacion}</span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#3D6B3F]/10 text-[#3D6B3F]">{p.asociacion}</span>
                       ) : "—"}
                     </td>
-                    <td className="p-4 text-sm text-slate-600 dark:text-dark-6 text-center">{p.marca ?? "—"}</td>
-                    <td className="p-4 text-center"><StatusBadge status={p.status} /></td>
-                    <td className="p-4">
+                    <td className="px-4 py-3 text-sm text-[#1F3A2E] text-center">{p.marca ?? "—"}</td>
+                    <td className="px-4 py-3 text-center"><StatusBadge status={p.status} /></td>
+                    <td className="px-4 py-3">
                       <div className="flex justify-center gap-2 transition-opacity">
                         <Link
-                          href={`/dashboard/admin/productores/${p.id}/productos`}
-                          className="inline-flex items-center rounded-lg border border-gray-200 dark:border-dark-3 px-2.5 py-2 text-xs font-medium text-slate-600 dark:text-dark-6 transition-colors hover:bg-gray-50 dark:hover:bg-dark-3 hover:text-slate-900 dark:hover:text-white"
+                          href={`/Administrador/tienda/productores/${p.id}/productos`}
+                          className="inline-flex items-center whitespace-nowrap rounded-lg border border-[#C5CFB0] px-2 py-1 text-xs font-medium text-[#1F3A2E] transition-all duration-200 hover:bg-[#A8C26B]/15 hover:text-[#1F3A2E]"
                         >
                           Ver productos
                         </Link>
@@ -281,19 +281,19 @@ export function ProductoresTabla() {
 
       {deleting && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-2 p-6 sm:p-8 text-center shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] p-6 sm:p-8 text-center shadow-[0_24px_48px_rgba(31,58,46,0.25)] border border-[#C5CFB0]">
             <div className="mx-auto mb-3 sm:mb-4 flex h-14 sm:h-16 w-14 sm:w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
               <Trash2 className="h-7 sm:h-8 w-7 sm:w-8" />
             </div>
-            <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">¿Eliminar productor?</h3>
-            <p className="mt-2 text-xs sm:text-sm text-gray-500 dark:text-dark-6">
-              Vas a eliminar a <span className="font-semibold text-gray-700 dark:text-white">{`${deleting.nombre} ${deleting.apellido_paterno}`.trim()}</span>. Esta acción lo ocultará del panel.
+            <h3 className="text-lg sm:text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">¿Eliminar productor?</h3>
+            <p className="mt-2 text-xs sm:text-sm text-[#3D6B3F]/70">
+              Vas a eliminar a <span className="font-semibold text-[#1F3A2E]">{`${deleting.nombre} ${deleting.apellido_paterno}`.trim()}</span>. Esta acción lo ocultará del panel.
             </p>
             <div className="mt-5 sm:mt-6 flex flex-col-reverse gap-2 sm:gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={() => setDeleting(null)}
-                className="flex-1 rounded-lg sm:rounded-xl border border-gray-200 dark:border-dark-3 px-3 py-2 sm:px-4 sm:py-3 text-sm font-semibold text-gray-600 dark:text-dark-6 transition-colors hover:bg-gray-50 dark:hover:bg-dark-3"
+                className="flex-1 rounded-lg sm:rounded-xl border border-[#C5CFB0] px-3 py-2 sm:px-4 sm:py-3 text-sm font-semibold text-[#1F3A2E] transition-all duration-200 hover:bg-[#C5CFB0]/30"
               >
                 Cancelar
               </button>
@@ -301,7 +301,7 @@ export function ProductoresTabla() {
                 type="button"
                 disabled={deleteLoading}
                 onClick={handleDelete}
-                className="flex-1 rounded-lg sm:rounded-xl bg-red-600 px-3 py-2 sm:px-4 sm:py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex-1 rounded-lg sm:rounded-xl bg-red-600 px-3 py-2 sm:px-4 sm:py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {deleteLoading ? "Eliminando..." : "Sí, eliminar"}
               </button>
@@ -316,10 +316,10 @@ export function ProductoresTabla() {
 function StatusBadge({ status }: { status: ProductorAdmin["status"] }) {
   const cls =
     status === "ACTIVO"
-      ? "bg-green-50 text-green-700 border-green-100"
+      ? "bg-[#A8C26B]/20 text-[#3D6B3F] border-[#A8C26B]/40"
       : status === "PAUSADO"
-        ? "bg-amber-50 text-amber-700 border-amber-100"
-        : "bg-gray-100 dark:bg-dark-3 text-gray-600 dark:text-dark-6 border-gray-200 dark:border-dark-4";
+        ? "bg-[#C97A3E]/15 text-[#C97A3E] border-[#C97A3E]/30"
+        : "bg-[#C5CFB0]/30 text-[#3D6B3F]/70 border-[#C5CFB0]";
   return (
     <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${cls}`}>{status}</span>
   );
@@ -331,7 +331,7 @@ function ActionButton({ children, label, danger = false, onClick }: { children: 
       type="button"
       title={label}
       onClick={onClick}
-      className={`rounded-lg p-2 transition-colors ${danger ? "text-slate-500 hover:bg-red-50 hover:text-red-600" : "text-slate-500 hover:bg-green-50 hover:text-green-700"}`}
+      className={`rounded-lg p-2 transition-all duration-200 ${danger ? "text-[#3D6B3F]/50 hover:bg-red-50 hover:text-red-600" : "text-[#3D6B3F]/50 hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F]"}`}
     >
       {children}
     </button>

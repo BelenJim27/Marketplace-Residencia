@@ -28,6 +28,7 @@ export type ProductItem = {
   precio_base?: string | number | null;
   moneda_base?: string | null;
   stock: number;
+  stock_minimo?: number | null;
   status?: string | null;
   peso_kg?: number | null;
   alto_cm?: number | null;

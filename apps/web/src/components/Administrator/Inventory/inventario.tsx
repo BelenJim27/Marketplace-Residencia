@@ -54,7 +54,7 @@ export default function InventarioUI() {  // ← export default
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#C5CFB0] border-t-[#3D6B3F]" />
       </div>
     );
   }
@@ -67,8 +67,8 @@ export default function InventarioUI() {  // ← export default
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Dashboard Administrador</h1>
-        <p className="text-sm text-gray-400 dark:text-dark-6 mt-0.5">Resumen general del sistema</p>
+        <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Dashboard Administrador</h1>
+        <p className="text-sm text-[#3D6B3F]/70 mt-0.5">Resumen general del sistema</p>
       </div>
 
       {/* Stat cards */}
@@ -82,8 +82,8 @@ export default function InventarioUI() {  // ← export default
       {/* Gráficas */}
       <div>
         <div className="flex items-center gap-3 mb-5">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-white">Análisis y Estadísticas</h2>
-          <span className="h-px flex-1 bg-gray-100 dark:bg-dark-3" />
+          <h2 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Análisis y Estadísticas</h2>
+          <span className="h-px flex-1 bg-[#C5CFB0]" />
         </div>
         <AdminCharts />
       </div>
@@ -103,19 +103,19 @@ function StatCard({
   color?: StatColor;
 }) {
   const valueColors: Record<StatColor, string> = {
-    default: "text-gray-800 dark:text-white",
-    green:   "text-green-500",
-    blue:    "text-blue-500",
-    orange:  "text-orange-400",
-    purple:  "text-purple-500",
+    default: "text-[#1F3A2E]",
+    green:   "text-[#3D6B3F]",
+    blue:    "text-[#3D6B3F]",
+    orange:  "text-[#C97A3E]",
+    purple:  "text-[#1F3A2E]",
   };
 
   return (
-    <div className="bg-white dark:bg-dark-2 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-3 p-6 hover:shadow-md transition-shadow">
-      <p className="text-[11px] font-semibold tracking-widest text-gray-400 dark:text-dark-6 uppercase mb-3">
+    <div className="bg-[#F4F0E3] rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-6 hover:shadow-[0_8px_24px_rgba(61,107,63,0.15)] hover:-translate-y-0.5 transition-all duration-200">
+      <p className="text-sm font-semibold text-[#3D6B3F]/70 uppercase tracking-wider mb-2">
         {label}
       </p>
-      <p className={`text-4xl font-bold ${valueColors[color]}`}>{value}</p>
+      <p className={`text-2xl font-bold [font-family:'DM_Sans',sans-serif] ${valueColors[color]}`}>{value}</p>
     </div>
   );
 }

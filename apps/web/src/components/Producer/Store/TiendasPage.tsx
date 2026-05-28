@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
@@ -98,57 +96,50 @@ export function TiendasPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1200px]">
-      
-      <div className="mb-6 flex flex-col gap-4 rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark lg:flex-row lg:items-center lg:justify-between">
+    <div className="mx-auto w-full max-w-[1200px] space-y-6">
+
+      {/* Header */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)] lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-dark dark:text-white">Mis Tiendas</h1>
-          <p className="text-sm text-gray-500">Administra tus puntos de venta y catálogo asociado.</p>
+          <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Mis Tiendas</h1>
+          <p className="text-sm text-[#3D6B3F]/70">Administra tus puntos de venta y catálogo asociado.</p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {stores.length > 0 && (
-            <Link
-              href="/dashboard/productor/tienda/editar"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-stroke bg-transparent px-5 py-3 font-medium text-primary transition hover:bg-primary hover:text-white dark:border-dark-3"
-            >
-              <Pencil size={18} />
-              Editar Tienda
-            </Link>
-          )}
-          <button
-            type="button"
-            onClick={() => setActiveModal("create")}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 font-medium text-white transition hover:bg-opacity-90"
-          >
-            <Plus size={18} />
-            Nueva Tienda
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveModal("create")}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#3D6B3F] px-5 py-3 font-medium text-white transition hover:bg-[#1F3A2E]"
+        >
+          <Plus size={18} />
+          Nueva Tienda
+        </button>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* Stats */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {stats.map((item) => (
           <Card key={item.label} title={item.label} value={item.value} />
         ))}
       </div>
 
-      <div className="mb-4 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark">
+      {/* Search */}
+      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Buscar por nombre de tienda"
-          className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none transition focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+          className="w-full rounded-xl border border-[#C5CFB0] bg-transparent px-4 py-3 text-[#1F3A2E] outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20 placeholder:text-[#3D6B3F]/40"
         />
       </div>
 
-      {error ? <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</div> : null}
+      {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>}
 
-      <div className="overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark">
+      {/* Table */}
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[980px] text-left">
-            <thead className="bg-gray-2 dark:bg-dark-2">
-              <tr className="text-sm text-gray-500">
+            <thead className="bg-[#1F3A2E]">
+              <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white">
                 <th className="px-5 py-4">Nombre</th>
                 <th className="px-5 py-4">Descripción</th>
                 <th className="px-5 py-4">País</th>
@@ -162,25 +153,26 @@ export function TiendasPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-5 py-10 text-center text-[#3D6B3F]/60">
                     Cargando tiendas...
                   </td>
                 </tr>
               ) : (
                 filteredStores.map((store) => (
-                  <tr key={store.id_tienda} className="border-t border-stroke text-sm dark:border-dark-3">
-                    <td className="px-5 py-4 font-medium text-dark dark:text-white">{store.nombre}</td>
-                    <td className="px-5 py-4 text-gray-600 dark:text-gray-3">{truncate(store.descripcion || "", 60)}</td>
-                    <td className="px-5 py-4 text-gray-600 dark:text-gray-3">{store.pais_operacion || "-"}</td>
+                  <tr key={store.id_tienda}
+                    className="border-t border-[#C5CFB0]/30 bg-white text-sm transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20">
+                    <td className="px-5 py-4 font-medium text-[#1F3A2E]">{store.nombre}</td>
+                    <td className="px-5 py-4 text-[#3D6B3F]/70">{truncate(store.descripcion || "", 60)}</td>
+                    <td className="px-5 py-4 text-[#3D6B3F]/70">{store.pais_operacion || "-"}</td>
                     <td className="px-5 py-4">
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+                      <span className="rounded-full bg-[#C5CFB0]/30 px-2 py-1 text-xs font-medium text-[#1F3A2E]">
                         {store.stock}
                       </span>
                     </td>
                     <td className="px-5 py-4">
                       <Badge status={store.status} />
                     </td>
-                    <td className="px-5 py-4 text-gray-500">{formatDate(store.fecha_creacion)}</td>
+                    <td className="px-5 py-4 text-[#3D6B3F]/60">{formatDate(store.fecha_creacion)}</td>
                     <td className="px-5 py-4">
                       <div className="flex justify-end gap-2">
                         <ActionButton label="Ver" icon={<Eye size={16} />} onClick={() => openStore("view", store)} />
@@ -194,7 +186,7 @@ export function TiendasPage() {
 
               {!loading && filteredStores.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-5 py-10 text-center text-[#3D6B3F]/60">
                     No hay tiendas para mostrar
                   </td>
                 </tr>
@@ -204,20 +196,20 @@ export function TiendasPage() {
         </div>
       </div>
 
-        <ModalAgregar
-          isOpen={activeModal === "create"}
-          onClose={closeModal}
-          onSuccess={(created: Tienda) => setStores((current) => [{ ...created, stock: Number(created.stock ?? 0) }, ...current])}
-        />
+      <ModalAgregar
+        isOpen={activeModal === "create"}
+        onClose={closeModal}
+        onSuccess={(created: Tienda) => setStores((current) => [{ ...created, stock: Number(created.stock ?? 0) }, ...current])}
+      />
       <ModalVer isOpen={activeModal === "view"} onClose={closeModal} tienda={selectedStore} />
-        <ModalEditar
-          isOpen={activeModal === "edit"}
-          onClose={closeModal}
-          tienda={selectedStore}
-          onSuccess={(updated: Tienda) =>
-            setStores((current) => current.map((item) => (item.id_tienda === updated.id_tienda ? { ...updated, stock: Number(updated.stock ?? 0) } : item)))
-          }
-        />
+      <ModalEditar
+        isOpen={activeModal === "edit"}
+        onClose={closeModal}
+        tienda={selectedStore}
+        onSuccess={(updated: Tienda) =>
+          setStores((current) => current.map((item) => (item.id_tienda === updated.id_tienda ? { ...updated, stock: Number(updated.stock ?? 0) } : item)))
+        }
+      />
       <ModalEliminar
         isOpen={activeModal === "delete"}
         onClose={closeModal}
@@ -230,18 +222,19 @@ export function TiendasPage() {
 
 function Card({ title, value }: { title: string; value: number | string }) {
   return (
-    <div className="rounded-[10px] bg-white p-5 shadow-1 dark:bg-gray-dark">
-      <p className="text-sm text-gray-500">{title}</p>
-      <div className="mt-2 text-2xl font-bold text-dark dark:text-white">{value}</div>
+    <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <p className="text-sm text-[#3D6B3F]/70">{title}</p>
+      <div className="mt-2 text-2xl font-bold text-[#1F3A2E]">{value}</div>
     </div>
   );
 }
 
 function Badge({ status }: { status: string | null }) {
   const normalized = normalizeStatus(status);
-  const className = normalized === "activo" ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-700";
-
-  return <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${className}`}>{normalized}</span>;
+  const cls = normalized === "activo"
+    ? "bg-[#A8C26B]/20 text-[#3D6B3F]"
+    : "bg-[#C5CFB0]/30 text-[#1F3A2E]";
+  return <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${cls}`}>{normalized}</span>;
 }
 
 function ActionButton({ label, icon, danger = false, onClick }: { label: string; icon: ReactNode; danger?: boolean; onClick: () => void }) {
@@ -250,7 +243,11 @@ function ActionButton({ label, icon, danger = false, onClick }: { label: string;
       type="button"
       title={label}
       onClick={onClick}
-      className={`rounded-lg p-2 transition ${danger ? "text-gray-500 hover:bg-red-50 hover:text-red-600" : "text-gray-500 hover:bg-[rgba(124,58,237,0.08)] hover:text-primary"}`}
+      className={`rounded-lg p-2 transition ${
+        danger
+          ? "text-[#3D6B3F]/50 hover:bg-red-50 hover:text-red-600"
+          : "text-[#3D6B3F]/50 hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F]"
+      }`}
     >
       {icon}
     </button>

@@ -24,7 +24,6 @@ import {
   ShieldCheck,
   TrendingUp,
   Tag,
-  Edit,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -55,7 +54,6 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         url: "/Administrador/dashboard",
         icon: LayoutDashboard,
       },
-      { title: "Perfil", url: "/profile", icon: UserRound },
       { title: "Usuarios", url: "/Administrador/usuarios", icon: Users },
       {
         title: "Auditoría",
@@ -163,19 +161,8 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
       },
       {
         title: "Tienda",
+        url: "/dashboard/productor/tienda",
         icon: Store,
-        children: [
-          {
-            title: "Ver Tiendas",
-            url: "/dashboard/productor/tienda",
-            icon: Store,
-          },
-          {
-            title: "Editar Tienda",
-            url: "/dashboard/productor/tienda/editar",
-            icon: Edit,
-          },
-        ],
       },
       {
         title: "Archivos",
@@ -244,19 +231,8 @@ export function getNavData(isProductor: boolean, isAdmin: boolean = false, tiene
           },
           {
             title: "Tienda",
+            url: "/dashboard/productor/tienda",
             icon: Store,
-            children: [
-              {
-                title: "Ver Tiendas",
-                url: "/dashboard/productor/tienda",
-                icon: Store,
-              },
-              {
-                title: "Editar Tienda",
-                url: "/dashboard/productor/tienda/editar",
-                icon: Edit,
-              },
-            ],
           },
           {
             title: "Archivos",

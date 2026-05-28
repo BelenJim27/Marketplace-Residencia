@@ -373,6 +373,15 @@ export class ProductosService {
       );
     }
 
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'crear_producto',
+        tabla_afectada: 'productos',
+        registro_id: String(producto.id_producto),
+        valor_nuevo: { nombre: producto.nombre, precio_base: dto.precio_base, status: dto.status ?? 'activo' } as any,
+      },
+    });
+
     return serializeBigInts(producto);
   }
 
@@ -428,6 +437,16 @@ export class ProductosService {
       }
     }
 
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'actualizar_producto',
+        tabla_afectada: 'productos',
+        registro_id: id,
+        valor_anterior: { nombre: current.nombre, precio_base: current.precio_base?.toString(), status: current.status } as any,
+        valor_nuevo: { nombre: dto.nombre, precio_base: dto.precio_base, status: dto.status } as any,
+      },
+    });
+
     return serializeBigInts(producto);
   }
 
@@ -443,6 +462,15 @@ export class ProductosService {
     const producto = await this.prisma.productos.update({
       where: { id_producto: BigInt(id) },
       data: { eliminado_en: new Date() },
+    });
+
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'eliminar_producto',
+        tabla_afectada: 'productos',
+        registro_id: id,
+        valor_anterior: { nombre: current.nombre, status: current.status } as any,
+      },
     });
 
     return serializeBigInts(producto);

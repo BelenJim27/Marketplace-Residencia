@@ -149,19 +149,19 @@ export default function SolicitudesProductoresPage() {
     switch (status) {
       case "pendiente":
         return (
-          <span className="inline-flex rounded-full bg-yellow-1 px-3 py-1 text-sm font-medium text-yellow-7 dark:bg-yellow-9 dark:text-yellow-2">
+          <span className="inline-flex rounded-full bg-[#C97A3E]/15 text-[#C97A3E] border border-[#C97A3E]/30 px-3 py-1 text-sm font-medium">
             Pendiente
           </span>
         );
       case "aprobado":
         return (
-          <span className="inline-flex rounded-full bg-green-1 px-3 py-1 text-sm font-medium text-green-7 dark:bg-green-9 dark:text-green-2">
+          <span className="inline-flex rounded-full bg-[#A8C26B]/20 text-[#3D6B3F] border border-[#A8C26B]/40 px-3 py-1 text-sm font-medium">
             Aprobado
           </span>
         );
       case "rechazado":
         return (
-          <span className="inline-flex rounded-full bg-red-1 px-3 py-1 text-sm font-medium text-red-7 dark:bg-red-9 dark:text-red-2">
+          <span className="inline-flex rounded-full bg-red-100 text-red-700 px-3 py-1 text-sm font-medium">
             Rechazado
           </span>
         );
@@ -177,18 +177,18 @@ export default function SolicitudesProductoresPage() {
     <>
       <Breadcrumb pageName="Solicitudes de Productores" />
 
-      <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card p-7.5">
+      <div className="rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-7">
         <div className="mb-6">
-          <h2 className="text-title-md2 font-bold text-black dark:text-white mb-2">
+          <h2 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-2">
             Solicitudes de Productores
           </h2>
-          <p className="text-body text-bodydark">
+          <p className="text-sm text-[#3D6B3F]/70">
             Revisa y gestiona las solicitudes de usuarios que desean convertirse en productores
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 flex items-center gap-2 rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20">
+          <div className="mb-6 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-red-600">
             <AlertCircle className="h-5 w-5 shrink-0" />
             <span>{error}</span>
           </div>
@@ -196,31 +196,31 @@ export default function SolicitudesProductoresPage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#3D6B3F]" />
           </div>
         ) : (
           <>
             {/* ── Pendientes ── */}
             <div className="mb-8">
-              <h3 className="mb-4 text-lg font-semibold text-dark dark:text-white flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-yellow-500" />
+              <h3 className="mb-4 text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif] flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-[#C97A3E]" />
                 Solicitudes Pendientes ({pendientes.length})
               </h3>
               {pendientes.length === 0 ? (
-                <p className="text-gray-500 py-4">No hay solicitudes pendientes</p>
+                <p className="text-[#3D6B3F]/70 py-4">No hay solicitudes pendientes</p>
               ) : (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {pendientes.map((solicitud) => (
                     <div
                       key={solicitud.id_productor}
-                      className="rounded-lg border border-gray-3 p-4 dark:border-dark-3"
+                      className="rounded-2xl border border-[#C5CFB0] bg-white p-4 shadow-[0_2px_8px_rgba(61,107,63,0.06)]"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <h4 className="font-semibold text-dark dark:text-white">
+                          <h4 className="font-semibold text-[#1F3A2E]">
                             {solicitud.usuarios?.nombre || "Usuario"}
                           </h4>
-                          <p className="text-sm text-gray-500">{solicitud.usuarios?.email}</p>
+                          <p className="text-sm text-[#3D6B3F]/70">{solicitud.usuarios?.email}</p>
                         </div>
                         {getStatusBadge(solicitud.estado)}
                       </div>
@@ -228,7 +228,7 @@ export default function SolicitudesProductoresPage() {
                       {/* Asociación en la tarjeta */}
                       {solicitud.asociacion && (
                         <div className="mb-2">
-                          <span className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          <span className="inline-flex rounded-full bg-[#3D6B3F]/10 px-2 py-0.5 text-xs font-medium text-[#3D6B3F]">
                             🏛 {solicitud.asociacion}
                           </span>
                         </div>
@@ -240,7 +240,7 @@ export default function SolicitudesProductoresPage() {
                           {solicitud.categorias.map((cat) => (
                             <span
                               key={cat.id_categoria}
-                              className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                              className="inline-flex rounded-full bg-[#A8C26B]/20 px-2 py-0.5 text-xs font-medium text-[#3D6B3F]"
                             >
                               {cat.nombre}
                             </span>
@@ -250,7 +250,7 @@ export default function SolicitudesProductoresPage() {
 
                       <button
                         onClick={() => setSelectedSolicitud(solicitud)}
-                        className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-opacity-90"
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white hover:bg-[#1F3A2E] transition-all duration-200"
                       >
                         <Eye className="h-4 w-4" />
                         Ver Detalles
@@ -264,26 +264,26 @@ export default function SolicitudesProductoresPage() {
             {/* ── Procesadas ── */}
             {procesadas.length > 0 && (
               <div>
-                <h3 className="mb-4 text-lg font-semibold text-dark dark:text-white">
+                <h3 className="mb-4 text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
                   Solicitudes Procesadas ({procesadas.length})
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[600px]">
                     <thead>
-                      <tr className="border-b border-gray-3 dark:border-dark-3">
-                        <th className="pb-3 text-left text-sm font-semibold text-dark dark:text-white">
+                      <tr className="bg-[#1F3A2E]">
+                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-white">
                           Usuario
                         </th>
-                        <th className="pb-3 text-left text-sm font-semibold text-dark dark:text-white">
+                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-white">
                           Email
                         </th>
-                        <th className="pb-3 text-left text-sm font-semibold text-dark dark:text-white">
+                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-white">
                           Categorías
                         </th>
-                        <th className="pb-3 text-left text-sm font-semibold text-dark dark:text-white">
+                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-white">
                           Fecha
                         </th>
-                        <th className="pb-3 text-left text-sm font-semibold text-dark dark:text-white">
+                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-white">
                           Status
                         </th>
                       </tr>
@@ -292,20 +292,20 @@ export default function SolicitudesProductoresPage() {
                       {procesadas.map((solicitud) => (
                         <tr
                           key={solicitud.id_productor}
-                          className="border-b border-gray-2 dark:border-dark-3"
+                          className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200"
                         >
-                          <td className="py-3 text-sm text-dark dark:text-white">
+                          <td className="px-4 py-3 text-sm text-[#1F3A2E]">
                             {solicitud.usuarios?.nombre}
                           </td>
-                          <td className="py-3 text-sm text-gray-500">
+                          <td className="px-4 py-3 text-sm text-[#1F3A2E]/70">
                             {solicitud.usuarios?.email}
                           </td>
-                          <td className="py-3 text-sm text-gray-500">
+                          <td className="px-4 py-3 text-sm text-[#1F3A2E]/70">
                             {solicitud.categorias && solicitud.categorias.length > 0
                               ? solicitud.categorias.map((c) => c.nombre).join(", ")
                               : "-"}
                           </td>
-                          <td className="py-3 text-sm text-gray-500">
+                          <td className="px-4 py-3 text-sm text-[#1F3A2E]/70">
                             {new Date(solicitud.solicitado_en).toLocaleDateString("es-MX")}
                           </td>
                           <td className="py-3">{getStatusBadge(solicitud.estado)}</td>
@@ -323,45 +323,45 @@ export default function SolicitudesProductoresPage() {
       {/* ── Modal detalle ── */}
       {selectedSolicitud && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 dark:bg-gray-dark">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] p-6">
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h2 className="text-xl font-bold text-dark dark:text-white">
+                <h2 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
                   {selectedSolicitud.usuarios?.nombre}
                 </h2>
-                <p className="text-gray-500">{selectedSolicitud.usuarios?.email}</p>
+                <p className="text-[#3D6B3F]/70">{selectedSolicitud.usuarios?.email}</p>
               </div>
               <button
                 onClick={() => setSelectedSolicitud(null)}
-                className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-dark-2"
+                className="rounded-lg p-2 hover:bg-[#C5CFB0]/30 transition-all duration-200"
               >
-                <XCircle className="h-5 w-5 text-gray-500" />
+                <XCircle className="h-5 w-5 text-[#3D6B3F]/60" />
               </button>
             </div>
 
             <div className="space-y-6">
               {/* Información del Usuario */}
               <div>
-                <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
+                <h3 className="mb-3 font-semibold text-[#1F3A2E] flex items-center gap-2">
                   <User className="h-5 w-5" />
                   Información del Usuario
                 </h3>
-                <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-1 p-4 dark:bg-dark-2">
+                <div className="grid grid-cols-2 gap-4 rounded-xl bg-white border border-[#C5CFB0] p-4">
                   <div>
-                    <p className="text-xs text-gray-500">Nombre</p>
-                    <p className="text-sm font-medium text-dark dark:text-white">
+                    <p className="text-xs text-[#3D6B3F]/60">Nombre</p>
+                    <p className="text-sm font-medium text-[#1F3A2E]">
                       {selectedSolicitud.usuarios?.nombre}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Email</p>
-                    <p className="text-sm font-medium text-dark dark:text-white">
+                    <p className="text-xs text-[#3D6B3F]/60">Email</p>
+                    <p className="text-sm font-medium text-[#1F3A2E]">
                       {selectedSolicitud.usuarios?.email}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Teléfono</p>
-                    <p className="text-sm font-medium text-dark dark:text-white">
+                    <p className="text-xs text-[#3D6B3F]/60">Teléfono</p>
+                    <p className="text-sm font-medium text-[#1F3A2E]">
                       {selectedSolicitud.usuarios?.telefono || "No proporcionado"}
                     </p>
                   </div>
@@ -371,12 +371,12 @@ export default function SolicitudesProductoresPage() {
               {/* Asociación */}
               {selectedSolicitud.asociacion && (
                 <div>
-                  <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
+                  <h3 className="mb-3 font-semibold text-[#1F3A2E] flex items-center gap-2">
                     <User className="h-5 w-5" />
                     Asociación
                   </h3>
-                  <div className="rounded-lg bg-gray-1 p-4 dark:bg-dark-2">
-                    <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                  <div className="rounded-xl bg-white border border-[#C5CFB0] p-4">
+                    <span className="inline-flex rounded-full bg-[#3D6B3F]/10 px-3 py-1 text-sm font-medium text-[#3D6B3F]">
                       🏛 {selectedSolicitud.asociacion}
                     </span>
                   </div>
@@ -385,50 +385,50 @@ export default function SolicitudesProductoresPage() {
 
               {/* Categorías a Vender */}
               <div>
-                <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
+                <h3 className="mb-3 font-semibold text-[#1F3A2E] flex items-center gap-2">
                   <ShoppingBag className="h-5 w-5" />
                   Categorías a Vender
                 </h3>
-                <div className="rounded-lg bg-gray-1 p-4 dark:bg-dark-2">
+                <div className="rounded-xl bg-white border border-[#C5CFB0] p-4">
                   {selectedSolicitud.categorias && selectedSolicitud.categorias.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {selectedSolicitud.categorias.map((cat) => (
                         <span
                           key={cat.id_categoria}
-                          className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary"
+                          className="inline-flex rounded-full bg-[#A8C26B]/20 px-3 py-1 text-sm font-medium text-[#3D6B3F]"
                         >
                           {cat.nombre}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">No especificadas</p>
+                    <p className="text-sm text-[#3D6B3F]/70">No especificadas</p>
                   )}
                 </div>
               </div>
 
               {/* Estado de Solicitud */}
               <div>
-                <h3 className="mb-3 font-semibold text-dark dark:text-white flex items-center gap-2">
+                <h3 className="mb-3 font-semibold text-[#1F3A2E] flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   Estado de Solicitud
                 </h3>
-                <div className="rounded-lg bg-gray-1 p-4 dark:bg-dark-2">
-                  <p className="text-xs text-gray-500">Fecha de solicitud</p>
-                  <p className="text-sm font-medium text-dark dark:text-white">
+                <div className="rounded-xl bg-white border border-[#C5CFB0] p-4">
+                  <p className="text-xs text-[#3D6B3F]/60">Fecha de solicitud</p>
+                  <p className="text-sm font-medium text-[#1F3A2E]">
                     {new Date(selectedSolicitud.solicitado_en).toLocaleString("es-MX")}
                   </p>
                   {selectedSolicitud.revisado_en && (
                     <>
-                      <p className="text-xs text-gray-500 mt-2">Fecha de resolución</p>
-                      <p className="text-sm font-medium text-dark dark:text-white">
+                      <p className="text-xs text-[#3D6B3F]/60 mt-2">Fecha de resolución</p>
+                      <p className="text-sm font-medium text-[#1F3A2E]">
                         {new Date(selectedSolicitud.revisado_en).toLocaleString("es-MX")}
                       </p>
                     </>
                   )}
                   {selectedSolicitud.motivo_rechazo && (
                     <>
-                      <p className="text-xs text-gray-500 mt-2">Motivo de rechazo</p>
+                      <p className="text-xs text-[#3D6B3F]/60 mt-2">Motivo de rechazo</p>
                       <p className="text-sm font-medium text-red-600">
                         {selectedSolicitud.motivo_rechazo}
                       </p>
@@ -455,7 +455,7 @@ export default function SolicitudesProductoresPage() {
                 <button
                   onClick={() => setApproveModalOpen(true)}
                   disabled={processingId !== null}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#3D6B3F] px-4 py-3 font-medium text-white hover:bg-[#1F3A2E] disabled:opacity-50 transition-all duration-200"
                 >
                   {processingId === selectedSolicitud.id_productor ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -473,18 +473,18 @@ export default function SolicitudesProductoresPage() {
       {/* ── Modal Rechazar ── */}
       {rejectModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 dark:bg-gray-dark">
-            <h2 className="text-xl font-bold text-dark dark:text-white mb-4">
+          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] p-6">
+            <h2 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-4">
               Rechazar Solicitud
             </h2>
-            <p className="text-gray-500 mb-4">
+            <p className="text-[#3D6B3F]/70 mb-4">
               Por favor proporciona un motivo para el rechazo:
             </p>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               rows={4}
-              className="w-full rounded-lg border border-gray-4 bg-gray-1 px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark-2 dark:text-white mb-4"
+              className="w-full rounded-xl border border-[#C5CFB0] bg-white px-4 py-3 text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20 mb-4"
               placeholder="Motivo del rechazo..."
             />
             <div className="flex gap-4">
@@ -493,7 +493,7 @@ export default function SolicitudesProductoresPage() {
                   setRejectModalOpen(false);
                   setRejectReason("");
                 }}
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 font-medium text-dark hover:bg-gray-100"
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[#C5CFB0] px-4 py-3 font-medium text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200"
               >
                 Cancelar
               </button>
@@ -512,11 +512,11 @@ export default function SolicitudesProductoresPage() {
       {/* ── Modal Aprobar ── */}
       {approveModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 dark:bg-gray-dark">
-            <h2 className="text-xl font-bold text-dark dark:text-white mb-4">
+          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] p-6">
+            <h2 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-4">
               Aprobar Solicitud
             </h2>
-            <p className="text-gray-500 mb-4">
+            <p className="text-[#3D6B3F]/70 mb-4">
               ¿Estás seguro de que deseas aprobar esta solicitud de productor? El usuario
               deberá completar su perfil y subir su certificado antes de poder vender.
             </p>
@@ -524,7 +524,7 @@ export default function SolicitudesProductoresPage() {
               value={approveReason}
               onChange={(e) => setApproveReason(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-gray-4 bg-gray-1 px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark-2 dark:text-white mb-4"
+              className="w-full rounded-xl border border-[#C5CFB0] bg-white px-4 py-3 text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20 mb-4"
               placeholder="Motivo de aprobación (opcional)..."
             />
             <div className="flex gap-4">
@@ -533,14 +533,14 @@ export default function SolicitudesProductoresPage() {
                   setApproveModalOpen(false);
                   setApproveReason("");
                 }}
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 font-medium text-dark hover:bg-gray-100"
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[#C5CFB0] px-4 py-3 font-medium text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => handleApprove(selectedSolicitud!.id_productor)}
                 disabled={processingId !== null}
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#3D6B3F] px-4 py-3 font-medium text-white hover:bg-[#1F3A2E] disabled:opacity-50 transition-all duration-200"
               >
                 {processingId !== null ? (
                   <Loader2 className="h-5 w-5 animate-spin" />

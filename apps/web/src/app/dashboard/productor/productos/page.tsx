@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useProductos } from "@/hooks/useProductos";
 import { ProductoModal } from "@/components/Producer/Products/acciones/ProductoModal";
 import {
@@ -8,15 +9,40 @@ import {
   ProductoFiltros,
   ProductoSeleccion,
   ProductoTabla,
+  ProductoPaginacion,
 } from "@/components/Producer/Products/acciones/ProductoVistas";
+
+const PAGE_SIZE = 10;
 
 export default function ProductosPage() {
   const ctx = useProductos();
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [ctx.query, ctx.statusFilter, ctx.storeFilter, ctx.minPrice, ctx.maxPrice]);
+
+  const totalPages = Math.max(1, Math.ceil(ctx.visibleProducts.length / PAGE_SIZE));
+
+  const pagedProducts = useMemo(
+    () => ctx.visibleProducts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [ctx.visibleProducts, currentPage],
+  );
+
+  const pagedIds = useMemo(() => pagedProducts.map((p) => p.id_producto), [pagedProducts]);
+
+  const allPageSelected =
+    pagedIds.length > 0 && pagedIds.every((id) => ctx.selectedIds.includes(id));
+
+  const toggleSelectAllPage = (checked: boolean) => {
+    pagedIds.forEach((id) => ctx.toggleProductSelection(id, checked));
+  };
 
   if (ctx.loading) {
     return (
       <div className="flex min-h-[320px] items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#C5CFB0] border-t-[#3D6B3F]" />
       </div>
     );
   }
@@ -30,7 +56,7 @@ export default function ProductosPage() {
       />
 
       {ctx.error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-600">
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
           {ctx.error}
         </div>
       )}
@@ -65,15 +91,23 @@ export default function ProductosPage() {
       />
 
       <ProductoTabla
-        products={ctx.visibleProducts}
+        products={pagedProducts}
         selectionEnabled={ctx.selectionEnabled}
         selectedIds={ctx.selectedIds}
-        allVisibleSelected={ctx.allVisibleSelected}
-        onToggleSelectAll={ctx.toggleSelectAllVisible}
+        allVisibleSelected={allPageSelected}
+        onToggleSelectAll={toggleSelectAllPage}
         onToggleSelect={ctx.toggleProductSelection}
         onView={ctx.openView}
         onEdit={ctx.openEdit}
         onDelete={ctx.handleDelete}
+      />
+
+      <ProductoPaginacion
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={ctx.visibleProducts.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setCurrentPage}
       />
 
       {ctx.modalOpen && (

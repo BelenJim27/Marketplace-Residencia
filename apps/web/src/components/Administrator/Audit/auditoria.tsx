@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
-import { Loader2, Search, Filter, FileText, User, Table, Clock } from "lucide-react";
+import { 
+  Loader2, Search, Filter, FileText, User, Table, Clock, 
+  ChevronLeft, ChevronRight 
+} from "lucide-react";
 
 interface Auditoria {
   id_auditoria: string;
@@ -22,9 +25,15 @@ export default function AuditoriaUI() {
   const [auditoria, setAuditoria] = useState<Auditoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Estados de filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAccion, setFilterAccion] = useState("todas");
   const [filterTabla, setFilterTabla] = useState("todas");
+
+  // Estado de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const getToken = () => (typeof window !== "undefined" ? getCookie("token") : null);
 
@@ -32,13 +41,19 @@ export default function AuditoriaUI() {
     fetchAuditoria();
   }, []);
 
+  // Reiniciar a la página 1 cuando se cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterAccion, filterTabla]);
+
   const fetchAuditoria = async () => {
     try {
       setLoading(true);
       const token = getToken();
       if (!token) throw new Error("No hay sesión activa");
-      const data = await api.auditoria.getAll();
-      setAuditoria(data as Auditoria[]);
+      const data = await api.auditoria.getAll() as any;
+      const list = Array.isArray(data) ? data : (data?.items ?? []);
+      setAuditoria(list as Auditoria[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar auditoría");
     } finally {
@@ -49,7 +64,16 @@ export default function AuditoriaUI() {
   const accionesUnicas = [...new Set(auditoria.map((a) => a.accion))];
   const tablasUnicas = [...new Set(auditoria.map((a) => a.tabla_afectada))];
 
+  // Calcular la fecha límite (hace 7 días)
+  const unaSemanaAtras = new Date();
+  unaSemanaAtras.setDate(unaSemanaAtras.getDate() - 7);
+
   const filteredAuditoria = auditoria.filter((item) => {
+    // 1. Filtrar por antigüedad (Ocultar si tiene más de 1 semana)
+    const itemDate = new Date(item.fecha);
+    if (itemDate < unaSemanaAtras) return false;
+
+    // 2. Filtros de búsqueda y selectores
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
       searchTerm === "" ||
@@ -59,8 +83,14 @@ export default function AuditoriaUI() {
       item.usuarios?.email.toLowerCase().includes(searchLower);
     const matchesAccion = filterAccion === "todas" || item.accion === filterAccion;
     const matchesTabla = filterTabla === "todas" || item.tabla_afectada === filterTabla;
+    
     return matchesSearch && matchesAccion && matchesTabla;
   });
+
+  // Lógica de Paginación
+  const totalPages = Math.ceil(filteredAuditoria.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedAuditoria = filteredAuditoria.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -75,20 +105,20 @@ export default function AuditoriaUI() {
 
   const getAccionColor = (accion: string) => {
     const colors: Record<string, string> = {
-      CREATE: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
-      UPDATE: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
-      DELETE: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
-      LOGIN: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
-      LOGOUT: "bg-gray-100 dark:bg-dark-3 text-gray-600 dark:text-dark-6",
-      REGISTER: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400",
+      CREATE:   "bg-[#A8C26B]/20 text-[#3D6B3F]",
+      UPDATE:   "bg-[#C97A3E]/15 text-[#C97A3E]",
+      DELETE:   "bg-red-100 text-red-700",
+      LOGIN:    "bg-[#1F3A2E]/10 text-[#1F3A2E]",
+      LOGOUT:   "bg-[#C5CFB0]/30 text-[#3D6B3F]/70",
+      REGISTER: "bg-[#A8C26B]/20 text-[#3D6B3F]",
     };
-    return colors[accion] || "bg-gray-100 dark:bg-dark-3 text-gray-600 dark:text-dark-6";
+    return colors[accion] || "bg-[#C5CFB0]/30 text-[#3D6B3F]/70";
   };
 
   const inputClass =
-    "w-full pl-10 pr-4 py-2 border border-stroke dark:border-dark-3 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-dark-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm";
+    "w-full pl-10 pr-4 py-2 border border-[#C5CFB0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent bg-[#F4F0E3] text-[#1F3A2E] placeholder-[#3D6B3F]/50 text-sm";
   const selectClass =
-    "px-3 py-2 border border-stroke dark:border-dark-3 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-dark-2 text-gray-900 dark:text-gray-100 text-sm";
+    "px-3 py-2 border border-[#C5CFB0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent bg-[#F4F0E3] text-[#1F3A2E] text-sm";
 
   if (loading) {
     return (
@@ -116,22 +146,22 @@ export default function AuditoriaUI() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-dark dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[#1F3A2E] flex items-center gap-2 [font-family:'Playfair_Display',serif]">
             <FileText className="w-6 h-6" />
             Auditoría
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">
+          <p className="text-[#3D6B3F]/70 text-sm mt-0.5">
             Registro de todas las acciones del sistema
           </p>
         </div>
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          {filteredAuditoria.length} registros
+        <span className="text-sm text-[#3D6B3F]/70">
+          {filteredAuditoria.length} registros (Últimos 7 días)
         </span>
       </div>
 
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3D6B3F]/50" />
           <input
             type="text"
             placeholder="Buscar..."
@@ -142,7 +172,7 @@ export default function AuditoriaUI() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          <Filter className="w-4 h-4 text-[#3D6B3F]/50" />
           <select
             value={filterAccion}
             onChange={(e) => setFilterAccion(e.target.value)}
@@ -171,63 +201,57 @@ export default function AuditoriaUI() {
         </div>
       </div>
 
-      <div className="overflow-x-auto border border-stroke dark:border-dark-3 rounded-lg">
-        <table className="w-full">
-          <thead className="bg-gray-2 dark:bg-dark-2">
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <table className="w-full text-sm">
+          <thead className="bg-[#1F3A2E] text-xs font-semibold text-white uppercase tracking-wider">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left">
                 <Table className="w-4 h-4 inline mr-1" /> Acción
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Tabla
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left">Tabla</th>
+              <th className="px-4 py-3 text-left">
                 <User className="w-4 h-4 inline mr-1" /> Usuario
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Registro ID
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left">Registro ID</th>
+              <th className="px-4 py-3 text-left">
                 <Clock className="w-4 h-4 inline mr-1" /> Fecha
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                IP
-              </th>
+              <th className="px-4 py-3 text-left">IP</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-stroke dark:divide-dark-3 bg-white dark:bg-dark-2">
-            {filteredAuditoria.length === 0 ? (
+          <tbody className="divide-y divide-[#C5CFB0]/30">
+            {paginatedAuditoria.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-                  No hay registros de auditoría
+                <td colSpan={6} className="px-6 py-8 text-center text-[#3D6B3F]/70 text-sm bg-white">
+                  No hay registros de auditoría recientes
                 </td>
               </tr>
             ) : (
-              filteredAuditoria.map((item) => (
-                <tr key={item.id_auditoria} className="hover:bg-gray-50/50 dark:hover:bg-dark-3/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getAccionColor(item.accion)}`}>
+              paginatedAuditoria.map((item) => (
+                <tr key={item.id_auditoria} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200">
+                  <td className="px-4 py-3 text-[#1F3A2E]">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getAccionColor(item.accion)}`}>
                       {item.accion}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-700 dark:text-white">
+                  <td className="px-4 py-3 text-[#1F3A2E]">
                     {item.tabla_afectada}
                   </td>
-                  <td className="px-6 py-4 text-sm">
-                    <div className="font-medium text-slate-700 dark:text-white">
+                  <td className="px-4 py-3 text-[#1F3A2E]">
+                    <div className="font-medium text-[#1F3A2E]">
                       {item.usuarios?.nombre || "Sistema"}
                     </div>
-                    <div className="text-gray-400 dark:text-gray-400 text-xs">
+                    <div className="text-[#3D6B3F]/60 text-xs">
                       {item.usuarios?.email || ""}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono text-xs">
+                  <td className="px-4 py-3 text-[#3D6B3F]/70 font-mono text-xs">
                     {item.registro_id || "-"}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-3 text-[#3D6B3F]/70">
                     {formatDate(item.fecha)}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono">
+                  <td className="px-4 py-3 text-[#3D6B3F]/70 font-mono">
                     {item.ip_origen || "-"}
                   </td>
                 </tr>
@@ -235,6 +259,46 @@ export default function AuditoriaUI() {
             )}
           </tbody>
         </table>
+        
+        {/* Controles de Paginación */}
+        {totalPages > 1 && (
+          <div className="bg-[#F4F0E3] px-4 py-3 border-t border-[#C5CFB0] flex items-center justify-between sm:px-6">
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-[#1F3A2E]">
+                  Mostrando del <span className="font-medium">{startIndex + 1}</span> al{" "}
+                  <span className="font-medium">
+                    {Math.min(startIndex + ITEMS_PER_PAGE, filteredAuditoria.length)}
+                  </span>{" "}
+                  de <span className="font-medium">{filteredAuditoria.length}</span> resultados
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-[#C5CFB0] bg-white text-sm font-medium text-[#3D6B3F] hover:bg-[#F4F0E3] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Anterior</span>
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="relative inline-flex items-center px-4 py-2 border border-[#C5CFB0] bg-white text-sm font-medium text-[#1F3A2E]">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-[#C5CFB0] bg-white text-sm font-medium text-[#3D6B3F] hover:bg-[#F4F0E3] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Siguiente</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

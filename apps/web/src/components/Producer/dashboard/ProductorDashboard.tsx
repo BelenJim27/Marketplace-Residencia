@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
@@ -119,7 +119,7 @@ export function ProductorDashboard() {
         headers.map((key) => escapeCsv(String((row as any)[key] ?? ""))).join(",")
       ),
     ].join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -147,7 +147,7 @@ export function ProductorDashboard() {
   if (loading || loadingCategorias) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#C5CFB0] border-t-[#3D6B3F]" />
       </div>
     );
   }
@@ -158,19 +158,19 @@ export function ProductorDashboard() {
       : "General";
 
   return (
-    <div className="min-h-screen space-y-6 bg-gray-100 p-4 dark:bg-gray-900 sm:p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-xl border border-stroke bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <h1 className="text-2xl font-bold text-dark dark:text-white">
+      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
           Dashboard Productor
         </h1>
-        <p className="text-gray-500 dark:text-gray-400">
+        <p className="text-[#3D6B3F]/70">
           {tieneLotes ? "Panel de Maestro Mezcalero" : `Panel de Productor · ${categoriasLabel}`}
         </p>
       </div>
 
       {error && (
-        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
           {error}
         </div>
       )}
@@ -182,29 +182,29 @@ export function ProductorDashboard() {
       />
 
       {tieneLotes && (
-        <section className="rounded-xl border border-stroke bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <div className="border-b border-stroke p-6 dark:border-gray-700">
-            <h2 className="text-xl font-bold text-dark dark:text-white">
+        <section className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <div className="border-b border-[#C5CFB0]/50 p-6">
+            <h2 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
               Lotes de Producción
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-[#3D6B3F]/70">
               Gestiona los lotes de tu producción de mezcal
             </p>
           </div>
           <div className="p-6">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-[#3D6B3F]/50">
               Componente de Lotes aquí
             </p>
           </div>
         </section>
       )}
 
-      <section className="rounded-xl border border-stroke bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div className="border-b border-stroke p-6 dark:border-gray-700">
+      <section className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <div className="border-b border-[#C5CFB0]/50 p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-xl font-bold text-dark dark:text-white">Analíticas</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <h2 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Analíticas</h2>
+              <p className="text-sm text-[#3D6B3F]/70">
                 {tieneLotes
                   ? "Ventas y productos más vendidos de tu producción"
                   : "Ventas y productos más vendidos"}
@@ -276,11 +276,11 @@ function MiniStat({
   highlight?: boolean;
 }) {
   return (
-    <div className="flex flex-col rounded-xl bg-gray-50 p-5 transition-colors hover:bg-gray-100 dark:bg-gray-700/50">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+    <div className="flex flex-col rounded-xl border border-[#C5CFB0]/50 bg-white p-5 transition-colors hover:bg-[#C5CFB0]/10">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40">
         {title} {subtitle && `(${subtitle})`}
       </span>
-      <span className={`mt-2 text-2xl font-black ${highlight ? "text-green-600" : "text-dark dark:text-white"}`}>
+      <span className={`mt-2 text-2xl font-black ${highlight ? "text-[#3D6B3F]" : "text-[#1F3A2E]"}`}>
         {value}
       </span>
     </div>

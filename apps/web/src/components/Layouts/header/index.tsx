@@ -1,8 +1,6 @@
 "use client";
 
 import { SearchIcon } from "@/assets/icons";
-import Image from "next/image";
-import Link from "next/link";
 import { useSidebarContext } from "@/context/SidebarContext";
 import { useAuth } from "@/context/AuthContext";
 import { MenuIcon, CloseIcon } from "./icons";
@@ -11,67 +9,30 @@ import { UserInfo } from "./user-info";
 import { useNotificationPoller } from "@/hooks/useNotificationPoller";
 
 export function Header() {
-  const { toggleSidebar, isOpen, isMobile } = useSidebarContext();
-  const { isAdmin, isProductor, isAuthenticated } = useAuth();
+  const { toggleSidebar, isOpen } = useSidebarContext();
+  const { } = useAuth();
   useNotificationPoller();
 
-  const isClient = isAuthenticated && !isAdmin && !isProductor;
-  const showLogo = isClient;
-
   return (
-    <header
-      style={{
-        borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)",
-        backgroundColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.08)",
-      }}
-      className="sticky top-0 z-30 flex items-center justify-between border-b border-green-200 bg-green-100 px-4 py-4 shadow-sm md:px-8"
-    >
-      {/* BOTÓN MENU HAMBURGUESA */}
+    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[#C5CFB0]/50 bg-[#F4F0E3] px-4 py-3 shadow-[0_1px_6px_rgba(31,58,46,0.06)] md:px-6">
+
+      {/* Botón hamburguesa — solo mobile */}
       <button
         onClick={toggleSidebar}
-        style={{ borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)" }}
-        className="rounded-lg border p-1.5 hover:opacity-80 dark:border-gray-700 dark:hover:bg-gray-800 lg:hidden"
+        className="flex-shrink-0 rounded-xl border border-[#C5CFB0] bg-white p-2 text-[#1F3A2E] hover:bg-[#1F3A2E] hover:text-white transition-all duration-200 lg:hidden"
         aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
       >
         {isOpen ? <CloseIcon /> : <MenuIcon />}
       </button>
 
-      {/* LOGO MOBILE - SÓLO CLIENTE */}
-      {isMobile && showLogo && (
-        <Link href={"/cliente/producto"} className="ml-2 max-[430px]:hidden min-[375px]:ml-4">
-          <Image
-            src={"/images/logo/tierra_agaves.png"}
-            width={28}
-            height={28}
-            alt="Tierra Agaves"
-            role="presentation"
-            className="object-contain"
-          />
-        </Link>
-      )}
+      {/* Spacer */}
+      <div className="flex-1" />
 
-      {/* LOGO DESKTOP - SÓLO CLIENTE */}
-      {!isMobile && showLogo && (
-        <Link href={"/cliente/producto"} className="hidden lg:flex items-center">
-          <Image
-            src={"/images/logo/tierra_agaves.png"}
-            width={80}
-            height={40}
-            alt="Tierra Agaves"
-            role="presentation"
-            className="object-contain"
-          />
-        </Link>
-      )}
-
-      <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2 md:gap-4">
-
-        {/* Icono buscar visible solo en tablet/md */}
-        <button
-          style={{ borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)" }}
-          className="md:hidden p-2 rounded-lg border hover:opacity-80 dark:border-gray-700 dark:hover:bg-gray-800"
-        >
-          <SearchIcon className="size-5" />
+      {/* Acciones derecha */}
+      <div className="flex items-center gap-2">
+        {/* Buscar — solo hasta md */}
+        <button className="rounded-xl border border-[#C5CFB0] bg-white p-2 text-[#1F3A2E] hover:bg-[#1F3A2E] hover:text-white transition-all duration-200 md:hidden">
+          <SearchIcon className="h-5 w-5" />
         </button>
 
         <Notification />

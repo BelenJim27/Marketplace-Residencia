@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, Edit2, Trash2, X } from "lucide-react";
+import React from "react";
+import { Search, Edit2, Trash2, X, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type Categoria = {
@@ -12,7 +13,7 @@ type Categoria = {
   tipo: string;
   imagen_url: string | null;
   activo: boolean;
-  categorias?: Categoria[];
+  other_categorias?: Categoria[];
 };
 
 type Notice = { type: "error" | "success"; message: string };
@@ -42,10 +43,19 @@ export default function CategoriasAdminPage() {
     } finally { setLoading(false); }
   };
 
-  const filteredCategorias = useMemo(() => {
+  // Sólo categorías padre (sin id_padre)
+  const padres = useMemo(
+    () => categorias.filter((c) => c.id_padre === null),
+    [categorias],
+  );
+
+  // Cuando hay búsqueda: lista plana de todas las que coincidan
+  const busquedaPlana = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return categorias;
-    return categorias.filter((c) => c.nombre.toLowerCase().includes(normalized) || c.descripcion?.toLowerCase().includes(normalized));
+    if (!normalized) return [];
+    return categorias.filter(
+      (c) => c.nombre.toLowerCase().includes(normalized) || c.descripcion?.toLowerCase().includes(normalized),
+    );
   }, [categorias, query]);
 
   const openCreateModal = (parentId?: number) => {
@@ -91,21 +101,28 @@ export default function CategoriasAdminPage() {
     }
   };
 
-  const fieldCls  = "mt-1 w-full rounded-lg border border-stroke dark:border-dark-3 bg-white dark:bg-dark-2 text-dark dark:text-white px-3 py-2 text-sm outline-none focus:border-primary";
-  const labelCls  = "block text-sm font-medium text-gray-700 dark:text-dark-7";
+  const fieldCls  = "mt-1 w-full rounded-lg border border-[#C5CFB0] bg-white text-[#1F3A2E] px-3 py-2 text-sm outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20";
+  const labelCls  = "block text-sm font-medium text-[#1F3A2E]";
+
+  const renderAcciones = (cat: Categoria) => (
+    <div className="flex justify-end gap-2">
+      <button type="button" onClick={() => openEditModal(cat)} className="rounded-lg p-2 text-[#3D6B3F]/40 hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] transition-all duration-200"><Edit2 className="h-4 w-4" /></button>
+      <button type="button" onClick={() => handleDelete(cat.id_categoria)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all duration-200"><Trash2 className="h-4 w-4" /></button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-dark dark:text-white">Gestión de Categorías</h1>
-          <p className="mt-0.5 text-sm text-gray-500 dark:text-dark-6">Administra las categorías y subcategorías del sistema.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Gestión de Categorías</h1>
+          <p className="mt-0.5 text-sm text-[#3D6B3F]/70">Administra las categorías y subcategorías del sistema.</p>
         </div>
         <button
           type="button"
           onClick={() => openCreateModal()}
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+          className="rounded-xl bg-[#3D6B3F] px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#1F3A2E]"
         >
           + Nueva Categoría
         </button>
@@ -113,29 +130,29 @@ export default function CategoriasAdminPage() {
 
       {/* Notice */}
       {notice && (
-        <div className={`rounded-2xl border px-4 py-3 text-sm ${notice.type === "success" ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
+        <div className={`rounded-2xl border px-4 py-3 text-sm ${notice.type === "success" ? "border-[#A8C26B]/40 bg-[#A8C26B]/10 text-[#3D6B3F]" : "border-red-200 bg-red-50 text-red-700"}`}>
           {notice.message}
         </div>
       )}
 
       {/* Search */}
-      <div className="rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-dark-2 p-6 shadow-sm">
+      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-dark-6" />
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#3D6B3F]/40" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar categorías..."
-            className="w-full rounded-xl border border-gray-100 dark:border-dark-3 bg-gray-50 dark:bg-dark-3 py-3 pl-12 pr-4 text-sm text-slate-700 dark:text-white placeholder-gray-400 dark:placeholder-dark-6 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+            className="w-full rounded-xl border border-[#C5CFB0] bg-white py-3 pl-12 pr-4 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/40 outline-none focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-dark-2 shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-left">
-            <thead className="bg-gray-50 dark:bg-dark-3 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-dark-6">
+            <thead className="bg-[#1F3A2E] text-[11px] font-bold uppercase tracking-wider text-white">
               <tr>
                 <th className="p-4">Nombre</th>
                 <th className="p-4">Slug</th>
@@ -144,34 +161,91 @@ export default function CategoriasAdminPage() {
                 <th className="p-4 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-dark-3">
+            <tbody className="divide-y divide-[#C5CFB0]/30">
               {loading ? (
-                <tr><td colSpan={5} className="p-10 text-center text-gray-500 dark:text-dark-6">Cargando...</td></tr>
-              ) : filteredCategorias.length === 0 ? (
-                <tr><td colSpan={5} className="p-10 text-center text-gray-500 dark:text-dark-6">No hay categorías.</td></tr>
+                <tr><td colSpan={5} className="p-10 text-center text-[#3D6B3F]/70 bg-white">Cargando...</td></tr>
+              ) : query.trim() ? (
+                /* ── Vista plana al buscar ── */
+                busquedaPlana.length === 0 ? (
+                  <tr><td colSpan={5} className="p-10 text-center text-[#3D6B3F]/70 bg-white">Sin resultados.</td></tr>
+                ) : (
+                  busquedaPlana.map((cat) => (
+                    <tr key={cat.id_categoria} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200">
+                      <td className="p-4 font-semibold text-[#1F3A2E]">
+                        {cat.id_padre !== null && <span className="mr-1 text-[#3D6B3F]/40">↳</span>}
+                        {cat.nombre}
+                      </td>
+                      <td className="p-4 text-sm text-[#1F3A2E]/70">{cat.slug}</td>
+                      <td className="p-4 text-sm text-[#1F3A2E]/70">{cat.tipo}</td>
+                      <td className="p-4 text-center">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cat.activo ? "bg-[#A8C26B]/20 text-[#3D6B3F]" : "bg-[#C97A3E]/15 text-[#C97A3E]"}`}>
+                          {cat.activo ? "Activo" : "Inactivo"}
+                        </span>
+                      </td>
+                      <td className="p-4">{renderAcciones(cat)}</td>
+                    </tr>
+                  ))
+                )
+              ) : padres.length === 0 ? (
+                <tr><td colSpan={5} className="p-10 text-center text-[#3D6B3F]/70 bg-white">No hay categorías.</td></tr>
               ) : (
-                filteredCategorias.map((cat) => (
-                  <tr key={cat.id_categoria} className="group hover:bg-gray-50/60 dark:hover:bg-dark-3/60">
-                    <td className="p-4 font-semibold text-dark dark:text-white">
-                      {cat.nombre}
-                      {cat.categorias && cat.categorias.length > 0 && (
-                        <span className="ml-2 text-xs text-gray-400 dark:text-dark-6">({cat.categorias.length} sub)</span>
-                      )}
-                    </td>
-                    <td className="p-4 text-sm text-gray-500 dark:text-dark-6">{cat.slug}</td>
-                    <td className="p-4 text-sm text-gray-500 dark:text-dark-6">{cat.tipo}</td>
-                    <td className="p-4 text-center">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cat.activo ? "bg-green-50 text-green-700" : "bg-gray-100 dark:bg-dark-3 text-gray-600 dark:text-dark-6"}`}>
-                        {cat.activo ? "Activo" : "Inactivo"}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex justify-end gap-2">
-                        <button type="button" onClick={() => openEditModal(cat)}  className="rounded-lg p-2 text-slate-400 hover:bg-green-50 hover:text-green-700"><Edit2  className="h-4 w-4" /></button>
-                        <button type="button" onClick={() => handleDelete(cat.id_categoria)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
-                      </div>
-                    </td>
-                  </tr>
+                /* ── Vista jerárquica ── */
+                padres.map((cat) => (
+                  <React.Fragment key={cat.id_categoria}>
+                    {/* Fila padre */}
+                    <tr key={cat.id_categoria} className="bg-white hover:bg-[#C5CFB0]/20 transition-all duration-200">
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-[#1F3A2E]">{cat.nombre}</span>
+                          {(cat.other_categorias?.length ?? 0) > 0 && (
+                            <span className="rounded-full bg-[#3D6B3F]/10 px-2 py-0.5 text-[10px] font-semibold text-[#3D6B3F]">
+                              {cat.other_categorias!.length} sub
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 text-sm text-[#1F3A2E]/70">{cat.slug}</td>
+                      <td className="p-4 text-sm text-[#1F3A2E]/70">{cat.tipo}</td>
+                      <td className="p-4 text-center">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cat.activo ? "bg-[#A8C26B]/20 text-[#3D6B3F]" : "bg-[#C97A3E]/15 text-[#C97A3E]"}`}>
+                          {cat.activo ? "Activo" : "Inactivo"}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex justify-end gap-2">
+                          {renderAcciones(cat)}
+                          <button
+                            type="button"
+                            title="Agregar subcategoría"
+                            onClick={() => openCreateModal(cat.id_categoria)}
+                            className="rounded-lg p-2 text-[#3D6B3F]/40 hover:bg-[#3D6B3F]/10 hover:text-[#3D6B3F] transition-all duration-200 text-xs font-semibold"
+                          >
+                            + sub
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Filas hijas */}
+                    {cat.other_categorias?.map((sub) => (
+                      <tr key={`sub-${sub.id_categoria}`} className="bg-[#F4F0E3]/60 hover:bg-[#C5CFB0]/20 transition-all duration-200">
+                        <td className="p-4 pl-10">
+                          <div className="flex items-center gap-2 text-[#1F3A2E]/80">
+                            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#3D6B3F]/40" />
+                            <span className="font-medium">{sub.nombre}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm text-[#1F3A2E]/60">{sub.slug}</td>
+                        <td className="p-4 text-sm text-[#1F3A2E]/60">{sub.tipo}</td>
+                        <td className="p-4 text-center">
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${sub.activo ? "bg-[#A8C26B]/20 text-[#3D6B3F]" : "bg-[#C97A3E]/15 text-[#C97A3E]"}`}>
+                            {sub.activo ? "Activo" : "Inactivo"}
+                          </span>
+                        </td>
+                        <td className="p-4">{renderAcciones(sub)}</td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
                 ))
               )}
             </tbody>
@@ -182,13 +256,13 @@ export default function CategoriasAdminPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white dark:bg-dark-2 p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-dark dark:text-white">{editingCategoria ? "Editar" : "Nueva"} Categoría</h2>
-              <button type="button" onClick={() => setShowModal(false)} className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-dark-3 text-gray-500 dark:text-dark-6"><X className="h-5 w-5" /></button>
+          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] overflow-hidden">
+            <div className="flex items-center justify-between px-6 pt-6 pb-4">
+              <h2 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">{editingCategoria ? "Editar" : "Nueva"} Categoría</h2>
+              <button type="button" onClick={() => setShowModal(false)} className="rounded-lg p-1 hover:bg-[#C5CFB0]/30 text-[#3D6B3F]/50"><X className="h-5 w-5" /></button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 px-6 pb-6">
               <div>
                 <label className={labelCls}>Nombre</label>
                 <input type="text" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} required className={fieldCls} />
@@ -209,13 +283,22 @@ export default function CategoriasAdminPage() {
                   <option value="tipo_mezcal">Tipo Mezcal</option>
                 </select>
               </div>
+              <div>
+                <label className={labelCls}>Categoría padre (opcional)</label>
+                <select value={formData.id_padre} onChange={(e) => setFormData({ ...formData, id_padre: e.target.value })} className={fieldCls}>
+                  <option value="">— Ninguna (categoría raíz) —</option>
+                  {padres.map((p) => (
+                    <option key={p.id_categoria} value={String(p.id_categoria)}>{p.nombre}</option>
+                  ))}
+                </select>
+              </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" checked={formData.activo} onChange={(e) => setFormData({ ...formData, activo: e.target.checked })} className="h-4 w-4 rounded border-gray-300 text-green-600" />
-                <label className="text-sm text-gray-700 dark:text-dark-7">Activo</label>
+                <input type="checkbox" checked={formData.activo} onChange={(e) => setFormData({ ...formData, activo: e.target.checked })} className="h-4 w-4 rounded border-[#C5CFB0] text-[#3D6B3F]" />
+                <label className="text-sm text-[#1F3A2E]">Activo</label>
               </div>
               <div className="flex justify-end gap-2 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 dark:text-dark-6 hover:bg-gray-100 dark:hover:bg-dark-3">Cancelar</button>
-                <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">Guardar</button>
+                <button type="button" onClick={() => setShowModal(false)} className="rounded-xl px-4 py-2 text-sm font-medium text-[#1F3A2E] border border-[#C5CFB0] hover:bg-[#C5CFB0]/30 transition-all duration-200">Cancelar</button>
+                <button type="submit" className="rounded-xl bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white hover:bg-[#1F3A2E] transition-all duration-200">Guardar</button>
               </div>
             </form>
           </div>

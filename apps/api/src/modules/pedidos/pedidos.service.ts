@@ -33,11 +33,22 @@ export class PedidosService {
     return serializeBigInts(
       await this.prisma.pedidos.findMany({
         include: {
-          detalle_pedido: true,
+          detalle_pedido: {
+            include: {
+              productores: {
+                select: {
+                  id_productor: true,
+                  nombre_marca: true,
+                  usuarios: { select: { nombre: true, apellido_paterno: true } },
+                },
+              },
+            },
+          },
           facturas: true,
           usuarios: true,
           monedas: true,
         },
+        orderBy: { fecha_creacion: 'desc' },
       }),
     );
   }

@@ -232,7 +232,7 @@ export default function ClientePerfilPage() {
   ];
 
   return (
-    <div style={{ background: colors.bgPage, minHeight: "100vh", padding: "32px 16px 64px", transition: "background 0.3s" }}>
+    <div style={{ paddingBottom: "64px", transition: "background 0.3s" }}>
       <div style={{ maxWidth: "820px", margin: "0 auto" }}>
         
         <div style={{ marginBottom: "28px" }}>

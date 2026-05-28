@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
-import { Loader2, Plus, Pencil, Trash2, Mail, ShieldCheck, X, User } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Mail, ShieldCheck, X, User, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Rol { id_rol: number; nombre: string }
 
@@ -47,6 +47,10 @@ export default function UsuariosUI() {
   const [saving, setSaving]               = useState(false);
   const [searchTerm, setSearchTerm]       = useState("");
   const [filterRole, setFilterRole]       = useState("todos");
+
+  // --- Paginación ---
+  const [currentPage, setCurrentPage]     = useState(1);
+  const itemsPerPage = 10;
 
   const getToken = () => typeof window !== "undefined" ? getCookie("token") : null;
 
@@ -129,7 +133,7 @@ export default function UsuariosUI() {
   const getInitials = (nombre: string) => nombre.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
   const getColor = (nombre: string) => {
-    const colors = ["bg-indigo-100 text-indigo-700", "bg-emerald-100 text-emerald-700", "bg-amber-100 text-amber-700", "bg-purple-100 text-purple-700"];
+    const colors = ["bg-[#A8C26B]/25 text-[#1F3A2E]", "bg-[#3D6B3F]/15 text-[#3D6B3F]", "bg-[#C97A3E]/20 text-[#C97A3E]", "bg-[#1F3A2E]/15 text-[#1F3A2E]"];
     return colors[nombre.charCodeAt(0) % colors.length];
   };
 
@@ -139,11 +143,18 @@ export default function UsuariosUI() {
     return matchesSearch && matchesRole;
   });
 
+  // --- Lógica de Paginación ---
+  const totalPages = Math.ceil(filteredUsuarios.length / itemsPerPage);
+  const currentUsuarios = filteredUsuarios.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const activeUsers    = usuarios.filter((u) => u.estado === "activo").length;
   const usersWithRoles = usuarios.filter((u) => (u.usuario_rol?.length || 0) > 0).length;
 
-  const inputCls = "w-full rounded-xl border border-stroke dark:border-dark-3 bg-white dark:bg-dark-2 text-dark dark:text-white p-3 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder-gray-400 dark:placeholder-gray-500";
-  const labelCls = "mb-2 block text-sm font-medium text-slate-700 dark:text-dark-7";
+  const inputCls = "w-full rounded-xl border border-[#C5CFB0] px-3 py-2 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/50 bg-[#F4F0E3] focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent transition-all";
+  const labelCls = "block text-sm font-medium text-[#1F3A2E] mb-1";
 
   if (loading) {
     return <div className="flex min-h-[400px] items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>;
@@ -154,12 +165,12 @@ export default function UsuariosUI() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-dark dark:text-white tracking-tight">Gestión de Usuarios</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Controla los accesos y permisos del personal</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#1F3A2E] tracking-tight [font-family:'Playfair_Display',serif]">Gestión de Usuarios</h1>
+          <p className="text-[#3D6B3F]/70 text-sm mt-0.5">Controla los accesos y permisos del personal</p>
         </div>
         <button
           onClick={() => { setShowModal(true); setEditingUsuario(null); setUserFormData(DEFAULT_FORM); }}
-          className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95 w-full sm:w-auto"
+          className="bg-[#3D6B3F] text-white text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-[#1F3A2E] transition-all duration-200 active:scale-95 w-full sm:w-auto"
         >
           <Plus size={18} className="inline mr-2" /> Nuevo Usuario
         </button>
@@ -171,14 +182,14 @@ export default function UsuariosUI() {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Total Usuarios", value: usuarios.length,      color: "text-dark dark:text-white" },
-          { label: "Activos",        value: activeUsers,           color: "text-green-600" },
-          { label: "Con Roles",      value: usersWithRoles,        color: "text-indigo-600" },
-          { label: "Pendientes",     value: usuarios.length - activeUsers, color: "text-amber-500" },
+          { label: "Total Usuarios", value: usuarios.length,      color: "text-[#1F3A2E]" },
+          { label: "Activos",        value: activeUsers,           color: "text-[#3D6B3F]" },
+          { label: "Con Roles",      value: usersWithRoles,        color: "text-[#3D6B3F]" },
+          { label: "Pendientes",     value: usuarios.length - activeUsers, color: "text-[#C97A3E]" },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-white dark:bg-gray-dark p-5 rounded-2xl shadow-sm border border-stroke dark:border-dark-3">
-            <p className="text-gray-400 dark:text-dark-6 text-[10px] font-bold uppercase tracking-widest">{label}</p>
-            <h2 className={`text-2xl font-black mt-1 ${color}`}>{value}</h2>
+          <div key={label} className="bg-[#F4F0E3] rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 flex flex-col gap-1">
+            <p className="text-sm font-semibold text-[#3D6B3F]/70 uppercase tracking-wider">{label}</p>
+            <h2 className={`text-2xl font-bold mt-1 [font-family:'DM_Sans',sans-serif] ${color}`}>{value}</h2>
           </div>
         ))}
       </div>
@@ -189,14 +200,20 @@ export default function UsuariosUI() {
           <input
             placeholder="Buscar por nombre o correo..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full border border-stroke dark:border-dark-3 bg-white dark:bg-dark-2 text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // Regresa a la página 1 al buscar
+            }}
+            className="w-full border border-[#C5CFB0] bg-[#F4F0E3] text-[#1F3A2E] placeholder-[#3D6B3F]/50 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent transition-all"
           />
         </div>
         <select
           value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
-          className="border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2 text-slate-600 dark:text-white p-2.5 rounded-xl text-sm outline-none"
+          onChange={(e) => {
+            setFilterRole(e.target.value);
+            setCurrentPage(1); // Regresa a la página 1 al filtrar
+          }}
+          className="border border-[#C5CFB0] bg-[#F4F0E3] text-[#1F3A2E] p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent"
         >
           <option value="todos">Todos los Roles</option>
           {roles.map((r) => <option key={r.id_rol} value={r.nombre.toLowerCase()}>{r.nombre}</option>)}
@@ -204,25 +221,25 @@ export default function UsuariosUI() {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-gray-dark border border-stroke dark:border-dark-3 rounded-2xl overflow-hidden">
+      <div className="border border-[#C5CFB0] rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead className="bg-gray-50/50 dark:bg-dark-3 text-gray-400 dark:text-dark-6 text-[11px] font-bold uppercase tracking-widest border-b border-gray-100 dark:border-dark-3">
+            <thead className="bg-[#1F3A2E] text-xs font-semibold text-white uppercase tracking-wider">
               <tr>
-                <th className="py-4 px-6">Usuario</th>
-                <th className="py-4 px-6">Rol / Permisos</th>
-                <th className="py-4 px-6">Estado</th>
-                <th className="py-4 px-6">Fecha Registro</th>
-                <th className="py-4 px-6 text-right">Acciones</th>
+                <th className="px-4 py-3 text-left">Usuario</th>
+                <th className="px-4 py-3 text-left">Rol / Permisos</th>
+                <th className="px-4 py-3 text-left">Estado</th>
+                <th className="px-4 py-3 text-left">Fecha Registro</th>
+                <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-dark-3">
-              {filteredUsuarios.length === 0 ? (
-                <tr><td colSpan={5} className="py-8 text-center text-gray-500 dark:text-dark-6">No se encontraron usuarios</td></tr>
+            <tbody className="divide-y divide-[#C5CFB0]/30">
+              {currentUsuarios.length === 0 ? (
+                <tr><td colSpan={5} className="py-8 text-center text-[#3D6B3F]/70 bg-white">No se encontraron usuarios</td></tr>
               ) : (
-                filteredUsuarios.map((user) => (
-                  <tr key={user.id_usuario} className="hover:bg-gray-50/50 dark:hover:bg-dark-3/50 transition-colors group">
-                    <td className="py-4 px-6">
+                currentUsuarios.map((user) => (
+                  <tr key={user.id_usuario} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200 group">
+                    <td className="px-4 py-3 text-[#1F3A2E]">
                       <div className="flex items-center gap-3">
                         {user.foto_url ? (
                           <img src={user.foto_url} alt={user.nombre} className="w-10 h-10 rounded-full object-cover shadow-sm" />
@@ -230,29 +247,29 @@ export default function UsuariosUI() {
                           <div className={`w-10 h-10 rounded-full ${getColor(user.nombre)} flex items-center justify-center font-bold text-xs shadow-sm`}>{getInitials(user.nombre)}</div>
                         )}
                         <div>
-                          <p className="text-sm font-bold text-slate-800 dark:text-white">{user.nombre} {user.apellido_paterno}</p>
-                          <p className="text-xs text-gray-400 dark:text-dark-6 flex items-center gap-1"><Mail size={12} /> {user.email}</p>
+                          <p className="text-sm font-bold text-[#1F3A2E]">{user.nombre} {user.apellido_paterno}</p>
+                          <p className="text-xs text-[#3D6B3F]/60 flex items-center gap-1"><Mail size={12} /> {user.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-dark-6">
-                        <ShieldCheck size={16} className={getUserRoles(user).some((r) => r?.toLowerCase().includes("admin")) ? "text-indigo-500" : "text-slate-400"} />
-                        {getUserRoles(user).length > 0 ? getUserRoles(user).map((rol, i) => <span key={i} className="font-medium">{rol}</span>) : <span className="text-gray-400 dark:text-dark-6">Sin rol</span>}
+                    <td className="px-4 py-3 text-[#1F3A2E]">
+                      <div className="flex items-center gap-2 text-sm text-[#1F3A2E]">
+                        <ShieldCheck size={16} className={getUserRoles(user).some((r) => r?.toLowerCase().includes("admin")) ? "text-[#3D6B3F]" : "text-[#C5CFB0]"} />
+                        {getUserRoles(user).length > 0 ? getUserRoles(user).map((rol, i) => <span key={i} className="font-medium">{rol}</span>) : <span className="text-[#3D6B3F]/50">Sin rol</span>}
                       </div>
                     </td>
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${user.estado === "activo" ? "bg-green-50 text-green-700 border-green-100" : "bg-gray-50 dark:bg-dark-3 text-gray-500 dark:text-dark-6 border-gray-100 dark:border-dark-4"}`}>
+                    <td className="px-4 py-3 text-[#1F3A2E]">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.estado === "activo" ? "bg-[#A8C26B]/20 text-[#3D6B3F]" : "bg-[#C97A3E]/15 text-[#C97A3E]"}`}>
                         {user.estado || "Activo"}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-xs text-gray-500 dark:text-dark-6 font-medium">
+                    <td className="px-4 py-3 text-sm text-[#3D6B3F]/70 font-medium">
                       {user.fecha_registro ? new Date(user.fecha_registro).toLocaleDateString("es-MX") : "-"}
                     </td>
-                    <td className="py-4 px-6 text-right">
-                      <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openEdit(user)}         className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Pencil size={16} /></button>
-                        <button onClick={() => handleDelete(user.id_usuario)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-3">
+                        <button onClick={() => openEdit(user)}         className="p-1.5 text-[#3D6B3F]/50 hover:text-[#3D6B3F] hover:bg-[#A8C26B]/20 rounded-lg transition-all duration-200"><Pencil size={16} /></button>
+                        <button onClick={() => handleDelete(user.id_usuario)} className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"><Trash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>
@@ -263,14 +280,66 @@ export default function UsuariosUI() {
         </div>
       </div>
 
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 sm:px-6 mt-4 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <div className="flex flex-1 justify-between sm:hidden">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-medium text-[#1F3A2E] hover:bg-[#F4F0E3] disabled:opacity-50"
+            >
+              Anterior
+            </button>
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="relative ml-3 inline-flex items-center rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-medium text-[#1F3A2E] hover:bg-[#F4F0E3] disabled:opacity-50"
+            >
+              Siguiente
+            </button>
+          </div>
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-[#1F3A2E]">
+                Mostrando <span className="font-semibold">{((currentPage - 1) * itemsPerPage) + 1}</span> a <span className="font-semibold">{Math.min(currentPage * itemsPerPage, filteredUsuarios.length)}</span> de <span className="font-semibold">{filteredUsuarios.length}</span> usuarios
+              </p>
+            </div>
+            <div>
+              <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm" aria-label="Pagination">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                >
+                  <span className="sr-only">Anterior</span>
+                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                </button>
+                <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0] focus:z-20 focus:outline-offset-0">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                >
+                  <span className="sr-only">Siguiente</span>
+                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal */}
       {showModalUsuario && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-dark-2 shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-dark-3 p-6">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">{editingUsuario ? "Editar Usuario" : "Nuevo Usuario"}</h3>
-              <button onClick={closeModal} className="text-gray-400 dark:text-dark-6 hover:text-slate-600 dark:hover:text-white"><X size={20} /></button>
+            <div className="flex items-center justify-between bg-[#1F3A2E] p-6">
+              <h3 className="text-lg font-bold text-white [font-family:'Playfair_Display',serif]">{editingUsuario ? "Editar Usuario" : "Nuevo Usuario"}</h3>
+              <button onClick={closeModal} className="text-white/70 hover:text-white hover:bg-white/10 rounded-lg p-1 transition-all duration-200"><X size={20} /></button>
             </div>
 
             {/* Modal Body */}
@@ -304,9 +373,9 @@ export default function UsuariosUI() {
                       <button type="button" onClick={() => { setSelectedFotoFile(null); setUserFormData({ ...userFormData, foto_url: "" }); }} className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"><X size={12} /></button>
                     </div>
                   ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-gray-300 dark:border-dark-3 bg-gray-50 dark:bg-dark-3"><User size={24} className="text-gray-400 dark:text-dark-6" /></div>
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-[#C5CFB0] bg-[#F4F0E3]"><User size={24} className="text-[#3D6B3F]/50" /></div>
                   )}
-                  <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 dark:border-dark-3 px-4 py-2 text-sm font-medium text-slate-600 dark:text-dark-6 hover:bg-gray-50 dark:hover:bg-dark-3">
+                  <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-[#C5CFB0] px-4 py-2 text-sm font-medium text-[#1F3A2E] hover:bg-[#C5CFB0]/20 transition-all duration-200">
                     <input type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; if (file.size > 500 * 1024) { alert("La imagen debe pesar menos de 500 KB."); e.target.value = ""; return; } setSelectedFotoFile(file); }} className="hidden" />
                     Subir foto
                   </label>
@@ -348,13 +417,13 @@ export default function UsuariosUI() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex gap-3 border-t border-gray-100 dark:border-dark-3 p-6">
-              <button type="button" onClick={closeModal} className="flex-1 rounded-xl border border-gray-200 dark:border-dark-3 py-3 font-medium text-slate-600 dark:text-dark-6 transition-colors hover:bg-gray-50 dark:hover:bg-dark-3">Cancelar</button>
+            <div className="flex gap-3 border-t border-[#C5CFB0] p-6 bg-[#F4F0E3]/50">
+              <button type="button" onClick={closeModal} className="flex-1 rounded-xl border border-[#C5CFB0] py-3 text-sm font-medium text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200">Cancelar</button>
               <button
                 type="button"
                 onClick={(e) => editingUsuario ? handleUpdateUsuario(e as unknown as React.FormEvent) : handleCreateUsuario(e as unknown as React.FormEvent)}
                 disabled={saving}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#3D6B3F] py-3 text-sm font-medium text-white hover:bg-[#1F3A2E] transition-all duration-200 disabled:opacity-50"
               >
                 {saving && <Loader2 className="animate-spin" size={16} />}
                 {editingUsuario ? "Actualizar" : "Crear"}

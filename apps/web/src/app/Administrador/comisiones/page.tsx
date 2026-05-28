@@ -132,7 +132,7 @@ export default function ComisionesAdminPage() {
         <div
           className={`flex items-center gap-2 rounded-md border px-4 py-2 text-sm ${
             notice.type === "success"
-              ? "border-green-300 bg-green-50 text-green-800"
+              ? "border-[#A8C26B]/40 bg-[#A8C26B]/10 text-[#3D6B3F]"
               : "border-red-300 bg-red-50 text-red-800"
           }`}
         >
@@ -146,19 +146,19 @@ export default function ComisionesAdminPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3D6B3F]/40" size={16} />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar..."
-            className="rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm dark:border-gray-600 dark:bg-gray-800"
+            className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] py-2 pl-9 pr-3 text-sm text-[#1F3A2E]"
           />
         </div>
         <select
           value={filtroAlcance}
           onChange={(e) => setFiltroAlcance(e.target.value)}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+          className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#1F3A2E]"
         >
           <option value="">Todos los alcances</option>
           {ALCANCES.map((a) => (
@@ -169,51 +169,51 @@ export default function ComisionesAdminPage() {
         </select>
         <button
           onClick={() => setShowResolver((v) => !v)}
-          className="rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-700 hover:bg-blue-100"
+          className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#3D6B3F] hover:bg-[#C5CFB0]/30 transition-all duration-200"
         >
           Probar resolver
         </button>
         <button
           onClick={openCreate}
-          className="ml-auto inline-flex items-center gap-1 rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-primary/90"
+          className="ml-auto inline-flex items-center gap-1 rounded-xl bg-[#3D6B3F] px-3 py-2 text-sm text-white hover:bg-[#1F3A2E] transition-all duration-200"
         >
           <Plus size={16} /> Nueva regla
         </button>
       </div>
 
       {showResolver && (
-        <div className="rounded-md border border-blue-200 bg-blue-50 p-4">
-          <h3 className="mb-3 font-medium text-blue-900">Probar resolución de comisión</h3>
+        <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <h3 className="mb-3 font-medium text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Probar resolución de comisión</h3>
           <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-3">
             <input
               placeholder="id_productor (opcional)"
               value={resolverInput.id_productor}
               onChange={(e) => setResolverInput((p) => ({ ...p, id_productor: e.target.value }))}
-              className="rounded-md border border-blue-200 bg-white px-3 py-2 text-sm"
+              className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E]"
             />
             <input
               placeholder="id_categoria (opcional)"
               value={resolverInput.id_categoria}
               onChange={(e) => setResolverInput((p) => ({ ...p, id_categoria: e.target.value }))}
-              className="rounded-md border border-blue-200 bg-white px-3 py-2 text-sm"
+              className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E]"
             />
             <input
               placeholder="pais_iso2 (ej. US, MX)"
               value={resolverInput.pais_iso2}
               maxLength={2}
               onChange={(e) => setResolverInput((p) => ({ ...p, pais_iso2: e.target.value.toUpperCase() }))}
-              className="rounded-md border border-blue-200 bg-white px-3 py-2 text-sm"
+              className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E]"
             />
           </div>
           <button
             onClick={handleResolver}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            className="rounded-xl bg-[#3D6B3F] px-4 py-2 text-sm text-white hover:bg-[#1F3A2E] transition-all duration-200"
           >
             Resolver
           </button>
           {resolverError && <p className="mt-3 text-sm text-red-700">{resolverError}</p>}
           {resolverResult && (
-            <div className="mt-3 rounded-md bg-white p-3 text-sm">
+            <div className="mt-3 rounded-xl bg-white border border-[#C5CFB0] p-3 text-sm text-[#1F3A2E]">
               <div>
                 <strong>id_comision:</strong> {resolverResult.id_comision}
               </div>
@@ -233,22 +233,22 @@ export default function ComisionesAdminPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-md border border-gray-200 dark:border-gray-700">
-        <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-800">
+      <div className="overflow-x-auto rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <table className="min-w-full divide-y divide-[#C5CFB0]/30 text-sm">
+          <thead className="bg-[#1F3A2E] text-white text-[11px] font-bold uppercase tracking-wider">
             <tr>
-              <th className="px-3 py-2 text-left">ID</th>
-              <th className="px-3 py-2 text-left">Alcance</th>
-              <th className="px-3 py-2 text-left">Contexto</th>
-              <th className="px-3 py-2 text-right">%</th>
-              <th className="px-3 py-2 text-right">Monto fijo</th>
-              <th className="px-3 py-2 text-right">Prioridad</th>
-              <th className="px-3 py-2 text-left">Activo</th>
-              <th className="px-3 py-2 text-left">Vigente desde</th>
-              <th className="px-3 py-2 text-right">Acciones</th>
+              <th className="px-3 py-2 text-left text-white">ID</th>
+              <th className="px-3 py-2 text-left text-white">Alcance</th>
+              <th className="px-3 py-2 text-left text-white">Contexto</th>
+              <th className="px-3 py-2 text-right text-white">%</th>
+              <th className="px-3 py-2 text-right text-white">Monto fijo</th>
+              <th className="px-3 py-2 text-right text-white">Prioridad</th>
+              <th className="px-3 py-2 text-left text-white">Activo</th>
+              <th className="px-3 py-2 text-left text-white">Vigente desde</th>
+              <th className="px-3 py-2 text-right text-white">Acciones</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-y divide-[#C5CFB0]/30">
             {loading && (
               <tr>
                 <td colSpan={9} className="px-3 py-6 text-center">
@@ -258,14 +258,14 @@ export default function ComisionesAdminPage() {
             )}
             {!loading && filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-gray-500">
+                <td colSpan={9} className="px-3 py-6 text-center text-[#3D6B3F]/70 bg-white">
                   Sin resultados
                 </td>
               </tr>
             )}
             {!loading &&
               filtered.map((c) => (
-                <tr key={c.id_comision}>
+                <tr key={c.id_comision} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200">
                   <td className="px-3 py-2">{c.id_comision}</td>
                   <td className="px-3 py-2">{c.alcance}</td>
                   <td className="px-3 py-2">
@@ -281,25 +281,31 @@ export default function ComisionesAdminPage() {
                   <td className="px-3 py-2 text-right">{c.prioridad}</td>
                   <td className="px-3 py-2">
                     {c.activo ? (
-                      <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">activo</span>
+                      <span className="inline-flex rounded-full bg-[#A8C26B]/20 text-[#3D6B3F] border border-[#A8C26B]/40 px-2 py-0.5 text-xs font-medium">activo</span>
                     ) : (
-                      <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">inactivo</span>
+                      <span className="inline-flex rounded-full bg-[#C97A3E]/15 text-[#C97A3E] border border-[#C97A3E]/30 px-2 py-0.5 text-xs font-medium">inactivo</span>
                     )}
                   </td>
                   <td className="px-3 py-2">{new Date(c.vigente_desde).toLocaleDateString()}</td>
-                  <td className="px-3 py-2 text-right">
-                    <button
-                      onClick={() => openEdit(c)}
-                      className="mr-2 inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
-                    >
-                      <Edit2 size={12} /> Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(c)}
-                      className="inline-flex items-center gap-1 rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
-                    >
-                      <Trash2 size={12} /> Desactivar
-                    </button>
+                  <td className="px-3 py-2">
+                    <div className="flex justify-end gap-1">
+                      <button
+                        type="button"
+                        title="Editar"
+                        onClick={() => openEdit(c)}
+                        className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] transition-all duration-200"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Desactivar"
+                        onClick={() => handleDelete(c)}
+                        className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -309,20 +315,20 @@ export default function ComisionesAdminPage() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 dark:bg-gray-900">
+          <div className="w-full max-w-lg rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] overflow-hidden p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-medium">{editing ? "Editar regla" : "Nueva regla"}</h2>
+              <h2 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">{editing ? "Editar regla" : "Nueva regla"}</h2>
               <button onClick={() => setShowForm(false)} aria-label="Cerrar">
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm">Alcance</label>
+                <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">Alcance</label>
                 <select
                   value={form.alcance}
                   onChange={(e) => setForm((p) => ({ ...p, alcance: e.target.value as ComisionInput["alcance"] }))}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                 >
                   {ALCANCES.map((a) => (
                     <option key={a} value={a}>
@@ -333,58 +339,58 @@ export default function ComisionesAdminPage() {
               </div>
               {form.alcance === "pais" && (
                 <div>
-                  <label className="mb-1 block text-sm">País (ISO2)</label>
+                  <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">País (ISO2)</label>
                   <input
                     required
                     maxLength={2}
                     value={form.pais_iso2 ?? ""}
                     onChange={(e) => setForm((p) => ({ ...p, pais_iso2: e.target.value.toUpperCase() }))}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm uppercase dark:border-gray-600 dark:bg-gray-800"
+                    className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm uppercase text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                     placeholder="US"
                   />
                 </div>
               )}
               {form.alcance === "categoria" && (
                 <div>
-                  <label className="mb-1 block text-sm">id_categoria</label>
+                  <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">id_categoria</label>
                   <input
                     type="number"
                     required
                     value={form.id_categoria ?? ""}
                     onChange={(e) => setForm((p) => ({ ...p, id_categoria: Number(e.target.value) }))}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                    className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                   />
                 </div>
               )}
               {form.alcance === "productor" && (
                 <div>
-                  <label className="mb-1 block text-sm">id_productor</label>
+                  <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">id_productor</label>
                   <input
                     type="number"
                     required
                     value={form.id_productor ?? ""}
                     onChange={(e) => setForm((p) => ({ ...p, id_productor: Number(e.target.value) }))}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                    className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                   />
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-sm">Porcentaje (decimal, ej. 0.15 = 15%)</label>
+                <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">Porcentaje (decimal, ej. 0.15 = 15%)</label>
                 <input
                   required
                   value={form.porcentaje}
                   onChange={(e) => setForm((p) => ({ ...p, porcentaje: e.target.value }))}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                   placeholder="0.1500"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm">Prioridad (menor = más específica)</label>
+                <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">Prioridad (menor = más específica)</label>
                 <input
                   type="number"
                   value={form.prioridad ?? 100}
                   onChange={(e) => setForm((p) => ({ ...p, prioridad: Number(e.target.value) }))}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -402,14 +408,14 @@ export default function ComisionesAdminPage() {
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="rounded-md border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+                  className="rounded-xl border border-[#C5CFB0] px-4 py-2 text-sm text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-white hover:bg-primary/90 disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#3D6B3F] px-4 py-2 text-sm text-white hover:bg-[#1F3A2E] disabled:opacity-60 transition-all duration-200"
                 >
                   {submitting && <Loader2 size={14} className="animate-spin" />}
                   {editing ? "Guardar" : "Crear"}

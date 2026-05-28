@@ -8,9 +8,9 @@ import type { ProductItem, StoreItem } from "@/hooks/useProductos";
 
 export function ProductoStatCard({ title, value }: { title: string; value: number | string }) {
   return (
-    <div className="rounded-[10px] bg-white p-5 shadow-1 dark:bg-gray-dark">
-      <p className="text-sm text-gray-500">{title}</p>
-      <div className="mt-2 text-2xl font-bold text-dark dark:text-white">{value}</div>
+    <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <p className="text-sm text-[#3D6B3F]/70">{title}</p>
+      <div className="mt-2 text-2xl font-bold text-[#1F3A2E]">{value}</div>
     </div>
   );
 }
@@ -25,15 +25,15 @@ export function ProductoHeader({
   disableNew: boolean;
 }) {
   return (
-    <div className="mb-6 flex items-center justify-between gap-4 rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark">
+    <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
       <div>
-        <h1 className="text-2xl font-bold text-dark dark:text-white">Gestión de productos</h1>
-        <p className="text-sm text-gray-500">Solo se muestran productos de tus tiendas</p>
+        <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Gestión de productos</h1>
+        <p className="text-sm text-[#3D6B3F]/70">Solo se muestran productos de tus tiendas</p>
       </div>
       <button
         onClick={onNew}
         disabled={disableNew}
-        className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-medium text-white transition hover:bg-opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-xl bg-[#3D6B3F] px-5 py-3 font-medium text-white transition hover:bg-[#1F3A2E] disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Plus size={18} /> Nuevo producto
       </button>
@@ -67,62 +67,57 @@ export function ProductoFiltros({
   stores,
   onClear,
 }: FiltrosProps) {
-  const input = "w-full rounded-lg border border-stroke bg-transparent px-4 py-3 outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2";
-  const lbl = "mb-2 block text-sm font-medium text-dark dark:text-white";
+  const input = "w-full rounded-lg border border-[#C5CFB0] bg-transparent px-3 py-2 text-sm text-[#1F3A2E] outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20 placeholder:text-[#3D6B3F]/40";
+  const lbl = "mb-1 block text-xs font-medium text-[#1F3A2E]/70";
 
   return (
-    <>
-      <div className="mb-4 flex items-center gap-3 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por nombre o tienda"
-          className={input}
-        />
+    <div className="mb-5 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-3 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      {/* Search row */}
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar por nombre o tienda"
+        className={`${input} mb-3`}
+      />
+
+      {/* Filters row */}
+      <div className="flex flex-wrap items-end gap-2 lg:flex-nowrap">
+        <label className="block min-w-0 flex-1">
+          <span className={lbl}>Estatus</span>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={input}>
+            <option value="todos">Todos</option>
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+            <option value="borrador">Borrador</option>
+          </select>
+        </label>
+
+        <label className="block min-w-0 flex-[1.5]">
+          <span className={lbl}>Tienda</span>
+          <select value={storeFilter} onChange={(e) => setStoreFilter(e.target.value)} className={input}>
+            <option value="todos">Todas</option>
+            {stores.map((s) => (
+              <option key={s.id_tienda} value={String(s.id_tienda)}>{s.nombre}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block min-w-0 flex-1">
+          <span className={lbl}>Precio mín</span>
+          <input type="text" inputMode="numeric" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="0" className={input} />
+        </label>
+
+        <label className="block min-w-0 flex-1">
+          <span className={lbl}>Precio máx</span>
+          <input type="text" inputMode="numeric" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="∞" className={input} />
+        </label>
+
+        <button type="button" onClick={onClear}
+          className="shrink-0 rounded-lg border border-[#C5CFB0] px-3 py-2 text-xs font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/20">
+          Limpiar
+        </button>
       </div>
-
-      <div className="mb-6 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 xl:grid-cols-5">
-
-          <label className="block">
-            <span className={lbl}>Estatus</span>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={input}>
-              <option value="todos">Todos</option>
-              <option value="activo">Activo</option>
-              <option value="inactivo">Inactivo</option>
-              <option value="borrador">Borrador</option>
-            </select>
-          </label>
-
-          <label className="block">
-            <span className={lbl}>Tienda</span>
-            <select value={storeFilter} onChange={(e) => setStoreFilter(e.target.value)} className={input}>
-              <option value="todos">Todas</option>
-              {stores.map((s) => (
-                <option key={s.id_tienda} value={String(s.id_tienda)}>{s.nombre}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className={lbl}>Precio mín</span>
-            <input type="text" inputMode="numeric" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="Precio mín" className={input} />
-          </label>
-
-          <label className="block">
-            <span className={lbl}>Precio máx</span>
-            <input type="text" inputMode="numeric" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Precio máx" className={input} />
-          </label>
-
-          <div className="flex items-end">
-            <button type="button" onClick={onClear} className="w-full rounded-lg border border-stroke px-4 py-3 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-dark-3 dark:text-white dark:hover:bg-white/5">
-              Limpiar filtros
-            </button>
-          </div>
-
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -140,13 +135,13 @@ export function ProductoSeleccion({
   onDeleteSelected: () => void;
 }) {
   return (
-    <div className="mb-4 flex flex-col gap-3 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark md:flex-row md:items-center md:justify-between">
-      <label className="inline-flex items-center gap-3 text-sm font-medium text-dark dark:text-white">
+    <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)] md:flex-row md:items-center md:justify-between">
+      <label className="inline-flex items-center gap-3 text-sm font-medium text-[#1F3A2E]">
         <input
           type="checkbox"
           checked={selectionEnabled}
           onChange={(e) => onToggleMode(e.target.checked)}
-          className="h-4 w-4 rounded border-stroke text-primary focus:ring-primary"
+          className="h-4 w-4 rounded border-[#C5CFB0] text-[#3D6B3F] focus:ring-[#3D6B3F]"
         />
         <span>Seleccionar productos</span>
       </label>
@@ -154,7 +149,7 @@ export function ProductoSeleccion({
         <button
           type="button"
           onClick={onDeleteSelected}
-          className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+          className="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
         >
           Eliminar seleccionados ({selectedIds.length})
         </button>
@@ -177,7 +172,7 @@ export function ProductoPrecioPendienteBanner({
   if (sinPrecio === 0) return null;
 
   return (
-    <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-600/40 dark:bg-amber-900/20 dark:text-amber-300">
+    <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-600/40 dark:bg-amber-900/20 dark:text-amber-300">
       <span className="shrink-0 text-base">⚠</span>
       <span>
         <strong>
@@ -191,11 +186,69 @@ export function ProductoPrecioPendienteBanner({
         <button
           type="button"
           onClick={onEditarPrecio}
-          className="ml-auto shrink-0 rounded-md border border-amber-300 px-3 py-1 text-xs font-medium transition hover:bg-amber-100 dark:border-amber-600 dark:hover:bg-amber-900/40"
+          className="ml-auto shrink-0 rounded-lg border border-amber-300 px-3 py-1 text-xs font-medium transition hover:bg-amber-100 dark:border-amber-600 dark:hover:bg-amber-900/40"
         >
           Ver productos
         </button>
       )}
+    </div>
+  );
+}
+
+// ─── Paginación ───────────────────────────────────────────────────────────────
+
+function getPageNumbers(current: number, total: number): (number | "...")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
+  if (current >= total - 3) return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  return [1, "...", current - 1, current, current + 1, "...", total];
+}
+
+export function ProductoPaginacion({
+  currentPage,
+  totalPages,
+  totalItems,
+  pageSize,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+}) {
+  const from = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const to = Math.min(currentPage * pageSize, totalItems);
+  const pages = getPageNumbers(currentPage, totalPages);
+
+  const btnBase = "rounded-lg border border-[#C5CFB0] px-3 py-1.5 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/20 disabled:cursor-not-allowed disabled:opacity-40";
+
+  return (
+    <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] px-5 py-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)] sm:flex-row sm:justify-between">
+      <p className="text-sm text-[#3D6B3F]/70">
+        {totalItems === 0 ? "Sin resultados" : `${from}–${to} de ${totalItems} producto${totalItems !== 1 ? "s" : ""}`}
+      </p>
+      <div className="flex items-center gap-1">
+        <button disabled={currentPage === 1} onClick={() => onPageChange(currentPage - 1)} className={btnBase}>‹</button>
+        {pages.map((p, i) =>
+          p === "..." ? (
+            <span key={`el-${i}`} className="px-2 text-sm text-[#3D6B3F]/50">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPageChange(p as number)}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                p === currentPage
+                  ? "bg-[#3D6B3F] text-white"
+                  : "border border-[#C5CFB0] text-[#1F3A2E] hover:bg-[#C5CFB0]/20"
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+        <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => onPageChange(currentPage + 1)} className={btnBase}>›</button>
+      </div>
     </div>
   );
 }
@@ -226,26 +279,27 @@ export function ProductoTabla({
   onDelete,
 }: TablaProps) {
   return (
-    <div className="overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark">
+    <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[800px] text-left">
-          <thead className="bg-gray-2 dark:bg-dark-2">
-            <tr className="text-sm text-gray-500">
+          <thead className="bg-[#1F3A2E]">
+            <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white">
               {selectionEnabled && (
                 <th className="w-12 px-4 py-4 text-center">
                   <input
                     type="checkbox"
                     checked={allVisibleSelected}
                     onChange={(e) => onToggleSelectAll(e.target.checked)}
-                    className="h-4 w-4 rounded border-stroke text-primary focus:ring-primary"
+                    className="h-4 w-4 rounded border-white/30 text-[#A8C26B] focus:ring-[#A8C26B]"
                   />
                 </th>
               )}
-              <th className="w-[40%] px-5 py-4">Nombre</th>
-              <th className="w-[15%] px-5 py-4">Precio base</th>
-              <th className="w-[10%] px-5 py-4">Moneda</th>
-              <th className="w-[15%] px-5 py-4">Status</th>
-              <th className="w-[20%] px-5 py-4 text-right">Acciones</th>
+              <th className="w-[32%] px-5 py-4">Nombre</th>
+              <th className="w-[13%] px-5 py-4">Precio base</th>
+              <th className="w-[8%] px-5 py-4">Moneda</th>
+              <th className="w-[12%] px-5 py-4">Status</th>
+              <th className="w-[10%] px-5 py-4">Stock</th>
+              <th className="w-[25%] px-5 py-4 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -255,7 +309,7 @@ export function ProductoTabla({
               return (
                 <tr
                   key={product.id_producto}
-                  className="border-t border-stroke text-sm dark:border-dark-3"
+                  className="border-t border-[#C5CFB0]/30 bg-white text-sm transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20"
                 >
                   {selectionEnabled && (
                     <td className="px-4 py-4 text-center">
@@ -263,13 +317,13 @@ export function ProductoTabla({
                         type="checkbox"
                         checked={selectedIds.includes(product.id_producto)}
                         onChange={(e) => onToggleSelect(product.id_producto, e.target.checked)}
-                        className="h-4 w-4 rounded border-stroke text-primary focus:ring-primary"
+                        className="h-4 w-4 rounded border-[#C5CFB0] text-[#3D6B3F] focus:ring-[#3D6B3F]"
                       />
                     </td>
                   )}
 
                   {/* ── Nombre + badge precio pendiente ── */}
-                  <td className="px-5 py-4 font-medium text-dark dark:text-white">
+                  <td className="px-5 py-4 font-medium text-[#1F3A2E]">
                     <div className="flex items-center gap-3">
                       <ProductoThumbnail src={product.imagen_url} alt={product.nombre} />
                       <div className="flex flex-col gap-1">
@@ -290,14 +344,14 @@ export function ProductoTabla({
                         $0.00 ⚠
                       </span>
                     ) : (
-                      <span>{Number(product.precio_base || 0).toFixed(2)}</span>
+                      <span className="text-[#1F3A2E]">{Number(product.precio_base || 0).toFixed(2)}</span>
                     )}
                   </td>
 
-                  <td className="px-5 py-4">{product.moneda_base || "MXN"}</td>
+                  <td className="px-5 py-4 text-[#3D6B3F]/70">{product.moneda_base || "MXN"}</td>
 
                   <td className="px-5 py-4">
-                    <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+                    <span className="rounded-full bg-[#A8C26B]/20 px-3 py-1 text-xs font-medium text-[#3D6B3F]">
                       {product.status || "activo"}
                     </span>
                   </td>
@@ -317,7 +371,7 @@ export function ProductoTabla({
                         </span>
                       );
                       return (
-                        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+                        <span className="rounded-full bg-[#C5CFB0]/30 px-2 py-1 text-xs font-medium text-[#1F3A2E]">
                           {stock}
                         </span>
                       );
@@ -328,16 +382,16 @@ export function ProductoTabla({
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => onView(product)}
-                        className="rounded-lg p-2 text-gray-500 hover:bg-green-50 hover:text-green-600"
+                        className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] transition-colors"
                       >
                         <Eye size={16} />
                       </button>
                       <button
                         onClick={() => onEdit(product)}
-                        className={`rounded-lg p-2 transition ${
+                        className={`rounded-lg p-2 transition-colors ${
                           sinPrecio
                             ? "bg-amber-50 text-amber-600 hover:bg-amber-100"
-                            : "text-gray-500 hover:bg-blue-50 hover:text-blue-600"
+                            : "text-[#3D6B3F]/50 hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F]"
                         }`}
                         title={sinPrecio ? "Editar — precio pendiente" : "Editar"}
                       >
@@ -345,7 +399,7 @@ export function ProductoTabla({
                       </button>
                       <button
                         onClick={() => onDelete(product)}
-                        className="rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                        className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-red-50 hover:text-red-600 transition-colors"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -359,7 +413,7 @@ export function ProductoTabla({
               <tr>
                 <td
                   colSpan={selectionEnabled ? 7 : 6}
-                  className="px-5 py-10 text-center text-gray-500"
+                  className="px-5 py-10 text-center text-[#3D6B3F]/60"
                 >
                   No hay productos para mostrar
                 </td>

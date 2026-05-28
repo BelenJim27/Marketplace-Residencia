@@ -2,7 +2,6 @@
 
 import { Eye, Package, User, TrendingUp } from "lucide-react";
 
-// 1. Definir la interfaz que TypeScript no encontraba
 interface Props {
   products: number;
   active: number;
@@ -13,31 +12,31 @@ export function StatsCards({ products, active, profileLabel }: Props) {
   const isComplete = profileLabel === "Completo";
 
   const cards = [
-    { 
-      label: "Total Productos", 
-      value: products, 
-      icon: Package, 
-      color: "text-blue-600" 
+    {
+      label: "Total Productos",
+      value: products,
+      icon: Package,
+      color: "text-[#3D6B3F]",
     },
-    { 
-      label: "Productos Activos", 
-      value: active, 
-      icon: Eye, 
-      color: "text-green-600" 
+    {
+      label: "Productos Activos",
+      value: active,
+      icon: Eye,
+      color: "text-[#A8C26B]",
     },
-    { 
-      label: "Estado del Perfil", 
-      value: profileLabel, 
-      icon: User, 
+    {
+      label: "Estado del Perfil",
+      value: profileLabel,
+      icon: User,
       isBadge: true,
-      color: isComplete ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700" 
+      color: isComplete ? "bg-[#A8C26B]/20 text-[#3D6B3F]" : "bg-[#C97A3E]/15 text-[#C97A3E]",
     },
-    { 
-      label: "Rendimiento", 
-      value: "+12%", 
-      icon: TrendingUp, 
-      color: "text-emerald-600", 
-      sub: "vs mes anterior" 
+    {
+      label: "Rendimiento",
+      value: "+12%",
+      icon: TrendingUp,
+      color: "text-[#3D6B3F]",
+      sub: "vs mes anterior",
     },
   ];
 
@@ -46,9 +45,9 @@ export function StatsCards({ products, active, profileLabel }: Props) {
       {cards.map((stat) => {
         const Icon = stat.icon;
         return (
-          <div key={stat.label} className="rounded-xl border border-stroke bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div key={stat.label} className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              <span className="text-sm font-medium text-[#3D6B3F]/70">
                 {stat.label}
               </span>
               {!stat.isBadge && <Icon className={`h-5 w-5 ${stat.color}`} />}
@@ -59,11 +58,11 @@ export function StatsCards({ products, active, profileLabel }: Props) {
                   {stat.value}
                 </span>
               ) : (
-                <span className="text-2xl font-bold text-dark dark:text-white">
+                <span className="text-2xl font-bold text-[#1F3A2E]">
                   {stat.value}
                 </span>
               )}
-              {stat.sub && <span className="text-xs text-gray-400">{stat.sub}</span>}
+              {stat.sub && <span className="text-xs text-[#3D6B3F]/50">{stat.sub}</span>}
             </div>
           </div>
         );

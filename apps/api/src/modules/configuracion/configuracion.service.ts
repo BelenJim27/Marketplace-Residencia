@@ -15,9 +15,52 @@ export class ConfiguracionService {
     return serializeBigInts(items);
   }
   async getSistema(id_config: number) { const item = await this.prisma.configuracion_sistema.findUnique({ where: { id_config } }); if (!item) throw new NotFoundException('Configuracion no encontrada'); return serializeBigInts(item); }
-  async createSistema(dto: CreateConfiguracionSistemaDto) { return serializeBigInts(await this.prisma.configuracion_sistema.create({ data: { clave: dto.clave.trim(), valor: dto.valor ?? null, tipo: dto.tipo?.trim() ?? 'texto', descripcion: dto.descripcion ?? null } })); }
-  async updateSistema(id_config: number, dto: UpdateConfiguracionSistemaDto) { return serializeBigInts(await this.prisma.configuracion_sistema.update({ where: { id_config }, data: { clave: dto.clave?.trim(), valor: dto.valor, tipo: dto.tipo?.trim(), descripcion: dto.descripcion } })); }
-  async removeSistema(id_config: number) { await this.prisma.configuracion_sistema.delete({ where: { id_config } }); return { message: 'Configuracion eliminada' }; }
+  async createSistema(dto: CreateConfiguracionSistemaDto) {
+    const config = await this.prisma.configuracion_sistema.create({
+      data: { clave: dto.clave.trim(), valor: dto.valor ?? null, tipo: dto.tipo?.trim() ?? 'texto', descripcion: dto.descripcion ?? null },
+    });
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'crear_configuracion',
+        tabla_afectada: 'configuracion_sistema',
+        registro_id: String(config.id_config),
+        valor_nuevo: { clave: config.clave, valor: config.valor } as any,
+      },
+    });
+    return serializeBigInts(config);
+  }
+
+  async updateSistema(id_config: number, dto: UpdateConfiguracionSistemaDto) {
+    const current = await this.prisma.configuracion_sistema.findUnique({ where: { id_config } });
+    const updated = await this.prisma.configuracion_sistema.update({
+      where: { id_config },
+      data: { clave: dto.clave?.trim(), valor: dto.valor, tipo: dto.tipo?.trim(), descripcion: dto.descripcion },
+    });
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'actualizar_configuracion',
+        tabla_afectada: 'configuracion_sistema',
+        registro_id: String(id_config),
+        valor_anterior: { clave: current?.clave, valor: current?.valor } as any,
+        valor_nuevo: { clave: dto.clave, valor: dto.valor } as any,
+      },
+    });
+    return serializeBigInts(updated);
+  }
+
+  async removeSistema(id_config: number) {
+    const current = await this.prisma.configuracion_sistema.findUnique({ where: { id_config } });
+    await this.prisma.configuracion_sistema.delete({ where: { id_config } });
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'eliminar_configuracion',
+        tabla_afectada: 'configuracion_sistema',
+        registro_id: String(id_config),
+        valor_anterior: { clave: current?.clave, valor: current?.valor } as any,
+      },
+    });
+    return { message: 'Configuracion eliminada' };
+  }
 
   async getConfigAsMap() {
     const configs = await this.listSistema();
@@ -35,10 +78,19 @@ export class ConfiguracionService {
   }
 
   async setAsociaciones(lista: string[]): Promise<string[]> {
+    const current = await this.prisma.configuracion_sistema.findUnique({ where: { clave: 'asociaciones' } });
     await this.prisma.configuracion_sistema.upsert({
       where: { clave: 'asociaciones' },
       update: { valor: JSON.stringify(lista), tipo: 'json' },
       create: { clave: 'asociaciones', valor: JSON.stringify(lista), tipo: 'json', descripcion: 'Lista de asociaciones de productores' },
+    });
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'actualizar_asociaciones',
+        tabla_afectada: 'configuracion_sistema',
+        valor_anterior: { asociaciones: current?.valor ? JSON.parse(current.valor) : [] } as any,
+        valor_nuevo: { asociaciones: lista } as any,
+      },
     });
     return lista;
   }

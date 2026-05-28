@@ -88,16 +88,24 @@ export class InventarioService {
     return serializeBigInts(item);
   }
   async createInventario(dto: CreateInventarioDto) {
-    return serializeBigInts(
-      await this.prisma.inventario.create({
-        data: {
-          id_producto: dto.id_producto,
-          stock: dto.stock,
-          stock_minimo: dto.stock_minimo ?? 0,
-        },
-      }),
-    );
+    const inventario = await this.prisma.inventario.create({
+      data: {
+        id_producto: dto.id_producto,
+        stock: dto.stock,
+        stock_minimo: dto.stock_minimo ?? 0,
+      },
+    });
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'crear_inventario',
+        tabla_afectada: 'inventario',
+        registro_id: String(inventario.id_inventario),
+        valor_nuevo: { id_producto: String(dto.id_producto), stock: dto.stock, stock_minimo: dto.stock_minimo ?? 0 } as any,
+      },
+    });
+    return serializeBigInts(inventario);
   }
+
   async updateInventario(id: string, dto: UpdateInventarioDto) {
     const current = await this.prisma.inventario.findUnique({
       where: { id_inventario: toBigIntId(id) },
@@ -119,6 +127,16 @@ export class InventarioService {
     if (dto.stock !== undefined && nuevoStock <= minimo) {
       this.notifyProductorStockBajo(current.id_producto, nuevoStock).catch(() => {});
     }
+
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'ajustar_stock',
+        tabla_afectada: 'inventario',
+        registro_id: id,
+        valor_anterior: { stock: current.stock, stock_minimo: current.stock_minimo } as any,
+        valor_nuevo: { stock: dto.stock, stock_minimo: dto.stock_minimo } as any,
+      },
+    });
 
     return serializeBigInts(updated);
   }
@@ -153,6 +171,13 @@ export class InventarioService {
   async removeInventario(id: string) {
     await this.prisma.inventario.delete({
       where: { id_inventario: toBigIntId(id) },
+    });
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'eliminar_inventario',
+        tabla_afectada: 'inventario',
+        registro_id: id,
+      },
     });
     return { message: "Inventario eliminado" };
   }

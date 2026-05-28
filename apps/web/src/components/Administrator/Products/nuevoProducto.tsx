@@ -123,24 +123,24 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
 
     return (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-[0_24px_48px_rgba(31,58,46,0.25)] w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden border border-[#C5CFB0]">
 
                 {/* CABECERA */}
-                <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-gray-800">Registrar Nuevo Producto</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+                <div className="p-6 bg-[#1F3A2E] flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-white [font-family:'Playfair_Display',serif]">Registrar Nuevo Producto</h2>
+                    <button onClick={onClose} className="text-white/70 hover:text-white text-2xl leading-none hover:bg-white/10 rounded-lg px-2 transition-all duration-200">&times;</button>
                 </div>
 
                 {/* FORMULARIO */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto bg-white">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto bg-[#F4F0E3]">
 
                     {/* NOMBRE */}
                     <div>
-                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Nombre del Producto</label>
+                        <label className="block text-sm font-medium text-[#1F3A2E] mb-1">Nombre del Producto</label>
                         <input
                             required
                             type="text"
-                            className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500"
+                            className="w-full rounded-xl border border-[#C5CFB0] px-3 py-2 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/50 bg-white focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent"
                             placeholder="Ej. Mezcal madrecuixe"
                             value={formData.nombre}
                             onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
@@ -149,9 +149,9 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
 
                     {/* CATEGORÍA */}
                     <div>
-                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Categoría</label>
+                        <label className="block text-sm font-medium text-[#1F3A2E] mb-1">Categoría</label>
                         <select
-                            className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500"
+                            className="w-full rounded-xl border border-[#C5CFB0] px-3 py-2 text-sm text-[#1F3A2E] bg-white focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent"
                             value={selectedCategorias[0] ?? ""}
                             onChange={(e) => setSelectedCategorias(e.target.value ? [Number(e.target.value)] : [])}
                         >
@@ -167,10 +167,10 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
                     {/* TIENDA + ESTADO */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tienda</label>
+                            <label className="block text-sm font-medium text-[#1F3A2E] mb-1">Tienda</label>
                             <select
                                 required
-                                className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500"
+                                className="w-full rounded-xl border border-[#C5CFB0] px-3 py-2 text-sm text-[#1F3A2E] bg-white focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent"
                                 value={formData.id_tienda || ""}
                                 onChange={(e) => handleTiendaChange(Number(e.target.value))}
                             >
@@ -183,9 +183,9 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
                             </select>
                         </div>
                         <div>
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Estado</label>
+                            <label className="block text-sm font-medium text-[#1F3A2E] mb-1">Estado</label>
                             <select
-                                className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500"
+                                className="w-full rounded-xl border border-[#C5CFB0] px-3 py-2 text-sm text-[#1F3A2E] bg-white focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent"
                                 value={formData.status}
                                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                             >
@@ -197,41 +197,41 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
 
                     {/* PRODUCTOR — 3 campos readonly, se llenan al elegir tienda */}
                     <div>
-                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 block">
+                        <label className="text-[11px] font-bold text-[#3D6B3F]/70 uppercase tracking-wider mb-2 block">
                             Productor{" "}
-                            <span className="normal-case font-normal text-gray-300">
+                            <span className="normal-case font-normal text-[#3D6B3F]/50">
                                 (se llena al seleccionar tienda)
                             </span>
                         </label>
                         <div className="grid grid-cols-3 gap-3">
                             <div>
-                                <label className="text-[10px] text-gray-400 mb-1 block">Nombre</label>
+                                <label className="text-[10px] text-[#3D6B3F]/60 mb-1 block">Nombre</label>
                                 <input
                                     type="text"
                                     readOnly
                                     value={getProductorField('nombre')}
                                     placeholder="—"
-                                    className="w-full border p-3 rounded-xl bg-gray-100 outline-none text-gray-600 cursor-not-allowed text-sm"
+                                    className="w-full border border-[#C5CFB0] p-3 rounded-xl bg-[#C5CFB0]/20 outline-none text-[#1F3A2E]/60 cursor-not-allowed text-sm"
                                 />
                             </div>
                             <div>
-                                <label className="text-[10px] text-gray-400 mb-1 block">Ap. Paterno</label>
+                                <label className="text-[10px] text-[#3D6B3F]/60 mb-1 block">Ap. Paterno</label>
                                 <input
                                     type="text"
                                     readOnly
                                     value={getProductorField('apellido_paterno')}
                                     placeholder="—"
-                                    className="w-full border p-3 rounded-xl bg-gray-100 outline-none text-gray-600 cursor-not-allowed text-sm"
+                                    className="w-full border border-[#C5CFB0] p-3 rounded-xl bg-[#C5CFB0]/20 outline-none text-[#1F3A2E]/60 cursor-not-allowed text-sm"
                                 />
                             </div>
                             <div>
-                                <label className="text-[10px] text-gray-400 mb-1 block">Ap. Materno</label>
+                                <label className="text-[10px] text-[#3D6B3F]/60 mb-1 block">Ap. Materno</label>
                                 <input
                                     type="text"
                                     readOnly
                                     value={getProductorField('apellido_materno')}
                                     placeholder="—"
-                                    className="w-full border p-3 rounded-xl bg-gray-100 outline-none text-gray-600 cursor-not-allowed text-sm"
+                                    className="w-full border border-[#C5CFB0] p-3 rounded-xl bg-[#C5CFB0]/20 outline-none text-[#1F3A2E]/60 cursor-not-allowed text-sm"
                                 />
                             </div>
                         </div>
@@ -240,20 +240,20 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
                     {/* PRECIO + MONEDA */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Precio Base</label>
+                            <label className="block text-sm font-medium text-[#1F3A2E] mb-1">Precio Base</label>
                             <input
                                 required
                                 type="number"
                                 step="0.01"
-                                className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                className="w-full mt-1 border border-[#C5CFB0] p-3 rounded-xl bg-white text-[#1F3A2E] outline-none focus:ring-2 focus:ring-[#3D6B3F] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 placeholder="0.00"
                                 onChange={(e) => setFormData({ ...formData, precio_base: Number(e.target.value) })}
                             />
                         </div>
                         <div>
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Moneda</label>
+                            <label className="block text-sm font-medium text-[#1F3A2E] mb-1">Moneda</label>
                             <select
-                                className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500"
+                                className="w-full rounded-xl border border-[#C5CFB0] px-3 py-2 text-sm text-[#1F3A2E] bg-white focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent"
                                 value={formData.moneda}
                                 onChange={(e) => setFormData({ ...formData, moneda: e.target.value })}
                             >
@@ -265,9 +265,9 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
 
                     {/* DESCRIPCIÓN */}
                     <div>
-                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Descripción</label>
+                        <label className="block text-sm font-medium text-[#1F3A2E] mb-1">Descripción</label>
                         <textarea
-                            className="w-full mt-1 border p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-green-500 h-24 resize-none"
+                            className="w-full rounded-xl border border-[#C5CFB0] px-3 py-2 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/50 bg-white focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent h-24 resize-none"
                             placeholder="Descripción del producto..."
                             value={formData.descripcion}
                             onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
@@ -275,18 +275,18 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
                     </div>
 
                     {/* BOTONES */}
-                    <div className="flex gap-3 pt-4 border-t">
+                    <div className="flex gap-3 pt-4 border-t border-[#C5CFB0]">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-3 border rounded-xl font-semibold text-gray-600 hover:bg-gray-50 transition"
+                            className="flex-1 py-3 bg-[#F4F0E3] text-[#1F3A2E] text-sm font-medium rounded-xl border border-[#C5CFB0] hover:bg-[#C5CFB0]/30 transition-all duration-200"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-50 transition"
+                            className="flex-1 py-3 bg-[#3D6B3F] text-white text-sm font-medium rounded-xl hover:bg-[#1F3A2E] disabled:opacity-50 transition-all duration-200"
                         >
                             {loading ? "Guardando..." : "Guardar Producto"}
                         </button>

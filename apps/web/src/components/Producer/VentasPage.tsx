@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
-import { Eye, Plus } from "lucide-react";
+import { Eye } from "lucide-react";
 import type { ReactNode } from "react";
 
 type SaleItem = {
@@ -30,17 +30,23 @@ type StoreItem = {
 };
 
 type SalesResponse = {
-  resumen: {
-    totalVentas: number;
-    ingresosTotales: number;
-    pendientes: number;
-  };
+  resumen: { totalVentas: number; ingresosTotales: number; pendientes: number };
   ventas: SaleItem[];
 };
+
+const PAGE_SIZE = 10;
+
+function getPageNumbers(current: number, total: number): (number | "...")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
+  if (current >= total - 3) return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  return [1, "...", current - 1, current, current + 1, "...", total];
+}
 
 export default function VentasPage() {
   const { user, loading: authLoading } = useAuth();
   const token = getCookie("token") ?? "";
+
   const [query, setQuery] = useState("");
   const [storeFilter, setStoreFilter] = useState("todos");
   const [minQuantity, setMinQuantity] = useState("");
@@ -51,49 +57,37 @@ export default function VentasPage() {
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [sales, setSales] = useState<SaleItem[]>([]);
   const [summary, setSummary] = useState<SalesResponse["resumen"]>({
-    totalVentas: 0,
-    ingresosTotales: 0,
-    pendientes: 0,
+    totalVentas: 0, ingresosTotales: 0, pendientes: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ventaSeleccionada, setVentaSeleccionada] = useState<SaleItem | null>(null);
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (authLoading) return;
-
     if (!user?.id_productor || !token) {
       setLoading(false);
       setError("No fue posible identificar el productor autenticado.");
-      setStores([]);
-      setSales([]);
-      setSummary({ totalVentas: 0, ingresosTotales: 0, pendientes: 0 });
       return;
     }
-
     let cancelled = false;
-
     const loadData = async () => {
-      if (!user?.id_productor) return;
-
       try {
         setLoading(true);
         setError(null);
-
         const [storesData, salesData] = await Promise.all([
           api.tiendas.getByProductor(user.id_productor, token),
           api.pedidos.getMineSales(token),
         ]);
-
         if (cancelled) return;
         setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);
         setSales(Array.isArray((salesData as SalesResponse).ventas) ? (salesData as SalesResponse).ventas : []);
         setSummary((salesData as SalesResponse).resumen ?? { totalVentas: 0, ingresosTotales: 0, pendientes: 0 });
       } catch (err) {
         if (!cancelled) {
-          setStores([]);
-          setSales([]);
+          setStores([]); setSales([]);
           setSummary({ totalVentas: 0, ingresosTotales: 0, pendientes: 0 });
           setError(err instanceof Error ? err.message : "No fue posible cargar las ventas");
         }
@@ -101,16 +95,12 @@ export default function VentasPage() {
         if (!cancelled) setLoading(false);
       }
     };
-
     loadData();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [authLoading, token, user?.id_productor]);
 
   const availableStatuses = useMemo(
-    () => Array.from(new Set(sales.map((sale) => normalizeStatus(sale.status)))).sort(),
+    () => Array.from(new Set(sales.map((s) => normalizeStatus(s.status)))).sort(),
     [sales],
   );
 
@@ -120,183 +110,124 @@ export default function VentasPage() {
     const maxQty = maxQuantity === "" ? null : Number(maxQuantity);
     const fromDate = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
     const toDate = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
-
     return sales.filter((sale) => {
       const saleDate = new Date(sale.fecha);
-      const matchesQuery =
-        !normalized ||
-        sale.producto.toLowerCase().includes(normalized) ||
-        sale.tienda.toLowerCase().includes(normalized);
-      const matchesStore = storeFilter === "todos" || sale.tienda === storeFilter;
-      const matchesQuantity =
-        (minQty === null || Number.isNaN(minQty) ? true : sale.cantidad >= minQty) &&
-        (maxQty === null || Number.isNaN(maxQty) ? true : sale.cantidad <= maxQty);
-      const matchesStatus =
-        statusFilter === "todos" || normalizeStatus(sale.status) === statusFilter;
-      const matchesDate =
+      return (
+        (!normalized || sale.producto.toLowerCase().includes(normalized) || sale.tienda.toLowerCase().includes(normalized)) &&
+        (storeFilter === "todos" || sale.tienda === storeFilter) &&
+        (minQty === null || Number.isNaN(minQty) || sale.cantidad >= minQty) &&
+        (maxQty === null || Number.isNaN(maxQty) || sale.cantidad <= maxQty) &&
+        (statusFilter === "todos" || normalizeStatus(sale.status) === statusFilter) &&
         (!fromDate || saleDate >= fromDate) &&
-        (!toDate || saleDate <= toDate);
-
-      return matchesQuery && matchesStore && matchesQuantity && matchesStatus && matchesDate;
+        (!toDate || saleDate <= toDate)
+      );
     });
   }, [query, sales, storeFilter, minQuantity, maxQuantity, statusFilter, dateFrom, dateTo]);
 
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [query, storeFilter, minQuantity, maxQuantity, statusFilter, dateFrom, dateTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSales.length / PAGE_SIZE));
+  const pagedSales = useMemo(
+    () => filteredSales.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredSales, currentPage],
+  );
+  const from = filteredSales.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const to = Math.min(currentPage * PAGE_SIZE, filteredSales.length);
+
   const clearFilters = () => {
-    setQuery("");
-    setStoreFilter("todos");
-    setMinQuantity("");
-    setMaxQuantity("");
-    setStatusFilter("todos");
-    setDateFrom("");
-    setDateTo("");
+    setQuery(""); setStoreFilter("todos"); setMinQuantity(""); setMaxQuantity("");
+    setStatusFilter("todos"); setDateFrom(""); setDateTo("");
   };
-
-  function abrirDetalle(venta: SaleItem) {
-    setVentaSeleccionada(venta);
-    setModalAbierto(true);
-  }
-
-  function cerrarModal() {
-    setModalAbierto(false);
-    setVentaSeleccionada(null);
-  }
-
-  const stats = [
-    { label: "Total Ventas", value: summary.totalVentas },
-    { label: "Ingresos Totales", value: formatCurrency(summary.ingresosTotales) },
-    { label: "Pendientes", value: summary.pendientes },
-  ];
 
   if (loading) {
     return (
       <div className="flex min-h-[320px] items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#3D6B3F] border-t-transparent" />
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#C5CFB0] border-t-[#3D6B3F]" />
       </div>
     );
   }
 
+  const inp = "w-full rounded-lg border border-[#C5CFB0] bg-transparent px-3 py-2 text-sm text-[#1F3A2E] outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20 placeholder:text-[#3D6B3F]/40";
+  const lbl = "mb-1 block text-xs font-medium text-[#1F3A2E]/70";
+  const btnPageBase = "rounded-lg border border-[#C5CFB0] px-3 py-1.5 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/20 disabled:cursor-not-allowed disabled:opacity-40";
+
   return (
-    <div className="mx-auto w-full max-w-[1200px] overflow-hidden">
+    <div className="mx-auto w-full max-w-[1200px] space-y-5">
 
-      {error ? (
-        <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-600">
-          {error}
-        </div>
-      ) : null}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>
+      )}
 
-      <div className="mb-6 flex flex-col gap-4 rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-dark dark:text-white">Ventas</h1>
-          <p className="text-sm text-gray-500">Consulta el estado de tus movimientos comerciales.</p>
-        </div>
+      {/* Header */}
+      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Ventas</h1>
+        <p className="text-sm text-[#3D6B3F]/70">Consulta el estado de tus movimientos comerciales.</p>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {stats.map((item) => (
+      {/* Stats */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {[
+          { label: "Total Ventas", value: summary.totalVentas },
+          { label: "Ingresos Totales", value: formatCurrency(summary.ingresosTotales) },
+          { label: "Pendientes", value: summary.pendientes },
+        ].map((item) => (
           <Card key={item.label} title={item.label} value={item.value} />
         ))}
       </div>
 
-      <div className="mb-4 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark overflow-hidden">
+      {/* Search + Filters — single compact card */}
+      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-3 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <input
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar por producto o tienda"
-          className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none transition focus:border-primary dark:border-dark-3 dark:bg-dark-2"
+          className={`${inp} mb-3`}
         />
-      </div>
-
-      <div className="mb-6 rounded-[10px] bg-white p-4 shadow-1 dark:bg-gray-dark overflow-hidden">
-        <div className="flex flex-wrap items-end gap-3 xl:flex-nowrap">
-          <label className="block min-w-0 flex-[1.3]">
-            <span className="mb-1 block text-xs font-medium text-dark dark:text-white">Tienda</span>
-            <select
-              value={storeFilter}
-              onChange={(event) => setStoreFilter(event.target.value)}
-              className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
-            >
+        <div className="flex flex-wrap items-end gap-2 xl:flex-nowrap">
+          <label className="block min-w-0 flex-[1.5]">
+            <span className={lbl}>Tienda</span>
+            <select value={storeFilter} onChange={(e) => setStoreFilter(e.target.value)} className={inp}>
               <option value="todos">Todas las tiendas</option>
-              {stores.map((store) => (
-                <option key={store.id_tienda} value={store.nombre}>
-                  {store.nombre}
-                </option>
-              ))}
+              {stores.map((s) => <option key={s.id_tienda} value={s.nombre}>{s.nombre}</option>)}
             </select>
           </label>
-
           <label className="block min-w-0 flex-1">
-            <span className="mb-1 block text-xs font-medium text-dark dark:text-white">Cant. min</span>
-            <input
-              type="number"
-              value={minQuantity}
-              onChange={(event) => setMinQuantity(event.target.value)}
-              className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
-            />
+            <span className={lbl}>Cant. mín</span>
+            <input type="number" value={minQuantity} onChange={(e) => setMinQuantity(e.target.value)} className={inp} />
           </label>
-
           <label className="block min-w-0 flex-1">
-            <span className="mb-1 block text-xs font-medium text-dark dark:text-white">Cant. max</span>
-            <input
-              type="number"
-              value={maxQuantity}
-              onChange={(event) => setMaxQuantity(event.target.value)}
-              className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
-            />
+            <span className={lbl}>Cant. máx</span>
+            <input type="number" value={maxQuantity} onChange={(e) => setMaxQuantity(e.target.value)} className={inp} />
           </label>
-
           <label className="block min-w-0 flex-1">
-            <span className="mb-1 block text-xs font-medium text-dark dark:text-white">Estatus</span>
-            <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-              className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
-            >
+            <span className={lbl}>Estatus</span>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={inp}>
               <option value="todos">Todos</option>
-              {availableStatuses.map((status) => (
-                <option key={status} value={status}>
-                  {formatStatusLabel(status)}
-                </option>
-              ))}
+              {availableStatuses.map((s) => <option key={s} value={s}>{formatStatusLabel(s)}</option>)}
             </select>
           </label>
-
           <label className="block min-w-0 flex-1">
-            <span className="mb-1 block text-xs font-medium text-dark dark:text-white">Desde</span>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(event) => setDateFrom(event.target.value)}
-              className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
-            />
+            <span className={lbl}>Desde</span>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={inp} />
           </label>
-
           <label className="block min-w-0 flex-1">
-            <span className="mb-1 block text-xs font-medium text-dark dark:text-white">Hasta</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(event) => setDateTo(event.target.value)}
-              className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2"
-            />
+            <span className={lbl}>Hasta</span>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={inp} />
           </label>
-
-          <div className="flex min-w-[120px] items-end xl:w-auto">
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="w-full rounded-lg border border-stroke px-3 py-2 text-sm font-medium text-dark transition hover:bg-gray-50 dark:border-dark-3 dark:text-white dark:hover:bg-white/5"
-            >
-              Limpiar filtros
-            </button>
-          </div>
+          <button type="button" onClick={clearFilters}
+            className="shrink-0 rounded-lg border border-[#C5CFB0] px-3 py-2 text-xs font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/20">
+            Limpiar
+          </button>
         </div>
       </div>
 
-      <div className="w-full overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark">
-        <div className="w-full overflow-hidden">
-          <table className="w-full table-fixed text-left text-xs">
-            <thead className="bg-gray-2 dark:bg-dark-2">
-              <tr className="text-xs text-gray-500">
+      {/* Table */}
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px] table-fixed text-left">
+            <thead className="bg-[#1F3A2E]">
+              <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white">
                 <th className="w-[22%] px-3 py-3">Producto</th>
                 <th className="w-[18%] px-3 py-3">Tienda</th>
                 <th className="w-[13%] px-3 py-3">P. unit.</th>
@@ -307,38 +238,31 @@ export default function VentasPage() {
                 <th className="w-[4%] px-3 py-3 text-right">Acc.</th>
               </tr>
             </thead>
-
             <tbody>
-              {filteredSales.map((sale) => {
-                return (
-                  <tr key={`${sale.id_pedido}-${sale.id_detalle}`} className="border-t border-stroke text-xs dark:border-dark-3">
-                    <td className="px-3 py-3 font-medium text-dark dark:text-white">
-                      <span className="block truncate" title={sale.producto}>{sale.producto}</span>
-                    </td>
-                    <td className="px-3 py-3 text-gray-600 dark:text-gray-3">
-                      <span className="block truncate" title={sale.tienda}>{sale.tienda}</span>
-                    </td>
-                    <td className="px-3 py-3 text-gray-600 dark:text-gray-3 whitespace-nowrap">{formatCurrency(sale.precio_unitario, sale.moneda)}</td>
-                    <td className="px-3 py-3 text-gray-600 dark:text-gray-3">{sale.cantidad}</td>
-                    <td className="px-3 py-3 font-medium text-dark dark:text-white whitespace-nowrap">{formatCurrency(sale.total, sale.moneda)}</td>
-                    <td className="px-3 py-3">
-                      <Badge status={sale.status} />
-                    </td>
-                    <td className="px-3 py-3 text-gray-500">{formatDate(sale.fecha)}</td>
-                    <td className="px-3 py-3">
-                      <div className="flex justify-end gap-2">
-                        <ActionButton label="Ver detalle" icon={<Eye size={16} />} onClick={() => abrirDetalle(sale)} />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-
+              {pagedSales.map((sale) => (
+                <tr key={`${sale.id_pedido}-${sale.id_detalle}`}
+                  className="border-t border-[#C5CFB0]/30 bg-white text-sm transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20">
+                  <td className="px-3 py-3 font-medium text-[#1F3A2E]">
+                    <span className="block truncate" title={sale.producto}>{sale.producto}</span>
+                  </td>
+                  <td className="px-3 py-3 text-[#3D6B3F]/70">
+                    <span className="block truncate" title={sale.tienda}>{sale.tienda}</span>
+                  </td>
+                  <td className="px-3 py-3 text-[#3D6B3F]/70 whitespace-nowrap">{formatCurrency(sale.precio_unitario, sale.moneda)}</td>
+                  <td className="px-3 py-3 text-[#3D6B3F]/70">{sale.cantidad}</td>
+                  <td className="px-3 py-3 font-medium text-[#1F3A2E] whitespace-nowrap">{formatCurrency(sale.total, sale.moneda)}</td>
+                  <td className="px-3 py-3"><Badge status={sale.status} /></td>
+                  <td className="px-3 py-3 text-[#3D6B3F]/60">{formatDate(sale.fecha)}</td>
+                  <td className="px-3 py-3">
+                    <div className="flex justify-end">
+                      <ActionButton label="Ver detalle" icon={<Eye size={15} />} onClick={() => { setVentaSeleccionada(sale); setModalAbierto(true); }} />
+                    </div>
+                  </td>
+                </tr>
+              ))}
               {filteredSales.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">
-                    No hay ventas para mostrar
-                  </td>
+                  <td colSpan={8} className="px-3 py-10 text-center text-[#3D6B3F]/60">No hay ventas para mostrar</td>
                 </tr>
               )}
             </tbody>
@@ -346,99 +270,90 @@ export default function VentasPage() {
         </div>
       </div>
 
-      {modalAbierto && ventaSeleccionada ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={cerrarModal}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl transition-all duration-200 ease-out max-h-[90vh] overflow-y-auto dark:bg-gray-800 dark:text-gray-100"
-            style={{ transform: modalAbierto ? "scale(1)" : "scale(0.95)", opacity: modalAbierto ? 1 : 0 }}
-            onClick={(event) => event.stopPropagation()}
-          >
+      {/* Paginación */}
+      {filteredSales.length > 0 && (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] px-5 py-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)] sm:flex-row sm:justify-between">
+          <p className="text-sm text-[#3D6B3F]/70">
+            {from}–{to} de {filteredSales.length} venta{filteredSales.length !== 1 ? "s" : ""}
+          </p>
+          <div className="flex items-center gap-1">
+            <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)} className={btnPageBase}>‹</button>
+            {getPageNumbers(currentPage, totalPages).map((p, i) =>
+              p === "..." ? (
+                <span key={`el-${i}`} className="px-2 text-sm text-[#3D6B3F]/50">…</span>
+              ) : (
+                <button key={p} onClick={() => setCurrentPage(p as number)}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                    p === currentPage ? "bg-[#3D6B3F] text-white" : "border border-[#C5CFB0] text-[#1F3A2E] hover:bg-[#C5CFB0]/20"
+                  }`}>
+                  {p}
+                </button>
+              )
+            )}
+            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)} className={btnPageBase}>›</button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal */}
+      {modalAbierto && ventaSeleccionada && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { setModalAbierto(false); setVentaSeleccionada(null); }}>
+          <div role="dialog" aria-modal="true"
+            className="w-full max-w-lg rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}>
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Detalle de Venta</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Pedido #{ventaSeleccionada.id_pedido}</p>
+                <h2 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Detalle de Venta</h2>
+                <p className="text-sm text-[#3D6B3F]/70">Pedido #{ventaSeleccionada.id_pedido}</p>
               </div>
-
-              <button
-                type="button"
-                onClick={cerrarModal}
-                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                aria-label="Cerrar modal"
-              >
+              <button type="button" onClick={() => { setModalAbierto(false); setVentaSeleccionada(null); }}
+                className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-[#C5CFB0]/20 hover:text-[#1F3A2E]" aria-label="Cerrar modal">
                 ✕
               </button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-700">
-                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Información del producto</p>
-                <div className="mt-4 space-y-3 text-sm text-gray-700 dark:text-gray-200">
+              <div className="rounded-xl border border-[#C5CFB0] bg-white p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40">Información del producto</p>
+                <div className="mt-3 space-y-3 text-sm">
                   <DetailRow label="Producto" value={ventaSeleccionada.producto} />
                   <DetailRow label="Precio unitario" value={formatCurrency(ventaSeleccionada.precio_unitario, ventaSeleccionada.moneda)} />
                   <DetailRow label="Cantidad" value={String(ventaSeleccionada.cantidad)} />
-                  <div className="pt-2">
-                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</p>
+                  <div className="pt-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40">Total</p>
                     <p className="text-2xl font-bold text-[#3D6B3F]">{formatCurrency(ventaSeleccionada.total, ventaSeleccionada.moneda)}</p>
                   </div>
                 </div>
               </div>
-
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-700">
-                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Información de la venta</p>
-                <div className="mt-4 space-y-3 text-sm text-gray-700 dark:text-gray-200">
+              <div className="rounded-xl border border-[#C5CFB0] bg-white p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40">Información de la venta</p>
+                <div className="mt-3 space-y-3 text-sm">
                   <DetailRow label="Tienda" value={ventaSeleccionada.tienda} />
                   <DetailRow label="Fecha" value={formatDateTime(ventaSeleccionada.fecha)} />
                   <DetailRow label="Moneda" value={ventaSeleccionada.moneda} />
                   <DetailRow label="Total del pedido" value={formatCurrency(ventaSeleccionada.pedido_total, ventaSeleccionada.moneda)} />
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-gray-500 dark:text-gray-400">Status</span>
+                    <span className="text-[#3D6B3F]/70">Status</span>
                     <SaleStatusBadge status={ventaSeleccionada.status} />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
-              <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Línea de tiempo</p>
-              <div className="mt-4 space-y-4">
-                <TimelineStep
-                  title="Pedido recibido"
-                  date={formatDateTime(ventaSeleccionada.fecha)}
-                  active
-                  done
-                />
-                <TimelineStep
-                  title="En proceso"
-                  date=""
-                  active={!isCancelledStatus(ventaSeleccionada.status)}
-                  done={isCompletedStatus(ventaSeleccionada.status)}
-                />
-                <TimelineStep
-                  title="Completado"
-                  date=""
-                  active={isCompletedStatus(ventaSeleccionada.status)}
-                  done={isCompletedStatus(ventaSeleccionada.status)}
-                />
+            <div className="mt-4 rounded-xl border border-[#C5CFB0] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40">Línea de tiempo</p>
+              <div className="mt-3 space-y-3">
+                <TimelineStep title="Pedido recibido" date={formatDateTime(ventaSeleccionada.fecha)} active done />
+                <TimelineStep title="En proceso" date="" active={!isCancelledStatus(ventaSeleccionada.status)} done={isCompletedStatus(ventaSeleccionada.status)} />
+                <TimelineStep title="Completado" date="" active={isCompletedStatus(ventaSeleccionada.status)} done={isCompletedStatus(ventaSeleccionada.status)} />
               </div>
             </div>
 
-              <div className="mt-5 flex items-center justify-between gap-3">
+            <div className="mt-4 flex items-center justify-between gap-3">
               {normalizeStatus(ventaSeleccionada.status) === "pendiente" ? (
                 <>
-                  <button
-                    type="button"
-                    className="rounded-lg bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white hover:bg-[#1F3A2E]"
-                  >
-                    Marcar como completada
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10"
-                  >
-                    Cancelar venta
-                  </button>
+                  <button type="button" className="rounded-xl bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white hover:bg-[#1F3A2E]">Marcar como completada</button>
+                  <button type="button" className="rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Cancelar venta</button>
                 </>
               ) : isCompletedStatus(ventaSeleccionada.status) ? (
                 <p className="text-sm font-medium text-[#3D6B3F]">✓ Venta completada</p>
@@ -448,41 +363,35 @@ export default function VentasPage() {
             </div>
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function Card({ title, value }: { title: string; value: number | string }) {
   return (
-    <div className="rounded-[10px] bg-white p-5 shadow-1 dark:bg-gray-dark">
-      <p className="text-sm text-gray-500">{title}</p>
-      <div className="mt-2 text-2xl font-bold text-dark dark:text-white">{value}</div>
+    <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <p className="text-sm text-[#3D6B3F]/70">{title}</p>
+      <div className="mt-1 text-2xl font-bold text-[#1F3A2E]">{value}</div>
     </div>
   );
 }
 
- function Badge({ status }: { status: string }) {
-  const normalized = normalizeStatus(status);
-  const className = isCompletedStatus(normalized)
-    ? "bg-[#C5CFB0]/40 text-[#1F3A2E]"
-    : normalized === "pendiente"
-      ? "bg-[#C97A3E]/10 text-[#C97A3E]"
-      : isCancelledStatus(normalized)
-        ? "bg-red-50 text-red-700"
-        : "bg-slate-100 text-slate-700";
-
-  return <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-medium capitalize ${className}`}>{formatStatusLabel(normalized)}</span>;
+function Badge({ status }: { status: string }) {
+  const n = normalizeStatus(status);
+  const cls = isCompletedStatus(n) ? "bg-[#A8C26B]/20 text-[#3D6B3F]"
+    : n === "pendiente" ? "bg-[#C97A3E]/15 text-[#C97A3E]"
+    : isCancelledStatus(n) ? "bg-red-50 text-red-700"
+    : "bg-[#C5CFB0]/30 text-[#1F3A2E]";
+  return <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${cls}`}>{formatStatusLabel(n)}</span>;
 }
 
 function ActionButton({ label, icon, onClick }: { label: string; icon: ReactNode; onClick?: () => void }) {
   return (
-    <button
-      type="button"
-      title={label}
-      onClick={onClick}
-      className="rounded-lg p-1.5 text-gray-500 transition hover:bg-[rgba(124,58,237,0.08)] hover:text-primary"
-    >
+    <button type="button" title={label} onClick={onClick}
+      className="rounded-lg p-1.5 text-[#3D6B3F]/50 transition hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F]">
       {icon}
     </button>
   );
@@ -491,87 +400,50 @@ function ActionButton({ label, icon, onClick }: { label: string; icon: ReactNode
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-gray-500 dark:text-gray-400">{label}</span>
-      <span className="font-medium text-gray-800 dark:text-gray-100 text-right">{value}</span>
+      <span className="text-[#3D6B3F]/70">{label}</span>
+      <span className="font-medium text-[#1F3A2E] text-right">{value}</span>
     </div>
   );
 }
 
 function SaleStatusBadge({ status }: { status: string }) {
-  const normalized = normalizeStatus(status);
-  const className = isCompletedStatus(normalized)
-    ? "bg-[#C5CFB0]/60 text-[#1F3A2E]"
-    : normalized === "pendiente"
-      ? "bg-[#C97A3E]/20 text-[#C97A3E]"
-      : isCancelledStatus(normalized)
-        ? "bg-red-100 text-red-700"
-        : "bg-slate-100 text-slate-700";
-
-  const label = formatStatusLabel(normalized);
-
-  return <span className={`rounded-full px-3 py-1 text-xs font-medium ${className}`}>{label}</span>;
+  const n = normalizeStatus(status);
+  const cls = isCompletedStatus(n) ? "bg-[#A8C26B]/30 text-[#3D6B3F]"
+    : n === "pendiente" ? "bg-[#C97A3E]/20 text-[#C97A3E]"
+    : isCancelledStatus(n) ? "bg-red-100 text-red-700"
+    : "bg-[#C5CFB0]/30 text-[#1F3A2E]";
+  return <span className={`rounded-full px-3 py-1 text-xs font-medium ${cls}`}>{formatStatusLabel(n)}</span>;
 }
 
-function TimelineStep({
-  title,
-  date,
-  active,
-  done,
-}: {
-  title: string;
-  date: string;
-  active: boolean;
-  done: boolean;
-}) {
+function TimelineStep({ title, date, active, done }: { title: string; date: string; active: boolean; done: boolean }) {
   return (
     <div className="flex items-start gap-3">
       <div className="flex flex-col items-center">
-        <div
-          className={`grid size-8 place-items-center rounded-full border ${done ? "border-[#3D6B3F] bg-[#3D6B3F] text-white" : active ? "border-gray-400 bg-gray-200 text-gray-600 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-200" : "border-gray-300 bg-gray-100 text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500"}`}
-        >
-          {done ? "✓" : active ? "🔄" : "○"}
+        <div className={`grid size-7 place-items-center rounded-full border text-xs ${done ? "border-[#3D6B3F] bg-[#3D6B3F] text-white" : active ? "border-[#C5CFB0] bg-[#F4F0E3] text-[#3D6B3F]" : "border-[#C5CFB0] bg-white text-[#3D6B3F]/40"}`}>
+          {done ? "✓" : active ? "↻" : "○"}
         </div>
-        <div className="mt-1 h-8 w-px bg-gray-200 dark:bg-gray-600" />
+        <div className="mt-1 h-6 w-px bg-[#C5CFB0]/50" />
       </div>
       <div>
-        <p className={`font-medium ${done ? "text-[#3D6B3F]" : "text-gray-700 dark:text-gray-200"}`}>{title}</p>
-        {date ? <p className="text-xs text-gray-500 dark:text-gray-400">{date}</p> : null}
+        <p className={`text-sm font-medium ${done ? "text-[#3D6B3F]" : "text-[#1F3A2E]"}`}>{title}</p>
+        {date && <p className="text-xs text-[#3D6B3F]/60">{date}</p>}
       </div>
     </div>
   );
 }
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("es-MX", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
-function formatCurrency(value: number, currency = "MXN") {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(value);
+function formatDateTime(v: string) {
+  return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" }).format(new Date(v));
 }
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium" }).format(new Date(value));
+function formatCurrency(v: number, currency = "MXN") {
+  return new Intl.NumberFormat("es-MX", { style: "currency", currency, maximumFractionDigits: 0 }).format(v);
 }
-
-function normalizeStatus(status: string) {
-  return status.trim().toLowerCase();
+function formatDate(v: string) {
+  return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium" }).format(new Date(v));
 }
-
-function formatStatusLabel(status: string) {
-  return status.charAt(0).toUpperCase() + status.slice(1);
-}
-
-function isCompletedStatus(status: string) {
-  return ["completada", "completado", "pagado", "entregado"].includes(normalizeStatus(status));
-}
-
-function isCancelledStatus(status: string) {
-  return ["cancelada", "cancelado", "rechazado"].includes(normalizeStatus(status));
-}
+function normalizeStatus(s: string) { return s.trim().toLowerCase(); }
+function formatStatusLabel(s: string) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function isCompletedStatus(s: string) { return ["completada", "completado", "pagado", "entregado"].includes(normalizeStatus(s)); }
+function isCancelledStatus(s: string) { return ["cancelada", "cancelado", "rechazado"].includes(normalizeStatus(s)); }

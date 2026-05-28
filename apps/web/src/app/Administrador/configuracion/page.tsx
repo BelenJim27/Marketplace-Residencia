@@ -141,18 +141,18 @@ export default function ConfiguracionPage() {
   return (
     <>
       <Breadcrumb pageName="Configuración" />
-      <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card p-7.5 space-y-6">
+      <div className="rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-7 space-y-6">
         <div>
-          <h2 className="text-title-md2 font-bold text-black dark:text-white mb-2">
+          <h2 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-2">
             Configuración del Sistema
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-[#3D6B3F]/70">
             Personaliza la identidad visual y la configuración de tu tienda
           </p>
         </div>
 
         {/* TABS */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
+        <div className="border-b border-[#C5CFB0]">
           <nav className="flex gap-1" aria-label="Tabs de configuración">
             {TABS.map((tab) => (
               <button
@@ -161,8 +161,8 @@ export default function ConfiguracionPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
                   activeTab === tab.id
-                    ? "border-primary text-primary dark:text-primary bg-primary/5 dark:bg-primary/10"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                    ? "border-[#3D6B3F] text-[#3D6B3F] bg-[#3D6B3F]/5"
+                    : "border-transparent text-[#3D6B3F]/60 hover:text-[#3D6B3F] hover:border-[#C5CFB0]"
                 }`}
               >
                 {tab.icon}
@@ -176,7 +176,7 @@ export default function ConfiguracionPage() {
         {activeTab === "colores" && (
           <>
             {message && (
-              <div className={`rounded-lg p-4 ${message.type === "success" ? "bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-300" : "bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300"}`}>
+              <div className={`rounded-xl border p-4 ${message.type === "success" ? "border-[#A8C26B]/40 bg-[#A8C26B]/10 text-[#3D6B3F]" : "border-red-200 bg-red-50 text-red-700"}`}>
                 {message.text}
               </div>
             )}
@@ -184,12 +184,12 @@ export default function ConfiguracionPage() {
             <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
               {/* SECCIÓN: Identidad de la tienda */}
               <section>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-4 pb-2 border-b border-[#C5CFB0]">
                   Identidad de la Tienda
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-[#1F3A2E] mb-2">
                       Nombre de la Aplicación
                     </label>
                     <input
@@ -197,18 +197,18 @@ export default function ConfiguracionPage() {
                       name="nombre_app"
                       value={formData.nombre_app}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-[#1F3A2E] mb-2">
                       Idioma por Defecto
                     </label>
                     <select
                       name="idioma_default"
                       value={formData.idioma_default}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                     >
                       <option value="es">Español</option>
                       <option value="en">English</option>
@@ -219,7 +219,7 @@ export default function ConfiguracionPage() {
 
               {/* SECCIÓN: Colores generales */}
               <section>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-4 pb-2 border-b border-[#C5CFB0]">
                   Paleta de Colores (Sistema)
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -229,7 +229,7 @@ export default function ConfiguracionPage() {
                     { key: "color_acento", label: "Color de Acento" },
                   ].map(({ key, label }) => (
                     <div key={key}>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-[#1F3A2E] mb-2">
                         {label}
                       </label>
                       <div className="flex gap-2">
@@ -238,14 +238,14 @@ export default function ConfiguracionPage() {
                           name={key}
                           value={formData[key as keyof typeof formData]}
                           onChange={handleChange}
-                          className="h-10 w-20 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
+                          className="h-10 w-20 rounded-lg border border-[#C5CFB0] cursor-pointer"
                         />
                         <input
                           type="text"
                           value={formData[key as keyof typeof formData]}
                           onChange={handleChange}
                           name={key}
-                          className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="flex-1 rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                         />
                       </div>
                     </div>
@@ -255,7 +255,7 @@ export default function ConfiguracionPage() {
 
               {/* SECCIÓN: Diseño Biocultural */}
               <section>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-4 pb-2 border-b border-[#C5CFB0]">
                   Diseño Biocultural (Oaxaca)
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -268,7 +268,7 @@ export default function ConfiguracionPage() {
                     { key: "bio_color_boton2", label: "Color Botón Secundario" },
                   ].map(({ key, label }) => (
                     <div key={key}>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-[#1F3A2E] mb-2">
                         {label}
                       </label>
                       <div className="flex gap-2">
@@ -277,28 +277,28 @@ export default function ConfiguracionPage() {
                           name={key}
                           value={formData[key as keyof typeof formData]}
                           onChange={handleChange}
-                          className="h-10 w-20 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
+                          className="h-10 w-20 rounded-lg border border-[#C5CFB0] cursor-pointer"
                         />
                         <input
                           type="text"
                           value={formData[key as keyof typeof formData]}
                           onChange={handleChange}
                           name={key}
-                          className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="flex-1 rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                         />
                       </div>
                     </div>
                   ))}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-[#1F3A2E] mb-2">
                     Fuente de Títulos
                   </label>
                   <select
                     name="bio_fuente_titulo"
                     value={formData.bio_fuente_titulo}
                     onChange={handleChange}
-                    className="w-full md:w-1/3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full md:w-1/3 rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                   >
                     {FONT_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -311,7 +311,7 @@ export default function ConfiguracionPage() {
 
               {/* SECCIÓN: Página de Inicio (Landing) */}
               <section>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-4 pb-2 border-b border-[#C5CFB0]">
                   Colores de la Página de Inicio (Cliente)
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -325,7 +325,7 @@ export default function ConfiguracionPage() {
                     { key: "land_color_cta", label: "Botón CTA" },
                   ].map(({ key, label }) => (
                     <div key={key}>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-[#1F3A2E] mb-2">
                         {label}
                       </label>
                       <div className="flex gap-2">
@@ -334,14 +334,14 @@ export default function ConfiguracionPage() {
                           name={key}
                           value={formData[key as keyof typeof formData]}
                           onChange={handleChange}
-                          className="h-10 w-20 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
+                          className="h-10 w-20 rounded-lg border border-[#C5CFB0] cursor-pointer"
                         />
                         <input
                           type="text"
                           value={formData[key as keyof typeof formData]}
                           onChange={handleChange}
                           name={key}
-                          className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="flex-1 rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                         />
                       </div>
                     </div>
@@ -351,7 +351,7 @@ export default function ConfiguracionPage() {
 
               {/* SECCIÓN: Cabecera de Tienda */}
               <section>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-4 pb-2 border-b border-[#C5CFB0]">
                   Colores de la Cabecera de Tienda
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -360,7 +360,7 @@ export default function ConfiguracionPage() {
                     { key: "tienda_header_border", label: "Color Borde" },
                   ].map(({ key, label }) => (
                     <div key={key}>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-[#1F3A2E] mb-2">
                         {label}
                       </label>
                       <div className="flex gap-2">
@@ -369,14 +369,14 @@ export default function ConfiguracionPage() {
                           name={key}
                           value={formData[key as keyof typeof formData]}
                           onChange={handleChange}
-                          className="h-10 w-20 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
+                          className="h-10 w-20 rounded-lg border border-[#C5CFB0] cursor-pointer"
                         />
                         <input
                           type="text"
                           value={formData[key as keyof typeof formData]}
                           onChange={handleChange}
                           name={key}
-                          className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="flex-1 rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                         />
                       </div>
                     </div>
@@ -386,19 +386,19 @@ export default function ConfiguracionPage() {
 
               {/* SECCIÓN: Tipografía del Sistema */}
               <section>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-4 pb-2 border-b border-[#C5CFB0]">
                   Tipografía del Sistema
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-[#1F3A2E] mb-2">
                       Fuente Panel Admin/Productor
                     </label>
                     <select
                       name="font_family_ui"
                       value={formData.font_family_ui}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                     >
                       <option value="Satoshi, system-ui, -apple-system, sans-serif">Satoshi (Default)</option>
                       <option value="'Playfair Display', Georgia, serif">Playfair Display (Elegante)</option>
@@ -407,14 +407,14 @@ export default function ConfiguracionPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-[#1F3A2E] mb-2">
                       Fuente Tienda Cliente
                     </label>
                     <select
                       name="font_family_store"
                       value={formData.font_family_store}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                     >
                       <option value="'Playfair Display', Georgia, serif">Playfair Display (Default)</option>
                       <option value="Satoshi, system-ui, -apple-system, sans-serif">Satoshi (Moderno)</option>
@@ -424,12 +424,12 @@ export default function ConfiguracionPage() {
                   </div>
                 </div>
                 {/* Font preview */}
-                <div className="mt-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Vista previa panel admin:</p>
+                <div className="mt-4 p-4 rounded-xl bg-white border border-[#C5CFB0]">
+                  <p className="text-sm text-[#3D6B3F]/70 mb-2">Vista previa panel admin:</p>
                   <p style={{ fontFamily: formData.font_family_ui }} className="text-base">
                     Esto es una vista previa de la tipografía del panel admin
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 mb-2">Vista previa tienda cliente:</p>
+                  <p className="text-sm text-[#3D6B3F]/70 mt-3 mb-2">Vista previa tienda cliente:</p>
                   <p style={{ fontFamily: formData.font_family_store }} className="text-base">
                     Esto es una vista previa de la tipografía de la tienda
                   </p>
@@ -438,7 +438,7 @@ export default function ConfiguracionPage() {
 
               {/* VISTA PREVIA */}
               <section>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-4 pb-2 border-b border-[#C5CFB0]">
                   Vista Previa
                 </h3>
                 <div
@@ -517,7 +517,7 @@ export default function ConfiguracionPage() {
                   type="button"
                   onClick={handleRestore}
                   disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="flex items-center gap-2 px-6 py-2 border border-[#C5CFB0] rounded-xl text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200"
                 >
                   <RotateCcw size={18} />
                   Restaurar Defaults
@@ -525,7 +525,7 @@ export default function ConfiguracionPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:bg-primary/50 transition-colors"
+                  className="flex items-center gap-2 px-6 py-2 bg-[#3D6B3F] text-white rounded-xl hover:bg-[#1F3A2E] disabled:opacity-60 transition-all duration-200"
                 >
                   <Save size={18} />
                   {saving ? "Guardando..." : "Guardar Cambios"}

@@ -377,6 +377,16 @@ export class ProductoresService {
       '/Administrador/solicitudes-productores',
     ).catch(() => {});
 
+    await this.prisma.auditoria.create({
+      data: {
+        id_usuario,
+        accion: 'solicitar_productor',
+        tabla_afectada: 'productores',
+        registro_id: String(resultado.id_productor),
+        valor_nuevo: { estado: 'pendiente', nombre_marca: dto.nombre_marca ?? null } as any,
+      },
+    });
+
     return serializeBigInts(resultado);
   }
 
@@ -569,6 +579,17 @@ export class ProductoresService {
           console.error("[Email] sendProductorRejectedEmail:", err),
         );
     }
+
+    await this.prisma.auditoria.create({
+      data: {
+        id_usuario: revisor_id,
+        accion: dto.estado === 'aprobado' ? 'aprobar_productor' : 'rechazar_productor',
+        tabla_afectada: 'productores',
+        registro_id: String(id_productor),
+        valor_anterior: { estado: 'pendiente' } as any,
+        valor_nuevo: { estado: dto.estado, motivo_rechazo: dto.motivo_rechazo ?? null } as any,
+      },
+    });
 
     return serializeBigInts(actualizado);
   }

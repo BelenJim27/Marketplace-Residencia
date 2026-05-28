@@ -37,7 +37,7 @@ export function RootContent({ children }: PropsWithChildren) {
     if (user && (isAdmin || isProductor)) {
       return (
         <SidebarProvider>
-          <div className="flex min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+          <div className="flex min-h-screen bg-[#F4F0E3] dark:bg-[#020d1a]">
             <Sidebar />
             <div className="flex flex-1 flex-col overflow-hidden">
               <Header />
@@ -126,7 +126,7 @@ export function RootContent({ children }: PropsWithChildren) {
     if (isAdminOrProductor) {
       return (
         <SidebarProvider>
-          <div className="flex min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+          <div className="flex min-h-screen bg-[#F4F0E3] dark:bg-[#020d1a]">
             <Sidebar />
             <div className="flex flex-1 flex-col overflow-hidden">
               <Header />

@@ -61,8 +61,8 @@ export default function AsociacionesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Asociaciones de Productores</h1>
-        <p className="mt-0.5 text-sm text-gray-500 dark:text-dark-6">
+        <h1 className="text-2xl font-bold tracking-tight text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Asociaciones de Productores</h1>
+        <p className="mt-0.5 text-sm text-[#3D6B3F]/70">
           Gestiona la lista de asociaciones disponibles en el formulario de solicitud.
         </p>
       </div>
@@ -71,7 +71,7 @@ export default function AsociacionesPage() {
         <div
           className={`rounded-2xl border px-4 py-3 text-sm ${
             notice.type === "success"
-              ? "border-green-200 bg-green-50 text-green-700"
+              ? "border-[#A8C26B]/40 bg-[#A8C26B]/10 text-[#3D6B3F]"
               : "border-red-200 bg-red-50 text-red-700"
           }`}
         >
@@ -80,21 +80,21 @@ export default function AsociacionesPage() {
       )}
 
       {/* Add new */}
-      <div className="rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-dark-2 p-6 shadow-sm">
-        <p className="mb-3 text-sm font-semibold text-slate-700 dark:text-white">Agregar nueva asociación</p>
+      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <p className="mb-3 text-sm font-semibold text-[#1F3A2E]">Agregar nueva asociación</p>
         <div className="flex gap-3">
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             placeholder="Nombre de la asociación..."
-            className="flex-1 rounded-xl border border-gray-200 dark:border-dark-3 bg-gray-50 dark:bg-dark-3 px-4 py-3 text-sm text-slate-700 dark:text-white placeholder-gray-400 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+            className="flex-1 rounded-xl border border-[#C5CFB0] bg-white px-4 py-3 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/40 outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20"
           />
           <button
             type="button"
             onClick={handleAdd}
             disabled={saving || !newName.trim()}
-            className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#3D6B3F] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#1F3A2E] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Plus className="h-4 w-4" />
             Agregar
@@ -103,16 +103,16 @@ export default function AsociacionesPage() {
       </div>
 
       {/* List */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-dark-3 bg-white dark:bg-dark-2 shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         {loading ? (
-          <p className="p-10 text-center text-sm text-gray-500 dark:text-dark-6">Cargando asociaciones...</p>
+          <p className="p-10 text-center text-sm text-[#3D6B3F]/70">Cargando asociaciones...</p>
         ) : asociaciones.length === 0 ? (
-          <p className="p-10 text-center text-sm text-gray-500 dark:text-dark-6">No hay asociaciones registradas.</p>
+          <p className="p-10 text-center text-sm text-[#3D6B3F]/70">No hay asociaciones registradas.</p>
         ) : (
-          <ul className="divide-y divide-gray-100 dark:divide-dark-3">
+          <ul className="divide-y divide-[#C5CFB0]/50">
             {asociaciones.map((a, idx) => (
               <li key={a} className="flex items-center justify-between px-6 py-4">
-                <span className="text-sm font-medium text-slate-800 dark:text-white">{a}</span>
+                <span className="text-sm font-medium text-[#1F3A2E]">{a}</span>
                 <button
                   type="button"
                   onClick={() => setDeletingIdx(idx)}
@@ -131,20 +131,20 @@ export default function AsociacionesPage() {
       {/* Confirm delete */}
       {deletingIdx !== null && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-2 p-8 text-center shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] p-8 text-center shadow-[0_24px_48px_rgba(31,58,46,0.25)]">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
               <Trash2 className="h-8 w-8" />
             </div>
-            <h3 className="text-xl font-bold text-gray-800 dark:text-white">¿Eliminar asociación?</h3>
-            <p className="mt-2 text-sm text-gray-500 dark:text-dark-6">
-              Se eliminará <span className="font-semibold text-gray-700 dark:text-white">"{asociaciones[deletingIdx]}"</span> de la lista.
+            <h3 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">¿Eliminar asociación?</h3>
+            <p className="mt-2 text-sm text-[#3D6B3F]/70">
+              Se eliminará <span className="font-semibold text-[#1F3A2E]">"{asociaciones[deletingIdx]}"</span> de la lista.
               Los productores ya registrados conservarán su asociación.
             </p>
             <div className="mt-6 flex gap-3">
               <button
                 type="button"
                 onClick={() => setDeletingIdx(null)}
-                className="flex-1 rounded-xl border border-gray-200 dark:border-dark-3 px-4 py-3 text-sm font-semibold text-gray-600 dark:text-dark-6 transition-colors hover:bg-gray-50 dark:hover:bg-dark-3"
+                className="flex-1 rounded-xl border border-[#C5CFB0] px-4 py-3 text-sm font-semibold text-[#1F3A2E] transition-all duration-200 hover:bg-[#C5CFB0]/30"
               >
                 Cancelar
               </button>

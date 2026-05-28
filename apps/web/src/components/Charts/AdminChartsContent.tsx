@@ -45,13 +45,13 @@ type ChartsData = {
 // ─── Paleta de colores ────────────────────────────────────────────────────────
 
 const COLORS = {
-  green: "#22c55e",
-  blue: "#3b82f6",
-  orange: "#f97316",
-  purple: "#a855f7",
-  teal: "#14b8a6",
-  rose: "#f43f5e",
-  amber: "#f59e0b",
+  green: "#3D6B3F",
+  blue: "#1F3A2E",
+  orange: "#C97A3E",
+  purple: "#A8C26B",
+  teal: "#C5CFB0",
+  rose: "#C97A3E",
+  amber: "#A8C26B",
 };
 
 const BAR_COLORS = [
@@ -80,8 +80,8 @@ function CustomTooltip({
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-lg px-4 py-3 text-sm">
-      {label && <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">{label}</p>}
+    <div className="bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl shadow-[0_4px_12px_rgba(61,107,63,0.12)] px-4 py-3 text-sm">
+      {label && <p className="font-semibold text-[#1F3A2E] mb-1 [font-family:'DM_Sans',sans-serif]">{label}</p>}
       {payload.map((entry, i) => (
         <p key={i} style={{ color: entry.color }} className="font-medium">
           {entry.name}:{" "}
@@ -110,14 +110,14 @@ function PeriodSelector({
   options: { label: string; value: Period }[];
 }) {
   return (
-    <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+    <div className="flex gap-1 bg-[#1F3A2E]/10 rounded-lg p-1">
       {options.map((opt) => (
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${value === opt.value
-            ? "bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm"
-            : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+          className={`px-3 py-1 rounded-md text-xs font-semibold transition-all duration-200 ${value === opt.value
+            ? "bg-[#F4F0E3] text-[#1F3A2E] shadow-sm"
+            : "text-[#3D6B3F]/70 hover:text-[#1F3A2E]"
             }`}
         >
           {opt.label}
@@ -141,11 +141,11 @@ function ChartCard({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+    <div className="bg-[#F4F0E3] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)] border border-[#C5CFB0] p-6">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h3 className="text-base font-bold text-gray-800 dark:text-white">{title}</h3>
-          {subtitle && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{subtitle}</p>}
+          <h3 className="text-base font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">{title}</h3>
+          {subtitle && <p className="text-xs text-[#3D6B3F]/70 mt-0.5">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -159,8 +159,8 @@ function ChartCard({
 function ChartSkeleton() {
   return (
     <div className="animate-pulse space-y-3">
-      <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded w-1/3" />
-      <div className="h-48 bg-gray-100 dark:bg-gray-700 rounded-xl" />
+      <div className="h-4 bg-[#C5CFB0]/50 rounded w-1/3" />
+      <div className="h-48 bg-[#C5CFB0]/50 rounded-xl" />
     </div>
   );
 }
@@ -169,7 +169,7 @@ function ChartSkeleton() {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center h-48 text-gray-300 dark:text-gray-600">
+    <div className="flex flex-col items-center justify-center h-48 text-[#C5CFB0]">
       <svg className="w-10 h-10 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path
           strokeLinecap="round"
@@ -227,9 +227,9 @@ export function AdminChartsContent() {
   const token = getCookie("token");
   const isDark = useIsDark();
 
-  const axisColor = isDark ? "#6b7280" : "#94a3b8"; // gray-500 / slate-400
-  const gridColor = isDark ? "#374151" : "#f1f5f9"; // gray-700 / slate-50
-  const labelColor = isDark ? "#9ca3af" : "#64748b"; // gray-400 / slate-500
+  const axisColor = isDark ? "#C5CFB0" : "#3D6B3F";
+  const gridColor = isDark ? "#1F3A2E" : "#C5CFB0";
+  const labelColor = isDark ? "#A8C26B" : "#1F3A2E";
 
   const [ventasPeriod, setVentasPeriod] = useState<Period>("mes");
   const [usuariosPeriod, setUsuariosPeriod] = useState<Period>("mes");
@@ -334,8 +334,11 @@ export function AdminChartsContent() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg">
-          {error}
+        <div className="flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 dark:border-red-900/30 dark:bg-red-950/20">
+          <svg className="h-4 w-4 flex-shrink-0 text-red-500 dark:text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+          </svg>
+          <p className="text-sm font-medium text-red-600 dark:text-red-400">{error}</p>
         </div>
       )}
 
@@ -433,7 +436,7 @@ export function AdminChartsContent() {
                 cursor={{ fill: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }}
                 content={(props) => <CustomTooltip {...props} />}
               />
-              <Area type="monotone" dataKey="total" stroke={COLORS.purple} fillOpacity={1} fill="url(#colorRegistros)" name="Registros" />
+              <Area type="monotone" dataKey="total" stroke={"#3D6B3F"} fillOpacity={1} fill="url(#colorRegistros)" name="Registros" />
             </AreaChart>
           </ResponsiveContainer>
         ) : (

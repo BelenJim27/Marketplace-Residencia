@@ -152,17 +152,17 @@ export function ProductoresForm({
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-sm">
-      <div className="w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl sm:max-w-2xl">
-        <div className="sticky top-0 flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-4 sm:px-6 sm:py-5">
+      <div className="w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-[#F4F0E3] shadow-[0_24px_48px_rgba(31,58,46,0.25)] sm:max-w-2xl border border-[#C5CFB0]">
+        <div className="sticky top-0 flex items-center justify-between bg-[#1F3A2E] px-4 py-4 sm:px-6 sm:py-5">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-lg sm:text-xl font-bold text-gray-800">
+            <h2 className="truncate text-lg sm:text-xl font-bold text-white [font-family:'Playfair_Display',serif]">
               {mode === "create"
                 ? "Nuevo productor"
                 : mode === "edit"
                   ? "Editar productor"
                   : "Detalle del productor"}
             </h2>
-            <p className="truncate text-xs text-gray-400">
+            <p className="truncate text-xs text-white/60">
               {productor
                 ? `ID: #PR-${String(productor.id).padStart(4, "0")}`
                 : "Completa la información requerida"}
@@ -172,7 +172,7 @@ export function ProductoresForm({
           <button
             type="button"
             onClick={onClose}
-            className="ml-2 flex-shrink-0 rounded-full p-2 text-gray-400 transition-colors hover:bg-white hover:text-gray-600"
+            className="ml-2 flex-shrink-0 rounded-full p-2 text-white/70 transition-all duration-200 hover:bg-white/10 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
@@ -186,7 +186,7 @@ export function ProductoresForm({
               value={form.nombre}
               onChange={(event) => handleChange("nombre", event.target.value)}
               disabled={isReadOnly}
-              className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full rounded-lg sm:rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 sm:px-4 sm:py-3 text-sm text-[#1F3A2E] outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 disabled:cursor-not-allowed disabled:opacity-70"
               placeholder="Nombre del productor"
             />
           </Field>
@@ -198,7 +198,7 @@ export function ProductoresForm({
                 value={form.apellido_paterno}
                 onChange={(event) => handleChange("apellido_paterno", event.target.value)}
                 disabled={isReadOnly}
-                className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-lg sm:rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 sm:px-4 sm:py-3 text-sm text-[#1F3A2E] outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 disabled:cursor-not-allowed disabled:opacity-70"
                 placeholder="Apellido paterno"
               />
             </Field>
@@ -208,7 +208,7 @@ export function ProductoresForm({
                 value={form.apellido_materno}
                 onChange={(event) => handleChange("apellido_materno", event.target.value)}
                 disabled={isReadOnly}
-                className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-lg sm:rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 sm:px-4 sm:py-3 text-sm text-[#1F3A2E] outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 disabled:cursor-not-allowed disabled:opacity-70"
                 placeholder="Apellido materno"
               />
             </Field>
@@ -220,7 +220,7 @@ export function ProductoresForm({
               value={form.region}
               onChange={(event) => handleChange("region", event.target.value)}
               disabled={isReadOnly}
-              className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full rounded-lg sm:rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 sm:px-4 sm:py-3 text-sm text-[#1F3A2E] outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 disabled:cursor-not-allowed disabled:opacity-70"
               placeholder="Ej. Sierra Sur"
             />
           </Field>
@@ -233,7 +233,7 @@ export function ProductoresForm({
                 handleChange("status", event.target.value as ProductorAdmin["status"])
               }
               disabled={isReadOnly}
-              className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full rounded-lg sm:rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 sm:px-4 sm:py-3 text-sm text-[#1F3A2E] outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <option value="ACTIVO">ACTIVO</option>
               <option value="PAUSADO">PAUSADO</option>
@@ -247,7 +247,7 @@ export function ProductoresForm({
               value={form.biografia}
               onChange={(event) => handleChange("biografia", event.target.value)}
               disabled={isReadOnly}
-              className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70 resize-none"
+              className="w-full rounded-lg sm:rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 sm:px-4 sm:py-3 text-sm text-[#1F3A2E] outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 disabled:cursor-not-allowed disabled:opacity-70 resize-none"
               placeholder="Cuéntanos sobre el productor, su historia y experiencia..."
               rows={2}
             />
@@ -259,7 +259,7 @@ export function ProductoresForm({
               value={form.otras_caracteristicas}
               onChange={(event) => handleChange("otras_caracteristicas", event.target.value)}
               disabled={isReadOnly}
-              className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-70 resize-none"
+              className="w-full rounded-lg sm:rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 sm:px-4 sm:py-3 text-sm text-[#1F3A2E] outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 disabled:cursor-not-allowed disabled:opacity-70 resize-none"
               placeholder="Ej. Certificaciones, especializaciones, métodos tradicionales..."
               rows={2}
             />
@@ -282,29 +282,29 @@ export function ProductoresForm({
                     }
                     handleChange("foto", file);
                   }}
-                  className="block w-full rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm file:mr-2 sm:file:mr-4 file:rounded-md sm:file:rounded-lg file:border-0 file:bg-green-100 file:px-2 sm:file:px-3 file:py-1 file:text-xs sm:file:text-sm file:font-semibold file:text-green-700 hover:file:bg-green-200"
+                  className="block w-full rounded-lg sm:rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] text-[#1F3A2E] px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm file:mr-2 sm:file:mr-4 file:rounded-md sm:file:rounded-lg file:border-0 file:bg-[#A8C26B]/20 file:px-2 sm:file:px-3 file:py-1 file:text-xs sm:file:text-sm file:font-semibold file:text-[#3D6B3F] hover:file:bg-[#A8C26B]/30"
                 />
               )}
               {form.foto && (
-                <div className="rounded-lg border border-gray-200 p-2 sm:p-3">
-                  <p className="text-xs font-medium text-gray-600">Archivo seleccionado:</p>
-                  <p className="truncate text-xs sm:text-sm text-gray-700">{form.foto.name}</p>
+                <div className="rounded-lg border border-[#C5CFB0] p-2 sm:p-3 bg-[#F4F0E3]">
+                  <p className="text-xs font-medium text-[#3D6B3F]">Archivo seleccionado:</p>
+                  <p className="truncate text-xs sm:text-sm text-[#1F3A2E]">{form.foto.name}</p>
                 </div>
               )}
               {productor?.foto_url && !form.foto && (
-                <div className="overflow-hidden rounded-lg border border-gray-200">
+                <div className="overflow-hidden rounded-lg border border-[#C5CFB0]">
                   <img src={productor.foto_url} alt="Foto actual" className="h-24 sm:h-32 w-full object-cover" />
-                  <p className="bg-gray-50 px-2 py-1 sm:px-3 sm:py-2 text-xs text-gray-600">Foto actual del productor</p>
+                  <p className="bg-[#F4F0E3] px-2 py-1 sm:px-3 sm:py-2 text-xs text-[#3D6B3F]/70">Foto actual del productor</p>
                 </div>
               )}
             </div>
           </Field>
 
-          <div className="flex flex-col-reverse gap-2 sm:gap-3 border-t border-gray-100 pt-4 sm:pt-5 sm:flex-row">
+          <div className="flex flex-col-reverse gap-2 sm:gap-3 border-t border-[#C5CFB0] pt-4 sm:pt-5 sm:flex-row">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg sm:rounded-xl border border-gray-200 px-3 py-2 sm:px-4 sm:py-3 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+              className="rounded-xl border border-[#C5CFB0] px-4 py-2 text-sm font-medium text-[#1F3A2E] hover:bg-[#C5CFB0]/20 transition-all duration-200"
             >
               {isReadOnly ? "Cerrar" : "Cancelar"}
             </button>
@@ -313,7 +313,7 @@ export function ProductoresForm({
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex w-full sm:flex-1 items-center justify-center gap-2 rounded-lg sm:rounded-xl bg-green-600 px-3 py-2 sm:px-4 sm:py-3 text-sm font-semibold text-white transition-all hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex w-full sm:flex-1 items-center justify-center gap-2 rounded-xl bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white hover:bg-[#1F3A2E] transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -347,7 +347,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-400">
+      <label className="block text-sm font-medium text-[#1F3A2E] mb-1">
         {label}
       </label>
       {children}

@@ -1,8 +1,6 @@
 "use client";
 
-import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { getNavData } from "./data";
@@ -13,10 +11,15 @@ import { useAuth } from "@/context/AuthContext";
 import { ChevronDown, LogOut } from "lucide-react";
 import { useProductorCategorias } from "../../../hooks/useProductorCategorias";
 import { getCookie } from "@/lib/cookies";
+import { useSession } from "next-auth/react";
+import Image from "next/image";
+import Link from "next/link";
+
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, isProductor, isAdmin, logout } = useAuth();
+  const { isProductor, isAdmin, logout } = useAuth();
+  const { data: session } = useSession();
   const { setIsOpen, isOpen, isMobile, toggleSidebar, isCollapsed, toggleCollapse } =
     useSidebarContext();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -28,11 +31,8 @@ export function Sidebar() {
     return menus;
   });
 
-  // ── Categorías del productor para mostrar/ocultar Lotes y Categorías ──────
   const token = getCookie("token") ?? "";
   const { tieneLotes } = useProductorCategorias(token, isAdmin);
-
-  // ── LÍNEA MODIFICADA: se pasa tieneLotes a getNavData ────────────────────
   const navData = getNavData(isProductor, isAdmin, tieneLotes);
 
   const isFilesRoute = pathname.startsWith("/dashboard/productor/archivos");
@@ -48,7 +48,6 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Overlay para móvil cuando sidebar abierto */}
       {isMobile && isOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
@@ -58,200 +57,245 @@ export function Sidebar() {
       )}
 
       <aside
-        style={{
-          borderColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.25)",
-          backgroundColor: "rgba(var(--color-primary-rgb, 45, 122, 62), 0.08)",
-        }}
         className={cn(
-          "border-r transition-all duration-300 ease-linear overflow-hidden h-screen sticky top-0 dark:border-gray-800 dark:bg-gray-dark",
+          "flex flex-col h-screen sticky top-0 transition-all duration-300 ease-linear overflow-hidden",
+          "bg-[#1F3A2E]",
           isMobile
             ? isOpen
-              ? "translate-x-0 fixed bottom-0 top-0 left-0 z-50 w-[280px] max-w-[85vw]"
-              : "-translate-x-full fixed bottom-0 top-0 left-0 z-50 w-[280px] max-w-[85vw]"
+              ? "translate-x-0 fixed bottom-0 top-0 left-0 z-50 w-[250px] max-w-[85vw]"
+              : "-translate-x-full fixed bottom-0 top-0 left-0 z-50 w-[250px] max-w-[85vw]"
             : isCollapsed
-              ? "w-24"
-              : "max-w-[290px] w-full",
+              ? "w-[68px]"
+              : "w-[245px]",
           !isOpen && !isMobile && "w-0",
         )}
       >
-        <div className="flex h-full flex-col py-6 md:py-10 pl-4 md:pl-[25px] pr-2 md:pr-[7px]">
+        <div className="flex h-full flex-col">
 
-          {/* Logo y botón collapse */}
-          <div className="relative pr-2 md:pr-4.5 flex items-center justify-between">
+          {/* Logo + collapse button */}
+          <div className="flex items-center justify-between px-4 pt-5 pb-4">
             {!isCollapsed && (
-              <Link
-                href={"/"}
-                onClick={() => isMobile && toggleSidebar()}
-                className="px-0 py-2 md:py-2.5"
-              >
-                <Logo />
+              <Link href="/" onClick={() => isMobile && toggleSidebar()}>
+                <Image
+                  src="/images/logo/tierra_agaves.png"
+                  width={110}
+                  height={44}
+                  alt="Tierra Agaves"
+                  className="object-contain brightness-0 invert"
+                  priority
+                />
               </Link>
             )}
 
-            {!isMobile && (
+            {isCollapsed && (
+              <Link href="/" className="mx-auto">
+                <Image
+                  src="/images/logo/tierra_agaves.png"
+                  width={32}
+                  height={32}
+                  alt="Tierra Agaves"
+                  className="object-contain brightness-0 invert"
+                  priority
+                />
+              </Link>
+            )}
+
+            {!isMobile && !isCollapsed && (
               <button
                 onClick={toggleCollapse}
-                className={cn(
-                  "p-1.5 hover:bg-white/60 rounded-lg transition ml-auto dark:hover:bg-white/10",
-                  isCollapsed ? "ml-1" : ""
-                )}
-                title={isCollapsed ? "Expandir" : "Colapsar"}
+                className="ml-2 rounded-lg p-1.5 text-white/40 hover:bg-white/10 hover:text-white/80 transition-all duration-200"
+                title="Colapsar"
               >
-                <ChevronLeft className={cn(
-                  "size-5 transition-transform duration-300",
-                  isCollapsed ? "rotate-180" : ""
-                )} />
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
+
+            {!isMobile && isCollapsed && (
+              <button
+                onClick={toggleCollapse}
+                className="absolute right-1 top-5 rounded-lg p-1.5 text-white/40 hover:bg-white/10 hover:text-white/80 transition-all duration-200"
+                title="Expandir"
+              >
+                <ChevronLeft className="h-4 w-4 rotate-180" />
               </button>
             )}
 
             {isMobile && isOpen && (
-              <button
-                onClick={toggleSidebar}
-                className="ml-auto p-1.5"
-              >
-                <ArrowLeftIcon className="size-7" />
+              <button onClick={toggleSidebar} className="ml-auto p-1.5 text-white/50 hover:text-white">
+                <ArrowLeftIcon className="h-5 w-5" />
               </button>
             )}
           </div>
 
           {/* Navigation */}
-          <div className="mt-4 md:mt-6 flex-1 overflow-y-auto pr-2 md:pr-3">
+          <div
+            className="flex-1 overflow-y-auto px-2 py-2"
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor: "rgba(255,255,255,0.08) transparent",
+            }}
+          >
             {navData.map((section) => (
-              <div key={section.label} className="mb-6 md:mb-8">
-
+              <div key={section.label} className="mb-2">
                 {!isCollapsed && (
-                  <h2 className="mb-3 md:mb-5 text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <p className="mb-1 px-3 pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/30">
                     {section.label}
-                  </h2>
+                  </p>
                 )}
 
-                <ul className={cn("space-y-1 md:space-y-2", isCollapsed ? "flex flex-col items-center gap-2 md:gap-4" : "")}>
-                  {section.items.map((item) => (
-                    <li
-                      key={item.title}
-                      className={cn(
-                        "relative",
-                        isCollapsed ? "w-12" : ""
-                      )}
-                      onMouseEnter={() => isCollapsed && setHoveredItem(item.title)}
-                      onMouseLeave={() => setHoveredItem(null)}
-                    >
-                      {item.children?.length ? (
-                        <>
+                <ul className="space-y-[2px]">
+                  {section.items.map((item) => {
+                    const active = isItemActive(item);
+                    const isDirectLink = !item.children?.length && !!item.url;
+                    const showTab = active && isDirectLink && !isCollapsed;
+
+                    return (
+                      <li
+                        key={item.title}
+                        className={cn(
+                          "relative",
+                          showTab && "-mr-px z-10 sidebar-tab-active",
+                        )}
+                        onMouseEnter={() => isCollapsed && setHoveredItem(item.title)}
+                        onMouseLeave={() => setHoveredItem(null)}
+                      >
+                        {item.children?.length ? (
+                          <>
+                            <MenuItem
+                              as="button"
+                              onClick={() =>
+                                setOpenMenus((cur) =>
+                                  cur.includes(item.title)
+                                    ? cur.filter((m) => m !== item.title)
+                                    : [...cur, item.title],
+                                )
+                              }
+                              isActive={active}
+                              title={item.title}
+                              className={cn(
+                                "flex w-full items-center gap-3 px-3 py-2.5 transition-all duration-200",
+                                active
+                                  ? "rounded-[20px] bg-white/[0.15] text-white"
+                                  : "rounded-xl text-white/70 hover:bg-white/[0.07] hover:text-white/90",
+                                isCollapsed && "justify-center px-2",
+                              )}
+                            >
+                              <item.icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-white" : "text-white/50")} />
+                              {!isCollapsed && (
+                                <span className="flex min-w-0 flex-1 items-center justify-between text-[13px] font-medium">
+                                  <span className="truncate">{item.title}</span>
+                                  <ChevronDown className={cn("h-3.5 w-3.5 text-white/30 transition-transform", isMenuOpen(item.title) && "rotate-180")} />
+                                </span>
+                              )}
+                            </MenuItem>
+
+                            {!isCollapsed && isMenuOpen(item.title) && (
+                              <ul className="mt-0.5 space-y-[2px] pl-3">
+                                {item.children.map((child) => {
+                                  const childActive = pathname === child.url;
+                                  const showChildTab = childActive && !isCollapsed;
+                                  return (
+                                    <li
+                                      key={child.title}
+                                      className={cn(
+                                        "relative",
+                                        showChildTab && "-mr-px z-10 sidebar-tab-active",
+                                      )}
+                                    >
+                                      <MenuItem
+                                        as="link"
+                                        href={child.url}
+                                        isActive={childActive}
+                                        title={child.title}
+                                        className={cn(
+                                          "flex items-center gap-3 px-3 py-2 transition-all duration-200",
+                                          showChildTab
+                                            ? "rounded-l-[20px] rounded-r-none bg-[#F4F0E3] text-[#1F3A2E]"
+                                            : childActive
+                                            ? "rounded-xl bg-white/[0.15] text-white"
+                                            : "rounded-xl text-white/50 hover:bg-white/[0.07] hover:text-white/80",
+                                        )}
+                                      >
+                                        <child.icon className={cn("h-4 w-4 shrink-0", showChildTab ? "text-[#1F3A2E]" : childActive ? "text-white" : "text-white/40")} />
+                                        <span className="text-[13px] font-medium truncate">{child.title}</span>
+                                      </MenuItem>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )}
+                          </>
+                        ) : item.url ? (
                           <MenuItem
-                            className={cn(
-                              "group flex items-center gap-2 md:gap-3 rounded-lg px-2 md:px-3 py-2.5 md:py-3 transition",
-                              "hover:bg-white/60 dark:hover:bg-white/10",
-                              isCollapsed ? "justify-center p-2 md:p-3" : ""
-                            )}
-                            as="button"
-                            onClick={() =>
-                              setOpenMenus((current) =>
-                                current.includes(item.title)
-                                  ? current.filter((menu) => menu !== item.title)
-                                  : [...current, item.title]
-                              )
-                            }
-                            isActive={isItemActive(item)}
+                            as="link"
+                            href={item.url}
+                            isActive={active}
                             title={item.title}
-                          >
-                            <item.icon className={cn("shrink-0 text-gray-600 transition-colors group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white", isCollapsed ? "size-6 md:size-7" : "size-5 md:size-6", isItemActive(item) && "text-gray-900 dark:text-white")} />
-                            {!isCollapsed && (
-                              <span className="flex min-w-0 flex-1 items-center justify-between gap-2 text-sm md:text-base">
-                                <span className="truncate">{item.title}</span>
-                                <ChevronDown className={cn("size-3 md:size-4 transition-transform text-gray-500 dark:text-gray-400", isMenuOpen(item.title) && "rotate-180")} />
-                              </span>
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-2.5 transition-all duration-200",
+                              showTab
+                                ? "rounded-l-[20px] rounded-r-none bg-[#F4F0E3] text-[#1F3A2E]"
+                                : active
+                                ? "rounded-xl bg-white/[0.15] text-white"
+                                : "rounded-xl text-white/70 hover:bg-white/[0.07] hover:text-white/90",
+                              isCollapsed && "justify-center px-2",
                             )}
+                          >
+                            <item.icon className={cn("h-[18px] w-[18px] shrink-0", showTab ? "text-[#1F3A2E]" : active ? "text-white" : "text-white/50")} />
+                            {!isCollapsed && <span className="text-[13px] font-medium truncate">{item.title}</span>}
                           </MenuItem>
+                        ) : null}
 
-                          {!isCollapsed && isMenuOpen(item.title) && (
-                            <div className="mt-1 md:mt-2 space-y-1 md:space-y-2 pl-3 md:pl-4">
-                              {item.children.map((child) => (
-                                <MenuItem
-                                  key={child.title}
-                                  className="group flex items-center gap-2 md:gap-3 rounded-lg py-2 md:py-2.5 pl-5 md:pl-7 pr-2 md:pr-3 transition hover:bg-white/60 dark:hover:bg-white/10"
-                                  as="link"
-                                  href={child.url}
-                                  isActive={pathname === child.url}
-                                  title={child.title}
-                                >
-                                  <child.icon className={cn("size-4 md:size-5 shrink-0 text-gray-600 transition-colors group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white", pathname === child.url && "text-gray-900 dark:text-white")} />
-                                  <span className="text-sm truncate">{child.title}</span>
-                                </MenuItem>
-                              ))}
-                            </div>
-                          )}
-                        </>
-                      ) : item.url ? (
-                        <MenuItem
-                          className={cn(
-                            "group flex items-center gap-2 md:gap-3 rounded-lg px-2 md:px-3 py-2.5 md:py-3 transition",
-                            "hover:bg-white/60 dark:hover:bg-white/10",
-                            isCollapsed ? "justify-center p-2 md:p-3" : ""
-                          )}
-                          as="link"
-                          href={item.url}
-                          isActive={isItemActive(item)}
-                          title={item.title}
-                        >
-                          <item.icon className={cn("shrink-0 text-gray-600 transition-colors group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white", isCollapsed ? "size-6 md:size-7" : "size-5 md:size-6", isItemActive(item) && "text-gray-900 dark:text-white")} />
-                          {!isCollapsed && <span className="text-sm md:text-base truncate">{item.title}</span>}
-                        </MenuItem>
-                      ) : null}
-
-                      {/* Menú flotante cuando está colapsado */}
-                      {isCollapsed && hoveredItem === item.title && !isMobile && (
-                        <div className="absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white shadow-lg pointer-events-none">
-                          {item.title}
-                          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-primary"></div>
-                        </div>
-                      )}
-                    </li>
-                  ))}
+                        {/* Tooltip when collapsed */}
+                        {isCollapsed && hoveredItem === item.title && !isMobile && (
+                          <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-xl bg-[#1F3A2E] border border-white/10 px-3 py-1.5 text-[13px] font-medium text-white shadow-xl">
+                            {item.title}
+                            <div className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-[#1F3A2E]" />
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))}
+          </div>
 
-            <div className="mt-6 md:mt-8 border-t border-gray-300 pt-4 md:pt-5 dark:border-gray-700">
-              <MenuItem
-                as="button"
-                isActive={false}
-                title="Cerrar sesión"
-                onClick={() => setShowLogoutConfirm(true)}
-                className={cn(
-                  "group flex w-full items-center gap-2 md:gap-3 rounded-lg px-2 md:px-3 py-2.5 md:py-3 text-gray-600 transition hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400",
-                  isCollapsed ? "justify-center p-2 md:p-3" : "",
-                )}
-              >
-                <LogOut className={cn("shrink-0 text-current", isCollapsed ? "size-6 md:size-7" : "size-5 md:size-6")} />
-                {!isCollapsed && <span className="text-sm md:text-base">Cerrar sesión</span>}
-              </MenuItem>
-            </div>
+          {/* Logout */}
+          <div className="px-2 pb-5 pt-3 border-t border-white/[0.08]">
+            <button
+              type="button"
+              onClick={() => setShowLogoutConfirm(true)}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-white/50 transition-all duration-200 hover:bg-red-500/10 hover:text-red-400",
+                isCollapsed && "justify-center px-2",
+              )}
+            >
+              <LogOut className="h-[18px] w-[18px] shrink-0" />
+              {!isCollapsed && <span className="text-[13px] font-medium">Cerrar sesión</span>}
+            </button>
           </div>
         </div>
       </aside>
 
+      {/* Logout modal */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-4 sm:p-6 shadow-2xl dark:bg-gray-dark">
-            <h3 className="text-base sm:text-lg font-semibold text-dark dark:text-white">Cerrar sesión</h3>
-            <p className="mt-2 text-sm text-gray-500">¿Estás seguro que deseas cerrar sesión?</p>
-
-            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-end gap-2 sm:gap-3 border-t border-gray-300 pt-4 dark:border-gray-700">
+          <div className="w-full max-w-sm rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Cerrar sesión</h3>
+            <p className="mt-2 text-sm text-[#3D6B3F]/70">¿Estás seguro que deseas cerrar sesión?</p>
+            <div className="mt-6 flex gap-3 border-t border-[#C5CFB0] pt-4">
               <button
                 type="button"
                 onClick={() => setShowLogoutConfirm(false)}
-                className="w-full sm:w-auto rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+                className="flex-1 rounded-xl border border-[#C5CFB0] px-4 py-2.5 text-sm font-semibold text-[#1F3A2E] transition hover:bg-[#C5CFB0]/30"
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setShowLogoutConfirm(false);
-                  logout();
-                }}
-                className="w-full sm:w-auto rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+                onClick={() => { setShowLogoutConfirm(false); logout(); }}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
               >
                 Cerrar sesión
               </button>

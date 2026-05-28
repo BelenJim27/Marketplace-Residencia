@@ -1,7 +1,9 @@
 "use client";
 
-import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+const PAGE_SIZE = 10;
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
@@ -89,6 +91,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
   const [selected, setSelected] = useState<ProductItem | null>(null);
   const [mode, setMode] = useState<"view" | "edit" | "create" | null>(null);
   const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
+  const [page, setPage] = useState(1);
 
   const token = getCookie("token") ?? "";
 
@@ -101,6 +104,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
         ? data.map((item) => normalizeProduct(item as ProductItem))
         : [];
       setProducts(normalized);
+      setPage(1);
     } catch (err) {
       console.error("Error loading productos:", err);
       setError(
@@ -125,6 +129,12 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
   const totalStock = useMemo(
     () => products.reduce((acc, p) => acc + Number(p.stock ?? 0), 0),
     [products],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
+  const paginated = useMemo(
+    () => products.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [products, page],
   );
 
   const openModal = (nextMode: "view" | "edit" | "create", product?: ProductItem) => {
@@ -219,7 +229,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
         <button
           type="button"
           onClick={() => openModal("create")}
-          className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700"
+          className="flex items-center gap-2 rounded-xl bg-[#3D6B3F] px-5 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:bg-[#1F3A2E]"
         >
           <Plus className="h-4 w-4" />
           Nuevo Producto
@@ -229,27 +239,27 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
       {/* ── Tarjetas de resumen ── */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <SummaryCard label="Total productos" value={products.length} />
-        <SummaryCard label="Activos" value={activeCount} accent="text-green-600 dark:text-green-400" />
-        <SummaryCard label="Stock total" value={totalStock} accent="text-blue-600 dark:text-blue-400" />
+        <SummaryCard label="Activos" value={activeCount} accent="text-[#3D6B3F]" />
+        <SummaryCard label="Stock total" value={totalStock} accent="text-[#3D6B3F]" />
       </div>
 
       {/* ── Notificaciones ── */}
       {error && (
-        <div className="rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
       {success && (
-        <div className="rounded-2xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-3 text-sm text-green-700 dark:text-green-400">
+        <div className="rounded-2xl border border-[#A8C26B]/40 bg-[#A8C26B]/10 px-4 py-3 text-sm text-[#3D6B3F]">
           {success}
         </div>
       )}
 
       {/* ── Tabla ── */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] text-left">
-            <thead className="bg-gray-50 dark:bg-gray-700/60 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-400">
+            <thead className="bg-[#1F3A2E] text-[11px] font-bold uppercase tracking-wider text-white">
               <tr>
                 <th className="px-5 py-4">Imagen</th>
                 <th className="px-5 py-4">Nombre</th>
@@ -263,39 +273,39 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={7} className="px-5 py-10 text-center text-[#3D6B3F]/70 bg-white">
                     Cargando productos...
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={7} className="px-5 py-10 text-center text-[#3D6B3F]/70 bg-white">
                     Este productor no tiene productos registrados.
                   </td>
                 </tr>
               ) : (
-                products.map((product) => (
+                paginated.map((product) => (
                   <tr
                     key={product.id_producto}
-                    className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors text-sm"
+                    className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200 text-sm"
                   >
                     <td className="px-5 py-4">
                       <ProductThumbnail src={product.imagen_url ?? null} alt={product.nombre} />
                     </td>
-                    <td className="px-5 py-4 font-medium text-gray-900 dark:text-white">
+                    <td className="px-5 py-4 font-medium text-[#1F3A2E]">
                       {product.nombre}
                     </td>
-                    <td className="px-5 py-4 text-gray-700 dark:text-gray-300">
+                    <td className="px-5 py-4 text-[#1F3A2E]">
                       {Number(product.precio_base ?? 0).toFixed(2)}
                     </td>
-                    <td className="px-5 py-4 text-gray-700 dark:text-gray-300">
+                    <td className="px-5 py-4 text-[#1F3A2E]">
                       {product.moneda_base || "MXN"}
                     </td>
                     <td className="px-5 py-4">
                       <StatusBadge status={String(product.status ?? "activo")} />
                     </td>
                     <td className="px-5 py-4">
-                      <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <span className="rounded-full bg-[#3D6B3F]/10 px-2 py-1 text-xs font-medium text-[#3D6B3F]">
                         {product.stock ?? 0}
                       </span>
                     </td>
@@ -305,7 +315,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
                           type="button"
                           title="Ver"
                           onClick={() => openModal("view", product)}
-                          className="rounded-lg p-2 text-gray-500 dark:text-gray-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400"
+                          className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] transition-all duration-200"
                         >
                           <Eye size={16} />
                         </button>
@@ -313,7 +323,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
                           type="button"
                           title="Editar"
                           onClick={() => openModal("edit", product)}
-                          className="rounded-lg p-2 text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400"
+                          className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-[#C97A3E]/10 hover:text-[#C97A3E] transition-all duration-200"
                         >
                           <Pencil size={16} />
                         </button>
@@ -321,7 +331,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
                           type="button"
                           title="Eliminar"
                           onClick={() => void handleDelete(product)}
-                          className="rounded-lg p-2 text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
+                          className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -335,12 +345,53 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
         </div>
       </div>
 
+      {/* ── Paginación ── */}
+      {products.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] px-5 py-3">
+          <p className="text-sm text-[#3D6B3F]/70">
+            Mostrando {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, products.length)} de {products.length} productos
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="rounded-lg p-2 text-[#1F3A2E] transition-all duration-200 hover:bg-[#C5CFB0]/40 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setPage(n)}
+                className={`h-8 w-8 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  n === page
+                    ? "bg-[#1F3A2E] text-white"
+                    : "text-[#1F3A2E] hover:bg-[#C5CFB0]/40"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded-lg p-2 text-[#1F3A2E] transition-all duration-200 hover:bg-[#C5CFB0]/40 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Modal Ver / Editar / Crear ── */}
       {mode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-800 p-8 shadow-2xl">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-800 dark:text-white">
+          <div className="w-full max-w-2xl rounded-2xl bg-[#F4F0E3] shadow-[0_24px_48px_rgba(31,58,46,0.25)] border border-[#C5CFB0] overflow-hidden">
+            <div className="flex items-center justify-between bg-[#1F3A2E] px-6 py-5">
+              <h2 className="text-xl font-bold text-white [font-family:'Playfair_Display',serif]">
                 {mode === "create"
                   ? "Nuevo Producto"
                   : mode === "edit"
@@ -350,13 +401,13 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-lg p-2 text-gray-400 dark:text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
+                className="rounded-full p-2 text-white/70 transition-all duration-200 hover:bg-white/10 hover:text-white"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="p-8 space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <Field
                   label="Nombre"
@@ -410,36 +461,36 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
                   ]}
                 />
               </div>
-            </div>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={closeModal}
-                className="rounded-xl border border-gray-200 dark:border-gray-600 px-5 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                Cancelar
-              </button>
-              {mode === "edit" && (
+              <div className="flex justify-end gap-3 border-t border-[#C5CFB0] pt-5">
                 <button
                   type="button"
-                  onClick={() => void handleSave()}
-                  disabled={saving}
-                  className="rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-60"
+                  onClick={closeModal}
+                  className="rounded-xl border border-[#C5CFB0] px-5 py-3 text-sm font-medium text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200"
                 >
-                  {saving ? "Guardando..." : "Guardar cambios"}
+                  Cancelar
                 </button>
-              )}
-              {mode === "create" && (
-                <button
-                  type="button"
-                  onClick={() => void handleCreate()}
-                  disabled={saving}
-                  className="rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-60"
-                >
-                  {saving ? "Creando..." : "Crear producto"}
-                </button>
-              )}
+                {mode === "edit" && (
+                  <button
+                    type="button"
+                    onClick={() => void handleSave()}
+                    disabled={saving}
+                    className="rounded-xl bg-[#3D6B3F] px-5 py-3 text-sm font-medium text-white hover:bg-[#1F3A2E] transition-all duration-200 disabled:opacity-60"
+                  >
+                    {saving ? "Guardando..." : "Guardar cambios"}
+                  </button>
+                )}
+                {mode === "create" && (
+                  <button
+                    type="button"
+                    onClick={() => void handleCreate()}
+                    disabled={saving}
+                    className="rounded-xl bg-[#3D6B3F] px-5 py-3 text-sm font-medium text-white hover:bg-[#1F3A2E] transition-all duration-200 disabled:opacity-60"
+                  >
+                    {saving ? "Creando..." : "Crear producto"}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -453,18 +504,18 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
 function SummaryCard({
   label,
   value,
-  accent = "text-slate-800 dark:text-white",
+  accent = "text-[#1F3A2E]",
 }: {
   label: string;
   value: number;
   accent?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+    <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <p className="text-xs font-semibold text-[#3D6B3F]/70 uppercase tracking-wider">
         {label}
       </p>
-      <h2 className={`mt-1 text-2xl font-black ${accent}`}>{value}</h2>
+      <h2 className={`mt-1 text-2xl font-bold [font-family:'DM_Sans',sans-serif] ${accent}`}>{value}</h2>
     </div>
   );
 }
@@ -472,7 +523,7 @@ function SummaryCard({
 function ProductThumbnail({ src, alt }: { src: string | null; alt: string }) {
   if (!src) {
     return (
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-700 text-[10px] font-semibold uppercase text-gray-400 dark:text-gray-500">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#C5CFB0]/30 text-[10px] font-semibold uppercase text-[#3D6B3F]/50">
         Sin
       </div>
     );
@@ -484,8 +535,8 @@ function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
   const className =
     normalized === "activo"
-      ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400";
+      ? "bg-[#A8C26B]/20 text-[#3D6B3F] border border-[#A8C26B]/40"
+      : "bg-[#C97A3E]/15 text-[#C97A3E] border border-[#C97A3E]/30";
   return (
     <span className={`rounded-full px-3 py-1 text-xs font-medium ${className}`}>
       {normalized}
@@ -509,11 +560,11 @@ function Field({
   type?: string;
 }) {
   const inputClass =
-    "w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4 py-3 text-gray-700 dark:text-gray-200 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-60";
+    "w-full rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-4 py-3 text-[#1F3A2E] outline-none transition-all placeholder-[#3D6B3F]/40 focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <label className="block space-y-1">
-      <span className="ml-1 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500 dark:text-gray-400">
+      <span className="block text-sm font-medium text-[#1F3A2E] mb-1">
         {label}
       </span>
       {textarea ? (
@@ -552,14 +603,14 @@ function SelectField({
 }) {
   return (
     <label className="block space-y-1">
-      <span className="ml-1 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500 dark:text-gray-400">
+      <span className="block text-sm font-medium text-[#1F3A2E] mb-1">
         {label}
       </span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4 py-3 text-gray-700 dark:text-gray-200 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-4 py-3 text-[#1F3A2E] outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>

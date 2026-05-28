@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -44,6 +46,27 @@
 
   .chat-height {
     @apply h-[calc(100vh_-_8.125rem)] lg:h-[calc(100vh_-_5.625rem)];
+  }
+
+  /* Sidebar connected-tab effect — concave corners */
+  .sidebar-tab-active::before,
+  .sidebar-tab-active::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    width: 1rem;
+    height: 1rem;
+    background-color: #1F3A2E;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .sidebar-tab-active::before {
+    bottom: 100%;
+    border-bottom-right-radius: 100%;
+  }
+  .sidebar-tab-active::after {
+    top: 100%;
+    border-top-right-radius: 100%;
   }
 
   .inbox-height {
