@@ -52,6 +52,13 @@ export class ProductosController {
     return this.service.findSinLote();
   }
 
+  @Post('sin-lote/assign-matching')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
+  assignLotesMatching() {
+    return this.service.assignLotesMatching();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
