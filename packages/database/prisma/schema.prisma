@@ -182,6 +182,7 @@ model envio_guias {
   id_transportista   Int?
   numero_guia        String              @unique @db.VarChar(200)
   url_etiqueta       String?             @db.VarChar(500)
+  label_pdf          Bytes?
   formato_etiqueta   String?             @db.VarChar(20)
   payload_request    Json?
   payload_response   Json?
@@ -763,6 +764,7 @@ model usuarios {
   refresh_tokens                                refresh_tokens[]
   resenas                                       resenas[]
   usuario_rol                                   usuario_rol[]
+  payouts_aprobados                             payouts[]                @relation("PayoutAprobador")
   paises                                        paises?                  @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
 }
 
@@ -897,9 +899,12 @@ model payouts {
   intentos           Int                @default(0)
   ultimo_error       String?            @db.VarChar(500)
   proximo_reintento  DateTime?          @db.Timestamptz(6)
+  aprobado_por       String?            @db.Uuid
+  aprobado_en        DateTime?          @db.Timestamptz(6)
   productores        productores        @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
   monedas            monedas            @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
   pedido_productor   pedido_productor[]
+  aprobador          usuarios?          @relation("PayoutAprobador", fields: [aprobado_por], references: [id_usuario])
 
   @@index([id_productor, estado], map: "idx_payouts_productor_estado")
   @@index([estado, proximo_reintento], map: "idx_payouts_retry")

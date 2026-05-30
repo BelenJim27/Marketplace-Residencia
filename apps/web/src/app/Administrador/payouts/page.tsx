@@ -21,6 +21,22 @@ const ESTADO_BADGE: Record<string, string> = {
 
 const ESTADOS_MANUALES = ["pendiente", "en_proceso", "procesado", "pagado", "fallido", "cancelado"] as const;
 
+type ResumenPendiente = {
+  id_productor: number;
+  nombre: string;
+  resumen_por_moneda: {
+    moneda: string;
+    pedidos_pendientes: number;
+    monto_bruto_total: string;
+    comision_total: string;
+    monto_neto_total: string;
+  }[];
+  metodos_disponibles: {
+    stripe: boolean;
+    paypal: boolean;
+  };
+};
+
 export default function PayoutsAdminPage() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +44,9 @@ export default function PayoutsAdminPage() {
 
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroProductor, setFiltroProductor] = useState("");
+
+  const [resumenPendientes, setResumenPendientes] = useState<ResumenPendiente[]>([]);
+  const [resumenLoading, setResumenLoading] = useState(false);
 
   const [genForm, setGenForm] = useState({ desde: "", hasta: "", proveedor: "" });
   const [generando, setGenerando] = useState(false);
@@ -58,8 +77,21 @@ export default function PayoutsAdminPage() {
     }
   }
 
+  async function loadResumenPendientes() {
+    setResumenLoading(true);
+    try {
+      const data = await api.payouts.resumenPendientes(token);
+      setResumenPendientes(data);
+    } catch (e) {
+      setNotice({ type: "error", message: e instanceof Error ? e.message : "Error cargando resumen" });
+    } finally {
+      setResumenLoading(false);
+    }
+  }
+
   useEffect(() => {
     load();
+    loadResumenPendientes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroEstado, filtroProductor]);
 
@@ -255,6 +287,110 @@ export default function PayoutsAdminPage() {
                 ))}
               </ul>
             )}
+          </div>
+        )}
+      </section>
+
+      {/* Pendientes por productor */}
+      <section className="rounded-md border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+        <h2 className="mb-3 text-lg font-medium">Pendientes por distribuir</h2>
+        {resumenLoading ? (
+          <div className="flex justify-center py-6">
+            <Loader2 className="animate-spin" size={20} />
+          </div>
+        ) : resumenPendientes.length === 0 ? (
+          <div className="rounded-md bg-gray-50 p-6 text-center text-gray-500 dark:bg-gray-800">
+            No hay pagos pendientes de distribuir
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-md border border-gray-200 dark:border-gray-700">
+            <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th className="px-3 py-2 text-left">Productor</th>
+                  <th className="px-3 py-2 text-left">Moneda</th>
+                  <th className="px-3 py-2 text-center">Pedidos</th>
+                  <th className="px-3 py-2 text-right">Monto Bruto</th>
+                  <th className="px-3 py-2 text-right">Comisión</th>
+                  <th className="px-3 py-2 text-right">A Pagar</th>
+                  <th className="px-3 py-2 text-left">Métodos</th>
+                  <th className="px-3 py-2 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {resumenPendientes.flatMap((productor) =>
+                  productor.resumen_por_moneda.map((moneda, idx) => (
+                    <tr key={`${productor.id_productor}-${moneda.moneda}-${idx}`}>
+                      {idx === 0 && (
+                        <td className="px-3 py-2" rowSpan={productor.resumen_por_moneda.length}>
+                          <span className="font-medium">{productor.nombre}</span>
+                          <span className="ml-2 text-gray-500">#{productor.id_productor}</span>
+                        </td>
+                      )}
+                      <td className="px-3 py-2">{moneda.moneda}</td>
+                      <td className="px-3 py-2 text-center">{moneda.pedidos_pendientes}</td>
+                      <td className="px-3 py-2 text-right">{moneda.monto_bruto_total}</td>
+                      <td className="px-3 py-2 text-right text-orange-600">{moneda.comision_total}</td>
+                      <td className="px-3 py-2 text-right font-medium">{moneda.monto_neto_total}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex gap-1">
+                          {productor.metodos_disponibles.stripe && (
+                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                              ● Stripe
+                            </span>
+                          )}
+                          {productor.metodos_disponibles.paypal && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                              ● PayPal
+                            </span>
+                          )}
+                          {!productor.metodos_disponibles.stripe && !productor.metodos_disponibles.paypal && (
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                              ○ Sin método
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {!productor.metodos_disponibles.stripe && !productor.metodos_disponibles.paypal ? (
+                          <span className="text-xs text-gray-500">Sin método</span>
+                        ) : (
+                          <select
+                            defaultValue=""
+                            onChange={async (e) => {
+                              const proveedor = e.target.value;
+                              if (!proveedor) return;
+                              const hoy = new Date().toISOString().split("T")[0];
+                              const hace30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+                              setGenerando(true);
+                              try {
+                                const res = await api.payouts.generar(token, {
+                                  desde: hace30,
+                                  hasta: hoy,
+                                  proveedor,
+                                  id_productor: productor.id_productor,
+                                });
+                                setNotice({ type: "success", message: `Payout ejecutado: ${res.creados} registro(s)` });
+                                await loadResumenPendientes();
+                              } catch (err) {
+                                setNotice({ type: "error", message: err instanceof Error ? err.message : "Error generando payout" });
+                              } finally {
+                                setGenerando(false);
+                              }
+                            }}
+                            className="rounded-md border border-gray-300 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800"
+                          >
+                            <option value="">Pagar con...</option>
+                            {productor.metodos_disponibles.stripe && <option value="stripe">Stripe</option>}
+                            {productor.metodos_disponibles.paypal && <option value="paypal">PayPal</option>}
+                          </select>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

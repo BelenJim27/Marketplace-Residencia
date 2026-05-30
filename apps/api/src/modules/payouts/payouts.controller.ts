@@ -39,4 +39,10 @@ export class PayoutsController {
   actualizarEstado(@Param('id') id: string, @Body() dto: UpdatePayoutEstadoDto) {
     return this.service.actualizarEstado(id, dto);
   }
+
+  @Get('resumen-pendientes')
+  @Roles('administrador')
+  resumenPendientes() {
+    return this.service.resumenPendientes();
+  }
 }

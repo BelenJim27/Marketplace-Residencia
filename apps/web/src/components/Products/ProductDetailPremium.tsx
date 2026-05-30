@@ -4,10 +4,10 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, ShoppingCart, Heart, MapPin, Droplets, Flame, Leaf } from 'lucide-react';
-import { formatPrice } from '@/lib/format-number';
 import { useCarrito } from '@/context/CarritoContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 import { useRouter } from 'next/navigation';
 
 interface ProductDetailPremiumProps {
@@ -20,6 +20,7 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
   const { agregarProducto } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
+  const { convertPrice, t } = useLocale();
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
 
@@ -79,7 +80,7 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
             style={{ color: '#6f5b38' }}
           >
             <ArrowLeft size={18} />
-            Volver al catálogo
+            {t("Volver al catálogo")}
           </button>
         </div>
       </div>
@@ -131,7 +132,7 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
             {/* Maestro y origen */}
             <div className="space-y-2">
               <p className="text-sm font-semibold uppercase tracking-widest" style={{ color: '#6f5b38' }}>
-                Elaborado por
+                {t("Elaborado por")}
               </p>
               <p className="text-lg font-semibold" style={{ color: '#352a1f' }}>
                 {maestro}
@@ -146,7 +147,7 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
             <div className="grid grid-cols-3 gap-4">
               <div className="p-4 rounded-xl" style={{ backgroundColor: '#f2f7f4' }}>
                 <div className="text-xs font-bold uppercase tracking-wider" style={{ color: '#6f5b38' }}>
-                  Maguey
+                  {t("product_card_agave")}
                 </div>
                 <p className="text-sm font-bold mt-1" style={{ color: '#353a1f' }}>
                   {maguey}
@@ -156,7 +157,7 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
                 <div className="flex items-center gap-2">
                   <Droplets size={16} style={{ color: '#cf744f' }} />
                   <div className="text-xs font-bold uppercase tracking-wider" style={{ color: '#6f5b38' }}>
-                    Alcohol
+                    {t("product_card_alcohol")}
                   </div>
                 </div>
                 <p className="text-sm font-bold mt-1" style={{ color: '#352a1f' }}>
@@ -165,10 +166,10 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
               </div>
               <div className="p-4 rounded-xl" style={{ backgroundColor: '#f7f5f2' }}>
                 <div className="text-xs font-bold uppercase tracking-wider" style={{ color: '#6f5b38' }}>
-                  Tipo
+                  {t("Tipo")}
                 </div>
                 <p className="text-sm font-bold mt-1" style={{ color: '#352a1f' }}>
-                  Artesanal
+                  {t("Artesanal")}
                 </p>
               </div>
             </div>
@@ -177,7 +178,7 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
             {producto.descripcion && (
               <div className="space-y-3">
                 <p className="text-sm font-semibold uppercase tracking-widest" style={{ color: '#6f5b38' }}>
-                  Sobre este mezcal
+                  {t("Sobre este mezcal")}
                 </p>
                 <p style={{ color: '#6f5b38' }} className="leading-relaxed">
                   {producto.descripcion}
@@ -210,7 +211,7 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
                   className="text-sm"
                   style={{ color: '#8b7445' }}
                 >
-                  Precio
+                  {t("product_card_price")}
                 </span>
                 <span
                   className="text-4xl font-black"
@@ -219,20 +220,14 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
                     color: '#cf744f',
                   }}
                 >
-                  ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
-                </span>
-                <span
-                  className="text-sm font-semibold"
-                  style={{ color: '#8b7445' }}
-                >
-                  MXN
+                  {convertPrice(Number(producto.precio_base || 0))}
                 </span>
               </div>
 
               {/* Cantidad */}
               <div className="flex items-center gap-4">
                 <span className="text-sm font-semibold" style={{ color: '#6f5b38' }}>
-                  Cantidad:
+                  {t("Cantidad:")}
                 </span>
                 <div className="flex items-center gap-3">
                   <button
@@ -272,7 +267,7 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
                   }}
                 >
                   <ShoppingCart size={18} />
-                  {agregado ? '¡Agregado!' : 'Agregar al carrito'}
+                  {agregado ? t("catalog_added_success") : t("product_detail_add_to_cart")}
                 </button>
                 <button
                   onClick={toggleWishlist}
@@ -293,11 +288,11 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
               <div className="space-y-2 pt-4">
                 <div className="flex items-center gap-3" style={{ color: '#6f5b38' }}>
                   <Leaf size={18} />
-                  <span className="text-sm">100% artesanal, sin aditivos</span>
+                  <span className="text-sm">{t("100% artesanal, sin aditivos")}</span>
                 </div>
                 <div className="flex items-center gap-3" style={{ color: '#6f5b38' }}>
                   <Flame size={18} />
-                  <span className="text-sm">Destilado en palenque tradicional</span>
+                  <span className="text-sm">{t("Destilado en palenque tradicional")}</span>
                 </div>
               </div>
             </div>

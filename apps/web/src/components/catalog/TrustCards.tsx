@@ -1,35 +1,42 @@
 "use client";
 
 import { CheckCircle2, Leaf, Users, Shield } from "lucide-react";
-
-const trustItems = [
-  {
-    icon: CheckCircle2,
-    title: "Trazabilidad Verificada",
-    description: "Cada producto cuenta su historia completa",
-    color: "from-emerald-400 to-teal-400",
-  },
-  {
-    icon: Leaf,
-    title: "Comercio Justo",
-    description: "Valor justo para productores y comunidades",
-    color: "from-amber-400 to-orange-400",
-  },
-  {
-    icon: Users,
-    title: "Comunidades Apoyadas",
-    description: "Impacto directo en economías locales",
-    color: "from-rose-400 to-pink-400",
-  },
-  {
-    icon: Shield,
-    title: "Compra Segura",
-    description: "Protegemos tu información en cada transacción",
-    color: "from-blue-400 to-indigo-400",
-  },
-];
+import { useLocale } from "@/context/LocaleContext";
+import { useMemo } from "react";
 
 export default function TrustCards() {
+  const { t } = useLocale();
+
+  const trustItems = useMemo(
+    () => [
+      {
+        icon: CheckCircle2,
+        title: t("trust_card_traceability_title"),
+        description: t("trust_card_traceability_description"),
+        color: "from-emerald-400 to-teal-400",
+      },
+      {
+        icon: Leaf,
+        title: t("trust_card_fair_trade_title"),
+        description: t("trust_card_fair_trade_description"),
+        color: "from-amber-400 to-orange-400",
+      },
+      {
+        icon: Users,
+        title: t("trust_card_communities_title"),
+        description: t("trust_card_communities_description"),
+        color: "from-rose-400 to-pink-400",
+      },
+      {
+        icon: Shield,
+        title: t("trust_card_secure_title"),
+        description: t("trust_card_secure_description"),
+        color: "from-blue-400 to-indigo-400",
+      },
+    ],
+    [t]
+  );
+
   return (
     <div className="w-full py-12">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

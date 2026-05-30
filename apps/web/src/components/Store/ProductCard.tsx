@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { useLocale } from '@/context/LocaleContext';
 
 interface ProductCardProps {
   id: string;
@@ -32,8 +33,7 @@ export function ProductCard({
   stock = 10,
   onAddToCart,
 }: ProductCardProps) {
-  // Translations - Replace with useTranslations() hook when i18n is configured
-  const t = (key: string, fallback: string) => fallback;
+  const { t } = useLocale();
   const [isAdding, setIsAdding] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 

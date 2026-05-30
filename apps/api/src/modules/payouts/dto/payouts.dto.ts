@@ -17,6 +17,10 @@ export class GenerarPayoutsDto {
   @IsString()
   @MaxLength(50)
   proveedor?: string;
+
+  @IsOptional()
+  @IsInt()
+  id_productor?: number;
 }
 
 export class UpdatePayoutEstadoDto {

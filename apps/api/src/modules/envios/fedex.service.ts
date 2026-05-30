@@ -3,15 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { CotizarEnvioDto } from './dto/envios.dto';
-import { ICarrierService, ShippingQuote, TrackingEvent } from './interfaces/carrier.interface';
-
-export interface FedexShipmentResult {
-  trackingNumber: string;
-  labelUrl?: string;
-  labelFormat: string;
-  cost?: number;
-  currency?: string;
-}
+import { ICarrierService, ShippingQuote, TrackingEvent, ShipmentResult } from './interfaces/carrier.interface';
 
 @Injectable()
 export class FedexService implements ICarrierService {
@@ -134,7 +126,7 @@ export class FedexService implements ICarrierService {
               stateOrProvinceCode,
               postalCode: dto.destino.codigo_postal,
               countryCode: dto.destino.pais,
-              residential: false,
+              residential: true,
             },
           },
           pickupType: 'DROPOFF_AT_FEDEX_LOCATION',
@@ -152,7 +144,7 @@ export class FedexService implements ICarrierService {
               },
             },
           ],
-          rateRequestType: ['LIST'],
+          rateRequestType: ['ACCOUNT', 'LIST'],
         },
       };
 
@@ -371,7 +363,7 @@ export class FedexService implements ICarrierService {
     }
   }
 
-  async createShipment(envio: any): Promise<FedexShipmentResult> {
+  async createShipment(envio: any): Promise<ShipmentResult> {
     if (!this.clientId || !this.clientSecret || !this.accountNumber) {
       throw new HttpException('FEDEX_NOT_CONFIGURED', HttpStatus.BAD_REQUEST);
     }
@@ -396,7 +388,7 @@ export class FedexService implements ICarrierService {
       (raw ?? '').replace(/\D/g, '').slice(-10).padStart(10, '0');
 
     const body: any = {
-      labelResponseOptions: 'URL_ONLY',
+      labelResponseOptions: 'LABEL',
       accountNumber: { value: this.accountNumber },
       requestedShipment: {
         shipper: {
@@ -492,21 +484,30 @@ export class FedexService implements ICarrierService {
       );
 
       const output = response.data?.output;
-      const pieceResponse = output?.transactionShipments?.[0]?.pieceResponses?.[0];
+      const shipment = output?.transactionShipments?.[0];
+      const pieceResponse = shipment?.pieceResponses?.[0];
       const trackingNumber: string =
         pieceResponse?.trackingNumber ??
-        output?.transactionShipments?.[0]?.masterTrackingNumber ??
+        shipment?.masterTrackingNumber ??
         '';
-      const labelUrl: string | undefined = pieceResponse?.packageDocuments?.[0]?.url;
+      const encodedLabel: string | undefined =
+        pieceResponse?.packageDocuments?.[0]?.encodedLabel ??
+        shipment?.shipmentDocuments?.[0]?.encodedLabel;
+      const labelBuffer: Buffer | undefined = encodedLabel
+        ? Buffer.from(encodedLabel, 'base64')
+        : undefined;
 
-      this.logger.debug('FedEx Ship response output:', JSON.stringify(output?.transactionShipments?.[0]));
+      this.logger.debug('FedEx Ship response output:', JSON.stringify(shipment));
       if (!trackingNumber) {
         throw new HttpException(
           'FedEx no devolvió número de guía. Revisa los logs del API para ver el response completo.',
           HttpStatus.BAD_GATEWAY,
         );
       }
-      return { trackingNumber, labelUrl, labelFormat: 'PDF' };
+      if (!labelBuffer) {
+        this.logger.warn(`FedEx no devolvió PDF para guía ${trackingNumber}. encodedLabel ausente en response.`);
+      }
+      return { trackingNumber, labelBuffer, labelFormat: 'PDF' };
     } catch (error: any) {
       if (error instanceof HttpException) throw error;
       const status = error.response?.status;

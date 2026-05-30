@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PaypalService } from '../pagos/paypal.service';
 import { StripeService } from '../pagos/stripe.service';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 import { GenerarPayoutsDto, ListPayoutsQueryDto, UpdatePayoutEstadoDto } from './dto/payouts.dto';
@@ -12,6 +13,7 @@ export class PayoutsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripeService: StripeService,
+    private readonly paypalService: PaypalService,
   ) {}
 
   async findAll(query: ListPayoutsQueryDto = {}) {
@@ -63,6 +65,7 @@ export class PayoutsService {
         moneda: { not: null },
         subtotal_bruto: { not: null },
         monto_neto_productor: { not: null },
+        ...(dto.id_productor ? { id_productor: dto.id_productor } : {}),
       },
     });
 
@@ -134,7 +137,17 @@ export class PayoutsService {
 
   private async procesarPayoutTransfer(payout: any) {
     const productor = payout.productores;
+    const proveedor = payout.proveedor ?? 'stripe';
 
+    if (proveedor === 'paypal') {
+      return this.procesarPayoutPayPal(payout, productor);
+    }
+
+    // Stripe (default)
+    return this.procesarPayoutStripe(payout, productor);
+  }
+
+  private async procesarPayoutStripe(payout: any, productor: any) {
     // Si el productor no tiene Stripe account, dejar como pendiente
     if (!productor.stripe_account_id || !productor.stripe_onboarding_completed) {
       return;
@@ -154,7 +167,6 @@ export class PayoutsService {
         metadata: { id_payout: payout.id_payout.toString(), id_productor: String(payout.id_productor) },
       });
 
-      // Marcar como procesado
       await this.prisma.payouts.update({
         where: { id_payout: payout.id_payout },
         data: {
@@ -165,9 +177,8 @@ export class PayoutsService {
         },
       });
     } catch (error: any) {
-      // Marcar como fallido y configurar retry
       const errorMsg = error?.message || 'Unknown error';
-      const proximoReintento = new Date(Date.now() + 15 * 60 * 1000); // +15 min
+      const proximoReintento = new Date(Date.now() + 15 * 60 * 1000);
 
       await this.prisma.payouts.update({
         where: { id_payout: payout.id_payout },
@@ -179,9 +190,56 @@ export class PayoutsService {
         },
       });
 
-      // Log para debugging
-      // eslint-disable-next-line no-console
       console.error(`[payouts] Stripe transfer failed for payout ${payout.id_payout}: ${errorMsg}`);
+    }
+  }
+
+  private async procesarPayoutPayPal(payout: any, productor: any) {
+    if (!productor.paypal_email) {
+      await this.prisma.payouts.update({
+        where: { id_payout: payout.id_payout },
+        data: {
+          estado: 'fallido',
+          ultimo_error: 'Productor no tiene paypal_email configurado',
+        },
+      });
+      return;
+    }
+
+    try {
+      const referenceId = `payout-${payout.id_payout}`;
+      const payout_result = await this.paypalService.createPayout({
+        paypalEmail: productor.paypal_email,
+        amountUSD: Number(payout.monto_neto),
+        referenceId,
+      });
+
+      const batchId = payout_result?.batchId || referenceId;
+
+      await this.prisma.payouts.update({
+        where: { id_payout: payout.id_payout },
+        data: {
+          estado: 'procesado',
+          referencia_externa: batchId,
+          procesado_en: new Date(),
+          proveedor: 'paypal',
+        },
+      });
+    } catch (error: any) {
+      const errorMsg = error?.message || 'Unknown error';
+      const proximoReintento = new Date(Date.now() + 15 * 60 * 1000);
+
+      await this.prisma.payouts.update({
+        where: { id_payout: payout.id_payout },
+        data: {
+          estado: 'fallido',
+          ultimo_error: errorMsg.substring(0, 500),
+          intentos: 1,
+          proximo_reintento: proximoReintento,
+        },
+      });
+
+      console.error(`[payouts] PayPal payout failed for payout ${payout.id_payout}: ${errorMsg}`);
     }
   }
 
@@ -226,5 +284,97 @@ export class PayoutsService {
         },
       }),
     );
+  }
+
+  async resumenPendientes() {
+    const pendientes = await this.prisma.pedido_productor.findMany({
+      where: {
+        id_payout: null,
+        estado: { in: ['entregado', 'liberado'] },
+      },
+      include: {
+        productores: {
+          select: {
+            id_productor: true,
+            razon_social: true,
+            stripe_account_id: true,
+            stripe_onboarding_completed: true,
+            paypal_email: true,
+            usuarios: { select: { nombre: true } },
+          },
+        },
+      },
+    });
+
+    const grupos = new Map<
+      number,
+      {
+        id_productor: number;
+        nombre: string;
+        monedas: Map<
+          string,
+          {
+            moneda: string;
+            pedidos: number;
+            monto_bruto_total: number;
+            comision_total: number;
+            monto_neto_total: number;
+          }
+        >;
+        stripe_onboarded: boolean;
+        paypal_email?: string | null;
+      }
+    >();
+
+    for (const pp of pendientes) {
+      const id = pp.id_productor;
+      const productor = pp.productores;
+      const nombre = productor.razon_social || productor.usuarios?.nombre || 'Sin nombre';
+
+      if (!grupos.has(id)) {
+        grupos.set(id, {
+          id_productor: id,
+          nombre,
+          monedas: new Map(),
+          stripe_onboarded: productor.stripe_onboarding_completed ?? false,
+          paypal_email: productor.paypal_email,
+        });
+      }
+
+      const grupo = grupos.get(id)!;
+      const moneda = pp.moneda!;
+
+      if (!grupo.monedas.has(moneda)) {
+        grupo.monedas.set(moneda, {
+          moneda,
+          pedidos: 0,
+          monto_bruto_total: 0,
+          comision_total: 0,
+          monto_neto_total: 0,
+        });
+      }
+
+      const stats = grupo.monedas.get(moneda)!;
+      stats.pedidos += 1;
+      stats.monto_bruto_total += Number(pp.subtotal_bruto);
+      stats.comision_total += Number(pp.comision_marketplace);
+      stats.monto_neto_total += Number(pp.monto_neto_productor);
+    }
+
+    return Array.from(grupos.values()).map((g) => ({
+      id_productor: g.id_productor,
+      nombre: g.nombre,
+      resumen_por_moneda: Array.from(g.monedas.values()).map((m) => ({
+        moneda: m.moneda,
+        pedidos_pendientes: m.pedidos,
+        monto_bruto_total: m.monto_bruto_total.toFixed(2),
+        comision_total: m.comision_total.toFixed(2),
+        monto_neto_total: m.monto_neto_total.toFixed(2),
+      })),
+      metodos_disponibles: {
+        stripe: g.stripe_onboarded,
+        paypal: !!g.paypal_email,
+      },
+    }));
   }
 }

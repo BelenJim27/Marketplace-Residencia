@@ -1,26 +1,47 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { v2 as cloudinary } from 'cloudinary';
 import { PrismaService } from '../../prisma/prisma.service';
-import { configureCloudinary, uploadToCloudinary as uploadBufferToCloudinary } from '../shared/cloudinary';
 import { serializeBigInts } from '../shared/serialize';
 import { CreateArchivoDto, UpdateArchivoDto } from './dto/archivos.dto';
+import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs';
+import { join, extname } from 'path';
+import { randomUUID } from 'crypto';
+
+const ARCHIVOS_DIR = join(process.cwd(), 'uploads', 'archivos');
+
+function ensureDir() {
+  if (!existsSync(ARCHIVOS_DIR)) {
+    mkdirSync(ARCHIVOS_DIR, { recursive: true });
+  }
+}
 
 @Injectable()
 export class ArchivosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async uploadToCloudinary(buffer: Buffer, originalName: string): Promise<string> {
-    void originalName;
-    return uploadBufferToCloudinary(buffer, 'archivos');
+  /** Guarda el buffer en disco y devuelve la ruta relativa pública. */
+  async uploadToLocal(buffer: Buffer, originalName: string): Promise<string> {
+    ensureDir();
+    const ext = extname(originalName).toLowerCase() || '.bin';
+    const fileName = `${randomUUID()}${ext}`;
+    const filePath = join(ARCHIVOS_DIR, fileName);
+    writeFileSync(filePath, buffer);
+    return `/uploads/archivos/${fileName}`;
   }
 
-  async deleteFromCloudinary(url: string) {
+  /** Elimina el archivo local si existe. */
+  async deleteLocal(url: string): Promise<void> {
     try {
-      configureCloudinary();
-      const parts = url.split('/');
-      const publicId = `archivos/${parts[parts.length - 1].split('.')[0]}`;
-      await cloudinary.uploader.destroy(publicId);
-    } catch (_) {}
+      if (!url) return;
+      // url es relativa: /uploads/archivos/{nombre}
+      const fileName = url.split('/').pop();
+      if (!fileName) return;
+      const filePath = join(ARCHIVOS_DIR, fileName);
+      if (existsSync(filePath)) {
+        unlinkSync(filePath);
+      }
+    } catch (_) {
+      // No lanzar — si el archivo ya no existe está bien
+    }
   }
 
   async findAll(entidad_tipo?: string, entidad_id?: number) {
@@ -85,10 +106,8 @@ export class ArchivosService {
 
     let nextUrl = current.url;
     if (file) {
-      // Elimina el archivo viejo de Cloudinary
-      await this.deleteFromCloudinary(current.url);
-      // Sube el nuevo
-      nextUrl = await this.uploadToCloudinary(file.buffer, file.originalName);
+      await this.deleteLocal(current.url);
+      nextUrl = await this.uploadToLocal(file.buffer, file.originalName);
     }
 
     const updated = await this.prisma.archivos.update({
@@ -111,7 +130,7 @@ export class ArchivosService {
     });
     if (!current) throw new NotFoundException('Archivo no encontrado');
     await this.prisma.archivos.delete({ where: { id_archivo: BigInt(id_archivo) } });
-    await this.deleteFromCloudinary(current.url);
+    await this.deleteLocal(current.url);
     return { message: 'Archivo eliminado' };
   }
 }

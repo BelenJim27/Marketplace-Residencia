@@ -5,26 +5,28 @@ import Link from "next/link";
 import { Heart, ShoppingBag, Trash2, ArrowRight } from "lucide-react";
 import { useWishlist } from "@/context/WishlistContext";
 import { useCarrito } from "@/context/CarritoContext";
+import { useLocale } from "@/context/LocaleContext";
 import { formatPrice } from "@/lib/format-number";
 
 export default function WishlistPage() {
   const { items, eliminarProducto } = useWishlist();
   const { agregarProducto } = useCarrito();
+  const { t } = useLocale();
 
   if (items.length === 0) {
     return (
       <main className="mx-auto max-w-screen-xl px-4 py-8 md:px-8">
         <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white" style={{ fontFamily: 'var(--font-family-store)' }}>
-          Lista de Deseos
+          {t("wishlist_title")}
         </h1>
         <div className="flex flex-col items-center justify-center gap-4 rounded-lg bg-white p-8 text-center shadow-md dark:bg-gray-dark">
           <Heart className="h-16 w-16 text-gray-300" />
-          <p className="text-gray-500">Tu lista de deseos está vacía</p>
+          <p className="text-gray-500">{t("wishlist_empty_state")}</p>
           <Link
             href="/cliente/producto"
             className="mt-4 flex items-center gap-2 rounded-lg bg-[#3D6B3F] px-6 py-2 text-white transition-colors hover:bg-[#1F3A2E]"
           >
-            Ver productos
+            {t("wishlist_view_products")}
           </Link>
         </div>
       </main>
@@ -34,7 +36,7 @@ export default function WishlistPage() {
   return (
     <main className="mx-auto max-w-screen-xl px-4 py-8 md:px-8">
       <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white" style={{ fontFamily: 'var(--font-family-store)' }}>
-        Lista de Deseos ({items.length})
+        {t("wishlist_title")} ({items.length})
       </h1>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -66,7 +68,7 @@ export default function WishlistPage() {
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-gray-400">
-                  Sin imagen
+                  {t("wishlist_no_image")}
                 </div>
               )}
             </Link>
@@ -98,7 +100,7 @@ export default function WishlistPage() {
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1F3A2E] active:scale-95"
                 >
                   <ShoppingBag size={16} />
-                  Agregar al carrito
+                  {t("wishlist_add_to_cart")}
                 </button>
                 <button
                   onClick={() => eliminarProducto(item.id_producto)}
@@ -117,7 +119,7 @@ export default function WishlistPage() {
         className="mt-8 inline-flex items-center gap-2 text-sm text-[#3D6B3F] hover:text-[#1F3A2E]"
       >
         <ArrowRight size={16} className="rotate-180" />
-        Continuar viendo productos
+        {t("wishlist_continue_viewing")}
       </Link>
     </main>
   );

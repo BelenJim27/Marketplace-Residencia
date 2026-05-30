@@ -10,6 +10,7 @@ import type { ProductItem } from "@/types/producer";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
+import { useLocale } from "@/context/LocaleContext";
 import { formatPrice } from "@/lib/format-number";
 import { useShipping } from "@/hooks/useShipping";
 import RatingAgregado from "@/components/Cliente/RatingAgregado";
@@ -85,6 +86,7 @@ export default function ProductoDetallePage() {
   const { agregarProducto } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
+  const { t } = useLocale();
 
   const [producto, setProducto] = useState<Producto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -237,8 +239,8 @@ export default function ProductoDetallePage() {
         <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-green-600 dark:border-gray-700 dark:border-t-green-500" />
           <div className="text-center">
-            <p className="text-gray-600 dark:text-gray-400">Cargando detalles del producto...</p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">Por favor espera</p>
+            <p className="text-gray-600 dark:text-gray-400">{t("Cargando detalles del producto...")}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">{t("Por favor espera")}</p>
           </div>
         </div>
       </div>
@@ -250,9 +252,9 @@ export default function ProductoDetallePage() {
       <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8">
         <div className="flex min-h-[400px] flex-col items-center justify-center gap-6">
           <div className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950 p-6 max-w-md text-center">
-            <p className="mb-2 text-sm font-semibold text-red-800 dark:text-red-200">Producto no disponible</p>
+            <p className="mb-2 text-sm font-semibold text-red-800 dark:text-red-200">{t("Producto no disponible")}</p>
             <p className="text-sm text-red-700 dark:text-red-300">
-              {error ? `Error: ${error}` : "El producto que buscas no existe o no está disponible en este momento."}
+              {error ? `Error: ${error}` : t("El producto que buscas no existe o no está disponible en este momento.")}
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -262,14 +264,14 @@ export default function ProductoDetallePage() {
               style={{ border: "1px solid #ddd8c4", color: "#306B3F" }}
             >
               <ArrowLeft size={18} />
-              Volver
+              {t("Volver")}
             </button>
             <Link
               href="/cliente/producto"
               className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
               style={{ backgroundColor: "#1F3A2E" }}
             >
-              Ver catálogo
+              {t("Ver catálogo")}
             </Link>
           </div>
         </div>
@@ -298,10 +300,10 @@ export default function ProductoDetallePage() {
         onClick={() => router.back()}
         className="mb-8 flex items-center gap-2 hover:opacity-70 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-lg p-2 -ml-2"
         style={{ color: "#306B3F" }}
-        aria-label="Volver a la página anterior"
+        aria-label={t("Volver a productos")}
       >
         <ArrowLeft size={20} />
-        Volver a productos
+        {t("Volver a productos")}
       </button>
 
       {/* Breadcrumb de categorías */}
@@ -422,9 +424,9 @@ export default function ProductoDetallePage() {
                 className="text-lg sm:text-xl font-semibold mb-3"
                 style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
               >
-                Rastreo y Autenticidad
+                {t("Rastreo y Autenticidad")}
               </h2>
-              <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">Verifica que este mezcal es auténtico escaneando el código QR. Desde dónde se produjo hasta tu mano.</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">{t("Verifica que este mezcal es auténtico escaneando el código QR. Desde dónde se produjo hasta tu mano.")}</p>
               {urlTrazabilidad ? (
                 <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
                   {/* QR Code */}
@@ -438,8 +440,8 @@ export default function ProductoDetallePage() {
                   <div className="flex-1 space-y-4">
                     {codigoLote && (
                       <div className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Tu código de lote</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">Abre el portal oficial con el botón de abajo o escanea el QR con tu teléfono para ver todos los detalles: productor, región, procedencia.</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">{t("Tu código de lote")}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">{t("Abre el portal oficial con el botón de abajo o escanea el QR con tu teléfono para ver todos los detalles: productor, región, procedencia.")}</p>
                         <p className="text-sm font-medium text-gray-900 dark:text-white break-words font-mono">{codigoLote}</p>
                         
                       </div>
@@ -453,7 +455,7 @@ export default function ProductoDetallePage() {
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-all duration-200 hover:shadow-md hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
                         style={{ backgroundColor: "#1F3A2E" }}
                       >
-                        Verifica aquí
+                        {t("Verifica aquí")}
                         <span>→</span>
                       </a>
                     </div>
@@ -471,7 +473,7 @@ export default function ProductoDetallePage() {
 
           {/* Specifications Accordion - detailed specs - ALWAYS SHOW */}
           <div className="space-y-3 mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Detalles Técnicos</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">{t("Detalles Técnicos")}</p>
             {hasAnySpec ? (
               Object.entries(filteredGroups).map(([groupName, specs]) =>
                 specs.length > 0 ? (
@@ -520,7 +522,7 @@ export default function ProductoDetallePage() {
             ) : (
               <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Los detalles técnicos de este producto aún no han sido completados. Contáctanos o revisa con el productor para más información.
+                  {t("Los detalles técnicos de este producto aún no han sido completados. Contáctanos o revisa con el productor para más información.")}
                 </p>
               </div>
             )}
@@ -591,7 +593,7 @@ export default function ProductoDetallePage() {
                   className="text-sm font-semibold"
                   style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
                 >
-                  Maestro Productor
+                  {t("Maestro Productor")}
                 </h3>
                 <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
                   {loteData?.id_productor ? (
@@ -617,7 +619,7 @@ export default function ProductoDetallePage() {
                   className="text-sm font-semibold"
                   style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
                 >
-                  Tienda
+                  {t("Tienda")}
                 </h3>
                 <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
                   {producto.id_tienda ? (
@@ -644,9 +646,9 @@ export default function ProductoDetallePage() {
 
           {/* Descripción */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Descripción</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("Descripción")}</h3>
             <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-[65ch]">
-              {producto.descripcion || "Sin descripción disponible"}
+              {producto.descripcion || t("Sin descripción disponible")}
             </p>
           </div>
 
@@ -654,7 +656,7 @@ export default function ProductoDetallePage() {
           <div className="space-y-5 pt-6 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-6">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Cantidad</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{t("Cantidad")}</label>
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setCantidad(Math.max(1, cantidad - 1))}
@@ -683,10 +685,10 @@ export default function ProductoDetallePage() {
             <div className="rounded-lg p-3 sm:p-4" style={{ border: "1px solid #e8dcc8", backgroundColor: "#fdf7ee" }}>
               <div className="flex items-center gap-2 mb-2">
                 <Truck size={16} style={{ color: "var(--bio-color-precio, #8b6914)" }} />
-                <span className="text-sm font-semibold" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>Envío</span>
+                <span className="text-sm font-semibold" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>{t("Envío")}</span>
               </div>
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                Te mostraremos el costo cuando ingreses tu dirección. Enviamos a todo el país.
+                {t("Te mostraremos el costo cuando ingreses tu dirección. Enviamos a todo el país.")}
               </p>
             </div>
 
@@ -723,7 +725,7 @@ export default function ProductoDetallePage() {
                   title={isInWishlist(producto.id_producto) ? "Remover de mi lista" : "Guarda este mezcal para luego"}
                 >
                   <Heart size={20} fill={isInWishlist(producto.id_producto) ? "currentColor" : "none"} aria-hidden="true" />
-                  <span className="hidden sm:inline">{isInWishlist(producto.id_producto) ? "En mi lista" : "Mi lista"}</span>
+                  <span className="hidden sm:inline">{isInWishlist(producto.id_producto) ? t("En mi lista") : t("Mi lista")}</span>
                   <span className="sm:hidden">{isInWishlist(producto.id_producto) ? "✓" : "♡"}</span>
                 </button>
                 <button
@@ -734,7 +736,7 @@ export default function ProductoDetallePage() {
                   aria-busy={agregado}
                 >
                   <ShoppingCart size={20} aria-hidden="true" />
-                  <span className="hidden sm:inline">{agregado ? "¡Agregado!" : "Agregar al carrito"}</span>
+                  <span className="hidden sm:inline">{agregado ? t("catalog_added_success") : t("Agregar al carrito")}</span>
                   <span className="sm:hidden">{agregado ? "✓" : "+"}</span>
                 </button>
               </div>
@@ -746,8 +748,8 @@ export default function ProductoDetallePage() {
                   title="Ir al carrito y completar tu compra"
                 >
                   <Zap size={20} aria-hidden="true" />
-                  <span className="hidden sm:inline">Comprar ahora</span>
-                  <span className="sm:hidden">Comprar</span>
+                  <span className="hidden sm:inline">{t("Comprar ahora")}</span>
+                  <span className="sm:hidden">{t("Comprar")}</span>
                 </button>
                 <a
                   href={`https://www.amazon.com/s?k=${encodeURIComponent(producto.nombre)}`}
@@ -766,7 +768,7 @@ export default function ProductoDetallePage() {
                     {/* Smile arc connecting a-z */}
                     <path d="M8 22Q16 20 20 22" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
                   </svg>
-                  <span className="hidden sm:inline">Comprar en Amazon</span>
+                  <span className="hidden sm:inline">{t("Comprar en Amazon")}</span>
                   <span className="sm:hidden">Amazon</span>
                 </a>
               </div>
@@ -778,17 +780,17 @@ export default function ProductoDetallePage() {
 
       {/* ── Reseñas ────────────────────────────────────────────────────────── */}
       <div className="mt-20 border-t border-gray-300 dark:border-gray-700 pt-12">
-        <Suspense fallback={<div className="py-12 text-center text-gray-500 dark:text-gray-400">Cargando reseñas...</div>}>
+        <Suspense fallback={<div className="py-12 text-center text-gray-500 dark:text-gray-400">{t("Cargando reseñas...")}</div>}>
           <ResenasSeccion productoId={productoId} />
         </Suspense>
       </div>
 
       {/* ── Productos relacionados ─────────────────────────────────────────── */}
       <div className="mt-20 border-t border-gray-300 dark:border-gray-700 pt-12 space-y-20">
-        <Suspense fallback={<div className="py-12 text-center text-gray-500 dark:text-gray-400">Cargando productos similares...</div>}>
+        <Suspense fallback={<div className="py-12 text-center text-gray-500 dark:text-gray-400">{t("Cargando productos similares...")}</div>}>
           <ProductosSimilares productoId={productoId} />
         </Suspense>
-        <Suspense fallback={<div className="py-12 text-center text-gray-500 dark:text-gray-400">Cargando más productos...</div>}>
+        <Suspense fallback={<div className="py-12 text-center text-gray-500 dark:text-gray-400">{t("Cargando más productos...")}</div>}>
           <TambienCompraron productoId={productoId} />
         </Suspense>
       </div>

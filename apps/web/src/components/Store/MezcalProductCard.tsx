@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { Heart, Share2, Sparkles } from "lucide-react";
+import { useLocale } from "@/context/LocaleContext";
 import { MEZCAL_COLORS, FONTS } from "./mezcal-constants";
 
 interface Mezcal {
@@ -39,6 +40,8 @@ export default function MezcalProductCard({
   onSelectProduct,
   onToggleWishlist,
 }: Props) {
+  const { t } = useLocale();
+
   return (
     <motion.div
       className="group h-full flex flex-col"
@@ -97,7 +100,7 @@ export default function MezcalProductCard({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            Ver detalle
+            {t("Ver detalle")}
           </motion.button>
 
           <div className="flex gap-2">
@@ -169,7 +172,7 @@ export default function MezcalProductCard({
                 fontFamily: FONTS.mono,
               }}
             >
-              Agave
+              {t("Agave")}
             </p>
             <p
               className="font-semibold"
@@ -188,7 +191,7 @@ export default function MezcalProductCard({
                 fontFamily: FONTS.mono,
               }}
             >
-              Región
+              {t("Región")}
             </p>
             <p
               className="font-semibold"
@@ -212,7 +215,7 @@ export default function MezcalProductCard({
                 fontFamily: FONTS.mono,
               }}
             >
-              Maestro Mezcalero
+              {t("Maestro Mezcalero")}
             </p>
             <p
               className="text-sm font-semibold"
@@ -241,7 +244,7 @@ export default function MezcalProductCard({
               }}
             >
               <Sparkles size={14} />
-              Aroma
+              {t("Aroma")}
             </p>
             <p
               className="text-xs leading-relaxed"
@@ -276,7 +279,7 @@ export default function MezcalProductCard({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            Explorar
+            {t("Explorar")}
           </motion.button>
         </div>
       </motion.div>

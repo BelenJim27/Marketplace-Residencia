@@ -8,7 +8,7 @@ import { ShoppingCart, X, Heart, ChevronRight, Sparkles, Filter } from "lucide-r
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
-import { formatPrice } from "@/lib/format-number";
+import { useLocale } from "@/context/LocaleContext";
 import { semanticColors, hexFallbacks } from "@/lib/colors";
 import { catalogColors } from "@/lib/colors-catalog";
 import { SidebarFiltersComponent } from "./SidebarFilters";
@@ -105,6 +105,8 @@ function StarRating({ rating = 5, reviews = 47, cardColor }: { rating?: number; 
 
 // Badge de Filtros Activos Mejorado
 function FilterBadge({ label, onRemove }: { label: string; onRemove: () => void }) {
+  const { t } = useLocale();
+  const ariaLabel = t("aria_label_remove_filter") + " " + label;
   return (
     <div
       className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-all hover:shadow-md animate-in fade-in duration-300"
@@ -119,8 +121,8 @@ function FilterBadge({ label, onRemove }: { label: string; onRemove: () => void 
         onClick={onRemove}
         className="hover:opacity-70 transition-opacity hover:scale-110 focus:outline-none focus:ring-1 focus:ring-offset-1 rounded-sm p-0.5 flex-shrink-0"
         style={{ "--tw-ring-color": hexFallbacks.brand } as React.CSSProperties}
-        aria-label={`Quitar filtro: ${label}`}
-        title={`Quitar filtro: ${label}`}
+        aria-label={ariaLabel}
+        title={ariaLabel}
       >
         <X size={14} aria-hidden="true" />
       </button>
@@ -146,6 +148,7 @@ const ProductCard = memo(function ProductCard({
   isAdded: boolean;
   onViewDetails: () => void;
 }) {
+  const { convertPrice, t } = useLocale();
   const imagenUrl = producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
   const maguey = producto.lotes?.datos_api?.maguey || "Espadin";
   const alcohol = producto.lotes?.datos_api?.grado_alcohol || producto.lotes?.datos_api?.alcohol || "46";
@@ -196,7 +199,7 @@ const ProductCard = memo(function ProductCard({
               backdropFilter: "blur(4px)",
             }}
           >
-            Mezcal
+            {t("product_card_type")}
           </div>
         </div>
 
@@ -217,14 +220,14 @@ const ProductCard = memo(function ProductCard({
 
             <div className="space-y-1.5 sm:space-y-2">
               <div className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                Agave
+                {t("product_card_agave")}
               </div>
               <div className="text-sm font-medium text-gray-900">{maguey}</div>
             </div>
 
             <div className="space-y-1.5 sm:space-y-2">
               <div className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                Origen
+                {t("product_card_origin")}
               </div>
               <div className="text-sm font-medium text-gray-900">{maestro}</div>
             </div>
@@ -235,14 +238,14 @@ const ProductCard = memo(function ProductCard({
             >
               <div className="flex flex-col gap-1 flex-1">
                 <span className="font-bold uppercase tracking-wider text-gray-400">
-                  Alcohol
+                  {t("product_card_alcohol")}
                 </span>
                 <span className="font-semibold text-amber-700">{alcohol}%</span>
               </div>
               <div style={{ width: "1px", background: "rgba(0, 0, 0, 0.1)" }}></div>
               <div className="flex flex-col gap-1 flex-1">
                 <span className="font-bold uppercase tracking-wider text-gray-400">
-                  Rating
+                  {t("product_card_rating")}
                 </span>
                 <div className="flex gap-0.5">
                   {[...Array(5)].map((_, i) => (
@@ -266,11 +269,9 @@ const ProductCard = memo(function ProductCard({
             style={{ borderColor: "rgba(0, 0, 0, 0.06)" }}
           >
             <div className="flex items-baseline gap-1">
-              <span className="text-xs text-gray-500 font-semibold">$</span>
               <span className="text-xl sm:text-2xl font-bold text-amber-700" style={{ fontFamily: "Courier New, monospace" }}>
-                {formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
+                {convertPrice(Number(producto.precio_base || 0))}
               </span>
-              <span className="text-xs text-gray-500 font-semibold">MXN</span>
             </div>
 
             <button
@@ -296,7 +297,7 @@ const ProductCard = memo(function ProductCard({
                   >
                     <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                   </svg>
-                  <span className="hidden sm:inline">Listo</span>
+                  <span className="hidden sm:inline">{t("product_card_added")}</span>
                   <span className="sm:hidden text-[9px]">✓</span>
                 </>
               ) : (
@@ -313,7 +314,7 @@ const ProductCard = memo(function ProductCard({
                     <circle cx="20" cy="21" r="1"></circle>
                     <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                   </svg>
-                  <span className="hidden sm:inline">Agregar</span>
+                  <span className="hidden sm:inline">{t("product_card_add")}</span>
                   <span className="sm:hidden">+</span>
                 </>
               )}
@@ -378,9 +379,9 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
             e.stopPropagation();
             onWishlist();
           }}
-          aria-label={isWishlisted ? "Remover de favoritos" : "Agregar a favoritos"}
+          aria-label={isWishlisted ? t("Remover de favoritos") : t("Agregar a favoritos")}
           aria-pressed={isWishlisted}
-          title={isWishlisted ? "Remover de favoritos" : "Agregar a favoritos"}
+          title={isWishlisted ? t("Remover de favoritos") : t("Agregar a favoritos")}
         >
           <Heart
             size={16}
@@ -485,7 +486,7 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
             }}
           >
             <ShoppingCart size={10} />
-            <span className="hidden sm:inline">{isAdded ? "¡Listo!" : "Agregar"}</span>
+            <span className="hidden sm:inline">{isAdded ? t("product_card_added") : t("product_card_add")}</span>
             <span className="sm:hidden">{isAdded ? "✓" : "+"}</span>
           </button>
 
@@ -500,10 +501,10 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
               e.stopPropagation();
               onViewDetails();
             }}
-            aria-label={`Ver detalles de ${producto.nombre}`}
-            title="Ver detalles del producto"
+            aria-label={`${t("product_card_view_details")} ${producto.nombre}`}
+            title={t("product_card_view_details")}
           >
-            Ver detalles
+            {t("product_card_view_details")}
           </button>
         </div>
       </div>
@@ -521,7 +522,7 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
           className="text-[7px] font-bold uppercase tracking-wider"
           style={{ color: hexFallbacks.brand }}
         >
-          Precio
+          {t("product_card_price")}
         </span>
         <span
           className="text-xs font-black leading-none"
@@ -530,10 +531,7 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
             color: hexFallbacks.brand,
           }}
         >
-          ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
-        </span>
-        <span className="text-[6px] tracking-tight font-semibold uppercase" style={{ color: hexFallbacks.brand, opacity: 0.6 }}>
-          MXN
+          {convertPrice(Number(producto.precio_base || 0))}
         </span>
       </div>
     </div>
@@ -546,6 +544,7 @@ export default function ProductCatalogEnhanced() {
   const { agregarProducto } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
+  const { convertPrice, t } = useLocale();
 
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -866,7 +865,7 @@ export default function ProductCatalogEnhanced() {
               <div className="flex items-center gap-2 mb-4">
                 <Filter size={18} style={{ color: hexFallbacks.brand }} />
                 <h2 className="text-lg font-bold" style={{ fontFamily: 'var(--font-family-store)', color: hexFallbacks.textPrimary }}>
-                  Filtros
+                  {t("sidebar_filters")}
                 </h2>
                 {cantidadFiltros > 0 && (
                   <span
@@ -908,7 +907,7 @@ export default function ProductCatalogEnhanced() {
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 transition-opacity" />
               <Filter size={18} aria-hidden="true" />
-              Filtros {cantidadFiltros > 0 && `(${cantidadFiltros})`}
+              {t("sidebar_filters")} {cantidadFiltros > 0 && `(${cantidadFiltros})`}
             </button>
           </div>
 
@@ -919,13 +918,16 @@ export default function ProductCatalogEnhanced() {
               <div className="text-sm" style={{ color: hexFallbacks.textSecondary }}>
                 {!loading && productosMostrados.length > 0 && (
                   <span className="font-semibold">
-                    Mostrando {(paginaActual - 1) * PRODUCTOS_POR_PAGINA + 1}–{Math.min(paginaActual * PRODUCTOS_POR_PAGINA, productosMostrados.length)} de {productosMostrados.length} {productosMostrados.length === 1 ? "producto" : "productos"}
+                    {t("pagination_showing")
+                      .replace("{start}", String((paginaActual - 1) * PRODUCTOS_POR_PAGINA + 1))
+                      .replace("{end}", String(Math.min(paginaActual * PRODUCTOS_POR_PAGINA, productosMostrados.length)))
+                      .replace("{total}", String(productosMostrados.length))}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <label htmlFor="sort-select" className="text-sm font-medium" style={{ color: hexFallbacks.textPrimary }}>
-                  Ordenar:
+                  {t("sidebar_sort_label")}
                 </label>
                 <select
                   id="sort-select"
@@ -941,10 +943,10 @@ export default function ProductCatalogEnhanced() {
                   } as React.CSSProperties}
                   aria-label="Ordenar productos por"
                 >
-                  <option value="popular">Popularidad</option>
-                  <option value="precio_asc">Precio: menor a mayor</option>
-                  <option value="precio_desc">Precio: mayor a menor</option>
-                  <option value="nombre_az">Nombre A–Z</option>
+                  <option value="popular">{t("sort_popularity")}</option>
+                  <option value="precio_asc">{t("sort_price_low_to_high")}</option>
+                  <option value="precio_desc">{t("sort_price_high_to_low")}</option>
+                  <option value="nombre_az">{t("sort_name_ascending")}</option>
                 </select>
               </div>
             </div>
@@ -960,10 +962,10 @@ export default function ProductCatalogEnhanced() {
                     </svg>
                   </div>
                   <p className="text-sm font-semibold" style={{ color: hexFallbacks.brand }}>
-                    Buscando lotes en el palenque...
+                    {t("loading_products")}
                   </p>
                   <p className="text-xs mt-2" style={{ color: hexFallbacks.textSecondary }}>
-                    Espera mientras procesamos tu búsqueda
+                    {t("loading_products_wait")}
                   </p>
                 </div>
               </div>
@@ -977,12 +979,12 @@ export default function ProductCatalogEnhanced() {
                   }}
                 >
                   <p className="text-sm font-semibold mb-2" style={{ color: hexFallbacks.errorColor }}>
-                    ⚠️ No pudimos cargar los productos
+                    ⚠️ {t("error_loading_products")}
                   </p>
                   <p className="text-xs mb-4" style={{ color: hexFallbacks.textSecondary }}>
                     {error && typeof error === 'string'
                       ? error
-                      : "Parece que hay un problema con la conexión. Por favor, verifica tu conexión a internet e intenta de nuevo."}
+                      : t("error_loading_description")}
                   </p>
                   <button
                     onClick={() => fetchProductos(filtros)}
@@ -990,7 +992,7 @@ export default function ProductCatalogEnhanced() {
                     style={{ backgroundColor: hexFallbacks.brand, "--tw-ring-color": hexFallbacks.brand } as React.CSSProperties}
                     aria-label="Reintentar cargar productos"
                   >
-                    Reintentar
+                    {t("error_retry_button")}
                   </button>
                 </div>
               </div>
@@ -1005,12 +1007,12 @@ export default function ProductCatalogEnhanced() {
                 >
                   <div className="text-4xl mb-3" aria-hidden="true">🔍</div>
                   <p className="text-sm font-semibold mb-2" style={{ color: hexFallbacks.textPrimary }}>
-                    No encontramos mezcales que coincidan
+                    {t("empty_state_title")}
                   </p>
                   <p className="text-xs mb-6" style={{ color: hexFallbacks.textSecondary }}>
-                    {cantidadFiltros > 0 ? "Tus filtros son muy restrictivos. " : ""}
+                    {cantidadFiltros > 0 ? t("empty_state_filters") + " " : ""}
                     {filtros.busqueda ? `"${filtros.busqueda}" no encontró resultados. ` : ""}
-                    Intenta ajustar los criterios de búsqueda.
+                    {t("empty_state_suggestion")}
                   </p>
                   {(cantidadFiltros > 0 || filtros.busqueda) && (
                     <button
@@ -1018,7 +1020,7 @@ export default function ProductCatalogEnhanced() {
                       className="w-full px-4 py-2.5 rounded-lg text-xs font-bold transition-all hover:opacity-70 focus:outline-none focus:ring-2 focus:ring-offset-1"
                       style={{ backgroundColor: `${hexFallbacks.brand}33`, color: hexFallbacks.brand, "--tw-ring-color": hexFallbacks.brand } as React.CSSProperties}
                     >
-                      ← Restablecer filtros
+                      {t("reset_filters")}
                     </button>
                   )}
                 </div>
@@ -1043,7 +1045,7 @@ export default function ProductCatalogEnhanced() {
                           cantidad: 1,
                         });
                         setAgregadoId(producto.id_producto);
-                        addToast("Producto agregado al carrito");
+                        addToast(t("product_added_toast"));
                         setTimeout(() => setAgregadoId(null), 2500);
                       }}
                       isAdded={agregadoId === producto.id_producto}
@@ -1066,7 +1068,7 @@ export default function ProductCatalogEnhanced() {
                       style={{ backgroundColor: hexFallbacks.bgSecondary, color: hexFallbacks.textPrimary, border: `1px solid ${hexFallbacks.borderLight}` }}
                       aria-label="Página anterior"
                     >
-                      ← Anterior
+                      {t("pagination_previous")}
                     </button>
 
                     {/* Números de página */}
@@ -1111,7 +1113,7 @@ export default function ProductCatalogEnhanced() {
                       style={{ backgroundColor: hexFallbacks.bgSecondary, color: hexFallbacks.textPrimary, border: `1px solid ${hexFallbacks.borderLight}` }}
                       aria-label="Página siguiente"
                     >
-                      Siguiente →
+                      {t("pagination_next")}
                     </button>
                   </div>
                 )}
@@ -1149,7 +1151,7 @@ export default function ProductCatalogEnhanced() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 id="filters-modal-title" className="text-lg font-bold" style={{ fontFamily: 'var(--font-family-store)', color: hexFallbacks.textPrimary }}>
-                    Filtros
+                    {t("sidebar_filters")}
                   </h2>
                 </div>
                 <button
@@ -1192,7 +1194,7 @@ export default function ProductCatalogEnhanced() {
                 const maxNum = Number(filtrosPendientes.precio_max) || 5000;
                 return minNum > maxNum ? (
                   <div id="price-error" className="mb-3 text-xs font-semibold p-2 rounded" style={{ color: hexFallbacks.errorColor, backgroundColor: `${hexFallbacks.errorColor}1a` }} role="alert">
-                    El precio mínimo debe ser menor al máximo
+                    {t("filters_min_greater_than_max")}
                   </div>
                 ) : null;
               })()}
