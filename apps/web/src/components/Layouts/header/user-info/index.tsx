@@ -100,6 +100,10 @@ export function UserInfo({ whiteText = false }: { whiteText?: boolean }) {
     [];
 
   const badge = getRoleBadge(roles);
+  const isAdmin     = roles.some((r) => ["administrador", "admin", "ADMIN"].includes(r));
+  const isProductor = roles.some((r) => ["productor", "PRODUCTOR"].includes(r));
+
+  const profileHref = "/profile";
 
   /* ── foto: solo si vino de Google OAuth ──
      session.user.image viene de NextAuth cuando el proveedor es Google.
@@ -170,7 +174,7 @@ export function UserInfo({ whiteText = false }: { whiteText?: boolean }) {
 
         <div className="p-2 text-base text-[#4B5563] dark:text-dark-6 [&>*]:cursor-pointer">
           <Link
-            href="/profile"
+            href={profileHref}
             onClick={() => setIsOpen(false)}
             className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
           >
@@ -178,23 +182,27 @@ export function UserInfo({ whiteText = false }: { whiteText?: boolean }) {
             <span className="mr-auto text-base font-medium">Ver perfil</span>
           </Link>
 
-          <Link
-            href="/cliente/direcciones"
-            onClick={() => setIsOpen(false)}
-            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
-          >
-            <MapPin className="h-5 w-5" />
-            <span className="mr-auto text-base font-medium">Mis Direcciones</span>
-          </Link>
+          {!isAdmin && !isProductor && (
+            <Link
+              href="/cliente/direcciones"
+              onClick={() => setIsOpen(false)}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
+            >
+              <MapPin className="h-5 w-5" />
+              <span className="mr-auto text-base font-medium">Mis Direcciones</span>
+            </Link>
+          )}
 
-          <Link
-            href="/pages/settings"
-            onClick={() => setIsOpen(false)}
-            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
-          >
-            <SettingsIcon />
-            <span className="mr-auto text-base font-medium">Configuración</span>
-          </Link>
+          {!isAdmin && !isProductor && (
+            <Link
+              href="/pages/settings"
+              onClick={() => setIsOpen(false)}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
+            >
+              <SettingsIcon />
+              <span className="mr-auto text-base font-medium">Configuración</span>
+            </Link>
+          )}
         </div>
 
         <hr className="border-[#E8E8E8] dark:border-dark-3" />

@@ -242,10 +242,10 @@ function SignUpContent() {
           <div className="mb-8">
             <div className="mb-4">
               <Image
-                src="/images/logo/tierra_agaves.png"
-                alt="Tierra Agaves"
-                width={100}
-                height={36}
+                src="/images/logo/agavea.png"
+                alt="AGAVEA"
+                width={180}
+                height={72}
                 className="object-contain"
               />
             </div>

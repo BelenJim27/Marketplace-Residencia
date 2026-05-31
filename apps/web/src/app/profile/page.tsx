@@ -11,7 +11,7 @@ import { useTheme } from "next-themes";
 import {
   User, Camera, Lock, Settings, ShoppingBag,
   ChevronRight, Check, Eye, EyeOff, Bell,
-  Moon, Sun, Globe, Pencil, AlertCircle, Loader2, DollarSign
+  Moon, Sun, Globe, Pencil, AlertCircle, Loader2, DollarSign, MapPin
 } from "lucide-react";
 
 // --- TIPOS ---
@@ -28,7 +28,7 @@ interface StoredUser {
   roles: string[];
 }
 
-type Tab = "perfil" | "seguridad" | "preferencias";
+type Tab = "perfil" | "seguridad" | "preferencias" | "direcciones";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -92,6 +92,20 @@ export default function ClientePerfilPage() {
   const [showPwNueva, setShowPwNueva] = useState(false);
   const [showPwConfirmar, setShowPwConfirmar] = useState(false);
   const [prefs, setPrefs] = useState({ idioma: "es", notificaciones: true, moneda: "MXN" });
+  const [loadingDir, setLoadingDir] = useState(false);
+  const [savingDir, setSavingDir] = useState(false);
+  const [editandoDir, setEditandoDir] = useState(false);
+  const [dirProduccion, setDirProduccion] = useState<{ calle: string; cp: string; ciudad: string; estado: string; referencia: string } | null>(null);
+  const [formDir, setFormDir] = useState({ calle: "", cp: "", ciudad: "", estado: "", referencia: "" });
+  const [region, setRegion] = useState<string | null>(null);
+
+  // Admin addresses
+  const [adminDirs, setAdminDirs] = useState<any[]>([]);
+  const [loadingAdminDir, setLoadingAdminDir] = useState(false);
+  const [savingAdminDir, setSavingAdminDir] = useState(false);
+  const [editandoAdminDir, setEditandoAdminDir] = useState<number | "new" | null>(null);
+  const emptyAdminForm = { nombre_etiqueta: "", nombre_destinatario: "", telefono: "", calle: "", numero: "", colonia: "", ciudad: "", estado: "", codigo_postal: "", referencia: "" };
+  const [formAdminDir, setFormAdminDir] = useState(emptyAdminForm);
 
   const cargarPerfil = useCallback(async () => {
     const token = getCookie("token");
@@ -219,6 +233,90 @@ export default function ClientePerfilPage() {
     } catch { flash("err", "Error"); } finally { setSavingPrefs(false); }
   };
 
+  const isProductor = user?.roles?.some((r: string) => ["productor", "PRODUCTOR"].includes(r));
+  const isAdmin     = user?.roles?.some((r: string) => ["administrador", "admin", "ADMIN"].includes(r));
+
+  const cargarAdminDirs = async () => {
+    if (!user?.id_usuario) return;
+    const token = getCookie("token");
+    if (!token) return;
+    setLoadingAdminDir(true);
+    try {
+      const res = await api.direcciones.getByUsuario(user.id_usuario, token) as any[];
+      setAdminDirs(Array.isArray(res) ? res : []);
+    } catch { /* sin direcciones */ } finally { setLoadingAdminDir(false); }
+  };
+
+  const handleSaveAdminDir = async () => {
+    const token = getCookie("token");
+    if (!token || !user?.id_usuario) return;
+    setSavingAdminDir(true);
+    try {
+      const payload = {
+        id_usuario: user.id_usuario,
+        nombre_etiqueta: formAdminDir.nombre_etiqueta || undefined,
+        nombre_destinatario: formAdminDir.nombre_destinatario || undefined,
+        telefono: formAdminDir.telefono || undefined,
+        calle: formAdminDir.calle || undefined,
+        numero: formAdminDir.numero || undefined,
+        colonia: formAdminDir.colonia || undefined,
+        ciudad: formAdminDir.ciudad || undefined,
+        estado: formAdminDir.estado || undefined,
+        codigo_postal: formAdminDir.codigo_postal || undefined,
+        referencia: formAdminDir.referencia || undefined,
+        pais_iso2: "MX",
+      };
+      if (editandoAdminDir === "new") {
+        await api.direcciones.create(token, payload);
+      } else if (typeof editandoAdminDir === "number") {
+        await api.direcciones.update(token, String(editandoAdminDir), payload);
+      }
+      await cargarAdminDirs();
+      setEditandoAdminDir(null);
+      setFormAdminDir(emptyAdminForm);
+      flash("ok", "Dirección guardada");
+    } catch { flash("err", "Error al guardar la dirección"); } finally { setSavingAdminDir(false); }
+  };
+
+  const handleSaveDir = async () => {
+    const token = getCookie("token");
+    if (!token) return;
+    setSavingDir(true);
+    try {
+      await api.productores.actualizarMiPerfil(token, {
+        direccion_produccion: {
+          linea_1: formDir.calle || undefined,
+          ciudad: formDir.ciudad || undefined,
+          estado: formDir.estado || undefined,
+          codigo_postal: formDir.cp || undefined,
+          referencia: formDir.referencia || undefined,
+          pais_iso2: "MX",
+        },
+      });
+      setDirProduccion({ ...formDir });
+      setEditandoDir(false);
+      flash("ok", "Dirección actualizada");
+    } catch { flash("err", "Error al guardar la dirección"); } finally { setSavingDir(false); }
+  };
+
+  const cargarDirecciones = async () => {
+    const token = getCookie("token");
+    if (!token) return;
+    setLoadingDir(true);
+    try {
+      const sol = await api.productores.getMiSolicitud(token) as any;
+      if (sol) {
+        const dp = sol.direccion_produccion;
+        if (dp) {
+          const d = { calle: dp.linea_1 ?? "", cp: dp.codigo_postal ?? "", ciudad: dp.ciudad ?? "", estado: dp.estado ?? "", referencia: dp.referencia ?? "" };
+          setDirProduccion(d);
+          setFormDir(d);
+        }
+        setRegion(sol.regiones?.nombre ?? null);
+      }
+    } catch { /* sin solicitud */ } finally { setLoadingDir(false); }
+  };
+
   if (!mounted) return null;
 
   const initials = getInitials(user?.nombre, user?.apellido_paterno);
@@ -229,6 +327,7 @@ export default function ClientePerfilPage() {
     { id: "perfil", label: t("Editar perfil"), icon: <User size={17} /> },
     { id: "seguridad", label: t("Contraseña"), icon: <Lock size={17} /> },
     { id: "preferencias", label: t("Preferencias"), icon: <Settings size={17} /> },
+    ...((isProductor || isAdmin) ? [{ id: "direcciones" as Tab, label: t("Mis Direcciones"), icon: <MapPin size={17} /> }] : []),
   ];
 
   return (
@@ -274,7 +373,7 @@ export default function ClientePerfilPage() {
 
         <div style={{ display: "flex", gap: "6px", background: colors.bgCard, padding: "6px", borderRadius: "12px", border: `1px solid ${colors.border}`, marginBottom: "16px" }}>
           {TABS.map((tb) => (
-            <button key={tb.id} onClick={() => setTab(tb.id)} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", cursor: "pointer", fontSize: "13px", background: tab === tb.id ? "#3D6B3F" : "transparent", color: tab === tb.id ? "#fff" : colors.textSub, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "all 0.2s", fontWeight: tab === tb.id ? "bold" : "normal" }}>
+            <button key={tb.id} onClick={() => { setTab(tb.id); if (tb.id === "direcciones") { if (isProductor && !dirProduccion) cargarDirecciones(); if (isAdmin && adminDirs.length === 0) cargarAdminDirs(); } }} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", cursor: "pointer", fontSize: "13px", background: tab === tb.id ? "#3D6B3F" : "transparent", color: tab === tb.id ? "#fff" : colors.textSub, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "all 0.2s", fontWeight: tab === tb.id ? "bold" : "normal" }}>
               {tb.icon} {tb.label}
             </button>
           ))}
@@ -441,7 +540,248 @@ export default function ClientePerfilPage() {
             </div>
           )}
 
+          {tab === "direcciones" && isAdmin && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <h2 style={{ fontSize: "18px", color: colors.textMain, margin: 0 }}>{t("Mis Direcciones")}</h2>
+                {editandoAdminDir === null && (
+                  <button
+                    onClick={() => { setFormAdminDir(emptyAdminForm); setEditandoAdminDir("new"); }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", fontWeight: 600, color: "#fff", background: "#3D6B3F", padding: "6px 14px", borderRadius: "999px", border: "none", cursor: "pointer" }}
+                  >
+                    + {t("Agregar")}
+                  </button>
+                )}
+              </div>
+
+              {loadingAdminDir ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}>
+                  <Loader2 className="animate-spin" size={28} color="#3D6B3F" />
+                </div>
+              ) : (
+                <>
+                  {/* Lista de direcciones */}
+                  {adminDirs.length === 0 && editandoAdminDir === null && (
+                    <p style={{ fontSize: "13px", color: colors.textSub, margin: 0 }}>No tienes direcciones guardadas aún.</p>
+                  )}
+                  {adminDirs.map((dir) => (
+                    <div key={dir.id_direccion} style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${colors.border}`, background: colors.inputBg }}>
+                      {editandoAdminDir === dir.id_direccion ? (
+                        /* Formulario edición */
+                        <AdminDirForm
+                          form={formAdminDir}
+                          onChange={(f) => setFormAdminDir(f)}
+                          onSave={handleSaveAdminDir}
+                          onCancel={() => setEditandoAdminDir(null)}
+                          saving={savingAdminDir}
+                          inputStyle={inputStyle}
+                          colors={colors}
+                          t={t}
+                        />
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                          <MapPin size={16} color="#3D6B3F" style={{ marginTop: "2px", flexShrink: 0 }} />
+                          <div style={{ flex: 1, fontSize: "14px", color: colors.textSub, lineHeight: "1.7" }}>
+                            {dir.nombre_etiqueta && <p style={{ margin: 0, fontWeight: 600, color: colors.textMain }}>{dir.nombre_etiqueta}</p>}
+                            {dir.nombre_destinatario && <p style={{ margin: 0, color: colors.textMain }}>{dir.nombre_destinatario}</p>}
+                            {(dir.calle || dir.numero) && <p style={{ margin: 0 }}>{[dir.calle, dir.numero].filter(Boolean).join(" ")}</p>}
+                            {dir.colonia && <p style={{ margin: 0 }}>{dir.colonia}</p>}
+                            {(dir.ciudad || dir.estado) && <p style={{ margin: 0 }}>{[dir.ciudad, dir.estado].filter(Boolean).join(", ")}</p>}
+                            {dir.codigo_postal && <p style={{ margin: 0 }}>CP {dir.codigo_postal}</p>}
+                            {dir.referencia && <p style={{ margin: "2px 0 0", fontSize: "12px" }}>{dir.referencia}</p>}
+                          </div>
+                          <button
+                            onClick={() => { setFormAdminDir({ nombre_etiqueta: dir.nombre_etiqueta ?? "", nombre_destinatario: dir.nombre_destinatario ?? "", telefono: dir.telefono ?? "", calle: dir.calle ?? "", numero: dir.numero ?? "", colonia: dir.colonia ?? "", ciudad: dir.ciudad ?? "", estado: dir.estado ?? "", codigo_postal: dir.codigo_postal ?? "", referencia: dir.referencia ?? "" }); setEditandoAdminDir(dir.id_direccion); }}
+                            style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 600, color: "#3D6B3F", background: "rgba(61,107,63,0.08)", padding: "4px 10px", borderRadius: "999px", border: "none", cursor: "pointer", flexShrink: 0 }}
+                          >
+                            <Pencil size={11} /> {t("Editar")}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Formulario nueva dirección */}
+                  {editandoAdminDir === "new" && (
+                    <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${colors.border}`, background: colors.inputBg }}>
+                      <p style={{ fontSize: "13px", fontWeight: 600, color: colors.textMain, marginBottom: "14px" }}>{t("Nueva dirección")}</p>
+                      <AdminDirForm
+                        form={formAdminDir}
+                        onChange={(f) => setFormAdminDir(f)}
+                        onSave={handleSaveAdminDir}
+                        onCancel={() => setEditandoAdminDir(null)}
+                        saving={savingAdminDir}
+                        inputStyle={inputStyle}
+                        colors={colors}
+                        t={t}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {tab === "direcciones" && isProductor && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <h2 style={{ fontSize: "18px", color: colors.textMain, marginBottom: "10px" }}>{t("Mis Direcciones")}</h2>
+
+              {loadingDir ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}>
+                  <Loader2 className="animate-spin" size={28} color="#3D6B3F" />
+                </div>
+              ) : (
+                <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${colors.border}`, background: colors.inputBg }}>
+                  {/* Encabezado */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+                    <MapPin size={18} color="#3D6B3F" />
+                    <span style={{ fontSize: "14px", fontWeight: 600, color: colors.textMain }}>{t("Lugar de Producción")}</span>
+                    {region && (
+                      <span style={{ fontSize: "11px", background: "rgba(61,107,63,0.1)", color: "#3D6B3F", padding: "2px 8px", borderRadius: "999px", fontWeight: 600 }}>
+                        {region}
+                      </span>
+                    )}
+                    {!editandoDir && (
+                      <button
+                        onClick={() => { setFormDir(dirProduccion ?? { calle: "", cp: "", ciudad: "", estado: "", referencia: "" }); setEditandoDir(true); }}
+                        style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", fontWeight: 600, color: "#3D6B3F", background: "rgba(61,107,63,0.08)", padding: "4px 12px", borderRadius: "999px", border: "none", cursor: "pointer" }}
+                      >
+                        <Pencil size={12} /> {t("Editar")}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Vista lectura */}
+                  {!editandoDir && (
+                    dirProduccion && (dirProduccion.calle || dirProduccion.ciudad) ? (
+                      <div style={{ fontSize: "14px", color: colors.textSub, lineHeight: "1.8" }}>
+                        {dirProduccion.calle && <p style={{ margin: 0, color: colors.textMain }}>{dirProduccion.calle}</p>}
+                        {(dirProduccion.ciudad || dirProduccion.estado) && <p style={{ margin: 0 }}>{[dirProduccion.ciudad, dirProduccion.estado].filter(Boolean).join(", ")}</p>}
+                        {dirProduccion.cp && <p style={{ margin: 0 }}>CP {dirProduccion.cp}</p>}
+                        {dirProduccion.referencia && <p style={{ margin: "4px 0 0", fontSize: "12px" }}>{dirProduccion.referencia}</p>}
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: "13px", color: colors.textSub, margin: 0 }}>No se ha registrado ninguna dirección aún.</p>
+                    )
+                  )}
+
+                  {/* Formulario edición */}
+                  {editandoDir && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      <div>
+                        <label style={{ fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" }}>{t("Calle y Número")}</label>
+                        <input value={formDir.calle} onChange={(e) => setFormDir({ ...formDir, calle: e.target.value })} style={inputStyle} placeholder="Av. Producción #456" />
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                        <div>
+                          <label style={{ fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" }}>{t("Ciudad")}</label>
+                          <input value={formDir.ciudad} onChange={(e) => setFormDir({ ...formDir, ciudad: e.target.value })} style={inputStyle} placeholder="Oaxaca" />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" }}>{t("Estado")}</label>
+                          <input value={formDir.estado} onChange={(e) => setFormDir({ ...formDir, estado: e.target.value })} style={inputStyle} placeholder="Oaxaca" />
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" }}>{t("Código Postal")}</label>
+                        <input value={formDir.cp} onChange={(e) => setFormDir({ ...formDir, cp: e.target.value.replace(/\D/g, "").slice(0, 5) })} style={inputStyle} placeholder="12345" maxLength={5} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" }}>{t("Referencia (opcional)")}</label>
+                        <input value={formDir.referencia} onChange={(e) => setFormDir({ ...formDir, referencia: e.target.value })} style={inputStyle} placeholder="Cerca del río, zona de ley seca" />
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "4px" }}>
+                        <button
+                          onClick={() => setEditandoDir(false)}
+                          style={{ padding: "9px 20px", borderRadius: "8px", border: `1px solid ${colors.border}`, background: "transparent", color: colors.textSub, cursor: "pointer", fontSize: "13px" }}
+                        >
+                          {t("Cancelar")}
+                        </button>
+                        <button
+                          onClick={handleSaveDir}
+                          disabled={savingDir}
+                          style={{ background: savingDir ? "#C5CFB0" : "#3D6B3F", color: "#fff", padding: "9px 20px", borderRadius: "8px", border: "none", cursor: savingDir ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "13px", display: "inline-flex", gap: "8px", alignItems: "center" }}
+                        >
+                          {savingDir ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
+                          {savingDir ? t("Guardando...") : t("Guardar")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminDirForm({ form, onChange, onSave, onCancel, saving, inputStyle, colors, t }: {
+  form: any; onChange: (f: any) => void; onSave: () => void; onCancel: () => void;
+  saving: boolean; inputStyle: React.CSSProperties; colors: any; t: (s: string) => string;
+}) {
+  const lbl = { fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" } as React.CSSProperties;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <div>
+          <label style={lbl}>{t("Etiqueta")}</label>
+          <input value={form.nombre_etiqueta} onChange={(e) => onChange({ ...form, nombre_etiqueta: e.target.value })} style={inputStyle} placeholder="Casa, Oficina…" />
+        </div>
+        <div>
+          <label style={lbl}>{t("Nombre del destinatario")}</label>
+          <input value={form.nombre_destinatario} onChange={(e) => onChange({ ...form, nombre_destinatario: e.target.value })} style={inputStyle} placeholder="Juan García" />
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <div>
+          <label style={lbl}>{t("Calle")}</label>
+          <input value={form.calle} onChange={(e) => onChange({ ...form, calle: e.target.value })} style={inputStyle} placeholder="Av. Principal" />
+        </div>
+        <div>
+          <label style={lbl}>{t("Número")}</label>
+          <input value={form.numero} onChange={(e) => onChange({ ...form, numero: e.target.value })} style={inputStyle} placeholder="#123" />
+        </div>
+      </div>
+      <div>
+        <label style={lbl}>{t("Colonia")}</label>
+        <input value={form.colonia} onChange={(e) => onChange({ ...form, colonia: e.target.value })} style={inputStyle} placeholder="Centro" />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <div>
+          <label style={lbl}>{t("Ciudad")}</label>
+          <input value={form.ciudad} onChange={(e) => onChange({ ...form, ciudad: e.target.value })} style={inputStyle} placeholder="Oaxaca" />
+        </div>
+        <div>
+          <label style={lbl}>{t("Estado")}</label>
+          <input value={form.estado} onChange={(e) => onChange({ ...form, estado: e.target.value })} style={inputStyle} placeholder="Oaxaca" />
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <div>
+          <label style={lbl}>{t("Código Postal")}</label>
+          <input value={form.codigo_postal} onChange={(e) => onChange({ ...form, codigo_postal: e.target.value.replace(/\D/g, "").slice(0, 5) })} style={inputStyle} placeholder="12345" maxLength={5} />
+        </div>
+        <div>
+          <label style={lbl}>{t("Teléfono")}</label>
+          <input value={form.telefono} onChange={(e) => onChange({ ...form, telefono: e.target.value.replace(/\D/g, "").slice(0, 10) })} style={inputStyle} placeholder="9511234567" maxLength={10} />
+        </div>
+      </div>
+      <div>
+        <label style={lbl}>{t("Referencia (opcional)")}</label>
+        <input value={form.referencia} onChange={(e) => onChange({ ...form, referencia: e.target.value })} style={inputStyle} placeholder="Entre calles, color de fachada…" />
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "4px" }}>
+        <button onClick={onCancel} style={{ padding: "9px 20px", borderRadius: "8px", border: `1px solid ${colors.border}`, background: "transparent", color: colors.textSub, cursor: "pointer", fontSize: "13px" }}>
+          {t("Cancelar")}
+        </button>
+        <button onClick={onSave} disabled={saving} style={{ background: saving ? "#C5CFB0" : "#3D6B3F", color: "#fff", padding: "9px 20px", borderRadius: "8px", border: "none", cursor: saving ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "13px", display: "inline-flex", gap: "8px", alignItems: "center" }}>
+          {saving ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
+          {saving ? t("Guardando...") : t("Guardar")}
+        </button>
       </div>
     </div>
   );

@@ -69,8 +69,8 @@ const TIPOS_MAGUEY = ["Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueñ
 // Use index % 2 to alternate: 0 = neutral (default), 1 = brand (featured)
 // Keeping most cards neutral maintains Restrained strategy
 const CARD_COLORS = [
-  { bg: hexFallbacks.bgSecondary, text: hexFallbacks.textPrimary },     // Neutral card
-  { bg: hexFallbacks.brand, text: hexFallbacks.bgSecondary },            // Brand featured card (≤10% of grid)
+  { bg: "var(--catalog-card-bg, #FFFFFF)",          text: "var(--catalog-text-primary, #1F3A2E)" },
+  { bg: "var(--catalog-card-featured-bg, #C97A3E)", text: "var(--catalog-card-bg, #FFFFFF)" },
 ];
 
 // StarRating Component
@@ -267,7 +267,7 @@ const ProductCard = memo(function ProductCard({
           >
             <div className="flex items-baseline gap-1">
               <span className="text-xs text-gray-500 font-semibold">$</span>
-              <span className="text-xl sm:text-2xl font-bold text-amber-700" style={{ fontFamily: "Courier New, monospace" }}>
+              <span className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "Courier New, monospace", color: "var(--catalog-price, #C97A3E)" }}>
                 {formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
               </span>
               <span className="text-xs text-gray-500 font-semibold">MXN</span>
@@ -276,7 +276,7 @@ const ProductCard = memo(function ProductCard({
             <button
               className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded transition-all hover:opacity-90 active:scale-95 w-full"
               style={{
-                backgroundColor: hexFallbacks.brand,
+                backgroundColor: "var(--catalog-accent, #C97A3E)",
                 border: "none",
                 cursor: "pointer",
               }}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductoThumbnail } from "@/components/Producer/Products/ImagenProducto";
 import type { ProductItem, StoreItem } from "@/hooks/useProductos";
 
@@ -197,13 +197,6 @@ export function ProductoPrecioPendienteBanner({
 
 // ─── Paginación ───────────────────────────────────────────────────────────────
 
-function getPageNumbers(current: number, total: number): (number | "...")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
-  if (current >= total - 3) return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
-  return [1, "...", current - 1, current, current + 1, "...", total];
-}
-
 export function ProductoPaginacion({
   currentPage,
   totalPages,
@@ -219,36 +212,27 @@ export function ProductoPaginacion({
 }) {
   const from = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const to = Math.min(currentPage * pageSize, totalItems);
-  const pages = getPageNumbers(currentPage, totalPages);
 
-  const btnBase = "rounded-lg border border-[#C5CFB0] px-3 py-1.5 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/20 disabled:cursor-not-allowed disabled:opacity-40";
+  if (totalPages <= 1) return null;
 
   return (
-    <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] px-5 py-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)] sm:flex-row sm:justify-between">
-      <p className="text-sm text-[#3D6B3F]/70">
-        {totalItems === 0 ? "Sin resultados" : `${from}–${to} de ${totalItems} producto${totalItems !== 1 ? "s" : ""}`}
+    <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 mt-4 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <p className="text-sm text-[#1F3A2E]">
+        {totalItems === 0 ? "Sin resultados" : <>Mostrando <span className="font-semibold">{from}</span>–<span className="font-semibold">{to}</span> de <span className="font-semibold">{totalItems}</span> producto{totalItems !== 1 ? "s" : ""}</>}
       </p>
-      <div className="flex items-center gap-1">
-        <button disabled={currentPage === 1} onClick={() => onPageChange(currentPage - 1)} className={btnBase}>‹</button>
-        {pages.map((p, i) =>
-          p === "..." ? (
-            <span key={`el-${i}`} className="px-2 text-sm text-[#3D6B3F]/50">…</span>
-          ) : (
-            <button
-              key={p}
-              onClick={() => onPageChange(p as number)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                p === currentPage
-                  ? "bg-[#3D6B3F] text-white"
-                  : "border border-[#C5CFB0] text-[#1F3A2E] hover:bg-[#C5CFB0]/20"
-              }`}
-            >
-              {p}
-            </button>
-          )
-        )}
-        <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => onPageChange(currentPage + 1)} className={btnBase}>›</button>
-      </div>
+      <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
+        <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}
+          className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+          Página {currentPage} de {totalPages}
+        </span>
+        <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages || totalPages === 0}
+          className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </nav>
     </div>
   );
 }

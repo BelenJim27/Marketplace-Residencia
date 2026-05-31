@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Search, Trash2 } from "lucide-react";
+import { Eye, Search, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -27,6 +27,8 @@ export function ProductoresTabla() {
   const [selectedProductor, setSelectedProductor] = useState<ProductorAdmin | null>(null);
   const [deleting, setDeleting] = useState<ProductorAdmin | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   async function loadProductores() {
     setLoading(true);
@@ -70,6 +72,8 @@ export function ProductoresTabla() {
     loadAsociaciones();
   }, []);
 
+  useEffect(() => { setCurrentPage(1); }, [query, regionFilter, statusFilter, idFilter, asociacionFilter, marcaFilter]);
+
   const regionOptions = useMemo(
     () => [...new Set(productores.map((p) => p.region).filter(Boolean))].sort(),
     [productores],
@@ -101,6 +105,9 @@ export function ProductoresTabla() {
     const seen = new Set<number>();
     return filteredList.filter((p) => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
   }, [idFilter, productores, query, regionFilter, statusFilter, asociacionFilter, marcaFilter]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedFiltered = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const stats = [
     { label: "Total Productores", value: productores.length, color: "text-[#1F3A2E]" },
@@ -235,7 +242,7 @@ export function ProductoresTabla() {
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={7} className="p-10 text-center text-sm text-[#3D6B3F]/70 bg-white">No hay productores para mostrar.</td></tr>
               ) : (
-                filtered.map((p) => (
+                paginatedFiltered.map((p) => (
                   <tr key={p.id} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200 group">
                     <td className="px-4 py-3 font-mono text-xs text-[#3D6B3F]/70">#PR-{String(p.id).padStart(4, "0")}</td>
                     <td className="px-4 py-3 font-semibold text-[#1F3A2E]">{`${p.nombre} ${p.apellido_paterno} ${p.apellido_materno}`.trim()}</td>
@@ -266,6 +273,28 @@ export function ProductoresTabla() {
           </table>
         </div>
       </div>
+
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <p className="text-sm text-[#1F3A2E]">
+            Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> de <span className="font-semibold">{filtered.length}</span> productores
+          </p>
+          <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
+            <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+              Página {currentPage} de {totalPages}
+            </span>
+            <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
+              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </nav>
+        </div>
+      )}
 
       <ProductoresForm
         mode={activeMode ?? "view"}

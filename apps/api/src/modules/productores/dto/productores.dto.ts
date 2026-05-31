@@ -42,6 +42,7 @@ export class SolicitarProductorDto {
   @IsOptional() @IsString() datos_bancarios?: string;
   @IsOptional() @IsString() @MaxLength(150) asociacion?: string;
   @IsOptional() @IsString() @MaxLength(150) nombre_marca?: string;
+  @IsOptional() @IsString() @MaxLength(500) certificado_url?: string;
   @IsOptional()
   @IsArray()
   @IsInt({ each: true })

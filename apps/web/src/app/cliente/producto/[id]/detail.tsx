@@ -26,6 +26,7 @@ interface Producto {
 export default function ProductDetailPage() {
   const params = useParams();
   const [producto, setProducto] = useState<Producto | null>(null);
+  const [stock, setStock] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,9 +34,16 @@ export default function ProductDetailPage() {
     const fetchProducto = async () => {
       try {
         const id = params.id as string;
-        // Intentar obtener del API
-        const data = await api.productos.getById(parseInt(id));
+        const data = await api.productos.getOne(id);
         setProducto(data as any);
+
+        // Obtener stock del inventario
+        try {
+          const inv = await api.inventario.getByProducto(parseInt(id));
+          setStock(inv?.stock ?? null);
+        } catch {
+          // stock no disponible, no es crítico
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error al cargar el producto');
       } finally {
@@ -77,5 +85,5 @@ export default function ProductDetailPage() {
     );
   }
 
-  return <ProductDetailPremium producto={producto} />;
+  return <ProductDetailPremium producto={producto} stock={stock} />;
 }

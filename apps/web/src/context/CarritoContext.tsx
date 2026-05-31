@@ -14,6 +14,7 @@ import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
 import type { AgregarProductoResult, CarritoItem, CarritoContextType } from "@/types/carrito";
 import { getEdadMinima, isAgeVerified } from "@/lib/edad";
+import { useAuth } from "@/context/AuthContext";
 
 function getToken(): string {
   return getCookie("token") || "";
@@ -39,15 +40,19 @@ function getUserId(): string {
 }
 
 export function CarritoProvider({ children }: { children: ReactNode }) {
+  const { isAdmin, isProductor } = useAuth();
+  const isStaff = isAdmin || isProductor;
+
   const [items, setItems] = useState<CarritoItem[]>([]);
   const [mounted, setMounted] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const syncTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Load cart on mount
+  // Load cart on mount — skip for staff roles
   useEffect(() => {
     setMounted(true);
+    if (isStaff) return;
     const usuarioId = getUserId();
     setCurrentUserId(usuarioId);
     const storageKey = getStorageKey(usuarioId);
@@ -59,11 +64,17 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
         console.error("Error parsing stored cart:", e);
       }
     }
-  }, []);
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When user changes, fetch backend cart and merge
+  // Clear cart as soon as we know the user is staff
+  useEffect(() => {
+    if (isStaff) setItems([]);
+  }, [isStaff]);
+
+  // When user changes, fetch backend cart and merge — skip for staff
   useEffect(() => {
     if (!mounted) return;
+    if (isStaff) return;
     const usuarioId = getUserId();
     if (usuarioId === currentUserId) return;
 
@@ -131,6 +142,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
 
   // Debounced sync to backend
   const syncToBackend = useCallback(() => {
+    if (isStaff) return;
     if (currentUserId === "guest" || currentUserId === null) return;
     if (syncing) return;
 
@@ -159,6 +171,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
   }, [currentUserId, items, syncing]);
 
   const agregarProducto = useCallback((producto: { [key: string]: any }): AgregarProductoResult => {
+    if (isStaff) return { ok: false, reason: "not_allowed" as any };
     // Trigger 2 — block age-restricted products unless cookie is set.
     // Trigger 3 (server) is the authoritative check, but blocking here avoids polluting
     // the carrito with items the buyer cannot legally check out with.

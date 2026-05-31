@@ -142,27 +142,15 @@ export function HeroMezcal() {
 
   const parallelOffset = prefersReducedMotion ? 0 : scrollY;
 
-  // Biocultura color scheme (Oaxaca-inspired)
-  const colors = {
-    light: {
-      gradientStart: '#3D6B3F',    // Verde Silvestre
-      gradientMid: '#3D6B3F',      // Verde Silvestre
-      gradientEnd: '#1F3A2E',      // Verde Tobalá
-      textPrimary: '#fef5f0',      // Warm cream
-      accentGreen: '#A8C26B',      // Verde Hoja Nueva
-      accentBrown: '#C97A3E',      // Cobre Mezcalero
-    },
-    dark: {
-      gradientStart: '#3D6B3F',    // Verde Silvestre
-      gradientMid: '#3D6B3F',      // Verde Silvestre
-      gradientEnd: '#1F3A2E',      // Verde Tobalá
-      textPrimary: '#e8f0ed',      // Cool cream
-      accentGreen: '#A8C26B',      // Verde Hoja Nueva
-      accentBrown: '#C97A3E',      // Cobre Mezcalero
-    },
+  // Usa variables CSS del catálogo inyectadas por ConfigContext
+  const activeColors = {
+    gradientStart: 'var(--catalog-hero-from, #3D6B3F)',
+    gradientMid:   'var(--catalog-hero-from, #3D6B3F)',
+    gradientEnd:   'var(--catalog-hero-to, #1F3A2E)',
+    textPrimary:   isDarkMode ? '#e8f0ed' : '#fef5f0',
+    accentGreen:   '#A8C26B',
+    accentBrown:   'var(--catalog-accent, #C97A3E)',
   };
-
-  const activeColors = isDarkMode ? colors.dark : colors.light;
 
   const isElementVisible = (id: string) => visibleElements.has(id);
 

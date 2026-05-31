@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import type { ReactNode } from "react";
-import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { ModalAgregar, ModalEditar, ModalEliminar, ModalVer } from "./acciones";
 
 type Tienda = {
@@ -30,6 +30,8 @@ export function TiendasPage() {
   const [stores, setStores] = useState<Tienda[]>([]);
   const [activeModal, setActiveModal] = useState<"create" | "view" | "edit" | "delete" | null>(null);
   const [selectedStore, setSelectedStore] = useState<Tienda | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const loadStores = async () => {
     if (authLoading) return;
@@ -65,6 +67,8 @@ export function TiendasPage() {
     loadStores();
   }, [authLoading, user?.id_productor, token]);
 
+  useEffect(() => { setCurrentPage(1); }, [query]);
+
   const filteredStores = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return stores;
@@ -78,6 +82,9 @@ export function TiendasPage() {
       );
     });
   }, [query, stores]);
+
+  const totalPages = Math.ceil(filteredStores.length / itemsPerPage);
+  const paginatedStores = filteredStores.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const stats = [
     { label: "Total Tiendas", value: stores.length },
@@ -158,7 +165,7 @@ export function TiendasPage() {
                   </td>
                 </tr>
               ) : (
-                filteredStores.map((store) => (
+                paginatedStores.map((store) => (
                   <tr key={store.id_tienda}
                     className="border-t border-[#C5CFB0]/30 bg-white text-sm transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20">
                     <td className="px-5 py-4 font-medium text-[#1F3A2E]">{store.nombre}</td>
@@ -195,6 +202,28 @@ export function TiendasPage() {
           </table>
         </div>
       </div>
+
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <p className="text-sm text-[#1F3A2E]">
+            Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, filteredStores.length)}</span> de <span className="font-semibold">{filteredStores.length}</span> tiendas
+          </p>
+          <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
+            <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+              Página {currentPage} de {totalPages}
+            </span>
+            <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
+              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </nav>
+        </div>
+      )}
 
       <ModalAgregar
         isOpen={activeModal === "create"}

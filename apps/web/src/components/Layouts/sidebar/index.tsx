@@ -73,14 +73,14 @@ export function Sidebar() {
         <div className="flex h-full flex-col">
 
           {/* Logo + collapse button */}
-          <div className="flex items-center justify-between px-4 pt-5 pb-4">
+          <div className="flex items-center justify-between px-5 pt-5 pb-4">
             {!isCollapsed && (
               <Link href="/" onClick={() => isMobile && toggleSidebar()}>
                 <Image
-                  src="/images/logo/tierra_agaves.png"
-                  width={110}
-                  height={44}
-                  alt="Tierra Agaves"
+                  src="/images/logo/agavea.png"
+                  width={150}
+                  height={60}
+                  alt="AGAVEA"
                   className="object-contain brightness-0 invert"
                   priority
                 />
@@ -90,10 +90,10 @@ export function Sidebar() {
             {isCollapsed && (
               <Link href="/" className="mx-auto">
                 <Image
-                  src="/images/logo/tierra_agaves.png"
-                  width={32}
-                  height={32}
-                  alt="Tierra Agaves"
+                  src="/images/logo/agavea.png"
+                  width={42}
+                  height={42}
+                  alt="AGAVEA"
                   className="object-contain brightness-0 invert"
                   priority
                 />
@@ -129,7 +129,7 @@ export function Sidebar() {
 
           {/* Navigation */}
           <div
-            className="flex-1 overflow-y-auto px-2 py-2"
+            className="flex-1 overflow-y-auto px-3 py-2"
             style={{
               scrollbarWidth: "thin",
               scrollbarColor: "rgba(255,255,255,0.08) transparent",
@@ -138,7 +138,7 @@ export function Sidebar() {
             {navData.map((section) => (
               <div key={section.label} className="mb-2">
                 {!isCollapsed && (
-                  <p className="mb-1 px-3 pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/30">
+                  <p className="mb-1 px-3 pt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/30">
                     {section.label}
                   </p>
                 )}
@@ -173,7 +173,7 @@ export function Sidebar() {
                               isActive={active}
                               title={item.title}
                               className={cn(
-                                "flex w-full items-center gap-3 px-3 py-2.5 transition-all duration-200",
+                                "flex w-full items-center gap-3 px-4 py-2.5 transition-all duration-200",
                                 active
                                   ? "rounded-[20px] bg-white/[0.15] text-white"
                                   : "rounded-xl text-white/70 hover:bg-white/[0.07] hover:text-white/90",
@@ -182,7 +182,7 @@ export function Sidebar() {
                             >
                               <item.icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-white" : "text-white/50")} />
                               {!isCollapsed && (
-                                <span className="flex min-w-0 flex-1 items-center justify-between text-[13px] font-medium">
+                                <span className="flex min-w-0 flex-1 items-center justify-between text-[14.5px] font-medium">
                                   <span className="truncate">{item.title}</span>
                                   <ChevronDown className={cn("h-3.5 w-3.5 text-white/30 transition-transform", isMenuOpen(item.title) && "rotate-180")} />
                                 </span>
@@ -208,7 +208,7 @@ export function Sidebar() {
                                         isActive={childActive}
                                         title={child.title}
                                         className={cn(
-                                          "flex items-center gap-3 px-3 py-2 transition-all duration-200",
+                                          "flex items-center gap-3 px-4 py-2 transition-all duration-200",
                                           showChildTab
                                             ? "rounded-l-[20px] rounded-r-none bg-[#F4F0E3] text-[#1F3A2E]"
                                             : childActive
@@ -217,7 +217,7 @@ export function Sidebar() {
                                         )}
                                       >
                                         <child.icon className={cn("h-4 w-4 shrink-0", showChildTab ? "text-[#1F3A2E]" : childActive ? "text-white" : "text-white/40")} />
-                                        <span className="text-[13px] font-medium truncate">{child.title}</span>
+                                        <span className="text-[14.5px] font-medium truncate">{child.title}</span>
                                       </MenuItem>
                                     </li>
                                   );
@@ -232,7 +232,7 @@ export function Sidebar() {
                             isActive={active}
                             title={item.title}
                             className={cn(
-                              "flex items-center gap-3 px-3 py-2.5 transition-all duration-200",
+                              "flex items-center gap-3 px-4 py-2.5 transition-all duration-200",
                               showTab
                                 ? "rounded-l-[20px] rounded-r-none bg-[#F4F0E3] text-[#1F3A2E]"
                                 : active
@@ -242,13 +242,13 @@ export function Sidebar() {
                             )}
                           >
                             <item.icon className={cn("h-[18px] w-[18px] shrink-0", showTab ? "text-[#1F3A2E]" : active ? "text-white" : "text-white/50")} />
-                            {!isCollapsed && <span className="text-[13px] font-medium truncate">{item.title}</span>}
+                            {!isCollapsed && <span className="text-[14.5px] font-medium truncate">{item.title}</span>}
                           </MenuItem>
                         ) : null}
 
                         {/* Tooltip when collapsed */}
                         {isCollapsed && hoveredItem === item.title && !isMobile && (
-                          <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-xl bg-[#1F3A2E] border border-white/10 px-3 py-1.5 text-[13px] font-medium text-white shadow-xl">
+                          <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-xl bg-[#1F3A2E] border border-white/10 px-3 py-1.5 text-[14.5px] font-medium text-white shadow-xl">
                             {item.title}
                             <div className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-[#1F3A2E]" />
                           </div>
@@ -272,7 +272,7 @@ export function Sidebar() {
               )}
             >
               <LogOut className="h-[18px] w-[18px] shrink-0" />
-              {!isCollapsed && <span className="text-[13px] font-medium">Cerrar sesión</span>}
+              {!isCollapsed && <span className="text-[14.5px] font-medium">Cerrar sesión</span>}
             </button>
           </div>
         </div>

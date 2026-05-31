@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, ShoppingCart, Heart, MapPin, Droplets, Flame, Leaf } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Heart, MapPin, Droplets, Flame, Leaf, Package } from 'lucide-react';
 import { formatPrice } from '@/lib/format-number';
 import { useCarrito } from '@/context/CarritoContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -12,16 +12,22 @@ import { useRouter } from 'next/navigation';
 
 interface ProductDetailPremiumProps {
   producto: any;
+  stock?: number | null;
   onBack?: () => void;
 }
 
-export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumProps) {
+export function ProductDetailPremium({ producto, stock = null, onBack }: ProductDetailPremiumProps) {
   const router = useRouter();
   const { agregarProducto } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
+
+  // Stock derivado: también puede venir en el propio objeto producto
+  const stockDisponible = stock ?? producto.inventario?.[0]?.stock ?? null;
+  const sinStock = stockDisponible !== null && stockDisponible === 0;
+  const stockBajo = stockDisponible !== null && stockDisponible > 0 && stockDisponible <= 10;
 
   const imagenPrincipal = producto.producto_imagenes?.[0]?.url || producto.imagen_principal_url;
   const maguey = producto.lotes?.datos_api?.maguey || 'Espadin';
@@ -249,8 +255,9 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
                     {cantidad}
                   </span>
                   <button
-                    onClick={() => setCantidad(cantidad + 1)}
-                    className="w-10 h-10 rounded-lg flex items-center justify-center font-bold transition-all"
+                    onClick={() => setCantidad(stockDisponible !== null ? Math.min(stockDisponible, cantidad + 1) : cantidad + 1)}
+                    disabled={stockDisponible !== null && cantidad >= stockDisponible}
+                    className="w-10 h-10 rounded-lg flex items-center justify-center font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                     style={{
                       backgroundColor: '#e1ebe5',
                       color: '#353a1f',
@@ -261,18 +268,41 @@ export function ProductDetailPremium({ producto, onBack }: ProductDetailPremiumP
                 </div>
               </div>
 
+              {/* Stock disponible */}
+              {stockDisponible !== null && (
+                <div className="flex items-center gap-2 py-2.5 px-3 rounded-xl w-fit"
+                  style={{
+                    backgroundColor: sinStock ? '#fef2f2' : stockBajo ? '#fffbeb' : '#f0fdf4',
+                    border: `1px solid ${sinStock ? '#fecaca' : stockBajo ? '#fde68a' : '#bbf7d0'}`,
+                  }}
+                >
+                  <Package size={15} style={{ color: sinStock ? '#dc2626' : stockBajo ? '#d97706' : '#16a34a' }} />
+                  <span className="text-sm font-semibold"
+                    style={{ color: sinStock ? '#dc2626' : stockBajo ? '#d97706' : '#16a34a' }}
+                  >
+                    {sinStock
+                      ? 'Agotado'
+                      : stockBajo
+                      ? `Solo ${stockDisponible} unidad${stockDisponible === 1 ? '' : 'es'} disponible${stockDisponible === 1 ? '' : 's'}`
+                      : `${stockDisponible} unidades en stock`
+                    }
+                  </span>
+                </div>
+              )}
+
               {/* Botones de acción */}
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={handleAgregarCarrito}
-                  className="flex-1 py-3 rounded-lg font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-95 flex items-center justify-center gap-2"
+                  disabled={sinStock}
+                  className="flex-1 py-3 rounded-lg font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: `linear-gradient(135deg, #53926d 0%, #417356 100%)`,
+                    background: sinStock ? '#d4c5b9' : `linear-gradient(135deg, #53926d 0%, #417356 100%)`,
                     color: 'white',
                   }}
                 >
                   <ShoppingCart size={18} />
-                  {agregado ? '¡Agregado!' : 'Agregar al carrito'}
+                  {sinStock ? 'Sin stock' : agregado ? '¡Agregado!' : 'Agregar al carrito'}
                 </button>
                 <button
                   onClick={toggleWishlist}

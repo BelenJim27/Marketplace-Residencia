@@ -123,6 +123,18 @@ export default function Footer() {
         className="max-w-6xl mx-auto mt-6 pt-4 text-center"
         style={{ borderTop: "1px solid rgba(200,169,122,0.15)" }}
       >
+        <p style={{
+          color: "rgba(197, 207, 176, 0.38)",
+          fontSize: "9.5px",
+          fontFamily: "Georgia, serif",
+          fontStyle: "italic",
+          lineHeight: "1.55",
+          maxWidth: "620px",
+          margin: "0 auto 8px",
+          letterSpacing: "0.01em",
+        }}>
+          {t("Las imágenes, información y contenidos relacionados con las asociaciones presentadas en esta página son propiedad de Tierra de Agaves y han sido extraídos de su página oficial y redes sociales con fines informativos. Todos los derechos de autor y derechos de imagen pertenecen a sus respectivos titulares.")}
+        </p>
         <p style={{ color: "#8a6a3a", fontSize: "11px", fontFamily: "Georgia, serif" }}>
           2026 {t("Guardianas de mezcal. Todos los derechos reservados.")}
         </p>

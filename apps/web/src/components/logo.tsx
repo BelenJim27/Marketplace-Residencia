@@ -4,10 +4,10 @@ export function Logo() {
   return (
     <div className="relative h-20 w-50">
       <Image
-        src="/images/logo/tierra_agaves.png"
+        src="/images/logo/agavea.png"
         sizes="(max-width: 768px) 100vw, 50vw"
         fill
-        alt="Tierra Agaves"
+        alt="AGAVEA"
         role="presentation"
         quality={100}
         className="object-contain"

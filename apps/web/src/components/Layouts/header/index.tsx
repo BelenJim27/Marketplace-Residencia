@@ -7,6 +7,8 @@ import { MenuIcon, CloseIcon } from "./icons";
 import { Notification } from "./notification";
 import { UserInfo } from "./user-info";
 import { useNotificationPoller } from "@/hooks/useNotificationPoller";
+import Link from "next/link";
+import { Home } from "lucide-react";
 
 export function Header() {
   const { toggleSidebar, isOpen } = useSidebarContext();
@@ -34,6 +36,14 @@ export function Header() {
         <button className="rounded-xl border border-[#C5CFB0] bg-white p-2 text-[#1F3A2E] hover:bg-[#1F3A2E] hover:text-white transition-all duration-200 md:hidden">
           <SearchIcon className="h-5 w-5" />
         </button>
+
+        <Link
+          href="/cliente/producto"
+          title="Ver tienda"
+          className="rounded-xl border border-[#C5CFB0] bg-white p-2 text-[#1F3A2E] hover:bg-[#1F3A2E] hover:text-white transition-all duration-200"
+        >
+          <Home className="h-5 w-5" />
+        </Link>
 
         <Notification />
 

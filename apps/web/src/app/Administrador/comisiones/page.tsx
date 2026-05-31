@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Edit2, X, Loader2, AlertCircle, CheckCircle2, Search } from "lucide-react";
+import { Plus, Trash2, Edit2, X, Loader2, AlertCircle, CheckCircle2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { api, type Comision, type ComisionInput } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
@@ -17,6 +17,8 @@ export default function ComisionesAdminPage() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [search, setSearch] = useState("");
   const [filtroAlcance, setFiltroAlcance] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Comision | null>(null);
@@ -46,6 +48,8 @@ export default function ComisionesAdminPage() {
     load();
   }, []);
 
+  useEffect(() => { setCurrentPage(1); }, [search, filtroAlcance]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return comisiones.filter((c) => {
@@ -55,6 +59,9 @@ export default function ComisionesAdminPage() {
       return haystack.includes(q);
     });
   }, [comisiones, search, filtroAlcance]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedComisiones = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   function openCreate() {
     setEditing(null);
@@ -264,7 +271,7 @@ export default function ComisionesAdminPage() {
               </tr>
             )}
             {!loading &&
-              filtered.map((c) => (
+              paginatedComisiones.map((c) => (
                 <tr key={c.id_comision} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200">
                   <td className="px-3 py-2">{c.id_comision}</td>
                   <td className="px-3 py-2">{c.alcance}</td>
@@ -312,6 +319,28 @@ export default function ComisionesAdminPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <p className="text-sm text-[#1F3A2E]">
+            Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> de <span className="font-semibold">{filtered.length}</span>
+          </p>
+          <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
+            <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+              Página {currentPage} de {totalPages}
+            </span>
+            <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
+              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </nav>
+        </div>
+      )}
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

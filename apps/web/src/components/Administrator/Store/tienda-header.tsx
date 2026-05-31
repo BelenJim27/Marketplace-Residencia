@@ -82,7 +82,8 @@ export function TiendaHeader() {
   const handleMyPurchasesClick = () => router.push(isAuthenticated ? "/tienda/compras" : "/auth/sign-in?redirect=/tienda/compras");
   const handleSellClick = () => {
     if (!isAuthenticated) router.push("/dashboard/productor/unirse?vender=true");
-    else if (user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r))) router.push("/dashboard/productor");
+    else if (isAdmin) router.push("/Administrador/dashboard");
+    else if (isProductor) router.push("/dashboard/productor");
     else router.push("/dashboard/productor/solicitar");
   };
 
@@ -179,10 +180,10 @@ export function TiendaHeader() {
         {/* Logo */}
         <Link href="/cliente/producto" className="flex items-center gap-3 shrink-0">
           <Image
-            src="/images/logo/tierra_agaves.png"
-            width={scrolled ? 70 : 90}
-            height={scrolled ? 25 : 32}
-            alt="Tierra Agaves"
+            src="/images/logo/agavea.png"
+            width={scrolled ? 110 : 140}
+            height={scrolled ? 40 : 52}
+            alt="AGAVEA"
             className="object-contain transition-all duration-300"
             style={{ filter: "brightness(0) invert(1)" }}
           />

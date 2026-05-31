@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search, Edit2, Trash2, X, ChevronRight } from "lucide-react";
+import { Search, Edit2, Trash2, X, ChevronRight, ChevronLeft } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type Categoria = {
@@ -28,8 +28,11 @@ export default function CategoriasAdminPage() {
   const [showModal, setShowModal]               = useState(false);
   const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null);
   const [formData, setFormData] = useState({ nombre: "", slug: "", descripcion: "", tipo: "general", activo: true, id_padre: "" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => { loadCategorias(); }, []);
+  useEffect(() => { setCurrentPage(1); }, [query]);
 
   const loadCategorias = async () => {
     setLoading(true);
@@ -57,6 +60,10 @@ export default function CategoriasAdminPage() {
       (c) => c.nombre.toLowerCase().includes(normalized) || c.descripcion?.toLowerCase().includes(normalized),
     );
   }, [categorias, query]);
+
+  const currentList = query.trim() ? busquedaPlana : padres;
+  const totalPages = Math.ceil(currentList.length / itemsPerPage);
+  const paginatedList = currentList.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const openCreateModal = (parentId?: number) => {
     setEditingCategoria(null);
@@ -169,7 +176,7 @@ export default function CategoriasAdminPage() {
                 busquedaPlana.length === 0 ? (
                   <tr><td colSpan={5} className="p-10 text-center text-[#3D6B3F]/70 bg-white">Sin resultados.</td></tr>
                 ) : (
-                  busquedaPlana.map((cat) => (
+                  paginatedList.map((cat) => (
                     <tr key={cat.id_categoria} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200">
                       <td className="p-4 font-semibold text-[#1F3A2E]">
                         {cat.id_padre !== null && <span className="mr-1 text-[#3D6B3F]/40">↳</span>}
@@ -190,7 +197,7 @@ export default function CategoriasAdminPage() {
                 <tr><td colSpan={5} className="p-10 text-center text-[#3D6B3F]/70 bg-white">No hay categorías.</td></tr>
               ) : (
                 /* ── Vista jerárquica ── */
-                padres.map((cat) => (
+                paginatedList.map((cat) => (
                   <React.Fragment key={cat.id_categoria}>
                     {/* Fila padre */}
                     <tr key={cat.id_categoria} className="bg-white hover:bg-[#C5CFB0]/20 transition-all duration-200">
@@ -252,6 +259,28 @@ export default function CategoriasAdminPage() {
           </table>
         </div>
       </div>
+
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <p className="text-sm text-[#1F3A2E]">
+            Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, currentList.length)}</span> de <span className="font-semibold">{currentList.length}</span> categorías
+          </p>
+          <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
+            <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+              Página {currentPage} de {totalPages}
+            </span>
+            <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
+              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </nav>
+        </div>
+      )}
 
       {/* Modal */}
       {showModal && (

@@ -150,7 +150,7 @@ export default function UsuariosUI() {
     currentPage * itemsPerPage
   );
 
-  const activeUsers    = usuarios.filter((u) => u.estado === "activo").length;
+  const activeUsers    = usuarios.filter((u) => !u.estado || u.estado === "activo").length;
   const usersWithRoles = usuarios.filter((u) => (u.usuario_rol?.length || 0) > 0).length;
 
   const inputCls = "w-full rounded-xl border border-[#C5CFB0] px-3 py-2 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/50 bg-[#F4F0E3] focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent transition-all";

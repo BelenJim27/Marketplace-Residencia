@@ -137,6 +137,17 @@ function applyColors(map: Record<string, string>) {
     "--font-family-store",
     map.font_family_store || "'Playfair Display', Georgia, serif"
   );
+
+  // ── Tokens de catálogo ──────────────────────────────────────────────────
+  root.style.setProperty("--catalog-accent",           map.catalog_accent           || "#C97A3E");
+  root.style.setProperty("--catalog-bg",               map.catalog_bg               || "#F4F0E3");
+  root.style.setProperty("--catalog-card-bg",          map.catalog_card_bg          || "#FFFFFF");
+  root.style.setProperty("--catalog-card-featured-bg", map.catalog_card_featured_bg || "#C97A3E");
+  root.style.setProperty("--catalog-text-primary",     map.catalog_text_primary     || "#1F3A2E");
+  root.style.setProperty("--catalog-text-secondary",   map.catalog_text_secondary   || "#3D6B3F");
+  root.style.setProperty("--catalog-price",            map.catalog_price            || "#C97A3E");
+  root.style.setProperty("--catalog-hero-from",        map.catalog_hero_from        || "#3D6B3F");
+  root.style.setProperty("--catalog-hero-to",          map.catalog_hero_to          || "#1F3A2E");
 }
 
 export function ConfigProvider({ children }: { children: ReactNode }) {

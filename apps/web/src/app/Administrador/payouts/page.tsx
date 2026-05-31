@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, AlertCircle, CheckCircle2, X, Search, Play, Eye, Undo2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, X, Search, Play, Eye, Undo2, ChevronLeft, ChevronRight } from "lucide-react";
 import { api, type Payout, type PayoutDetalle } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { formatPrice } from "@/lib/format-number";
@@ -40,6 +40,8 @@ export default function PayoutsAdminPage() {
   const [detalleModal, setDetalleModal] = useState<PayoutDetalle | null>(null);
   const [detalleLoading, setDetalleLoading] = useState(false);
   const [reembolsando, setReembolsando] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const token = getCookie("token") ?? "";
 
@@ -60,6 +62,7 @@ export default function PayoutsAdminPage() {
 
   useEffect(() => {
     load();
+    setCurrentPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroEstado, filtroProductor]);
 
@@ -141,6 +144,9 @@ export default function PayoutsAdminPage() {
       setDetalleLoading(false);
     }
   }
+
+  const totalPages = Math.ceil(payouts.length / itemsPerPage);
+  const paginatedPayouts = payouts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const totales = useMemo(() => {
     return payouts.reduce(
@@ -332,7 +338,7 @@ export default function PayoutsAdminPage() {
                 </tr>
               )}
               {!loading &&
-                payouts.map((p) => (
+                paginatedPayouts.map((p) => (
                   <tr key={p.id_payout} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200">
                     <td className="px-3 py-2">#{p.id_payout}</td>
                     <td className="px-3 py-2">
@@ -386,6 +392,28 @@ export default function PayoutsAdminPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 mt-4 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+            <p className="text-sm text-[#1F3A2E]">
+              Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, payouts.length)}</span> de <span className="font-semibold">{payouts.length}</span> payouts
+            </p>
+            <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
+              <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
+                className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
+                className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </nav>
+          </div>
+        )}
       </section>
 
       {estadoModal && (

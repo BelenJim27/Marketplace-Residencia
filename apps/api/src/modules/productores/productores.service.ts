@@ -214,6 +214,7 @@ export class ProductoresService {
           datos_bancarios: datosBancariosEncriptados,
           asociacion: dto.asociacion ?? null,
           nombre_marca: dto.nombre_marca ?? null,
+          certificado_url: dto.certificado_url ?? null,
           motivo_rechazo: null,
           revisado_por: null,
           revisado_en: null,
@@ -246,6 +247,7 @@ export class ProductoresService {
           datos_bancarios: datosBancariosEncriptados,
           asociacion: dto.asociacion ?? null,
           nombre_marca: dto.nombre_marca ?? null,
+          certificado_url: dto.certificado_url ?? null,
           ...(dto.categorias_ids && dto.categorias_ids.length > 0
             ? {
                 productor_categoria: {

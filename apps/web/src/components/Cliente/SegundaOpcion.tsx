@@ -36,49 +36,13 @@ function getCSSVar(varName: string, fallback: string): string {
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 
-const STATS_CONFIG = [
-  {
-    key: "totalProductores" as const,
-    icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-    label: "Productores registrados",
-  },
-  {
-    key: "totalRegiones" as const,
-    icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
-      </svg>
-    ),
-    label: "Comunidades participantes",
-  },
-  {
-    key: "totalProductos" as const,
-    icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      </svg>
-    ),
-    label: "Productos trazables",
-  },
-  {
-    key: "ingresosFormateado" as const,
-    icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <line x1="12" y1="1" x2="12" y2="23" />
-        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-      </svg>
-    ),
-    label: "Ingresos generados",
-  },
+const STATS_ICONS = [
+  <svg key="s1" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  <svg key="s2" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  <svg key="s3" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>,
+  <svg key="s4" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
 ];
+const STATS_KEYS = ["totalProductores", "totalRegiones", "totalProductos", "ingresosFormateado"] as const;
 
 
 const BOTTLE_CARDS_STATIC = [
@@ -246,13 +210,13 @@ function TrazaSlide({ producto, isMobile, t }: { producto: ProductoTrazabilidad;
 }
 
 // ─── Fallback cuando no hay datos ─────────────────────────────────────────────
-function TrazaFallback({ isMobile, t }: { isMobile: boolean; t: (s: string) => string }) {
+function TrazaFallback({ isMobile, t, cfg }: { isMobile: boolean; t: (s: string) => string; cfg: LandingCfg }) {
   const PASOS_BASE = [
-    { numero: "01", titulo: "Recolección",  desc: "Agave silvestre cosechado a mano en su punto óptimo de madurez.", fecha: "" },
-    { numero: "02", titulo: "Cocción",       desc: "Las piñas se cuecen en horno cónico de tierra durante 4 días.", fecha: "" },
-    { numero: "03", titulo: "Molienda",      desc: "Machacado con tahona de piedra jalada por animal.", fecha: "" },
-    { numero: "04", titulo: "Fermentación",  desc: "Fermentación natural en tinas de madera con levaduras silvestres.", fecha: "" },
-    { numero: "05", titulo: "Destilación",   desc: "Doble destilación en alambique de cobre artesanal.", fecha: "" },
+    { numero: "01", titulo: cfg.landing_paso_1_titulo, desc: cfg.landing_paso_1_desc, fecha: "" },
+    { numero: "02", titulo: cfg.landing_paso_2_titulo, desc: cfg.landing_paso_2_desc, fecha: "" },
+    { numero: "03", titulo: cfg.landing_paso_3_titulo, desc: cfg.landing_paso_3_desc, fecha: "" },
+    { numero: "04", titulo: cfg.landing_paso_4_titulo, desc: cfg.landing_paso_4_desc, fecha: "" },
+    { numero: "05", titulo: cfg.landing_paso_5_titulo, desc: cfg.landing_paso_5_desc, fecha: "" },
   ];
   return (
     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "300px 1fr", gap: isMobile ? "24px" : "48px", alignItems: "start" }}>
@@ -287,27 +251,67 @@ function TrazaFallback({ isMobile, t }: { isMobile: boolean; t: (s: string) => s
 
 // ─── CONFIG defaults ─────────────────────────────────────────────────────────
 const LANDING_CFG_DEFAULTS = {
-  landing_hero_titulo_1:  "Oaxaca auténtico,",
-  landing_hero_titulo_2:  "trazable y justo",
-  landing_hero_subtitulo: "Conectamos el origen, la tradición y el talento de nuestras comunidades con el mundo.",
-  landing_hero_boton:     "Explorar productos",
-  landing_hero_badge_1:   "Trazabilidad completa",
-  landing_hero_badge_2:   "Comercio justo",
-  landing_hero_badge_3:   "Protección cultural",
+  // Hero
+  landing_hero_titulo_1:   "Oaxaca auténtico,",
+  landing_hero_titulo_2:   "trazable y justo",
+  landing_hero_subtitulo:  "Conectamos el origen, la tradición y el talento de nuestras comunidades con el mundo.",
+  landing_hero_boton:      "Explorar productos",
+  landing_hero_boton_2:    "Ser productor",
+  landing_hero_eyebrow:    "Trazabilidad · Origen · Identidad",
+  landing_hero_badge_1:    "Trazabilidad completa",
+  landing_hero_badge_2:    "Comercio justo",
+  landing_hero_badge_3:    "Protección cultural",
+  // Ticker
+  landing_ticker_1: "Mezcal artesanal",
+  landing_ticker_2: "Trazabilidad completa",
+  landing_ticker_3: "Comercio justo",
+  landing_ticker_4: "Oaxaca, México",
+  // Historia
+  landing_sobre_eyebrow:  "Nuestra historia",
+  landing_sobre_heading:  "El alma del",
+  landing_sobre_heading_em: "agave",
   landing_sobre_texto_1:  "Descubre el auténtico sabor del mezcal, un destilado artesanal nacido del corazón del agave.",
   landing_sobre_texto_2:  "Elaborado con procesos tradicionales que respetan la tierra y el tiempo, cada botella guarda carácter y tradición. Sus notas ahumadas y matices únicos lo convierten en una experiencia inigualable.",
   landing_sobre_cita:     "El alma de Oaxaca en cada gota",
-  landing_stats_titulo:   "Impacto que construimos juntos",
-  landing_stats_subtitulo:"Cada compra transforma vidas y preserva nuestra herencia cultural.",
-  landing_sobre_img_1:    "/fotos/16.jpg",
-  landing_sobre_img_2:    "/fotos/24.jpeg",
-  landing_sobre_img_3:    "/fotos/5.jpg",
-  landing_sobre_img_4:    "/fotos/22.jpeg",
-  landing_sobre_img_5:    "/fotos/20.jpeg",
-  landing_botella_1_img:  "/fotos/28.1.png",
-  landing_botella_2_img:  "/fotos/29.1.png",
-  landing_botella_3_img:  "/fotos/30.1.png",
-  landing_botella_4_img:  "/fotos/31.1.png",
+  // Stats
+  landing_stats_eyebrow:   "Nuestro impacto",
+  landing_stats_titulo:    "Impacto que construimos juntos",
+  landing_stats_subtitulo: "Cada compra transforma vidas y preserva nuestra herencia cultural.",
+  landing_stat_label_1:    "Productores registrados",
+  landing_stat_label_2:    "Comunidades participantes",
+  landing_stat_label_3:    "Productos trazables",
+  landing_stat_label_4:    "Ingresos generados",
+  // Trazabilidad
+  landing_traza_eyebrow:  "Cada botella, una historia",
+  landing_traza_heading:  "Escanea, descubre,",
+  landing_traza_heading_em: "confía",
+  landing_traza_desc:     "Cada producto trae un código QR único. Verás el productor, la comunidad, el lote y cuánto del precio vuelve al artesano.",
+  landing_traza_cta:      "Ver trazabilidad por botella",
+  // Pasos (trazabilidad fallback)
+  landing_paso_1_titulo: "Recolección",
+  landing_paso_1_desc:   "Agave silvestre cosechado a mano en su punto óptimo de madurez.",
+  landing_paso_2_titulo: "Cocción",
+  landing_paso_2_desc:   "Las piñas se cuecen en horno cónico de tierra durante 4 días.",
+  landing_paso_3_titulo: "Molienda",
+  landing_paso_3_desc:   "Machacado con tahona de piedra jalada por animal.",
+  landing_paso_4_titulo: "Fermentación",
+  landing_paso_4_desc:   "Fermentación natural en tinas de madera con levaduras silvestres.",
+  landing_paso_5_titulo: "Destilación",
+  landing_paso_5_desc:   "Doble destilación en alambique de cobre artesanal.",
+  // Productos destacados
+  landing_productos_eyebrow:  "Explora",
+  landing_productos_heading:  "Productos destacados",
+  landing_productos_subtitulo: "Descubre nuestra selección de mezcales, cada uno con su propia historia.",
+  // Imágenes
+  landing_sobre_img_1:  "/fotos/16.jpg",
+  landing_sobre_img_2:  "/fotos/24.jpeg",
+  landing_sobre_img_3:  "/fotos/5.jpg",
+  landing_sobre_img_4:  "/fotos/22.jpeg",
+  landing_sobre_img_5:  "/fotos/20.jpeg",
+  landing_botella_1_img: "/fotos/28.1.png",
+  landing_botella_2_img: "/fotos/29.1.png",
+  landing_botella_3_img: "/fotos/30.1.png",
+  landing_botella_4_img: "/fotos/31.1.png",
 };
 type LandingCfg = typeof LANDING_CFG_DEFAULTS;
 
@@ -439,7 +443,7 @@ export default function LandingPageOaxaca() {
               color: colorSage, fontWeight: 700,
               textShadow: "0 1px 8px rgba(0,0,0,0.9)",
             }}>
-              {t("Trazabilidad · Origen · Identidad")}
+              {t(cfg.landing_hero_eyebrow)}
             </span>
           </div>
 
@@ -518,7 +522,7 @@ export default function LandingPageOaxaca() {
                 letterSpacing: "0.03em",
               }}
             >
-              {t("Ser productor")}
+              {t(cfg.landing_hero_boton_2)}
             </button>
           </div>
         </div>
@@ -539,7 +543,7 @@ export default function LandingPageOaxaca() {
               fontSize: "13px", fontWeight: 700, letterSpacing: "0.2em",
               textTransform: "uppercase", color: colorHeading, padding: "0 28px",
             }}>
-              {t("Mezcal artesanal")} &nbsp;·&nbsp; {t("Trazabilidad completa")} &nbsp;·&nbsp; {t("Comercio justo")} &nbsp;·&nbsp; {t("Oaxaca, México")}
+              {t(cfg.landing_ticker_1)} &nbsp;·&nbsp; {t(cfg.landing_ticker_2)} &nbsp;·&nbsp; {t(cfg.landing_ticker_3)} &nbsp;·&nbsp; {t(cfg.landing_ticker_4)}
             </span>
           ))}
         </div>
@@ -573,7 +577,7 @@ export default function LandingPageOaxaca() {
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{ width: "32px", height: "2px", background: colorAccent, borderRadius: "1px" }} />
             <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.24em", textTransform: "uppercase", color: colorAccent }}>
-              {t("Nuestra historia")}
+              {t(cfg.landing_sobre_eyebrow)}
             </span>
           </div>
 
@@ -583,7 +587,7 @@ export default function LandingPageOaxaca() {
             fontWeight: 700, lineHeight: 1.15,
             color: colorHeading, margin: 0,
           }}>
-            {t("El alma del")} <em style={{ color: colorAccent }}>{t("agave")}</em>
+            {t(cfg.landing_sobre_heading)} <em style={{ color: colorAccent }}>{t(cfg.landing_sobre_heading_em)}</em>
           </h2>
 
           {/* Pull-quote */}
@@ -715,7 +719,7 @@ export default function LandingPageOaxaca() {
               fontSize: "13px", fontWeight: 700, letterSpacing: "0.22em",
               textTransform: "uppercase", color: colorAccent,
             }}>
-              {t("Nuestro impacto")}
+              {t(cfg.landing_stats_eyebrow)}
             </span>
             <div style={{ width: "24px", height: "1px", background: colorAccent }} />
           </div>
@@ -744,8 +748,9 @@ export default function LandingPageOaxaca() {
           width: "100%",
           maxWidth: "960px",
         }}>
-          {STATS_CONFIG.map((stat, i) => {
-            const valor = landingStats ? String(landingStats[stat.key] ?? "—") : "…";
+          {STATS_KEYS.map((key, i) => {
+            const valor = landingStats ? String(landingStats[key] ?? "—") : "…";
+            const label = [cfg.landing_stat_label_1, cfg.landing_stat_label_2, cfg.landing_stat_label_3, cfg.landing_stat_label_4][i];
             return (
               <div key={i} style={{
                 display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
@@ -763,7 +768,7 @@ export default function LandingPageOaxaca() {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "#F4F0E3",
                 }}>
-                  {stat.icon}
+                  {STATS_ICONS[i]}
                 </div>
                 <div>
                   <p style={{
@@ -775,7 +780,7 @@ export default function LandingPageOaxaca() {
                     {statsLoading ? "…" : valor}
                   </p>
                   <p style={{ fontSize: "14px", lineHeight: 1.5, color: "rgba(244,240,227,0.9)", margin: 0, marginTop: "6px" }}>
-                    {t(stat.label)}
+                    {t(label)}
                   </p>
                 </div>
               </div>
@@ -795,15 +800,15 @@ export default function LandingPageOaxaca() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "12px" }}>
               <div style={{ width: "24px", height: "1px", background: colorAccent }} />
               <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: colorAccent }}>
-                {t("Cada botella, una historia")}
+                {t(cfg.landing_traza_eyebrow)}
               </span>
               <div style={{ width: "24px", height: "1px", background: colorAccent }} />
             </div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: isMobile ? "24px" : "32px", fontWeight: 700, color: "#F4F0E3", margin: "0 0 12px", lineHeight: 1.2 }}>
-              {t("Escanea, descubre,")} <em style={{ color: colorSage }}>{t("confía")}</em>
+              {t(cfg.landing_traza_heading)} <em style={{ color: colorSage }}>{t(cfg.landing_traza_heading_em)}</em>
             </h2>
             <p style={{ fontSize: "15px", color: "rgba(244,240,227,0.9)", lineHeight: 1.7, maxWidth: "500px", margin: "0 auto" }}>
-              {t("Cada producto trae un código QR único. Verás el productor, la comunidad, el lote y cuánto del precio vuelve al artesano.")}
+              {t(cfg.landing_traza_desc)}
             </p>
           </div>
 
@@ -814,7 +819,7 @@ export default function LandingPageOaxaca() {
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
           ) : trazaProductos.length === 0 ? (
-            <TrazaFallback isMobile={isMobile} t={t} />
+            <TrazaFallback isMobile={isMobile} t={t} cfg={cfg} />
           ) : (
             <>
               {/* Slide activo */}
@@ -887,7 +892,7 @@ export default function LandingPageOaxaca() {
               background: colorAccent, color: colorHeading,
               border: "none", cursor: "pointer", letterSpacing: "0.03em",
             }}>
-              {t("Ver trazabilidad por botella")}
+              {t(cfg.landing_traza_cta)}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </button>
           </div>
@@ -983,15 +988,15 @@ export default function LandingPageOaxaca() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "10px" }}>
             <div style={{ width: "24px", height: "1px", background: colorAccent }} />
             <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: colorAccent }}>
-              {t("Explora")}
+              {t(cfg.landing_productos_eyebrow)}
             </span>
             <div style={{ width: "24px", height: "1px", background: colorAccent }} />
           </div>
           <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: isMobile ? "24px" : "32px", fontWeight: 700, color: colorHeading, margin: "0 0 10px", lineHeight: 1.2 }}>
-            {t("Productos destacados")}
+            {t(cfg.landing_productos_heading)}
           </h2>
           <p style={{ fontSize: "15px", color: colorBody, lineHeight: 1.6, maxWidth: "480px", margin: "0 auto" }}>
-            {t("Descubre nuestra selección de mezcales, cada uno con su propia historia.")}
+            {t(cfg.landing_productos_subtitulo)}
           </p>
         </div>
 

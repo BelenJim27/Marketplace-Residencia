@@ -1,98 +1,250 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useMemo } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import type { DashboardPeriod, VentasAnalytics } from "@/hooks/useVentasData";
+
+// Colores por nivel de rotación
+const COLOR_ALTA  = "#3d7a4f";  // ≥ 7 unidades
+const COLOR_MEDIA = "#a0b86a";  // 3–6 unidades
+const COLOR_BAJA  = "#d0a060";  // ≤ 2 unidades
 
 type Props = {
   periodo: DashboardPeriod;
-  onPeriodoChange: (periodo: DashboardPeriod) => void;
+  onPeriodoChange: (p: DashboardPeriod) => void;
   data: VentasAnalytics | null;
   isLoading: boolean;
   error: string | null;
   onRetry: () => void;
 };
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function rotationColor(qty: number): string {
+  if (qty >= 7) return COLOR_ALTA;
+  if (qty >= 3) return COLOR_MEDIA;
+  return COLOR_BAJA;
+}
+
+function rotationLabel(qty: number): string {
+  if (qty >= 7) return "Alta";
+  if (qty >= 3) return "Media";
+  return "Baja";
+}
+
+// ── Sub-componentes ────────────────────────────────────────────────────────────
+
+function MetricCard({ label, main, sub }: { label: string; main: string; sub?: string }) {
+  return (
+    <div className="flex-1 min-w-[130px] rounded-xl border border-[#C5CFB0]/60 bg-[#F4F0E3]/60 px-4 py-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-[#1F3A2E]/50">{label}</p>
+      <p className="mt-1 text-lg font-black text-[#1F3A2E] leading-tight">{main}</p>
+      {sub && <p className="mt-0.5 text-xs text-[#3D6B3F]/70 line-clamp-1">{sub}</p>}
+    </div>
+  );
+}
+
+function ProductosTooltip({ active, payload }: { active?: boolean; payload?: { payload: EnrichedItem }[] }) {
+  if (!active || !payload?.length) return null;
+  const item = payload[0]?.payload;
+  if (!item) return null;
+  return (
+    <div className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-4 py-3 text-sm shadow-[0_4px_12px_rgba(61,107,63,0.15)] max-w-[260px]">
+      <p className="font-semibold text-[#1F3A2E] mb-1.5 text-xs leading-snug">{item.x}</p>
+      <p className="font-bold text-base" style={{ color: rotationColor(item.y) }}>
+        {item.y} unidades · {item.pct}% del total
+      </p>
+      <p className="text-xs text-[#3D6B3F]/60 mt-1">
+        Rotación: {rotationLabel(item.y)}
+      </p>
+    </div>
+  );
+}
+
+// ── Tipos internos ─────────────────────────────────────────────────────────────
+
+type EnrichedItem = {
+  x: string;
+  y: number;
+  monto: number;
+  pct: number;
+  label: string;
+};
+
+// ── Componente principal ───────────────────────────────────────────────────────
+
 export function ProductosChart({ periodo, onPeriodoChange, data, isLoading, error, onRetry }: Props) {
-  const chartData = data?.productos || [];
+  const rawData = data?.productos ?? [];
+
+  const { chartData, metrics } = useMemo(() => {
+    const sorted = [...rawData].sort((a, b) => b.y - a.y);
+    const total = sorted.reduce((s, d) => s + d.y, 0);
+
+    const enriched: EnrichedItem[] = sorted.map((d) => ({
+      ...d,
+      pct: total > 0 ? Math.round((d.y / total) * 100) : 0,
+      label: `${d.y}  (${total > 0 ? Math.round((d.y / total) * 100) : 0}%)`,
+    }));
+
+    const leader = enriched[0];
+    const top2Pct =
+      total > 0 && enriched.length >= 2
+        ? Math.round(((enriched[0].y + enriched[1].y) / total) * 100)
+        : leader?.pct ?? 0;
+    const lowRotation = enriched.filter((d) => d.y <= 2).length;
+
+    return {
+      chartData: enriched,
+      metrics: { total, leader, top2Pct, lowRotation },
+    };
+  }, [rawData]);
+
+  // Altura dinámica: al menos 320px, 52px por producto
+  const chartHeight = Math.max(320, chartData.length * 52);
+
+  // Ancho del eje Y según el nombre más largo
+  const maxNameLen = chartData.reduce((max, d) => Math.max(max, d.x.length), 0);
+  const yAxisWidth = Math.min(Math.max(maxNameLen * 7, 120), 240);
 
   return (
-    <div className="rounded-[10px] border border-stroke bg-white dark:bg-gray-800 p-5 shadow-sm dark:border-gray-700">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <div id="export-productos-chart" className="rounded-2xl border border-[#C5CFB0] bg-white shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 w-full">
+      {/* Header */}
+      <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="text-lg font-semibold text-dark dark:text-white">Productos</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-300">Ranking de productos por cantidad vendida</p>
+          <h3 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
+            Productos
+          </h3>
+          <p className="text-sm text-[#3D6B3F]/70">Ranking por cantidad vendida</p>
         </div>
-        <div className="flex rounded-full bg-gray-100 p-1 dark:bg-gray-700">
-          {(["semana", "mes", "año"] as DashboardPeriod[]).map((option) => (
+        <div className="flex rounded-full bg-[#F4F0E3] border border-[#C5CFB0]/50 p-1">
+          {(["semana", "mes", "año"] as DashboardPeriod[]).map((opt) => (
             <button
-              key={option}
+              key={opt}
               type="button"
-              onClick={() => onPeriodoChange(option)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${periodo === option ? "bg-primary text-white" : "text-gray-600 hover:text-dark dark:text-gray-300 dark:hover:text-white"}`}
+              onClick={() => onPeriodoChange(opt)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                periodo === opt
+                  ? "bg-[#3d7a4f] text-white shadow-sm"
+                  : "text-[#3D6B3F]/70 hover:text-[#1F3A2E]"
+              }`}
             >
-              {labelPeriodo(option)}
+              {opt === "semana" ? "Semana" : opt === "mes" ? "Mes" : "Año"}
             </button>
           ))}
         </div>
       </div>
 
+      {/* Tarjetas de métricas */}
+      {chartData.length > 0 && (
+        <div className="mb-5 flex flex-wrap gap-3">
+          <MetricCard label="Total unidades" main={String(metrics.total)} />
+          <MetricCard
+            label="Producto líder"
+            main={`${metrics.leader?.pct ?? 0}%`}
+            sub={metrics.leader?.x}
+          />
+          <MetricCard
+            label="Top 2 representan"
+            main={`${metrics.top2Pct}%`}
+            sub="del total vendido"
+          />
+          <MetricCard
+            label="Baja rotación"
+            main={String(metrics.lowRotation)}
+            sub="productos (≤2 uds.)"
+          />
+        </div>
+      )}
+
+      {/* Gráfica */}
       {isLoading ? (
-        <ChartSkeleton />
+        <div className="h-[320px] animate-pulse rounded-xl bg-[#F4F0E3]" />
       ) : error ? (
-        <ChartError message={error} onRetry={onRetry} />
-      ) : chartData.length === 0 ? (
-        <EmptyState message="No hay productos para mostrar" />
+        <div className="flex h-[320px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-red-200 text-sm text-red-500">
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="rounded-lg bg-red-50 px-4 py-2 font-medium text-red-700 hover:bg-red-100 transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
+      ) : !chartData.length ? (
+        <div className="flex h-[320px] items-center justify-center rounded-xl border border-dashed border-[#C5CFB0] text-sm text-[#3D6B3F]/60">
+          No hay productos para mostrar
+        </div>
       ) : (
-        <ResponsiveContainer width="100%" height={320}>
-          <BarChart data={chartData} layout="vertical" margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="5 5" horizontal={false} stroke="rgba(148,163,184,0.25)" />
-            <XAxis type="number" tickLine={false} axisLine={false} />
-            <YAxis type="category" dataKey="x" tickLine={false} axisLine={false} width={180} tickFormatter={(value) => truncate(String(value), 24)} />
-            <Tooltip formatter={(value, _name, entry) => [`${Number(value)} unidades`, `${(entry as any)?.payload?.x ?? ""}`] as [string, string]} labelFormatter={() => ""} />
-            <Bar dataKey="y" radius={[0, 8, 8, 0]} animationDuration={600}>
-              {chartData.map((item, index) => (
-                <Cell key={item.x} fill={barColor(index, chartData.length)} />
+        <ResponsiveContainer width="100%" height={chartHeight}>
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 0, right: 100, left: 10, bottom: 0 }}
+          >
+            <CartesianGrid
+              strokeDasharray="4 4"
+              horizontal={false}
+              stroke="rgba(197,207,176,0.5)"
+            />
+            <XAxis
+              type="number"
+              tickLine={false}
+              axisLine={false}
+              tick={{ fill: "#3D6B3F", fontSize: 11 }}
+            />
+            <YAxis
+              type="category"
+              dataKey="x"
+              tickLine={false}
+              axisLine={false}
+              width={yAxisWidth}
+              tick={{ fill: "#1F3A2E", fontSize: 12 }}
+            />
+            <Tooltip
+              content={(props: any) => <ProductosTooltip {...props} />}
+              cursor={{ fill: "rgba(197,207,176,0.15)" }}
+            />
+            <Bar dataKey="y" radius={[0, 6, 6, 0]} animationDuration={600}>
+              {chartData.map((item, i) => (
+                <Cell key={`cell-${i}`} fill={rotationColor(item.y)} />
               ))}
-              <LabelList dataKey="y" position="right" fill="#64748b" />
+              <LabelList
+                dataKey="label"
+                position="right"
+                style={{ fill: "#64748b", fontSize: 12, fontWeight: 500 }}
+              />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       )}
-    </div>
-  );
-}
 
-function labelPeriodo(periodo: DashboardPeriod) {
-  if (periodo === "semana") return "Semana";
-  if (periodo === "año") return "Año";
-  return "Mes";
-}
-
-function barColor(index: number, total: number) {
-  if (index === 0) return "#16a34a";
-  if (index === total - 1) return "#fb923c";
-  return "#d1d5db";
-}
-
-function truncate(value: string, maxLength: number) {
-  return value.length <= maxLength ? value : `${value.slice(0, maxLength).trimEnd()}...`;
-}
-
-function ChartSkeleton() {
-  return <div className="h-[320px] animate-pulse rounded-[10px] bg-gray-100 dark:bg-gray-700" />;
-}
-
-function EmptyState({ message }: { message: string }) {
-  return <div className="flex h-[320px] items-center justify-center rounded-[10px] border border-dashed border-stroke text-sm text-gray-500 dark:border-gray-700 dark:text-gray-300">{message}</div>;
-}
-
-function ChartError({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div className="flex h-[320px] flex-col items-center justify-center gap-3 rounded-[10px] border border-dashed border-red-200 text-sm text-red-600 dark:border-red-900">
-      <p>{message}</p>
-      <button type="button" onClick={onRetry} className="rounded-lg bg-red-50 px-4 py-2 font-medium text-red-700">
-        Reintentar
-      </button>
+      {/* Leyenda de rotación */}
+      {chartData.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-4 text-xs text-[#3D6B3F]/70 border-t border-[#C5CFB0]/30 pt-3">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: COLOR_ALTA }} />
+            Alta rotación (≥7 uds.)
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: COLOR_MEDIA }} />
+            Media rotación (3–6 uds.)
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: COLOR_BAJA }} />
+            Baja rotación (≤2 uds.)
+          </span>
+        </div>
+      )}
     </div>
   );
 }

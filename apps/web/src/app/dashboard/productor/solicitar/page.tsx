@@ -238,6 +238,7 @@ export default function SolicitarPage() {
         nombre_marca: form.nombre_marca || undefined,
         id_region: form.id_region ?? undefined,
         categorias_ids: form.categorias_ids,
+        certificado_url: certificadoUrl || undefined,
         direccion_fiscal: form.direccion_calle ? {
           linea_1: form.direccion_calle, ciudad: form.direccion_ciudad,
           estado: form.direccion_estado, codigo_postal: form.direccion_cp, pais_iso2: "MX",

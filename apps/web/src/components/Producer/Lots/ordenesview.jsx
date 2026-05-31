@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
-import { Eye, X, Check, AlertCircle, Loader2, ShoppingBag } from "lucide-react";
+import { Eye, X, Check, AlertCircle, Loader2, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react";
 
 // ─── Tipos y Estilos ──────────────────────────────────────────────────────────
 
@@ -90,8 +90,12 @@ export default function OrdenesView() {
 
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // ─── Carga ────────────────────────────────────────────────────────────────
+
+  useEffect(() => { setCurrentPage(1); }, [query, storeFilter, statusFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -160,6 +164,9 @@ export default function OrdenesView() {
     });
   }, [sales, query, storeFilter, statusFilter, dateFrom, dateTo]);
 
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedOrders = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const clearFilters = () => {
     setQuery(""); setStoreFilter("todos"); setStatusFilter("todos");
     setDateFrom(""); setDateTo("");
@@ -225,7 +232,7 @@ export default function OrdenesView() {
               </tr>
             </thead>
             <tbody className="divide-y dark:divide-gray-700">
-              {filtered.map((orden) => (
+              {paginatedOrders.map((orden) => (
                 <tr key={`${orden.id_pedido}-${orden.id_detalle}`} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-4 py-3 font-medium dark:text-white">{orden.producto}</td>
                   <td className="px-4 py-3 dark:text-gray-400">{orden.tienda}</td>
@@ -240,6 +247,28 @@ export default function OrdenesView() {
             </tbody>
           </table>
         </div>
+
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+            <p className="text-sm text-[#1F3A2E]">
+              Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> de <span className="font-semibold">{filtered.length}</span> órdenes
+            </p>
+            <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
+              <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
+                className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
+                className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </nav>
+          </div>
+        )}
       </div>
     </div>
   );

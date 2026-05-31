@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap, ChevronDown, ExternalLink } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap, ChevronDown, ExternalLink, Package } from "lucide-react";
 import { api } from "@/lib/api";
 import type { ProductItem } from "@/types/producer";
 import { useCarrito } from "@/context/CarritoContext";
@@ -87,6 +87,7 @@ export default function ProductoDetallePage() {
   const { isAuthenticated } = useAuth();
 
   const [producto, setProducto] = useState<Producto | null>(null);
+  const [stock, setStock] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imagenSeleccionada, setImagenSeleccionada] = useState(0);
@@ -105,6 +106,11 @@ export default function ProductoDetallePage() {
     try {
       const data = await api.productos.getOne(id as string);
       setProducto(data as Producto);
+
+      // Obtener stock del inventario (no bloquea la carga principal)
+      api.inventario.getByProducto(id as string)
+        .then((inv) => { if (inv?.stock !== undefined) setStock(inv.stock); })
+        .catch(() => {});
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar el producto");
     } finally {
@@ -652,6 +658,26 @@ export default function ProductoDetallePage() {
 
           {/* Cantidad + acciones */}
           <div className="space-y-5 pt-6 border-t border-gray-200 dark:border-gray-700">
+
+            {/* Badge de stock */}
+            {stock !== null && (
+              <div
+                className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold"
+                style={{
+                  backgroundColor: stock === 0 ? "#fef2f2" : stock <= 10 ? "#fffbeb" : "#f0fdf4",
+                  border: `1px solid ${stock === 0 ? "#fecaca" : stock <= 10 ? "#fde68a" : "#bbf7d0"}`,
+                  color: stock === 0 ? "#dc2626" : stock <= 10 ? "#d97706" : "#16a34a",
+                }}
+              >
+                <Package size={15} />
+                {stock === 0
+                  ? "Agotado"
+                  : stock <= 10
+                  ? `Solo ${stock} unidad${stock === 1 ? "" : "es"} disponible${stock === 1 ? "" : "s"}`
+                  : `${stock} unidades en stock`}
+              </div>
+            )}
+
             <div className="flex items-center gap-6">
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Cantidad</label>
@@ -728,14 +754,14 @@ export default function ProductoDetallePage() {
                 </button>
                 <button
                   onClick={handleAgregar}
-                  disabled={agregado}
+                  disabled={agregado || stock === 0}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-medium transition-all duration-200 text-white hover:shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-                  style={{ backgroundColor: "#1F3A2E" }}
+                  style={{ backgroundColor: stock === 0 ? "#9ca3af" : "#1F3A2E" }}
                   aria-busy={agregado}
                 >
                   <ShoppingCart size={20} aria-hidden="true" />
-                  <span className="hidden sm:inline">{agregado ? "¡Agregado!" : "Agregar al carrito"}</span>
-                  <span className="sm:hidden">{agregado ? "✓" : "+"}</span>
+                  <span className="hidden sm:inline">{stock === 0 ? "Sin stock" : agregado ? "¡Agregado!" : "Agregar al carrito"}</span>
+                  <span className="sm:hidden">{stock === 0 ? "×" : agregado ? "✓" : "+"}</span>
                 </button>
               </div>
               <div className="flex gap-2">
@@ -753,19 +779,11 @@ export default function ProductoDetallePage() {
                   href={`https://www.amazon.com/s?k=${encodeURIComponent(producto.nombre)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded px-4 py-3 sm:px-6 font-semibold transition-all duration-200 hover:shadow-lg hover:brightness-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-                  style={{ backgroundColor: "#FF9900", color: "white" }}
+                  className="flex items-center justify-center gap-2 rounded px-4 py-3 sm:px-6 font-semibold transition-all duration-200 hover:shadow-lg active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px] border-2"
+                  style={{ backgroundColor: "#ffffff", color: "#131921", borderColor: "#FF9900" }}
                   title="Buscar en Amazon"
                 >
-                  {/* Amazon logo - stylized "a" and "z" with smile arc */}
-                  <svg className="w-6 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    {/* A */}
-                    <path d="M4 20v-8l4-8h1l4 8v8H12v-2H8v2H4z" fill="currentColor"/>
-                    {/* Z */}
-                    <path d="M16 12h4v2h-4v6h4v2h-6v-2h4v-4h-4v-2h2v-2h2z" fill="currentColor"/>
-                    {/* Smile arc connecting a-z */}
-                    <path d="M8 22Q16 20 20 22" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-                  </svg>
+                  <img src="/images/amazon-icon.png" alt="Amazon" className="w-6 h-6 object-contain" />
                   <span className="hidden sm:inline">Comprar en Amazon</span>
                   <span className="sm:hidden">Amazon</span>
                 </a>

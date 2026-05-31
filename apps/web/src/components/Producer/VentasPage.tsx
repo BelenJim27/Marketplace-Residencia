@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
-import { Eye } from "lucide-react";
+import { Eye, LayoutDashboard, ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 type SaleItem = {
@@ -36,15 +37,9 @@ type SalesResponse = {
 
 const PAGE_SIZE = 10;
 
-function getPageNumbers(current: number, total: number): (number | "...")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
-  if (current >= total - 3) return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
-  return [1, "...", current - 1, current, current + 1, "...", total];
-}
 
 export default function VentasPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isAdmin, isProductor } = useAuth();
   const token = getCookie("token") ?? "";
 
   const [query, setQuery] = useState("");
@@ -150,8 +145,6 @@ export default function VentasPage() {
 
   const inp = "w-full rounded-lg border border-[#C5CFB0] bg-transparent px-3 py-2 text-sm text-[#1F3A2E] outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20 placeholder:text-[#3D6B3F]/40";
   const lbl = "mb-1 block text-xs font-medium text-[#1F3A2E]/70";
-  const btnPageBase = "rounded-lg border border-[#C5CFB0] px-3 py-1.5 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/20 disabled:cursor-not-allowed disabled:opacity-40";
-
   return (
     <div className="mx-auto w-full max-w-[1200px] space-y-5">
 
@@ -160,9 +153,18 @@ export default function VentasPage() {
       )}
 
       {/* Header */}
-      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-        <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Ventas</h1>
-        <p className="text-sm text-[#3D6B3F]/70">Consulta el estado de tus movimientos comerciales.</p>
+      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)] flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Ventas</h1>
+          <p className="text-sm text-[#3D6B3F]/70">Consulta el estado de tus movimientos comerciales.</p>
+        </div>
+        <Link
+          href={isAdmin ? "/Administrador/dashboard" : "/dashboard/productor"}
+          className="flex shrink-0 items-center gap-2 rounded-xl border border-[#1F3A2E] bg-[#1F3A2E] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2a4f3a]"
+        >
+          <LayoutDashboard className="h-4 w-4" />
+          <span>Ir al panel</span>
+        </Link>
       </div>
 
       {/* Stats */}
@@ -232,8 +234,8 @@ export default function VentasPage() {
                 <th className="w-[18%] px-3 py-3">Tienda</th>
                 <th className="w-[13%] px-3 py-3">P. unit.</th>
                 <th className="w-[9%] px-3 py-3">Cant.</th>
-                <th className="w-[13%] px-3 py-3">Total</th>
-                <th className="w-[10%] px-3 py-3">Status</th>
+                <th className="w-[13%] pl-3 pr-1 py-3">Total</th>
+                <th className="w-[10%] pl-1 pr-3 py-3">Status</th>
                 <th className="w-[11%] px-3 py-3">Fecha</th>
                 <th className="w-[4%] px-3 py-3 text-right">Acc.</th>
               </tr>
@@ -250,8 +252,8 @@ export default function VentasPage() {
                   </td>
                   <td className="px-3 py-3 text-[#3D6B3F]/70 whitespace-nowrap">{formatCurrency(sale.precio_unitario, sale.moneda)}</td>
                   <td className="px-3 py-3 text-[#3D6B3F]/70">{sale.cantidad}</td>
-                  <td className="px-3 py-3 font-medium text-[#1F3A2E] whitespace-nowrap">{formatCurrency(sale.total, sale.moneda)}</td>
-                  <td className="px-3 py-3"><Badge status={sale.status} /></td>
+                  <td className="pl-3 pr-1 py-3 font-medium text-[#1F3A2E] whitespace-nowrap">{formatCurrency(sale.total, sale.moneda)}</td>
+                  <td className="pl-1 pr-3 py-3"><Badge status={sale.status} /></td>
                   <td className="px-3 py-3 text-[#3D6B3F]/60">{formatDate(sale.fecha)}</td>
                   <td className="px-3 py-3">
                     <div className="flex justify-end">
@@ -271,27 +273,24 @@ export default function VentasPage() {
       </div>
 
       {/* Paginación */}
-      {filteredSales.length > 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] px-5 py-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)] sm:flex-row sm:justify-between">
-          <p className="text-sm text-[#3D6B3F]/70">
-            {from}–{to} de {filteredSales.length} venta{filteredSales.length !== 1 ? "s" : ""}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <p className="text-sm text-[#1F3A2E]">
+            Mostrando <span className="font-semibold">{from}</span>–<span className="font-semibold">{to}</span> de <span className="font-semibold">{filteredSales.length}</span> venta{filteredSales.length !== 1 ? "s" : ""}
           </p>
-          <div className="flex items-center gap-1">
-            <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)} className={btnPageBase}>‹</button>
-            {getPageNumbers(currentPage, totalPages).map((p, i) =>
-              p === "..." ? (
-                <span key={`el-${i}`} className="px-2 text-sm text-[#3D6B3F]/50">…</span>
-              ) : (
-                <button key={p} onClick={() => setCurrentPage(p as number)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                    p === currentPage ? "bg-[#3D6B3F] text-white" : "border border-[#C5CFB0] text-[#1F3A2E] hover:bg-[#C5CFB0]/20"
-                  }`}>
-                  {p}
-                </button>
-              )
-            )}
-            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)} className={btnPageBase}>›</button>
-          </div>
+          <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
+            <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+              Página {currentPage} de {totalPages}
+            </span>
+            <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
+              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </nav>
         </div>
       )}
 
@@ -441,7 +440,7 @@ function formatCurrency(v: number, currency = "MXN") {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency, maximumFractionDigits: 0 }).format(v);
 }
 function formatDate(v: string) {
-  return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium" }).format(new Date(v));
+  return new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(v));
 }
 function normalizeStatus(s: string) { return s.trim().toLowerCase(); }
 function formatStatusLabel(s: string) { return s.charAt(0).toUpperCase() + s.slice(1); }

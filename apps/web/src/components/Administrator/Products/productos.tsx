@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import ModalNuevoProducto from './nuevoProducto';
 import ModalEditarVer from './acciones';
-import { Eye, Pencil, Trash2, Search, Plus } from "lucide-react";
+import { Eye, Pencil, Trash2, Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { formatPrice } from "@/lib/format-number";
@@ -34,6 +34,8 @@ export default function ProductosAdmin() {
 
     const [filtroTipo, setFiltroTipo] = useState("todos");
     const [filtroEstado, setFiltroEstado] = useState("todos");
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const fetchProductos = async () => {
         try {
@@ -59,6 +61,8 @@ export default function ProductosAdmin() {
     useEffect(() => {
         fetchProductos();
     }, []);
+
+    useEffect(() => { setCurrentPage(1); }, [busqueda, filtroTipo, filtroEstado]);
 
     const handleVer = (p: Producto) => {
         setProductoSeleccionado(p);
@@ -102,6 +106,9 @@ export default function ProductosAdmin() {
 
         return matchesSearch && matchesStatus && matchesTipo;
     });
+
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    const paginatedProductos = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     if (loading) return (
         <div className="p-6 text-center text-[#3D6B3F]/70 text-sm animate-pulse">
@@ -215,7 +222,7 @@ export default function ProductosAdmin() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[#C5CFB0]/30">
-                            {filtered.map((p) => (
+                            {paginatedProductos.map((p) => (
                                 <tr key={p.id_producto} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200 group">
 
                                     {/* PRODUCTO CON FOTO */}
@@ -288,6 +295,28 @@ export default function ProductosAdmin() {
                     )}
                 </div>
             </div>
+
+            {/* Paginación */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+                <p className="text-sm text-[#1F3A2E]">
+                  Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> de <span className="font-semibold">{filtered.length}</span> productos
+                </p>
+                <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
+                  <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
+                    className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </nav>
+              </div>
+            )}
 
             {/* MODAL NUEVO */}
             <ModalNuevoProducto

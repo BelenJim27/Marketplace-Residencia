@@ -368,40 +368,31 @@ export default function Pedidos() {
 
         {/* Paginación */}
         {filtered.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between pt-1">
-            <p className="text-sm text-[#3D6B3F]/70">
-              Mostrando {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length} pedidos
+          <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+            <p className="text-sm text-[#1F3A2E]">
+              Mostrando <span className="font-semibold">{(page - 1) * PAGE_SIZE + 1}</span>–<span className="font-semibold">{Math.min(page * PAGE_SIZE, filtered.length)}</span> de <span className="font-semibold">{filtered.length}</span> pedidos
             </p>
-            <div className="flex items-center gap-1">
+            <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
               <button
                 type="button"
                 disabled={page === 1}
                 onClick={() => setPage((p) => p - 1)}
-                className="rounded-lg p-2 text-[#1F3A2E] transition-all duration-200 hover:bg-[#C5CFB0]/40 disabled:cursor-not-allowed disabled:opacity-40"
+                className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-5 w-5" />
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setPage(n)}
-                  className={`h-8 w-8 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    n === page ? "bg-[#1F3A2E] text-white" : "text-[#1F3A2E] hover:bg-[#C5CFB0]/40"
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
+              <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+                Página {page} de {totalPages}
+              </span>
               <button
                 type="button"
                 disabled={page === totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="rounded-lg p-2 text-[#1F3A2E] transition-all duration-200 hover:bg-[#C5CFB0]/40 disabled:cursor-not-allowed disabled:opacity-40"
+                className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-5 w-5" />
               </button>
-            </div>
+            </nav>
           </div>
         )}
       </div>

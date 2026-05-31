@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { getCookie } from "@/lib/cookies";
@@ -51,6 +51,7 @@ export function ProductorDashboard() {
 
   const [salesPeriod, setSalesPeriod] = useState<DashboardPeriod>("mes");
   const [productsPeriod, setProductsPeriod] = useState<DashboardPeriod>("mes");
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const chartsRef = useRef<HTMLDivElement | null>(null);
 
@@ -127,22 +128,25 @@ export function ProductorDashboard() {
     link.click();
   };
 
-  const exportPdf = async () => {
-    if (!chartsRef.current) return;
-    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-      import("html2canvas"),
-      import("jspdf"),
-    ]);
-    const canvas = await html2canvas(chartsRef.current, { scale: 2, backgroundColor: "#ffffff" });
-    const pdf = new jsPDF("p", "mm", "a4");
-    const imgData = canvas.toDataURL("image/png");
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    pdf.text("Reporte de Rendimiento - Productor", 10, 10);
-    pdf.addImage(imgData, "PNG", 10, 20, pdfWidth, pdfHeight);
-    pdf.save("dashboard-analiticas.pdf");
-  };
+  const exportPdf = useCallback(async () => {
+    if (pdfLoading) return;
+    setPdfLoading(true);
+    try {
+      const { exportPdfReport } = await import("@/lib/exportPdfReport");
+      await exportPdfReport({
+        producerName:     producer?.usuarios?.nombre ?? "Productor",
+        producerPhoto:    (producer as any)?.foto_url ?? null,
+        salesData,
+        productsData,
+        ventasChartEl:    document.getElementById("export-ventas-chart"),
+        productosChartEl: document.getElementById("export-productos-chart"),
+      });
+    } catch (err) {
+      console.error("Error generando PDF:", err);
+    } finally {
+      setPdfLoading(false);
+    }
+  }, [pdfLoading, producer, salesData, productsData]);
 
   if (loading || loadingCategorias) {
     return (
@@ -214,6 +218,7 @@ export function ProductorDashboard() {
               onExportPdf={exportPdf}
               onExportCsv={exportCsv}
               disabled={salesLoading || productsLoading}
+              pdfLoading={pdfLoading}
             />
           </div>
         </div>
@@ -237,7 +242,7 @@ export function ProductorDashboard() {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
+            <div className="flex flex-col gap-8">
               <VentasChart
                 periodo={salesPeriod}
                 onPeriodoChange={setSalesPeriod}
