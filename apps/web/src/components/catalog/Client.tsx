@@ -868,12 +868,22 @@ export default function ProductCatalogEnhanced() {
                   {t("sidebar_filters")}
                 </h2>
                 {cantidadFiltros > 0 && (
-                  <span
-                    className="ml-auto text-xs font-bold px-2 py-1 rounded-full text-white"
-                    style={{ backgroundColor: hexFallbacks.brand }}
-                  >
-                    {cantidadFiltros}
-                  </span>
+                  <div className="ml-auto flex items-center gap-2">
+                    <span
+                      className="text-xs font-bold px-2 py-1 rounded-full text-white"
+                      style={{ backgroundColor: hexFallbacks.brand }}
+                    >
+                      {cantidadFiltros}
+                    </span>
+                    <button
+                      onClick={limpiarTodo}
+                      className="text-xs font-semibold hover:opacity-70 transition-opacity focus:outline-none"
+                      style={{ color: hexFallbacks.brand }}
+                      aria-label={t("reset_filters")}
+                    >
+                      {t("reset_filters")}
+                    </button>
+                  </div>
                 )}
               </div>
               <SidebarFiltersComponent
@@ -1153,6 +1163,15 @@ export default function ProductCatalogEnhanced() {
                   <h2 id="filters-modal-title" className="text-lg font-bold" style={{ fontFamily: 'var(--font-family-store)', color: hexFallbacks.textPrimary }}>
                     {t("sidebar_filters")}
                   </h2>
+                  {cantidadFiltros > 0 && (
+                    <button
+                      onClick={() => { limpiarTodo(); }}
+                      className="mt-0.5 text-xs font-semibold hover:opacity-70 transition-opacity focus:outline-none"
+                      style={{ color: hexFallbacks.brand }}
+                    >
+                      {t("reset_filters")}
+                    </button>
+                  )}
                 </div>
                 <button
                   onClick={() => setShowMobileFilters(false)}

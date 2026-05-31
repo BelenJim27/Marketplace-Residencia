@@ -99,6 +99,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       return UI_TRANSLATIONS[locale]?.[text] ?? text;
     }
     return text;
+
   }, [locale]);
 
   const translateAsync = useCallback(async (text: string): Promise<string> => {
@@ -108,6 +109,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       return UI_TRANSLATIONS[locale]?.[text] ?? text;
     }
     return text;
+
   }, [locale]);
 
   // convertPrice — convierte desde MXN

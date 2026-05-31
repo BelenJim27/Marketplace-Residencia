@@ -94,9 +94,9 @@ export default function ProductoDetallePage() {
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
   const [forceAgeGate, setForceAgeGate] = useState(false);
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const { cotizarTodos } = useShipping();
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const fetchProducto = useCallback(async () => {
     const id = params.id;
@@ -234,8 +234,18 @@ export default function ProductoDetallePage() {
 
   // Hero specs (always show if populated)
   const magueySpec = producto?.maguey;
-  const categoriaSpec = producto?.tipo_mezcal;
   const abvSpec = producto?.abv ? `${producto.abv}%` : gradoAlcohol ? `${gradoAlcohol}%` : null;
+  const categoriaSpec = producto?.tipo_mezcal || (producto?.categorias && producto.categorias.length > 0 ? producto.categorias[0] : null) || null;
+
+  const detalleTecnico = [
+    { label: "Grados de alcohol", value: gradoAlcohol ? `${gradoAlcohol}°GL` : abvSpec },
+    { label: "Tipo de agave", value: magueySpec },
+    { label: "Nombre común", value: nombreComun },
+    { label: "Nombre científico", value: nombreCientifico },
+    { label: "Región de origen", value: region },
+    { label: "Fecha de elaboración", value: fechaElaboracion },
+    { label: "Sitio de elaboración", value: sitio },
+  ].filter((d) => d.value);
 
   if (loading) {
     return (
@@ -520,6 +530,7 @@ export default function ProductoDetallePage() {
                         ))}
                       </div>
                     )}
+
                   </div>
                 ) : null
               )
@@ -787,6 +798,7 @@ export default function ProductoDetallePage() {
               </div>
             </div>
           </div>
+
 
         </div>
       </div>

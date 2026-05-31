@@ -336,9 +336,15 @@ export function useCheckout() {
     setErrorMensaje(null);
 
     try {
-      const costoEnvio = envioSeleccionado.precioTotal;
+      const costoEnvioOriginal = envioSeleccionado.precioTotal;
+      const envioMoneda = (envioSeleccionado.moneda ?? 'MXN').toUpperCase();
+      // Todos los items del carrito están en MXN (moneda_base = 'MXN').
+      // Convertir el costo de envío a MXN antes de sumar para evitar mezcla de monedas.
+      const costoEnvioMXN = envioMoneda !== 'MXN' && ratesMXN[envioMoneda as keyof typeof ratesMXN]
+        ? parseFloat((costoEnvioOriginal / ratesMXN[envioMoneda as keyof typeof ratesMXN]!).toFixed(2))
+        : costoEnvioOriginal;
       const subtotal = parseFloat(precioTotal.toFixed(2));
-      const totalConEnvio = parseFloat((precioTotal + costoEnvio).toFixed(2));
+      const totalConEnvio = parseFloat((precioTotal + costoEnvioMXN).toFixed(2));
 
       let pedidoId: string;
       let pedidoRecienCreado = false;
@@ -348,10 +354,12 @@ export function useCheckout() {
         const pedido = await api.pedidos.create(token, {
           id_usuario: user.id_usuario,
           estado: "pendiente",
-          total: totalConEnvio.toString(),
-          moneda: currency,
-          tipo_cambio: currency === "USD" ? String(ratesMXN?.USD ?? 1) : undefined,
-          moneda_referencia: "MXN",
+          total: totalConEnvio.toString(),  // siempre en MXN
+          moneda: 'MXN',
+          tipo_cambio: currency !== 'MXN' && ratesMXN[currency as keyof typeof ratesMXN]
+            ? String(ratesMXN[currency as keyof typeof ratesMXN])
+            : undefined,
+          moneda_referencia: currency !== 'MXN' ? currency : undefined,
           pais_destino_iso2: direccionSeleccionada.pais_iso2 ?? (direccionSeleccionada.ubicacion as any)?.pais ?? "MX",
           direccion_envio_snapshot: direccionSeleccionada,
         }) as { id?: number; id_pedido?: number };
@@ -375,8 +383,8 @@ export function useCheckout() {
         // CAMBIO 2: Inclusión de transportista_codigo y codigo_servicio
         await api.envios.create(token, {
           id_pedido: Number(pedidoId),
-          costo_envio: String(costoEnvio),
-          moneda_costo: envioSeleccionado.moneda,
+          costo_envio: String(costoEnvioMXN),
+          moneda_costo: 'MXN',
           peso_kg: String(pesoTotal),
           estado: "preparando",
           transportista_codigo: (envioSeleccionado as any).carrier, // nuevo
@@ -411,7 +419,7 @@ export function useCheckout() {
           pagoResponse = await api.pagos.paypal.createOrder(token, {
             id_pedido: pedidoId,
             subtotal,
-            shipping_amount: costoEnvio,
+            shipping_amount: costoEnvioMXN,
             moneda: "MXN",
             shipping_address: buildShippingAddressForStripe(direccionSeleccionada),
           });
@@ -421,7 +429,7 @@ export function useCheckout() {
           pagoResponse = await api.pagos.stripe.createIntent(token, {
             id_pedido: pedidoId,
             subtotal,
-            shipping_amount: costoEnvio,
+            shipping_amount: costoEnvioMXN,
             moneda: "MXN",
             shipping_address: buildShippingAddressForStripe(direccionSeleccionada),
             recipient_name: recipientName,
@@ -511,7 +519,14 @@ export function useCheckout() {
     }
   }, [user?.id_usuario, prepararPago]);
 
-  const totalConEnvio = precioTotal + (envioSeleccionado?.precioTotal ?? 0);
+  const totalConEnvio = (() => {
+    if (!envioSeleccionado) return precioTotal;
+    const moneda = (envioSeleccionado.moneda ?? 'MXN').toUpperCase();
+    const envioEnMXN = moneda !== 'MXN' && ratesMXN[moneda as keyof typeof ratesMXN]
+      ? envioSeleccionado.precioTotal / ratesMXN[moneda as keyof typeof ratesMXN]!
+      : envioSeleccionado.precioTotal;
+    return precioTotal + envioEnMXN;
+  })();
 
   return {
     paso,

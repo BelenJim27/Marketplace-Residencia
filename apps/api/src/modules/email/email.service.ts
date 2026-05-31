@@ -109,13 +109,31 @@ export class EmailService {
     email: string,
     orderNumber: string,
     totalAmount: number,
-    options?: { incluyeAlcohol?: boolean },
+    options?: { incluyeAlcohol?: boolean; lang?: 'es' | 'en' },
   ): Promise<void> {
     const incluyeAlcohol = !!options?.incluyeAlcohol;
+    const lang = options?.lang ?? 'es';
+    const isEn = lang === 'en';
+
+    const strings = {
+      subject: isEn
+        ? `Your order ${orderNumber} has been confirmed`
+        : `Tu orden ${orderNumber} ha sido confirmada`,
+      heading: isEn ? 'Order Confirmed!' : '¡Orden confirmada!',
+      intro: isEn
+        ? 'Your order has been received successfully.'
+        : 'Tu orden ha sido recibida exitosamente.',
+      labelOrder: isEn ? 'Order number:' : 'Número de orden:',
+      labelTotal: isEn ? 'Total amount:' : 'Monto total:',
+      shipping: isEn
+        ? 'You will receive shipping updates soon.'
+        : 'Recibirás actualizaciones sobre el estado de tu envío pronto.',
+      cta: isEn ? 'View my orders' : 'Ver mis órdenes',
+      moreInfo: isEn ? 'More information' : 'Más información',
+    };
 
     // Surgeon General Warning — required (27 CFR 16.21) for any order containing alcohol.
-    // Inserted only when at least one item belongs to a regulated category, so non-alcohol
-    // orders aren't burdened with the warning.
+    // Always in English as required by US federal law, regardless of the email language.
     const alcoholBlock = incluyeAlcohol
       ? `
             <div style="margin: 20px 0; padding: 15px; border: 2px solid #b45309; background: #fffbeb; border-radius: 6px; color: #78350f; font-size: 12px; line-height: 1.5;">
@@ -124,13 +142,13 @@ export class EmailService {
               <br />
               <strong>(2)</strong> Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.
               <br /><br />
-              <a href="${process.env.FRONTEND_URL}/alcohol-disclaimer" style="color:#78350f; text-decoration:underline;">Más información</a>
+              <a href="${process.env.FRONTEND_URL}/alcohol-disclaimer" style="color:#78350f; text-decoration:underline;">${strings.moreInfo}</a>
             </div>`
       : '';
 
     const html = `
       <!DOCTYPE html>
-      <html>
+      <html lang="${lang}">
       <head>
         <meta charset="utf-8">
         <style>
@@ -145,14 +163,14 @@ export class EmailService {
       <body>
         <div class="container">
           <div class="card">
-            <h2>¡Orden confirmada!</h2>
-            <p>Tu orden ha sido recibida exitosamente.</p>
+            <h2>${strings.heading}</h2>
+            <p>${strings.intro}</p>
             <div class="highlight">
-              <p><strong>Número de orden:</strong> ${orderNumber}</p>
-              <p><strong>Monto total:</strong> $${totalAmount.toFixed(2)}</p>
+              <p><strong>${strings.labelOrder}</strong> ${orderNumber}</p>
+              <p><strong>${strings.labelTotal}</strong> $${totalAmount.toFixed(2)}</p>
             </div>
-            <p>Recibirás actualizaciones sobre el estado de tu envío pronto.</p>
-            <a href="${process.env.FRONTEND_URL}/pedidos" class="button">Ver mis órdenes</a>
+            <p>${strings.shipping}</p>
+            <a href="${process.env.FRONTEND_URL}/pedidos" class="button">${strings.cta}</a>
             ${alcoholBlock}
             <div class="footer">
               <p>© ${new Date().getFullYear()} Marketplace</p>
@@ -165,7 +183,7 @@ export class EmailService {
 
     await this.sendEmail({
       to: email,
-      subject: `Tu orden ${orderNumber} ha sido confirmada`,
+      subject: strings.subject,
       html,
     });
   }

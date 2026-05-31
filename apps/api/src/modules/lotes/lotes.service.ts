@@ -215,7 +215,6 @@ export class LotesService {
         data: {
           nombre:         nombreProducto,
           metadata:       metadata as any,
-          status:         loteApi.estado ?? 'activo',
           actualizado_en: new Date(),
         },
       });
@@ -248,7 +247,7 @@ export class LotesService {
           descripcion:          `Mezcal registrado en trazabilidad. Folio: ${loteApi.folio ?? '-'}`,
           precio_base:          0,   // El productor lo ajusta manualmente en el panel
           moneda_base:          'MXN',
-          status:               loteApi.estado ?? 'activo',
+          status:               'activo',
           metadata:             metadata as any,
           imagen_principal_url: null,
         },

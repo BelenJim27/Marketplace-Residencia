@@ -157,12 +157,13 @@ export class FedexService implements ICarrierService {
           },
           documentShipment: false,
           commodities: [{
-            description: dto.descripcion_contenido ?? 'Mezcal artesanal',
+            // US Customs requires English descriptions for international shipments.
+            description: dto.descripcion_contenido_en ?? dto.descripcion_contenido ?? 'Artisanal Mezcal - Distilled Agave Spirit',
             countryOfManufacture: 'MX',
             quantity: 1,
             quantityUnits: 'PCS',
-            unitPrice: { amount: dto.valor_declarado_usd ?? 10.00, currency: 'USD' },
-            customsValue: { amount: dto.valor_declarado_usd ?? 10.00, currency: 'USD' },
+            unitPrice: { amount: dto.valor_declarado_usd ?? 20.00, currency: 'USD' },
+            customsValue: { amount: dto.valor_declarado_usd ?? 20.00, currency: 'USD' },
             weight: { units: 'KG', value: Number(dto.peso_kg) }
           }]
         };
@@ -450,7 +451,10 @@ export class FedexService implements ICarrierService {
     }
 
     if (destCountry !== 'MX') {
-      const declaredValue = Number(envio.valor_declarado_aduana || 10);
+      if (!envio.valor_declarado_aduana || Number(envio.valor_declarado_aduana) < 1) {
+        this.logger.warn(`Envío ${envio.id_envio ?? 'N/A'}: valor_declarado_aduana no definido; usando $20 USD. Actualiza el envío con el valor real del pedido.`);
+      }
+      const declaredValue = Number(envio.valor_declarado_aduana || 20);
       const declaredCurrency = envio.moneda_aduana ?? 'USD';
       body.requestedShipment.customsClearanceDetail = {
         dutiesPayment: {
@@ -459,14 +463,16 @@ export class FedexService implements ICarrierService {
         },
         documentShipment: false,
         commodities: [{
-          description: envio.contenido_descripcion ?? 'Mezcal artesanal',
+          // US Customs requires English descriptions for international shipments.
+          description: envio.contenido_descripcion_en ?? envio.contenido_descripcion ?? 'Artisanal Mezcal - Distilled Agave Spirit',
           countryOfManufacture: 'MX',
           quantity: 1,
           quantityUnits: 'PCS',
           unitPrice: { amount: declaredValue, currency: declaredCurrency },
           customsValue: { amount: declaredValue, currency: declaredCurrency },
           weight: { units: 'KG', value: Number(envio.peso_kg || 1) },
-          ...(envio.codigo_hs && { harmonizedCode: envio.codigo_hs }),
+          // HS 2208.90 = bebidas destiladas (mezcal, tequila, otros destilados de agave)
+          harmonizedCode: envio.codigo_hs ?? '220890',
         }],
       };
     }

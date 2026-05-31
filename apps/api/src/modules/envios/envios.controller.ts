@@ -1,4 +1,4 @@
-import { Headers, UnauthorizedException, HttpException, HttpStatus } from '@nestjs/common';
+import { Headers, Logger, UnauthorizedException, HttpException, HttpStatus } from '@nestjs/common';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +11,8 @@ import { TasasCambioService } from '../tasas-cambio/tasas-cambio.service';
 
 @Controller('envios')
 export class EnviosController {
+  private readonly logger = new Logger('EnviosController');
+
   constructor(
     private readonly service: EnviosService,
     private readonly fedexService: FedexService,
@@ -68,7 +70,9 @@ export class EnviosController {
             const conv = await this.tasasCambio.convertir(q.moneda, 'MXN', String(q.precioTotal));
             q.precioTotal = conv.monto_destino;
             q.moneda = 'MXN';
-          } catch { /* sin tasa vigente: mantener moneda original */ }
+          } catch (err: any) {
+            this.logger.warn(`Sin tasa de cambio ${q.moneda}→MXN para cotización ${q.productCode}: ${err?.message}`);
+          }
         }
       }
     }
