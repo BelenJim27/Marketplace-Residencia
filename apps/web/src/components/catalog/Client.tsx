@@ -269,14 +269,8 @@ const ProductCard = memo(function ProductCard({
             style={{ borderColor: "rgba(0, 0, 0, 0.06)" }}
           >
             <div className="flex items-baseline gap-1">
-<<<<<<< HEAD
-              <span className="text-xs text-gray-500 font-semibold">$</span>
-              <span className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "Courier New, monospace", color: "var(--catalog-price, #C97A3E)" }}>
-                {formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
-=======
               <span className="text-xl sm:text-2xl font-bold text-amber-700" style={{ fontFamily: "Courier New, monospace" }}>
                 {convertPrice(Number(producto.precio_base || 0))}
->>>>>>> 0bcd801103da1e104ade8759757e58614a22afba
               </span>
             </div>
 

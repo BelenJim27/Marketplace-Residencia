@@ -762,13 +762,8 @@ export default function ProductoDetallePage() {
                   aria-busy={agregado}
                 >
                   <ShoppingCart size={20} aria-hidden="true" />
-<<<<<<< HEAD
-                  <span className="hidden sm:inline">{stock === 0 ? "Sin stock" : agregado ? "¡Agregado!" : "Agregar al carrito"}</span>
-                  <span className="sm:hidden">{stock === 0 ? "×" : agregado ? "✓" : "+"}</span>
-=======
                   <span className="hidden sm:inline">{agregado ? t("catalog_added_success") : t("Agregar al carrito")}</span>
                   <span className="sm:hidden">{agregado ? "✓" : "+"}</span>
->>>>>>> 0bcd801103da1e104ade8759757e58614a22afba
                 </button>
               </div>
               <div className="flex gap-2">
@@ -790,10 +785,6 @@ export default function ProductoDetallePage() {
                   style={{ backgroundColor: "#ffffff", color: "#131921", borderColor: "#FF9900" }}
                   title="Buscar en Amazon"
                 >
-<<<<<<< HEAD
-                  <img src="/images/amazon-icon.png" alt="Amazon" className="w-6 h-6 object-contain" />
-                  <span className="hidden sm:inline">Comprar en Amazon</span>
-=======
                   {/* Amazon logo - stylized "a" and "z" with smile arc */}
                   <svg className="w-6 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     {/* A */}
@@ -804,7 +795,6 @@ export default function ProductoDetallePage() {
                     <path d="M8 22Q16 20 20 22" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
                   </svg>
                   <span className="hidden sm:inline">{t("Comprar en Amazon")}</span>
->>>>>>> 0bcd801103da1e104ade8759757e58614a22afba
                   <span className="sm:hidden">Amazon</span>
                 </a>
               </div>

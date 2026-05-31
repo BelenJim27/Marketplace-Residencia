@@ -93,11 +93,7 @@ export default function PayoutsAdminPage() {
 
   useEffect(() => {
     load();
-<<<<<<< HEAD
-    setCurrentPage(1);
-=======
     loadResumenPendientes();
->>>>>>> 0bcd801103da1e104ade8759757e58614a22afba
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroEstado, filtroProductor]);
 

@@ -3,12 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-<<<<<<< HEAD
-import { ArrowLeft, ShoppingCart, Heart, MapPin, Droplets, Flame, Leaf, Package } from 'lucide-react';
-import { formatPrice } from '@/lib/format-number';
-=======
 import { ArrowLeft, ShoppingCart, Heart, MapPin, Droplets, Flame, Leaf } from 'lucide-react';
->>>>>>> 0bcd801103da1e104ade8759757e58614a22afba
 import { useCarrito } from '@/context/CarritoContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
@@ -302,11 +297,7 @@ export function ProductDetailPremium({ producto, stock = null, onBack }: Product
                   }}
                 >
                   <ShoppingCart size={18} />
-<<<<<<< HEAD
-                  {sinStock ? 'Sin stock' : agregado ? '¡Agregado!' : 'Agregar al carrito'}
-=======
                   {agregado ? t("catalog_added_success") : t("product_detail_add_to_cart")}
->>>>>>> 0bcd801103da1e104ade8759757e58614a22afba
                 </button>
                 <button
                   onClick={toggleWishlist}
