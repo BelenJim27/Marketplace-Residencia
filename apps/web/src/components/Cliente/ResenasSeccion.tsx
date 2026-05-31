@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
 import { getCookie } from "@/lib/cookies";
+import RatingAgregado from "@/components/Cliente/RatingAgregado";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -158,6 +159,7 @@ function ResenaForm({
 // ─── Card de una reseña ───────────────────────────────────────────────────────
 
 function ResenaCard({ resena }: { resena: Resena }) {
+  const { t } = useLocale();
   const nombreCompleto = [resena.usuarios.nombre, resena.usuarios.apellido_paterno]
     .filter(Boolean)
     .join(" ");
@@ -181,7 +183,7 @@ function ResenaCard({ resena }: { resena: Resena }) {
               {nombreCompleto}
             </p>
             {resena.compra_verificada && (
-              <span className="text-xs text-green-600 font-medium whitespace-nowrap">{useLocale().t("✓ Compra verificada")}</span>
+              <span className="text-xs text-green-600 font-medium whitespace-nowrap">{t("✓ Compra verificada")}</span>
             )}
           </div>
           <p className="text-xs text-gray-400">{fecha}</p>
@@ -207,7 +209,7 @@ function ResenaCard({ resena }: { resena: Resena }) {
       {resena.respuesta_vendedor && (
         <div className="mt-3 ml-10 pl-3 border-l-2 border-amber-200">
           <p className="text-xs font-semibold mb-0.5" style={{ color: "var(--bio-color-precio, #8b6914)" }}>
-            {useLocale().t("Respuesta del productor")}
+            {t("Respuesta del productor")}
           </p>
           <p className="text-xs text-gray-500">{resena.respuesta_vendedor}</p>
         </div>
@@ -255,6 +257,8 @@ export default function ResenasSeccion({ productoId }: Props) {
       >
         {t("Reseñas")}
       </h3>
+
+      <RatingAgregado productoId={productoId} />
 
       {/* Formulario */}
       <ResenaForm

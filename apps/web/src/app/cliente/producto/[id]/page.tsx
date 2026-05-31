@@ -12,7 +12,6 @@ import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
 import { useShipping } from "@/hooks/useShipping";
-import RatingAgregado from "@/components/Cliente/RatingAgregado";
 const ResenasSeccion = lazy(() => import("@/components/Cliente/ResenasSeccion"));
 const ProductosSimilares = lazy(() => import("@/components/Cliente/ProductosRelacionados").then(m => ({ default: m.ProductosSimilares })));
 const TambienCompraron = lazy(() => import("@/components/Cliente/ProductosRelacionados").then(m => ({ default: m.TambienCompraron })));
@@ -552,9 +551,6 @@ export default function ProductoDetallePage() {
               {convertPrice(Number(producto.precio_base || 0))}
             </p>
           </div>
-
-          {/* ★ Rating agregado */}
-          <RatingAgregado productoId={productoId} />
 
           {/* Disclaimer regulatorio */}
           <CategoryDisclaimer
