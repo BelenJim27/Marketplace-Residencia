@@ -11,7 +11,6 @@ import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
-import { formatPrice } from "@/lib/format-number";
 import { useShipping } from "@/hooks/useShipping";
 import RatingAgregado from "@/components/Cliente/RatingAgregado";
 const ResenasSeccion = lazy(() => import("@/components/Cliente/ResenasSeccion"));
@@ -86,7 +85,7 @@ export default function ProductoDetallePage() {
   const { agregarProducto } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
-  const { t } = useLocale();
+  const { t, convertPrice } = useLocale();
 
   const [producto, setProducto] = useState<Producto | null>(null);
   const [stock, setStock] = useState<number | null>(null);
@@ -206,22 +205,22 @@ export default function ProductoDetallePage() {
   // Specs grouping for mezcal domain
   const specGroups = {
     "Dónde y Qué": [
-      { label: "Región de Origen", value: region, help: "Estado o región donde se produjo" },
-      { label: "Tipo de Maguey", value: producto?.maguey, help: "La planta base del mezcal" },
-      { label: "Clasificación", value: producto?.tipo_mezcal, help: "Artesanal, ancestral, o industrial" },
-      { label: "Maestro Productor", value: producto?.maestro_mezcalero || nombreProductor, help: "Productor responsable" },
+      { label: t("Región de Origen"), value: region, help: t("Estado o región donde se produjo") },
+      { label: t("Tipo de Maguey"), value: producto?.maguey, help: t("La planta base del mezcal") },
+      { label: t("Clasificación"), value: producto?.tipo_mezcal, help: t("Artesanal, ancestral, o industrial") },
+      { label: t("Maestro Productor"), value: producto?.maestro_mezcalero || nombreProductor, help: t("Productor responsable") },
     ],
     "Cómo se Hace": [
-      { label: "Tipo de Horno", value: producto?.destilacion, help: "Método de cocción del maguey" },
-      { label: "Molienda", value: producto?.molienda, help: "Cómo se tritura el maguey" },
-      { label: "Graduación Alcohólica", value: producto?.abv ? `${producto.abv}%` : gradoAlcohol ? `${gradoAlcohol}%` : null, help: "Fuerza del mezcal" },
+      { label: t("Tipo de Horno"), value: producto?.destilacion, help: t("Método de cocción del maguey") },
+      { label: t("Molienda"), value: producto?.molienda, help: t("Cómo se tritura el maguey") },
+      { label: t("Graduación Alcohólica"), value: producto?.abv ? `${producto.abv}%` : gradoAlcohol ? `${gradoAlcohol}%` : null, help: t("Fuerza del mezcal") },
     ],
     "Cómo Sabe": [
-      { label: "Notas de Sabor", value: producto?.perfil, help: "Aromas y sabores principales" },
-      { label: "Nombre Local", value: nombreComun, help: "Cómo se conoce la planta localmente" },
-      { label: "Nombre Científico", value: nombreCientifico, help: "Clasificación botánica" },
+      { label: t("Notas de Sabor"), value: producto?.perfil, help: t("Aromas y sabores principales") },
+      { label: t("Nombre Local"), value: nombreComun, help: t("Cómo se conoce la planta localmente") },
+      { label: t("Nombre Científico"), value: nombreCientifico, help: t("Clasificación botánica") },
     ],
-  } as const;
+  };
 
   // Filter out empty specs, but keep at least one group visible with fallback message
   const filteredGroups = Object.fromEntries(
@@ -494,7 +493,7 @@ export default function ProductoDetallePage() {
                       aria-expanded={expandedGroup === groupName}
                       aria-controls={`specs-${groupName}`}
                     >
-                      <span className="font-medium text-gray-900 dark:text-white text-left text-sm">{groupName}</span>
+                      <span className="font-medium text-gray-900 dark:text-white text-left text-sm">{t(groupName)}</span>
                       <ChevronDown
                         size={18}
                         className={`transition-transform flex-shrink-0 ml-2 ${expandedGroup === groupName ? "rotate-180" : ""}`}
@@ -550,7 +549,7 @@ export default function ProductoDetallePage() {
               className="text-2xl sm:text-3xl font-bold"
               style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}
             >
-              ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })}
+              {convertPrice(Number(producto.precio_base || 0))}
             </p>
           </div>
 
@@ -566,17 +565,17 @@ export default function ProductoDetallePage() {
           {/* Hero Specs - Key characteristics first */}
           {(magueySpec || categoriaSpec || abvSpec) && (
             <div className="space-y-3 rounded-lg p-4 sm:p-5" style={{ backgroundColor: "var(--bio-color-fondo-sec, #f0ebe0)", border: "1px solid #e8dcc8" }}>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--bio-color-precio, #8b6914)" }}>Características</p>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--bio-color-precio, #8b6914)" }}>{t("Características")}</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {magueySpec && (
                   <div className="space-y-2">
-                    <span className="block text-xs text-gray-600 dark:text-gray-400">Maguey</span>
+                    <span className="block text-xs text-gray-600 dark:text-gray-400">{t("Maguey")}</span>
                     <p className="font-semibold text-base break-words" style={{ color: "#1F3A2E", fontFamily: "'Playfair Display', Georgia, serif" }}>{magueySpec}</p>
                   </div>
                 )}
                 {categoriaSpec && (
                   <div className="space-y-2">
-                    <span className="block text-xs text-gray-600 dark:text-gray-400">Categoría</span>
+                    <span className="block text-xs text-gray-600 dark:text-gray-400">{t("Categoría")}</span>
                     <p className="font-semibold text-base break-words" style={{ color: "#1F3A2E", fontFamily: "'Playfair Display', Georgia, serif" }}>{categoriaSpec}</p>
                   </div>
                 )}
@@ -785,15 +784,7 @@ export default function ProductoDetallePage() {
                   style={{ backgroundColor: "#ffffff", color: "#131921", borderColor: "#FF9900" }}
                   title="Buscar en Amazon"
                 >
-                  {/* Amazon logo - stylized "a" and "z" with smile arc */}
-                  <svg className="w-6 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    {/* A */}
-                    <path d="M4 20v-8l4-8h1l4 8v8H12v-2H8v2H4z" fill="currentColor"/>
-                    {/* Z */}
-                    <path d="M16 12h4v2h-4v6h4v2h-6v-2h4v-4h-4v-2h2v-2h2z" fill="currentColor"/>
-                    {/* Smile arc connecting a-z */}
-                    <path d="M8 22Q16 20 20 22" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-                  </svg>
+                  <img src="/images/amazon-icon.png" alt="Amazon" className="w-6 h-6 object-contain" aria-hidden="true" />
                   <span className="hidden sm:inline">{t("Comprar en Amazon")}</span>
                   <span className="sm:hidden">Amazon</span>
                 </a>

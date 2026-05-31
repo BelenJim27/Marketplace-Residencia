@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
-import { formatPrice } from "@/lib/format-number";
+import { useLocale } from "@/context/LocaleContext";
 
 interface Producto {
   id_producto: bigint;
@@ -47,6 +47,7 @@ export default function TiendaPage() {
   const { agregarProducto } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
+  const { convertPrice } = useLocale();
 
   const [tienda, setTienda] = useState<Tienda | null>(null);
   const [productor, setProductor] = useState<Productor | null>(null);
@@ -276,7 +277,7 @@ export default function TiendaPage() {
                         className="font-bold text-base"
                         style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#306B3F" }}
                       >
-                        ${formatPrice(Number(producto.precio_base || 0), { showCurrency: false })} MXN
+                        {convertPrice(Number(producto.precio_base || 0))}
                       </span>
                     </div>
                     <button

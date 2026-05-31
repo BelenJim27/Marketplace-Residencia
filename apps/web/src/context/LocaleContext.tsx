@@ -45,7 +45,7 @@ const translations: Record<string, Record<string, string>> = {
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState("es");
-  const [rates, setRates] = useState<Record<string, number>>({ MXN: 1 });
+  const [rates, setRates] = useState<Record<string, number>>({ MXN: 1, USD: 0.050, EUR: 0.046, BRL: 0.27, CNY: 0.36, JPY: 7.8 });
   const [loadingRates, setLoadingRates] = useState(false);
   const [currency, setCurrencyState] = useState<Currency>("MXN");
 
@@ -90,17 +90,24 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     if (saved && LOCALE_CONFIG[saved]) setLocaleState(saved);
   }, []);
 
-  // t() — busca traducción en los JSONs por namespaces (catalog, checkout, legal) + UI_TRANSLATIONS fallback
+  // t() — busca en el JSON del locale actual primero (funciona para claves tipo "catalog_added_success"
+  // en todos los idiomas, incluyendo "es"); solo si no hay match, cae al texto original
   const t = useCallback((text: string): string => {
-    if (locale === "es") return text;
-    // Prioridad: JSONs por namespace > UI_TRANSLATIONS (legacy)
-    return translations[locale]?.[text] ?? UI_TRANSLATIONS[locale]?.[text] ?? text;
+    const fromJson = translations[locale]?.[text];
+    if (fromJson !== undefined) return fromJson;
+    if (locale !== "es") {
+      return UI_TRANSLATIONS[locale]?.[text] ?? text;
+    }
+    return text;
   }, [locale]);
 
-  // translateAsync — devuelve lo mismo que t() (no es async, pero mantiene la firma)
   const translateAsync = useCallback(async (text: string): Promise<string> => {
-    if (locale === "es") return text;
-    return translations[locale]?.[text] ?? UI_TRANSLATIONS[locale]?.[text] ?? text;
+    const fromJson = translations[locale]?.[text];
+    if (fromJson !== undefined) return fromJson;
+    if (locale !== "es") {
+      return UI_TRANSLATIONS[locale]?.[text] ?? text;
+    }
+    return text;
   }, [locale]);
 
   // convertPrice — convierte desde MXN

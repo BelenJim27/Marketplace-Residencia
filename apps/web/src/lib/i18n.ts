@@ -18,6 +18,16 @@ export const LOCALE_CONFIG: Record<string, {
 // No hay más llamadas a MyMemory — se usan lookup directo desde LocaleContext
 
 // ─── Moneda con ExchangeRate-API ───────────────────────────────────────────
+// Tasas aproximadas de respaldo (1 MXN → X moneda) actualizadas manualmente
+const FALLBACK_RATES: Record<string, number> = {
+  MXN: 1,
+  USD: 0.050,
+  EUR: 0.046,
+  BRL: 0.27,
+  CNY: 0.36,
+  JPY: 7.8,
+};
+
 let ratesCache: { data: Record<string, number>; ts: number } | null = null;
 
 export async function getExchangeRates(): Promise<Record<string, number>> {
@@ -27,13 +37,17 @@ export async function getExchangeRates(): Promise<Record<string, number>> {
 
   try {
     const KEY = process.env.NEXT_PUBLIC_EXCHANGERATE_API_KEY;
+    if (!KEY) {
+      ratesCache = { data: FALLBACK_RATES, ts: now };
+      return FALLBACK_RATES;
+    }
     const res = await fetch(`https://v6.exchangerate-api.com/v6/${KEY}/latest/MXN`);
     const data = await res.json();
-    const rates = data.conversion_rates || { MXN: 1 };
+    const rates = data.conversion_rates || FALLBACK_RATES;
     ratesCache = { data: rates, ts: now };
     return ratesCache.data;
   } catch {
-    return { MXN: 1 }; // si falla, sin conversión
+    return FALLBACK_RATES;
   }
 }
 
@@ -41,6 +55,7 @@ export function formatPrice(amount: number, currency: string, numberLocale: stri
   return new Intl.NumberFormat(numberLocale, {
     style: "currency",
     currency,
+    currencyDisplay: currency === "MXN" ? "symbol" : "code",
     maximumFractionDigits: 2,
   }).format(amount);
 }

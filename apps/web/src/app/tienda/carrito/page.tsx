@@ -6,12 +6,11 @@ import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, ShoppingBag, Info } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
 import { useLocale } from "@/context/LocaleContext";
-import { formatPrice } from "@/lib/format-number";
 
 export default function CarritoPage() {
   const router = useRouter();
   const { items, precioTotal, actualizarCantidad, eliminarProducto } = useCarrito();
-  const { t } = useLocale();
+  const { t, convertPrice } = useLocale();
 
   if (items.length === 0) {
     return (
@@ -101,7 +100,7 @@ export default function CarritoPage() {
                       {item.nombre}
                     </h3>
                     <p className="text-xs text-gray-500">
-                      ${formatPrice(Number(item.precio_base), { showCurrency: false })} {t("cart_price_unit")}
+                      {convertPrice(Number(item.precio_base))} {t("cart_price_unit")}
                     </p>
                   </div>
                 </Link>
@@ -130,7 +129,7 @@ export default function CarritoPage() {
                 {/* Total */}
                 <div className="mb-4 text-right lg:mb-0 lg:text-center">
                   <p className="font-bold text-gray-900 dark:text-white">
-                    ${formatPrice(Number(item.precio_base) * item.cantidad, { showCurrency: false })}
+                    {convertPrice(Number(item.precio_base) * item.cantidad)}
                   </p>
                 </div>
 
@@ -169,7 +168,7 @@ export default function CarritoPage() {
                   {t("cart_summary_subtotal")} ({items.length} {items.length === 1 ? "producto" : "productos"})
                 </span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  ${formatPrice(subtotal, { showCurrency: false })} MXN
+                  {convertPrice(subtotal)}
                 </span>
               </div>
 
@@ -198,7 +197,7 @@ export default function CarritoPage() {
             <div className="flex justify-between border-b border-gray-200 py-4 dark:border-gray-700">
               <span className="font-semibold text-gray-900 dark:text-white">{t("cart_summary_subtotal")}</span>
               <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                ${formatPrice(subtotal, { showCurrency: false })} MXN
+                {convertPrice(subtotal)}
               </span>
             </div>
 

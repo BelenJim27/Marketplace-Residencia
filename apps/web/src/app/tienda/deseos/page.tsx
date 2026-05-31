@@ -6,12 +6,11 @@ import { Heart, ShoppingBag, Trash2, ArrowRight } from "lucide-react";
 import { useWishlist } from "@/context/WishlistContext";
 import { useCarrito } from "@/context/CarritoContext";
 import { useLocale } from "@/context/LocaleContext";
-import { formatPrice } from "@/lib/format-number";
 
 export default function WishlistPage() {
   const { items, eliminarProducto } = useWishlist();
   const { agregarProducto } = useCarrito();
-  const { t } = useLocale();
+  const { t, convertPrice } = useLocale();
 
   if (items.length === 0) {
     return (
@@ -82,7 +81,7 @@ export default function WishlistPage() {
               </Link>
 
               <p className="mb-4 mt-auto pt-2 text-xl font-bold text-[#3D6B3F]">
-                ${formatPrice(Number(item.producto.precio_base), { showCurrency: false })}
+                {convertPrice(Number(item.producto.precio_base))}
               </p>
 
               <div className="flex gap-2">
