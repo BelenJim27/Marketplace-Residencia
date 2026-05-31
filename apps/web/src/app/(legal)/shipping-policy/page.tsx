@@ -8,7 +8,7 @@ export default function ShippingPolicyPage() {
       <LegalSection heading="Cobertura">
         <LegalP>
           Enviamos a México y Estados Unidos. Otros países se evalúan caso por caso. Para
-          envíos a EE.UU. utilizamos FedEx Internacional.
+          envíos internacionales utilizamos servicios de logística confiables.
         </LegalP>
       </LegalSection>
 
@@ -24,15 +24,15 @@ export default function ShippingPolicyPage() {
         <LegalP>
           El costo se calcula al momento del checkout según peso y destino. Los aranceles
           y impuestos de importación, cuando apliquen, son responsabilidad del comprador
-          y los cobra FedEx en destino.
+          y los cobra el transportista en destino.
         </LegalP>
       </LegalSection>
 
       <LegalSection heading="Firma de adulto">
         <LegalP>
           Las entregas que contengan bebidas alcohólicas requieren firma de un adulto
-          21+ con identificación oficial. Si nadie con la edad legal está presente, FedEx
-          intentará la entrega de nuevo el siguiente día hábil.
+          21+ con identificación oficial. Si nadie con la edad legal está presente, el
+          transportista intentará la entrega de nuevo el siguiente día hábil.
         </LegalP>
       </LegalSection>
 
@@ -46,7 +46,7 @@ export default function ShippingPolicyPage() {
 
       <LegalSection heading="Seguimiento">
         <LegalP>
-          Recibirás un número de guía FedEx por correo cuando el pedido salga de nuestro
+          Recibirás un número de guía por correo cuando el pedido salga de nuestro
           almacén. También puedes consultarlo en tu sección "Mis Pedidos".
         </LegalP>
       </LegalSection>

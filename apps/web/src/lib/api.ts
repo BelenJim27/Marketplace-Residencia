@@ -565,6 +565,8 @@ export const api = {
         method: "POST",
         headers: headers(token),
       }),
+    /** Devuelve la URL relativa al endpoint de descarga (requiere token en header). */
+    getGuiaDownloadUrl: (id: string) => `/envios/${id}/guia/download`,
   },
 
   transportistas: {
@@ -1342,6 +1344,13 @@ export const api = {
   },
 
   tasasCambio: {
+    actuales: () =>
+      fetchJson<{
+        MXN: {
+          USD: number | null;
+          EUR: number | null;
+        };
+      }>(endpoint("/tasas-cambio/actuales")),
     list: (origen?: string, destino?: string) => {
       const params = new URLSearchParams();
       if (origen) params.append("origen", origen);
@@ -1493,6 +1502,10 @@ export const api = {
         method: "PATCH",
         headers: headers(token),
         body: JSON.stringify(data),
+      }),
+    resumenPendientes: (token: string) =>
+      fetchJson<any[]>(endpoint("/payouts/resumen-pendientes"), {
+        headers: headers(token),
       }),
   },
 };

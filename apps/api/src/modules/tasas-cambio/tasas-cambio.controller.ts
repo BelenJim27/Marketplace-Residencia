@@ -14,6 +14,20 @@ export class TasasCambioController {
     return this.service.findAll(origen, destino);
   }
 
+  @Get('actuales')
+  async getActuales() {
+    const [usd, eur] = await Promise.allSettled([
+      this.service.getVigente('MXN', 'USD'),
+      this.service.getVigente('MXN', 'EUR'),
+    ]);
+    return {
+      MXN: {
+        USD: usd.status === 'fulfilled' ? Number(usd.value.tasa) : null,
+        EUR: eur.status === 'fulfilled' ? Number(eur.value.tasa) : null,
+      },
+    };
+  }
+
   @Get('vigente')
   getVigente(
     @Query('origen') origen: string,

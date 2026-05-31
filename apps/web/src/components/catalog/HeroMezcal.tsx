@@ -5,9 +5,9 @@ import { ShoppingCart, Zap, ChevronLeft, ChevronRight, Leaf, ArrowRight } from '
 import { useRouter } from 'next/navigation';
 import { hexFallbacks } from '@/lib/colors';
 import { useCarrito } from '@/context/CarritoContext';
+import { useLocale } from '@/context/LocaleContext';
 import { api } from '@/lib/api';
 import Image from 'next/image';
-import { formatPrice } from '@/lib/format-number';
 
 interface ProductoHero {
   id_producto: number | bigint;
@@ -28,6 +28,7 @@ export function HeroMezcal() {
   const router = useRouter();
 
   const { agregarProducto } = useCarrito();
+  const { convertPrice, t } = useLocale();
   const [productos, setProductos] = useState<ProductoHero[]>([]);
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -250,7 +251,7 @@ export function HeroMezcal() {
             className="text-xs sm:text-sm font-semibold uppercase tracking-widest"
             style={{ color: activeColors.accentGreen }}
           >
-            Patrimonio Biocultura
+            {t("catalog_hero_badge")}
           </p>
           <Leaf size={18} color={activeColors.accentGreen} aria-hidden="true" />
         </div>
@@ -274,7 +275,7 @@ export function HeroMezcal() {
             lineHeight: 1.1,
           }}
         >
-          Mezcales Ancestrales de Oaxaca
+          {t("catalog_hero_title")}
         </h1>
 
         {/* Subheading */}
@@ -293,8 +294,7 @@ export function HeroMezcal() {
             transition: 'opacity 0.6s ease-out 0.1s, transform 0.6s ease-out 0.1s',
           }}
         >
-          Conexión directa con productores artesanales que preservan tradiciones milenarias.
-          Cada sorbo cuenta historias de tierra, agave y maestría.
+          {t("catalog_hero_description")}
         </p>
 
         {/* Divider */}
@@ -337,7 +337,7 @@ export function HeroMezcal() {
               className="text-xs sm:text-sm"
               style={{ color: `${activeColors.textPrimary}99` }}
             >
-              Mezcales artesanales
+              {t("catalog_stats_handcrafted")}
             </p>
           </div>
 
@@ -361,7 +361,7 @@ export function HeroMezcal() {
               className="text-xs sm:text-sm"
               style={{ color: `${activeColors.textPrimary}99` }}
             >
-              Calificación promedio
+              {t("catalog_stats_rating")}
             </p>
           </div>
 
@@ -384,7 +384,7 @@ export function HeroMezcal() {
               className="text-xs sm:text-sm"
               style={{ color: `${activeColors.textPrimary}99` }}
             >
-              Clientes satisfechos
+              {t("catalog_stats_satisfied")}
             </p>
           </div>
         </div>
@@ -405,7 +405,7 @@ export function HeroMezcal() {
           } as React.CSSProperties}
           aria-label="Explorar catálogo de mezcales"
         >
-          Explorar Catálogo
+          {t("catalog_explore_button")}
           <ArrowRight
             size={18}
             className="transition-transform group-hover:translate-x-1"
@@ -425,7 +425,7 @@ export function HeroMezcal() {
             className="text-xs font-bold uppercase tracking-widest text-center"
             style={{ color: activeColors.accentGreen }}
           >
-            Lo Más Vendido
+            {t("catalog_most_sold")}
           </p>
 
           {/* Loading skeleton */}
@@ -479,7 +479,7 @@ export function HeroMezcal() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-white/20 text-xs">Sin imagen</span>
+                        <span className="text-white/20 text-xs">{t("catalog_no_image")}</span>
                       </div>
                     )}
                   </div>
@@ -507,9 +507,7 @@ export function HeroMezcal() {
                       className="text-xl sm:text-2xl font-black"
                       style={{ color: activeColors.accentGreen }}
                     >
-                      ${formatPrice(Number(p.precio_base || 0), {
-                        showCurrency: false,
-                      })}
+                      {convertPrice(Number(p.precio_base || 0))}
                     </p>
 
                     {/* Action Buttons stacked vertically */}
@@ -526,7 +524,7 @@ export function HeroMezcal() {
                         aria-label="Agregar al carrito"
                       >
                         <ShoppingCart size={13} />
-                        {yaAgregado ? '¡Agregado!' : 'Al carrito'}
+                        {yaAgregado ? t("catalog_added_success") : t("catalog_add_to_cart")}
                       </button>
                       <button
                         onClick={() =>
@@ -540,7 +538,7 @@ export function HeroMezcal() {
                         aria-label="Comprar ahora"
                       >
                         <Zap size={13} />
-                        Comprar ya
+                        {t("catalog_buy_now")}
                       </button>
                     </div>
                   </div>

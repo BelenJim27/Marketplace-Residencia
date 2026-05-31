@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Star } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatPrice } from "@/lib/format-number";
+import { useLocale } from "@/context/LocaleContext";
 
 interface ProductoCard {
   id_producto: string;
@@ -33,6 +33,7 @@ function MiniStars({ promedio }: { promedio: number }) {
 }
 
 function ProductoMiniCard({ producto }: { producto: ProductoCard }) {
+  const { convertPrice } = useLocale();
   return (
     <Link
       href={`/cliente/producto/${producto.id_producto}`}
@@ -48,7 +49,7 @@ function ProductoMiniCard({ producto }: { producto: ProductoCard }) {
             className="object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-gray-300 text-xs">Sin imagen</div>
+          <div className="flex h-full items-center justify-center text-gray-300 text-xs">{useLocale().t("catalog_no_image")}</div>
         )}
       </div>
       <div className="p-2 sm:p-3 space-y-1">
@@ -60,7 +61,7 @@ function ProductoMiniCard({ producto }: { producto: ProductoCard }) {
         </p>
         {producto.total_resenas > 0 && <MiniStars promedio={producto.promedio_calificacion} />}
         <p className="text-xs sm:text-sm font-bold" style={{ color: "var(--bio-color-precio, #8b6914)" }}>
-          ${formatPrice(Number(producto.precio_base), { showCurrency: false })}
+          {convertPrice(Number(producto.precio_base))}
         </p>
       </div>
     </Link>
@@ -116,7 +117,8 @@ export function ProductosSimilares({ productoId }: { productoId: string }) {
     });
   }, [productoId]);
 
-  return <SeccionProductos titulo="Productos similares" productos={productos} />;
+  const { t } = useLocale();
+  return <SeccionProductos titulo={t("related_products_title")} productos={productos} />;
 }
 
 // ─── También compraron ────────────────────────────────────────────────────────
@@ -130,5 +132,6 @@ export function TambienCompraron({ productoId }: { productoId: string }) {
     });
   }, [productoId]);
 
-  return <SeccionProductos titulo="Clientes también compraron" productos={productos} />;
+  const { t } = useLocale();
+  return <SeccionProductos titulo={t("Clientes también compraron")} productos={productos} />;
 }

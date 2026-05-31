@@ -7,7 +7,7 @@ import Image from "next/image";
 import { ShoppingCart, Heart, Sparkles, User, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
-import { formatPrice } from "@/lib/format-number";
+import { useLocale } from "@/context/LocaleContext";
 
 interface Producto {
   id: number;
@@ -39,6 +39,7 @@ export default function ProductCarousel() {
   const router = useRouter();
   const { agregarProducto } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
+  const { convertPrice, t } = useLocale();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [agregadoId, setAgregadoId] = useState<number | bigint | null>(null);
@@ -156,7 +157,7 @@ export default function ProductCarousel() {
               color: "var(--bio-color-titulo, #5c3d1e)",
             }}
           >
-            Destacados
+            {t("carousel_featured")}
           </h2>
           <p
             className="text-xs opacity-60"
@@ -165,7 +166,7 @@ export default function ProductCarousel() {
               color: "var(--bio-color-titulo, #5c3d1e)",
             }}
           >
-            Nuestras mejores selecciones
+            {t("carousel_featured_subtitle")}
           </p>
         </div>
       </div>
@@ -193,7 +194,7 @@ export default function ProductCarousel() {
                   className="object-contain p-6 w-full h-full"
                 />
               ) : (
-                <div className="text-gray-300 text-xs">Sin imagen</div>
+                <div className="text-gray-300 text-xs">{t("catalog_no_image")}</div>
               )}
             </div>
             <p
@@ -240,7 +241,7 @@ export default function ProductCarousel() {
                   />
                 </>
               ) : (
-                <div className="text-gray-300 text-xs">Sin imagen</div>
+                <div className="text-gray-300 text-xs">{t("catalog_no_image")}</div>
               )}
 
               {/* Wishlist Button */}
@@ -295,7 +296,7 @@ export default function ProductCarousel() {
                       color: "var(--bio-color-precio, #8b6914)",
                     }}
                   >
-                    Maestra Mezcalera: {getNombreProductor(productoActual)}
+                    {t("carousel_producer_label")} {getNombreProductor(productoActual)}
                   </span>
                 </div>
               )}
@@ -309,7 +310,7 @@ export default function ProductCarousel() {
                     color: "var(--bio-color-precio, #8b6914)",
                   }}
                 >
-                  ${formatPrice(Number(productoActual.precio_base || 0), { showCurrency: false })}
+                  {convertPrice(Number(productoActual.precio_base || 0))}
                 </span>
               </div>
 
@@ -336,7 +337,7 @@ export default function ProductCarousel() {
               >
                 <ShoppingCart className="h-4 w-4" />
                 <span className="transition-all duration-300">
-                  {agregadoId === productoActual.id_producto ? "¡Agregado!" : "Agregar al carrito"}
+                  {agregadoId === productoActual.id_producto ? t("carousel_added_success") : t("carousel_add_to_cart")}
                 </span>
               </button>
             </div>
@@ -359,7 +360,7 @@ export default function ProductCarousel() {
                   className="object-contain p-6 w-full h-full"
                 />
               ) : (
-                <div className="text-gray-300 text-xs">Sin imagen</div>
+                <div className="text-gray-300 text-xs">{t("catalog_no_image")}</div>
               )}
             </div>
             <p

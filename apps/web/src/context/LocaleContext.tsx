@@ -1,9 +1,18 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { LOCALE_CONFIG, translateText, getExchangeRates, formatPrice } from "@/lib/i18n";
+import { LOCALE_CONFIG, getExchangeRates, formatPrice } from "@/lib/i18n";
+import { UI_TRANSLATIONS } from "@/i18n/ui-strings";
+import commonES from "@/i18n/locales/es/common.json";
+import commonEN from "@/i18n/locales/en/common.json";
+import catalogES from "@/i18n/locales/es/catalog.json";
+import catalogEN from "@/i18n/locales/en/catalog.json";
+import checkoutES from "@/i18n/locales/es/checkout.json";
+import checkoutEN from "@/i18n/locales/en/checkout.json";
+import legalES from "@/i18n/locales/es/legal.json";
+import legalEN from "@/i18n/locales/en/legal.json";
 
-export type Currency = "MXN" | "USD";
+export type Currency = "MXN" | "USD" | "EUR" | "BRL" | "CNY" | "JPY";
 
 interface LocaleContextType {
   locale: string;
@@ -19,9 +28,23 @@ interface LocaleContextType {
 
 const LocaleContext = createContext<LocaleContextType | null>(null);
 
+const translations: Record<string, Record<string, string>> = {
+  es: {
+    ...commonES,
+    ...catalogES,
+    ...checkoutES,
+    ...legalES,
+  },
+  en: {
+    ...commonEN,
+    ...catalogEN,
+    ...checkoutEN,
+    ...legalEN,
+  },
+};
+
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState("es");
-  const [translations, setTranslations] = useState<Record<string, string>>({});
   const [rates, setRates] = useState<Record<string, number>>({ MXN: 1 });
   const [loadingRates, setLoadingRates] = useState(false);
   const [currency, setCurrencyState] = useState<Currency>("MXN");
@@ -32,7 +55,8 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const detectarMoneda = async () => {
       const saved = localStorage.getItem("currency") as Currency;
-      if (saved === "MXN" || saved === "USD") {
+      const VALID: Currency[] = ["MXN", "USD", "EUR", "BRL", "CNY", "JPY"];
+      if (VALID.includes(saved)) {
         setCurrencyState(saved);
         return;
       }
@@ -56,7 +80,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setLoadingRates(true);
     getExchangeRates()
-      .then(setRates)
+      .then(r => setRates(r || { MXN: 1 }))
       .finally(() => setLoadingRates(false));
   }, [locale]);
 
@@ -66,25 +90,18 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     if (saved && LOCALE_CONFIG[saved]) setLocaleState(saved);
   }, []);
 
-  // t() — traduce y cachea en el estado local
+  // t() — busca traducción en los JSONs por namespaces (catalog, checkout, legal) + UI_TRANSLATIONS fallback
   const t = useCallback((text: string): string => {
     if (locale === "es") return text;
-    const key = `${locale}:${text}`;
-    if (translations[key]) return translations[key];
+    // Prioridad: JSONs por namespace > UI_TRANSLATIONS (legacy)
+    return translations[locale]?.[text] ?? UI_TRANSLATIONS[locale]?.[text] ?? text;
+  }, [locale]);
 
-    // Traducir en segundo plano y actualizar estado
-    translateText(text, config.langCode).then(translated => {
-      setTranslations(prev => ({ ...prev, [key]: translated }));
-    });
-
-    return text; // muestra original mientras traduce
-  }, [locale, translations, config.langCode]);
-
-  // translateAsync — para cuando necesitas esperar la traducción
+  // translateAsync — devuelve lo mismo que t() (no es async, pero mantiene la firma)
   const translateAsync = useCallback(async (text: string): Promise<string> => {
     if (locale === "es") return text;
-    return translateText(text, config.langCode);
-  }, [locale, config.langCode]);
+    return translations[locale]?.[text] ?? UI_TRANSLATIONS[locale]?.[text] ?? text;
+  }, [locale]);
 
   // convertPrice — convierte desde MXN
   const convertPrice = useCallback((mxn: number): string => {
@@ -98,7 +115,6 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   };
 
   const setLocale = (newLocale: string) => {
-    setTranslations({}); // limpiar caché al cambiar idioma
     setLocaleState(newLocale);
     localStorage.setItem("locale", newLocale);
   };

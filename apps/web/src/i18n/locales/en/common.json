@@ -1,32 +1,19 @@
 {
-  "Common": {
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "edit": "Edit",
-    "search": "Search",
-    "loading": "Loading...",
-    "error": "Error",
-    "success": "Success"
-  },
-  "Auth": {
-    "login": "Sign in",
-    "register": "Register",
-    "logout": "Sign out",
-    "email": "Email",
-    "password": "Password",
-    "confirmPassword": "Confirm password",
-    "forgotPassword": "Forgot password?",
-    "resetPassword": "Reset password",
-    "noAccount": "Don't have an account?",
-    "hasAccount": "Already have an account?",
-    "signUp": "Sign up",
-    "signIn": "Sign in"
-  },
-  "Navigation": {
-    "home": "Home",
-    "dashboard": "Dashboard",
-    "profile": "Profile",
-    "settings": "Settings"
-  }
+  "save": "Save",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "edit": "Edit",
+  "search": "Search",
+  "loading": "Loading...",
+  "error": "Error",
+  "success": "Success",
+  "login": "Sign in",
+  "register": "Sign up",
+  "logout": "Sign out",
+  "email": "Email",
+  "password": "Password",
+  "home": "Home",
+  "dashboard": "Dashboard",
+  "profile": "Profile",
+  "settings": "Settings"
 }

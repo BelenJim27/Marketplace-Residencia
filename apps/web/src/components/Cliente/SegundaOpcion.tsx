@@ -176,7 +176,7 @@ function TrazaSlide({ producto, isMobile, t }: { producto: ProductoTrazabilidad;
               {/* Texto */}
               <div style={{ paddingTop: "4px", flex: 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2px" }}>
-                  <span style={{ fontSize: "11px", color: "#C97A3E", fontWeight: 700, letterSpacing: "0.1em" }}>PASO {step.numero}</span>
+                  <span style={{ fontSize: "11px", color: "#C97A3E", fontWeight: 700, letterSpacing: "0.1em" }}>{t("PASO")} {step.numero}</span>
                   {step.fecha && <span style={{ fontSize: "12px", color: "rgba(244,240,227,0.6)" }}>{step.fecha}</span>}
                 </div>
                 <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "14px", fontWeight: 600, color: "#F4F0E3", margin: "0 0 2px" }}>
@@ -238,7 +238,7 @@ function TrazaFallback({ isMobile, t, cfg }: { isMobile: boolean; t: (s: string)
               {i < PASOS_BASE.length - 1 && <div style={{ width: "1px", flex: 1, background: "rgba(201,122,62,0.35)", minHeight: "20px" }} />}
             </div>
             <div style={{ paddingTop: "4px", flex: 1 }}>
-              <span style={{ fontSize: "11px", color: "#C97A3E", fontWeight: 700, letterSpacing: "0.1em" }}>PASO {step.numero}</span>
+              <span style={{ fontSize: "11px", color: "#C97A3E", fontWeight: 700, letterSpacing: "0.1em" }}>{t("PASO")} {step.numero}</span>
               <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "14px", fontWeight: 600, color: "#F4F0E3", margin: "2px 0" }}>{t(step.titulo)}</p>
               <p style={{ fontSize: "13px", color: "rgba(244,240,227,0.75)", lineHeight: 1.5, margin: 0 }}>{t(step.desc)}</p>
             </div>

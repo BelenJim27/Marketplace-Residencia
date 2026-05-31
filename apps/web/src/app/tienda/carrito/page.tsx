@@ -5,27 +5,29 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, ShoppingBag, Info } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
+import { useLocale } from "@/context/LocaleContext";
 import { formatPrice } from "@/lib/format-number";
 
 export default function CarritoPage() {
   const router = useRouter();
   const { items, precioTotal, actualizarCantidad, eliminarProducto } = useCarrito();
+  const { t } = useLocale();
 
   if (items.length === 0) {
     return (
       <main className="mx-auto max-w-screen-xl px-4 py-12 md:px-8">
         <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white" style={{ fontFamily: 'var(--font-family-store)' }}>
-          Mi Carrito
+          {t("cart_title")}
         </h1>
 
         <div className="flex flex-col items-center justify-center gap-4 rounded-lg bg-white p-12 text-center shadow-md dark:bg-gray-dark">
           <ShoppingBag className="h-16 w-16 text-gray-300" />
-          <p className="text-gray-600 dark:text-gray-400">Tu carrito está vacío</p>
+          <p className="text-gray-600 dark:text-gray-400">{t("cart_empty_state")}</p>
           <Link
             href="/cliente/producto"
             className="mt-4 rounded-lg bg-[#3D6B3F] px-6 py-2 text-white transition-colors hover:bg-[#1F3A2E]"
           >
-            Seguir comprando
+            {t("cart_continue_shopping")}
           </Link>
         </div>
       </main>
@@ -37,7 +39,7 @@ export default function CarritoPage() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 md:px-8">
       <h1 className="mb-8 text-4xl font-bold text-dark dark:text-white" style={{ fontFamily: 'var(--font-family-store)' }}>
-        Mi Carrito
+        {t("cart_title")}
       </h1>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -47,16 +49,16 @@ export default function CarritoPage() {
             {/* Table Header */}
             <div className="hidden border-b border-gray-200 px-6 py-4 dark:border-gray-700 lg:grid lg:grid-cols-5 lg:gap-4">
               <div className="col-span-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
-                PRODUCTO
+                {t("cart_table_product")}
               </div>
               <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">
-                CANTIDAD
+                {t("cart_table_quantity")}
               </div>
               <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">
-                TOTAL
+                {t("cart_table_total")}
               </div>
               <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">
-                ACCIÓN
+                {t("cart_table_action")}
               </div>
             </div>
 
@@ -90,7 +92,7 @@ export default function CarritoPage() {
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-gray-400">
-                        Sin imagen
+                        {t("cart_no_image")}
                       </div>
                     )}
                   </div>
@@ -99,7 +101,7 @@ export default function CarritoPage() {
                       {item.nombre}
                     </h3>
                     <p className="text-xs text-gray-500">
-                      ${formatPrice(Number(item.precio_base), { showCurrency: false })} MXN c/u
+                      ${formatPrice(Number(item.precio_base), { showCurrency: false })} {t("cart_price_unit")}
                     </p>
                   </div>
                 </Link>
@@ -149,7 +151,7 @@ export default function CarritoPage() {
             onClick={() => router.push("/cliente/producto")}
             className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#3D6B3F] px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1F3A2E]"
           >
-            ← Seguir comprando
+            {t("cart_continue_button")}
           </button>
         </div>
 
@@ -157,14 +159,14 @@ export default function CarritoPage() {
         <div className="lg:col-span-1">
           <div className="sticky top-4 rounded-lg bg-white p-6 shadow-md dark:bg-gray-dark">
             <h2 className="mb-6 text-lg font-semibold text-gray-900 dark:text-white">
-              Resumen del Pedido
+              {t("cart_summary_title")}
             </h2>
 
             {/* Pricing Breakdown */}
             <div className="space-y-3 border-b border-gray-200 pb-4 dark:border-gray-700">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-gray-300">
-                  Subtotal ({items.length} {items.length === 1 ? "producto" : "productos"})
+                  {t("cart_summary_subtotal")} ({items.length} {items.length === 1 ? "producto" : "productos"})
                 </span>
                 <span className="font-medium text-gray-900 dark:text-white">
                   ${formatPrice(subtotal, { showCurrency: false })} MXN
@@ -173,28 +175,28 @@ export default function CarritoPage() {
 
               <div className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                  Envío
+                  {t("cart_summary_shipping")}
                   <Info size={14} className="text-gray-400" />
                 </span>
                 <span className="text-gray-500 dark:text-gray-400">
-                  Se calcula en el siguiente paso
+                  {t("cart_summary_calculated_later")}
                 </span>
               </div>
 
               <div className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                  IVA
+                  {t("cart_summary_tax")}
                   <Info size={14} className="text-gray-400" />
                 </span>
                 <span className="text-gray-500 dark:text-gray-400">
-                  Se calcula en el siguiente paso
+                  {t("cart_summary_calculated_later")}
                 </span>
               </div>
             </div>
 
             {/* Total */}
             <div className="flex justify-between border-b border-gray-200 py-4 dark:border-gray-700">
-              <span className="font-semibold text-gray-900 dark:text-white">Subtotal</span>
+              <span className="font-semibold text-gray-900 dark:text-white">{t("cart_summary_subtotal")}</span>
               <span className="text-2xl font-bold text-gray-900 dark:text-white">
                 ${formatPrice(subtotal, { showCurrency: false })} MXN
               </span>
@@ -202,7 +204,7 @@ export default function CarritoPage() {
 
             {/* Info Note */}
             <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-              * El precio final incluirá envío e IVA según tu dirección de entrega.
+              {t("cart_price_note")}
             </p>
 
             {/* Checkout Button */}
@@ -210,7 +212,7 @@ export default function CarritoPage() {
               onClick={() => router.push("/tienda/checkout")}
               className="mt-6 w-full rounded-lg bg-[#3D6B3F] py-3 font-semibold text-white transition-colors hover:bg-[#1F3A2E]"
             >
-              Proceder al Pago
+              {t("cart_checkout_button")}
             </button>
           </div>
         </div>

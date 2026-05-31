@@ -11,7 +11,6 @@ import { useLocale } from "@/context/LocaleContext";
 // Importación limpia del hook genérico
 import { useShipping, ShippingQuote, DireccionDestino } from "./useShipping"; 
 
-import { getExchangeRates } from "@/lib/i18n";
 import type { CheckoutStep, Direccion, TarjetaMock } from "@/types/checkout";
 
 export type { CheckoutStep, Direccion, TarjetaMock } from "@/types/checkout";
@@ -79,14 +78,25 @@ export function useCheckout() {
     };
   }, [items]);
 
-  const hasLoadedRef = useRef(false);
-  const [ratesMXN, setRatesMXN] = useState<Record<string, number>>({ USD: 20 });
+  const hasLoadedRatesRef = useRef(false);
+  const hasLoadedDireccionesRef = useRef(false);
+  const [ratesMXN, setRatesMXN] = useState<{ USD: number | null; EUR: number | null }>({ USD: null, EUR: null });
 
   useEffect(() => {
     if (seleccionado) {
       setEnvioSeleccionado(seleccionado);
     }
   }, [seleccionado]);
+
+  // Cargar tasas del backend
+  useEffect(() => {
+    if (!hasLoadedRatesRef.current) {
+      hasLoadedRatesRef.current = true;
+      api.tasasCambio.actuales()
+        .then(setRatesMXN)
+        .catch((err) => console.error('Error loading exchange rates:', err));
+    }
+  }, []);
 
   const extraerDireccionDestino = useCallback((dir: Direccion | null): DireccionDestino | null => {
     if (!dir) return null;
@@ -172,8 +182,8 @@ export function useCheckout() {
   }, [user?.id_usuario]);
 
   useEffect(() => {
-    if (!hasLoadedRef.current && user?.id_usuario) {
-      hasLoadedRef.current = true;
+    if (!hasLoadedDireccionesRef.current && user?.id_usuario) {
+      hasLoadedDireccionesRef.current = true;
       cargarDirecciones();
     }
   }, [user?.id_usuario, cargarDirecciones]);

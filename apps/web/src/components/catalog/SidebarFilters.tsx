@@ -2,6 +2,7 @@
 
 import { Search, HelpCircle } from "lucide-react";
 import { useState } from "react";
+import { useLocale } from "@/context/LocaleContext";
 
 interface SidebarFiltersProps {
   filtrosPendientes: {
@@ -146,6 +147,7 @@ function PriceRangeSlider({
   onMaxChange: (value: string) => void;
   onApply: () => void;
 }) {
+  const { t } = useLocale();
   // P4: Price validation
   const minNum = Number(minValue) || 0;
   const maxNum = Number(maxValue) || 5000;
@@ -155,7 +157,7 @@ function PriceRangeSlider({
     <div className="space-y-3 px-1 pt-1">
       <div>
         <label className="text-xs font-semibold text-gray-600 mb-1 block">
-          Mínimo: ${minNum.toLocaleString("es-MX")}
+          {t("filters_minimum")} ${minNum.toLocaleString("es-MX")}
         </label>
         <input
           type="range"
@@ -170,7 +172,7 @@ function PriceRangeSlider({
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600 mb-1 block">
-          Máximo: ${maxNum.toLocaleString("es-MX")}
+          {t("filters_maximum")} ${maxNum.toLocaleString("es-MX")}
         </label>
         <input
           type="range"
@@ -186,7 +188,7 @@ function PriceRangeSlider({
       {/* P4: Price validation error message */}
       {hasError && (
         <div className="text-xs font-semibold" style={{ color: "#e74c3c" }}>
-          El precio mínimo debe ser menor al máximo. Ajusta los valores.
+          {t("filters_min_greater_than_max")}
         </div>
       )}
       <button
@@ -199,7 +201,7 @@ function PriceRangeSlider({
           opacity: hasError ? 0.6 : 1,
         }}
       >
-        Aplicar
+        {t("filters_apply")}
       </button>
     </div>
   );
@@ -218,6 +220,8 @@ export function SidebarFiltersComponent({
   onAplicarPrecio,
   TIPOS_MAGUEY,
 }: SidebarFiltersProps) {
+  const { t } = useLocale();
+
   return (
     <div className="space-y-4">
       {/* Buscador */}
@@ -229,8 +233,8 @@ export function SidebarFiltersComponent({
       />
 
       <FilterSection
-        title="Maguey"
-        tooltip="El tipo de agave usado. Cada variedad tiene sabor único."
+        title={t("filters_title")}
+        tooltip={t("filters_agave_tooltip")}
       >
         <div className="space-y-0.5 px-1">
           {TIPOS_MAGUEY.map((m) => (
@@ -246,8 +250,8 @@ export function SidebarFiltersComponent({
 
 
       <FilterSection
-        title="Rango de Precio"
-        tooltip="Rango de precio en pesos mexicanos (MXN)."
+        title={t("filters_price_range")}
+        tooltip={t("filters_price_tooltip")}
       >
         <PriceRangeSlider
           minValue={precioMinLocal}
@@ -273,6 +277,8 @@ export function SearchBarComponent({
   searchFocus: boolean;
   onSearchFocus: (focused: boolean) => void;
 }) {
+  const { t } = useLocale();
+
   return (
     <div className="relative group">
       {/* Shadow effect on focus */}
@@ -292,7 +298,7 @@ export function SearchBarComponent({
       />
       <input
         type="text"
-        placeholder="Buscar por nombre, región, tipo..."
+        placeholder={t("filters_search_placeholder")}
         value={busqueda}
         onChange={(e) => onBusquedaChange(e.target.value)}
         onFocus={() => onSearchFocus(true)}

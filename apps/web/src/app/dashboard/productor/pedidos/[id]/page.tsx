@@ -18,7 +18,7 @@ interface OrderDetail {
     direccion_envio_snapshot: any;
   };
   detalles: any[];
-  envio: { id_envio?: number; numero_rastreo?: string; estado?: string } | null;
+  envio: { id_envio?: number; numero_rastreo?: string; estado?: string; tiene_guia?: boolean } | null;
   desglose?: {
     subtotal_bruto: string | null;
     comision_marketplace: string;
@@ -38,6 +38,7 @@ export default function DetalleOrdenProductor() {
   const [generandoGuia, setGenerandoGuia] = useState(false);
   const [nuevoEstado, setNuevoEstado] = useState("");
   const [numeroRastreo, setNumeroRastreo] = useState("");
+  const [tieneGuia, setTieneGuia] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -56,6 +57,7 @@ export default function DetalleOrdenProductor() {
         setOrden(res);
         setNuevoEstado(res.estado_productor);
         setNumeroRastreo(res.envio?.numero_rastreo || "");
+        setTieneGuia(!!(res.envio?.numero_rastreo || res.envio?.tiene_guia));
       } catch (err) {
         setError("Error al cargar la orden");
         console.error(err);
@@ -101,8 +103,13 @@ export default function DetalleOrdenProductor() {
     try {
       const token = getCookie("token") || "";
       const guia = await api.envios.crearGuia(token, String(orden.envio.id_envio));
-      setSuccess(`Guía generada: ${guia.numero_guia}`);
+      setSuccess(`Guía generada: ${guia.numero_guia}. Ya puedes descargar la etiqueta.`);
       setNumeroRastreo(guia.numero_guia);
+      setTieneGuia(true);
+      // Actualizar estado local para que el botón desaparezca correctamente
+      setOrden((prev) =>
+        prev ? { ...prev, envio: { ...prev.envio, numero_rastreo: guia.numero_guia, tiene_guia: true } } : prev
+      );
     } catch (err: any) {
       const msg = err?.details?.message || err?.message || "Error al generar la guía";
       setError(msg);
@@ -279,35 +286,74 @@ export default function DetalleOrdenProductor() {
           <h2 className="text-lg font-bold mb-4">Información de Envío</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Número de Rastreo FedEx</label>
+              <label className="block text-sm font-medium mb-2">Número de Rastreo</label>
               <input
                 type="text"
                 value={numeroRastreo}
                 onChange={(e) => setNumeroRastreo(e.target.value)}
-                placeholder="Ingresa el número de guía FedEx"
+                placeholder="Ingresa el número de guía"
                 className="w-full px-3 py-2 border border-gray-300 rounded"
               />
             </div>
-            <button
-              onClick={handleActualizarTracking}
-              disabled={saving || !numeroRastreo}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
-            >
-              {saving ? "Guardando..." : "Guardar Tracking"}
-            </button>
-            {orden.envio?.id_envio && !orden.envio?.numero_rastreo && (
+            <div className="flex flex-wrap gap-2">
               <button
-                onClick={handleGenerarGuia}
-                disabled={generandoGuia || saving}
-                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400"
+                onClick={handleActualizarTracking}
+                disabled={saving || !numeroRastreo}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
               >
-                {generandoGuia ? "Generando guía..." : "Generar Guía FedEx"}
+                {saving ? "Guardando..." : "Guardar Tracking"}
               </button>
-            )}
-            {orden.envio?.numero_rastreo && (
-              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
-                <div className="text-sm text-gray-600">Rastreo registrado:</div>
-                <div className="font-medium">{orden.envio.numero_rastreo}</div>
+              {orden.envio?.id_envio && !tieneGuia && (
+                <button
+                  onClick={handleGenerarGuia}
+                  disabled={generandoGuia || saving}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400"
+                >
+                  {generandoGuia ? "Generando guía..." : "Generar Guía"}
+                </button>
+              )}
+            </div>
+
+            {/* Tracking registrado + descarga de etiqueta */}
+            {(tieneGuia || orden.envio?.numero_rastreo) && orden.envio?.id_envio && (
+              <div className="mt-2 p-4 bg-blue-50 border border-blue-200 rounded space-y-3">
+                {orden.envio.numero_rastreo && (
+                  <div>
+                    <div className="text-sm text-gray-600">Número de rastreo:</div>
+                    <div className="font-medium font-mono">{orden.envio.numero_rastreo}</div>
+                  </div>
+                )}
+                <a
+                  href={`${process.env.NEXT_PUBLIC_API_URL ?? ""}/envios/${orden.envio.id_envio}/guia/download`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded hover:bg-indigo-700 transition-colors"
+                  onClick={(e) => {
+                    // Agregar el token como query param para que el AuthGuard lo acepte
+                    const token = getCookie("token");
+                    if (token) {
+                      e.preventDefault();
+                      const url = `${process.env.NEXT_PUBLIC_API_URL ?? ""}/envios/${orden.envio!.id_envio}/guia/download`;
+                      // Abrir con fetch para pasar Authorization header y forzar descarga
+                      fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+                        .then((res) => res.blob())
+                        .then((blob) => {
+                          const blobUrl = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = blobUrl;
+                          a.download = `guia-${orden.envio!.numero_rastreo ?? orden.envio!.id_envio}.pdf`;
+                          a.click();
+                          URL.revokeObjectURL(blobUrl);
+                        })
+                        .catch(() => setError("Error al descargar la etiqueta PDF"));
+                    }
+                  }}
+                >
+                  📄 Descargar etiqueta PDF
+                </a>
+                <p className="text-xs text-gray-500">
+                  Imprime esta etiqueta y pégala en el paquete antes de enviarlo.
+                </p>
               </div>
             )}
           </div>

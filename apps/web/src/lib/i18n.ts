@@ -14,32 +14,8 @@ export const LOCALE_CONFIG: Record<string, {
   ja: { label: "日本語",    flag: "🇯🇵", currency: "JPY", numberLocale: "ja-JP", langCode: "ja" },
 };
 
-// ─── Traducción con MyMemory ───────────────────────────────────────────────
-const translationCache: Record<string, string> = {};
-
-export async function translateText(text: string, targetLang: string): Promise<string> {
-  if (targetLang === "es") return text;
-
-  const cacheKey = `${targetLang}:${text}`;
-  if (translationCache[cacheKey]) return translationCache[cacheKey];
-
-  try {
-    const res = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=es|${targetLang}`
-    );
-    const data = await res.json();
-    const translated = data.responseData.translatedText;
-    translationCache[cacheKey] = translated;
-    return translated;
-  } catch {
-    return text; // si falla, devuelve el original
-  }
-}
-
-export async function translateBatch(texts: string[], targetLang: string): Promise<string[]> {
-  if (targetLang === "es") return texts;
-  return Promise.all(texts.map(t => translateText(t, targetLang)));
-}
+// Traducciones estáticas se importan desde ui-strings.ts
+// No hay más llamadas a MyMemory — se usan lookup directo desde LocaleContext
 
 // ─── Moneda con ExchangeRate-API ───────────────────────────────────────────
 let ratesCache: { data: Record<string, number>; ts: number } | null = null;
@@ -53,7 +29,8 @@ export async function getExchangeRates(): Promise<Record<string, number>> {
     const KEY = process.env.NEXT_PUBLIC_EXCHANGERATE_API_KEY;
     const res = await fetch(`https://v6.exchangerate-api.com/v6/${KEY}/latest/MXN`);
     const data = await res.json();
-    ratesCache = { data: data.conversion_rates, ts: now };
+    const rates = data.conversion_rates || { MXN: 1 };
+    ratesCache = { data: rates, ts: now };
     return ratesCache.data;
   } catch {
     return { MXN: 1 }; // si falla, sin conversión

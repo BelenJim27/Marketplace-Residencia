@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { Heart, Share2, Sparkles, Crown } from "lucide-react";
+import { useLocale } from "@/context/LocaleContext";
 import { MEZCAL_COLORS, FONTS } from "./mezcal-constants";
 
 interface Mezcal {
@@ -50,6 +51,7 @@ export default function MezcalProductCardAudaz({
   onSelectProduct,
   onToggleWishlist,
 }: Props) {
+  const { t } = useLocale();
   const isEditionLimited = mezcal.botella_numero !== null;
 
   return (
@@ -242,7 +244,7 @@ export default function MezcalProductCardAudaz({
                   fontWeight: "bold",
                 }}
               >
-                Agave
+                {t("Agave")}
               </p>
               <p
                 className="font-semibold"
@@ -266,7 +268,7 @@ export default function MezcalProductCardAudaz({
                   fontWeight: "bold",
                 }}
               >
-                Región
+                {t("Región")}
               </p>
               <p
                 className="font-semibold text-sm"
@@ -300,7 +302,7 @@ export default function MezcalProductCardAudaz({
                 fontWeight: "bold",
               }}
             >
-              Maestro
+              {t("Maestro")}
             </p>
             <p
               className="font-bold text-sm"
@@ -333,7 +335,7 @@ export default function MezcalProductCardAudaz({
               }}
             >
               <Sparkles size={14} />
-              Aroma
+              {t("Aroma")}
             </p>
             <p
               className="text-xs leading-relaxed"
@@ -375,7 +377,7 @@ export default function MezcalProductCardAudaz({
               }}
               whileTap={{ scale: 0.92 }}
             >
-              Explorar
+              {t("Explorar")}
             </motion.button>
           </motion.div>
         </motion.div>

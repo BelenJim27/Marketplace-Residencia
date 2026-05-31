@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
+import { useLocale } from "@/context/LocaleContext";
 import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
 import {
@@ -47,6 +48,7 @@ export default function SolicitarPage() {
   const { isAuthenticated, loading: authLoading, user: contextUser } = useAuth();
   const { data: session } = useSession();
   const { resolvedTheme } = useTheme();
+  const { t } = useLocale();
   const isDark = resolvedTheme === "dark";
   const user   = session?.user || contextUser;
 
@@ -170,7 +172,7 @@ export default function SolicitarPage() {
           }
         }
       } catch (err) {
-        setError("Error al cargar la información inicial.");
+        setError(t("Error al cargar la información inicial."));
       } finally {
         setLoadingInit(false);
       }
@@ -180,11 +182,11 @@ export default function SolicitarPage() {
 
   /* ── file upload ──────────────────────────────────────────────────────── */
   const uploadFile = async (file: File) => {
-    if (file.size > 500 * 1024) { setError("El archivo debe pesar menos de 500 KB."); return; }
+    if (file.size > 500 * 1024) { setError(t("El archivo debe pesar menos de 500 KB.")); return; }
     setUploading(true); setError("");
     try {
       const token = (session as any)?.accessToken || getCookie("token");
-      if (!token) { setError("No se detectó sesión."); return; }
+      if (!token) { setError(t("No se detectó sesión.")); return; }
       const fd = new FormData();
       fd.append("archivo", file);
       fd.append("entidad_tipo", "productor_certificado");
@@ -192,7 +194,7 @@ export default function SolicitarPage() {
       const res = await api.archivos.upload(token, fd);
       setCertificadoUrl((res as any).url || `/${(res as any).id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al subir el certificado");
+      setError(err instanceof Error ? err.message : t("Error al subir el certificado"));
     } finally {
       setUploading(false);
     }
@@ -226,11 +228,11 @@ export default function SolicitarPage() {
 
   /* ── submit ───────────────────────────────────────────────────────────── */
   const handleSubmit = async () => {
-    if (!certificadoUrl) { setError("Sube el certificado primero"); return; }
+    if (!certificadoUrl) { setError(t("Sube el certificado primero")); return; }
     setIsSubmitting(true); setError("");
     try {
       const token = (session as any)?.accessToken || getCookie("token");
-      if (!token) { setError("No se detectó sesión."); return; }
+      if (!token) { setError(t("No se detectó sesión.")); return; }
       await api.productores.solicitar(token, {
         rfc: form.rfc || undefined,
         razon_social: form.razon_social || undefined,
@@ -251,7 +253,7 @@ export default function SolicitarPage() {
       } as any);
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al enviar la solicitud");
+      setError(err instanceof Error ? err.message : t("Error al enviar la solicitud"));
     } finally {
       setIsSubmitting(false);
     }
@@ -280,7 +282,7 @@ export default function SolicitarPage() {
       <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"320px", gap:"16px" }}>
         <style>{keyframes}</style>
         <div className="_spin" style={{ width:"36px", height:"36px", borderRadius:"50%", border:`2px solid ${C.border}`, borderTopColor:C.copper }} />
-        <p style={{ fontFamily:SANS, color:C.body, fontSize:"13px" }}>Cargando...</p>
+        <p style={{ fontFamily:SANS, color:C.body, fontSize:"13px" }}>{t("Cargando...")}</p>
       </div>
     );
   }
@@ -301,38 +303,38 @@ export default function SolicitarPage() {
   );
 
   if (noElegible) return (
-    <StatusCard icon={<AlertCircle style={{ width:"28px", height:"28px", color:"#D97706" }} />} iconBg="rgba(217,119,6,0.12)" title="No disponible con esta cuenta" message="Esta cuenta ya realizó pedidos como cliente. Para vender en Tierra Agaves necesitas crear una cuenta dedicada a tu actividad como productor.">
+    <StatusCard icon={<AlertCircle style={{ width:"28px", height:"28px", color:"#D97706" }} />} iconBg="rgba(217,119,6,0.12)" title={t("No disponible con esta cuenta")} message={t("Esta cuenta ya realizó pedidos como cliente. Para vender en Tierra Agaves necesitas crear una cuenta dedicada a tu actividad como productor.")}>
       <div style={{ display:"flex", gap:"12px", justifyContent:"center", flexWrap:"wrap" }}>
-        <button onClick={() => router.push("/cliente/producto")} style={{ background:"transparent", border:`1px solid ${C.inputBorder}`, borderRadius:"8px", padding:"11px 22px", fontFamily:SANS, fontSize:"13px", cursor:"pointer", color:C.label }}>Volver a la tienda</button>
-        <button onClick={() => router.push("/auth/sign-up?vender=true")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 22px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>Crear cuenta nueva</button>
+        <button onClick={() => router.push("/cliente/producto")} style={{ background:"transparent", border:`1px solid ${C.inputBorder}`, borderRadius:"8px", padding:"11px 22px", fontFamily:SANS, fontSize:"13px", cursor:"pointer", color:C.label }}>{t("Volver a la tienda")}</button>
+        <button onClick={() => router.push("/auth/sign-up?vender=true")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 22px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>{t("Crear cuenta nueva")}</button>
       </div>
     </StatusCard>
   );
 
   if (solicitudActual) {
     if (solicitudActual.estado === "pendiente") return (
-      <StatusCard icon={<Loader2 className="_spin" style={{ width:"28px", height:"28px", color:C.copper }} />} iconBg="rgba(201,122,62,0.12)" title="Solicitud en revisión" message="Tu solicitud está siendo revisada por un administrador. Te notificaremos cuando haya una respuesta.">
-        <button onClick={() => router.push("/cliente/producto")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>Volver a la tienda</button>
+      <StatusCard icon={<Loader2 className="_spin" style={{ width:"28px", height:"28px", color:C.copper }} />} iconBg="rgba(201,122,62,0.12)" title={t("Solicitud en revisión")} message={t("Tu solicitud está siendo revisada por un administrador. Te notificaremos cuando haya una respuesta.")}>
+        <button onClick={() => router.push("/cliente/producto")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>{t("Volver a la tienda")}</button>
       </StatusCard>
     );
     if (solicitudActual.estado === "aprobado") return (
-      <StatusCard icon={<CheckCircle2 style={{ width:"28px", height:"28px", color:"#15803D" }} />} iconBg="rgba(21,128,61,0.12)" title="¡Ya eres Productor!" message="Tu solicitud fue aprobada. Ahora puedes publicar y vender tus productos en la plataforma.">
-        <button onClick={() => router.push("/dashboard/productor")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>Ir a mi dashboard</button>
+      <StatusCard icon={<CheckCircle2 style={{ width:"28px", height:"28px", color:"#15803D" }} />} iconBg="rgba(21,128,61,0.12)" title={t("¡Ya eres Productor!")} message={t("Tu solicitud fue aprobada. Ahora puedes publicar y vender tus productos en la plataforma.")}>
+        <button onClick={() => router.push("/dashboard/productor")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>{t("Ir a mi dashboard")}</button>
       </StatusCard>
     );
     if (solicitudActual.estado === "rechazado") return (
-      <StatusCard icon={<AlertCircle style={{ width:"28px", height:"28px", color:"#B91C1C" }} />} iconBg="rgba(185,28,28,0.12)" title="Solicitud rechazada" message="Tu solicitud fue rechazada por el siguiente motivo:">
+      <StatusCard icon={<AlertCircle style={{ width:"28px", height:"28px", color:"#B91C1C" }} />} iconBg="rgba(185,28,28,0.12)" title={t("Solicitud rechazada")} message={t("Tu solicitud fue rechazada por el siguiente motivo:")}>
         <div style={{ background:C.errorBg, border:`1px solid rgba(185,28,28,0.18)`, borderRadius:"8px", padding:"14px 16px", marginBottom:"24px", textAlign:"left" }}>
           <p style={{ fontFamily:SANS, color:C.error, fontSize:"13px", lineHeight:1.6, margin:0 }}>{solicitudActual.motivo_rechazo || "No especificado"}</p>
         </div>
-        <button onClick={() => { setSolicitudActual(null); setStep(1); }} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>Intentar de nuevo</button>
+        <button onClick={() => { setSolicitudActual(null); setStep(1); }} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>{t("Intentar de nuevo")}</button>
       </StatusCard>
     );
   }
 
   if (success) return (
-    <StatusCard icon={<CheckCircle2 style={{ width:"28px", height:"28px", color:"#15803D" }} />} iconBg="rgba(21,128,61,0.12)" title="Solicitud enviada" message="Tu solicitud ha sido enviada. Un administrador la revisará pronto y te notificaremos por correo.">
-      <button onClick={() => router.push("/cliente/producto")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>Volver a la tienda</button>
+    <StatusCard icon={<CheckCircle2 style={{ width:"28px", height:"28px", color:"#15803D" }} />} iconBg="rgba(21,128,61,0.12)" title={t("Solicitud enviada")} message={t("Tu solicitud ha sido enviada. Un administrador la revisará pronto y te notificaremos por correo.")}>
+      <button onClick={() => router.push("/cliente/producto")} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>{t("Volver a la tienda")}</button>
     </StatusCard>
   );
 
@@ -356,13 +358,13 @@ export default function SolicitarPage() {
         <div style={{ position:"absolute", right:"-40px", top:"-40px", width:"200px", height:"200px", borderRadius:"50%", border:"1px solid rgba(244,240,227,0.05)", pointerEvents:"none" }} />
         <div style={{ position:"absolute", right:"30px", top:"30px", width:"110px", height:"110px", borderRadius:"50%", border:"1px solid rgba(244,240,227,0.05)", pointerEvents:"none" }} />
         <p style={{ fontFamily:MONO, color:C.copper, fontSize:"10px", fontWeight:700, letterSpacing:"0.22em", textTransform:"uppercase", margin:"0 0 8px" }}>
-          Guardianas del Mezcal · Programa de Productores
+          {t("Guardianas del Mezcal · Programa de Productores")}
         </p>
         <h1 style={{ fontFamily:SERIF, color:C.cream, fontSize:"clamp(20px,3.5vw,30px)", fontWeight:400, lineHeight:1.12, margin:"0 0 6px" }}>
-          Únete como Productor
+          {t("Únete como Productor")}
         </h1>
         <p style={{ fontFamily:SANS, color:"rgba(244,240,227,0.60)", fontSize:"13px", lineHeight:1.6, maxWidth:"500px", margin:0 }}>
-          Completa los 4 pasos para publicar y vender tus productos artesanales.
+          {t("Completa los 4 pasos para publicar y vender tus productos artesanales.")}
         </p>
       </div>
 
@@ -415,7 +417,7 @@ export default function SolicitarPage() {
 
         {/* Step counter */}
         <p style={{ fontFamily:MONO, fontSize:"10px", color:C.body, margin:"8px 0 0", letterSpacing:"0.12em" }}>
-          PASO {step} DE {STEPS.length} — {STEPS[step - 1].label.toUpperCase()}
+          {t("PASO")} {step} {t("DE")} {STEPS.length} — {t(STEPS[step - 1].label).toUpperCase()}
         </p>
       </div>
 
@@ -435,15 +437,15 @@ export default function SolicitarPage() {
         {step === 1 && (
           <div>
             <StepHeader
-              eyebrow="01 · Requisito" title="Tu Asociación"
-              desc="Selecciona la asociación de mezcaleros a la que perteneces. Este dato es requerido para validar tu actividad como productor."
+              eyebrow={t("01 · Requisito")} title={t("Tu Asociación")}
+              desc={t("Selecciona la asociación de mezcaleros a la que perteneces. Este dato es requerido para validar tu actividad como productor.")}
               C={C} SERIF={SERIF} SANS={SANS} MONO={MONO}
             />
 
             {asociaciones.length === 0 ? (
               <div style={{ display:"flex", alignItems:"center", gap:"10px", padding:"20px 0" }}>
                 <Loader2 className="_spin" style={{ width:"16px", height:"16px", color:C.copper }} />
-                <span style={{ fontFamily:SANS, color:C.body, fontSize:"13px" }}>Cargando asociaciones...</span>
+                <span style={{ fontFamily:SANS, color:C.body, fontSize:"13px" }}>{t("Cargando asociaciones...")}</span>
               </div>
             ) : (
               <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
@@ -469,7 +471,7 @@ export default function SolicitarPage() {
                 })}
               </div>
             )}
-            {showErr.asociacion && <ErrMsg msg="Selecciona la asociación a la que perteneces" C={C} SANS={SANS} />}
+            {showErr.asociacion && <ErrMsg msg={t("Selecciona la asociación a la que perteneces")} C={C} SANS={SANS} />}
           </div>
         )}
 
@@ -477,42 +479,42 @@ export default function SolicitarPage() {
         {step === 2 && (
           <div style={{ display:"flex", flexDirection:"column", gap:"20px" }}>
             <StepHeader
-              eyebrow="02 · Identidad" title="Información de tu Marca"
-              desc="Estos datos identificarán tu tienda en la plataforma. Solo el nombre de marca es obligatorio."
+              eyebrow={t("02 · Identidad")} title={t("Información de tu Marca")}
+              desc={t("Estos datos identificarán tu tienda en la plataforma. Solo el nombre de marca es obligatorio.")}
               C={C} SERIF={SERIF} SANS={SANS} MONO={MONO}
             />
 
             {/* — Identidad principal — */}
-            <Section title="Identidad" C={C} SERIF={SERIF} SANS={SANS}>
+            <Section title={t("Identidad")} C={C} SERIF={SERIF} SANS={SANS}>
               {/* Nombre de marca */}
               <div>
-                <Label text="Nombre de marca" required C={C} SANS={SANS} />
+                <Label text={t("Nombre de marca")} required C={C} SANS={SANS} />
                 <input
                   type="text" value={form.nombre_marca} maxLength={150}
-                  placeholder="Ej: Mezcal Don Cosme"
+                  placeholder={t("Ej: Mezcal Don Cosme")}
                   style={inp("nombre_marca", showErr.nombre_marca)}
                   onFocus={() => setFocusedField("nombre_marca")}
                   onBlur={() => { setFocusedField(null); setTouched(t => ({ ...t, nombre_marca:true })); }}
                   onChange={e => setField("nombre_marca", e.target.value)}
                 />
                 {showErr.nombre_marca
-                  ? <ErrMsg msg="Escribe el nombre de tu marca" C={C} SANS={SANS} />
-                  : <FieldHint text={`${form.nombre_marca.length}/150 caracteres`} C={C} SANS={SANS} />
+                  ? <ErrMsg msg={t("Escribe el nombre de tu marca")} C={C} SANS={SANS} />
+                  : <FieldHint text={`${form.nombre_marca.length}/150 ${t("caracteres")}`} C={C} SANS={SANS} />
                 }
               </div>
 
             </Section>
 
             {/* — Región — */}
-            <Section title="Región de origen" C={C} SERIF={SERIF} SANS={SANS} subtitle="¿En qué comunidad o región produces tu mezcal?">
+            <Section title={t("Región de origen")} C={C} SERIF={SERIF} SANS={SANS} subtitle={t("¿En qué comunidad o región produces tu mezcal?")}>
               <div>
-                <Label text="Comunidad / Región" C={C} SANS={SANS} />
+                <Label text={t("Comunidad / Región")} C={C} SANS={SANS} />
                 <div style={{ position:"relative" }}>
                   <MapPin style={{ position:"absolute", left:"12px", top:"50%", transform:"translateY(-50%)", width:"14px", height:"14px", color:C.copper, pointerEvents:"none" }} />
                   <select value={form.id_region ?? ""} onChange={e => setField("id_region", e.target.value ? Number(e.target.value) : null)}
                     style={{ ...inp("region"), paddingLeft:"36px", appearance:"none", cursor:"pointer" }}
                     onFocus={() => setFocusedField("region")} onBlur={() => setFocusedField(null)}>
-                    <option value="">Selecciona una región...</option>
+                    <option value="">{t("Selecciona una región...")}</option>
                     {regiones.map(r => (
                       <option key={r.id_region} value={r.id_region}>{r.nombre}{r.estado_prov ? ` — ${r.estado_prov}` : ""}</option>
                     ))}
@@ -522,40 +524,40 @@ export default function SolicitarPage() {
             </Section>
 
             {/* — Dirección de producción — */}
-            <Section title="Dirección de producción" C={C} SERIF={SERIF} SANS={SANS} subtitle="Ubicación donde elaboras tus productos (opcional).">
+            <Section title={t("Dirección de producción")} C={C} SERIF={SERIF} SANS={SANS} subtitle={t("Ubicación donde elaboras tus productos (opcional).")}>
               <div>
-                <Label text="Calle y número" C={C} SANS={SANS} />
-                <input type="text" value={form.produccion_calle} placeholder="Av. Principal 123"
+                <Label text={t("Calle y número")} C={C} SANS={SANS} />
+                <input type="text" value={form.produccion_calle} placeholder={t("Av. Principal 123")}
                   style={inp("prod_calle")} onFocus={() => setFocusedField("prod_calle")} onBlur={() => setFocusedField(null)}
                   onChange={e => setField("produccion_calle", e.target.value)}
                 />
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:"14px" }}>
                 <div>
-                  <Label text="Ciudad" C={C} SANS={SANS} />
-                  <input type="text" value={form.produccion_ciudad} placeholder="Matatlán"
+                  <Label text={t("Ciudad")} C={C} SANS={SANS} />
+                  <input type="text" value={form.produccion_ciudad} placeholder={t("Matatlán")}
                     style={inp("prod_ciudad")} onFocus={() => setFocusedField("prod_ciudad")} onBlur={() => setFocusedField(null)}
                     onChange={e => setField("produccion_ciudad", e.target.value)}
                   />
                 </div>
                 <div>
-                  <Label text="Estado" C={C} SANS={SANS} />
-                  <input type="text" value={form.produccion_estado} placeholder="Oaxaca"
+                  <Label text={t("Estado")} C={C} SANS={SANS} />
+                  <input type="text" value={form.produccion_estado} placeholder={t("Oaxaca")}
                     style={inp("prod_estado")} onFocus={() => setFocusedField("prod_estado")} onBlur={() => setFocusedField(null)}
                     onChange={e => setField("produccion_estado", e.target.value)}
                   />
                 </div>
                 <div>
-                  <Label text="C.P." C={C} SANS={SANS} />
-                  <input type="text" value={form.produccion_cp} placeholder="70300" maxLength={5}
+                  <Label text={t("C.P.")} C={C} SANS={SANS} />
+                  <input type="text" value={form.produccion_cp} placeholder={t("70300")} maxLength={5}
                     style={inp("prod_cp")} onFocus={() => setFocusedField("prod_cp")} onBlur={() => setFocusedField(null)}
                     onChange={e => setField("produccion_cp", e.target.value.replace(/\D/g, ""))}
                   />
                 </div>
               </div>
               <div>
-                <Label text="Referencia" C={C} SANS={SANS} />
-                <input type="text" value={form.produccion_referencia} placeholder="Entre calles, puntos de referencia..."
+                <Label text={t("Referencia")} C={C} SANS={SANS} />
+                <input type="text" value={form.produccion_referencia} placeholder={t("Entre calles, puntos de referencia...")}
                   style={inp("prod_ref")} onFocus={() => setFocusedField("prod_ref")} onBlur={() => setFocusedField(null)}
                   onChange={e => setField("produccion_referencia", e.target.value)}
                 />
@@ -569,20 +571,20 @@ export default function SolicitarPage() {
           <div>
             <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"16px", marginBottom:"24px" }}>
               <StepHeader
-                eyebrow="03 · Oferta" title="Categorías de Productos"
-                desc="Selecciona las categorías de lo que vas a vender. Puedes elegir varias."
+                eyebrow={t("03 · Oferta")} title={t("Categorías de Productos")}
+                desc={t("Selecciona las categorías de lo que vas a vender. Puedes elegir varias.")}
                 C={C} SERIF={SERIF} SANS={SANS} MONO={MONO}
               />
               <button type="button" onClick={toggleAll} disabled={categorias.length === 0}
                 style={{ fontFamily:SANS, fontSize:"12px", fontWeight:600, color:C.copper, background:"none", border:"none", cursor:"pointer", padding:0, flexShrink:0, whiteSpace:"nowrap", textDecoration:"underline", textUnderlineOffset:"2px", marginTop:"4px", opacity: categorias.length === 0 ? 0.4 : 1 }}>
-                {allSel ? "Deseleccionar todas" : "Seleccionar todas"}
+                {allSel ? t("Deseleccionar todas") : t("Seleccionar todas")}
               </button>
             </div>
 
             {categorias.length === 0 ? (
               <div style={{ display:"flex", alignItems:"center", gap:"10px", padding:"24px 0" }}>
                 <Loader2 className="_spin" style={{ width:"16px", height:"16px", color:C.copper }} />
-                <span style={{ fontFamily:SANS, color:C.body, fontSize:"13px" }}>Cargando categorías...</span>
+                <span style={{ fontFamily:SANS, color:C.body, fontSize:"13px" }}>{t("Cargando categorías...")}</span>
               </div>
             ) : (
               <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
@@ -607,7 +609,7 @@ export default function SolicitarPage() {
                           </button>
                           <button type="button" onClick={() => toggleExpandida(cat.id_categoria)}
                             style={{ background:"none", border:"none", cursor:"pointer", padding:"9px 14px", display:"flex", alignItems:"center", gap:"5px", color:C.body }}>
-                            <span style={{ fontFamily:SANS, fontSize:"11px" }}>{hijas.length} tipos</span>
+                            <span style={{ fontFamily:SANS, fontSize:"11px" }}>{hijas.length} {t("tipos")}</span>
                             {expanded ? <ChevronUp style={{ width:"12px", height:"12px" }} /> : <ChevronDown style={{ width:"12px", height:"12px" }} />}
                           </button>
                         </div>
@@ -652,11 +654,11 @@ export default function SolicitarPage() {
             {/* feedback */}
             <div style={{ marginTop:"14px" }}>
               {showErr.categorias
-                ? <ErrMsg msg="Selecciona al menos una categoría" C={C} SANS={SANS} />
+                ? <ErrMsg msg={t("Selecciona al menos una categoría")} C={C} SANS={SANS} />
                 : form.categorias_ids.length > 0 && (
                   <p style={{ fontFamily:SANS, color:C.success, fontSize:"12px", display:"flex", alignItems:"center", gap:"6px", margin:0 }}>
                     <CheckCircle2 style={{ width:"12px", height:"12px" }} />
-                    {form.categorias_ids.length} categoría{form.categorias_ids.length > 1 ? "s" : ""} seleccionada{form.categorias_ids.length > 1 ? "s" : ""}
+                    {form.categorias_ids.length} {form.categorias_ids.length === 1 ? t("categoría") : t("categorías")} seleccionada{form.categorias_ids.length > 1 ? "s" : ""}
                   </p>
                 )}
             </div>
@@ -667,8 +669,8 @@ export default function SolicitarPage() {
         {step === 4 && (
           <div>
             <StepHeader
-              eyebrow="04 · Verificación" title="Certificado de Origen"
-              desc="Sube tu documento de verificación. Máximo 500 KB."
+              eyebrow={t("04 · Verificación")} title={t("Certificado de Origen")}
+              desc={t("Sube tu documento de verificación. Máximo 500 KB.")}
               C={C} SERIF={SERIF} SANS={SANS} MONO={MONO}
             />
 
@@ -680,13 +682,13 @@ export default function SolicitarPage() {
                     <CheckCircle2 style={{ width:"18px", height:"18px", color:C.success }} />
                   </div>
                   <div>
-                    <p style={{ fontFamily:SANS, color:C.success, fontSize:"14px", fontWeight:600, margin:0 }}>Certificado subido correctamente</p>
-                    <p style={{ fontFamily:SANS, color:C.body, fontSize:"12px", margin:"2px 0 0" }}>El archivo está listo para enviar</p>
+                    <p style={{ fontFamily:SANS, color:C.success, fontSize:"14px", fontWeight:600, margin:0 }}>{t("Certificado subido correctamente")}</p>
+                    <p style={{ fontFamily:SANS, color:C.body, fontSize:"12px", margin:"2px 0 0" }}>{t("El archivo está listo para enviar")}</p>
                   </div>
                 </div>
                 <button type="button" onClick={() => setCertificadoUrl("")}
                   style={{ background:"none", border:`1px solid ${C.inputBorder}`, borderRadius:"6px", cursor:"pointer", fontFamily:SANS, color:C.error, fontSize:"12px", padding:"6px 12px" }}>
-                  Cambiar
+                  {t("Cambiar")}
                 </button>
               </div>
             ) : (
@@ -706,7 +708,7 @@ export default function SolicitarPage() {
                 {uploading ? (
                   <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"14px" }}>
                     <Loader2 className="_spin" style={{ width:"32px", height:"32px", color:C.copper }} />
-                    <p style={{ fontFamily:SANS, color:C.body, fontSize:"14px", margin:0 }}>Subiendo archivo...</p>
+                    <p style={{ fontFamily:SANS, color:C.body, fontSize:"14px", margin:0 }}>{t("Subiendo archivo...")}</p>
                   </div>
                 ) : (
                   <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"10px" }}>
@@ -714,9 +716,9 @@ export default function SolicitarPage() {
                       <UploadIcon style={{ width:"22px", height:"22px", color:C.copper }} />
                     </div>
                     <p style={{ fontFamily:SANS, color:C.label, fontSize:"15px", margin:0 }}>
-                      <span style={{ color:C.copper, fontWeight:700 }}>Haz clic para subir</span> o arrastra aquí
+                      <span style={{ color:C.copper, fontWeight:700 }}>{t("Haz clic para subir")}</span> {t("o arrastra aquí")}
                     </p>
-                    <p style={{ fontFamily:SANS, color:C.body, fontSize:"12px", margin:0 }}>PDF, JPG, PNG · máx. 500 KB</p>
+                    <p style={{ fontFamily:SANS, color:C.body, fontSize:"12px", margin:0 }}>{t("PDF, JPG, PNG · máx. 500 KB")}</p>
                   </div>
                 )}
               </div>
@@ -725,14 +727,14 @@ export default function SolicitarPage() {
             {/* Summary before submit */}
             <div style={{ marginTop:"28px", background:C.section, border:`1px solid ${C.border}`, borderRadius:"12px", padding:"20px 22px" }}>
               <p style={{ fontFamily:MONO, fontSize:"10px", color:C.copper, letterSpacing:"0.18em", textTransform:"uppercase", margin:"0 0 14px" }}>
-                Resumen de tu solicitud
+                {t("Resumen de tu solicitud")}
               </p>
               <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
                 {[
-                  { label:"Asociación",  val: form.asociacion || "—",               ok: !!form.asociacion },
-                  { label:"Marca",       val: form.nombre_marca || "—",             ok: !!form.nombre_marca },
-                  { label:"Categorías",  val: form.categorias_ids.length > 0 ? `${form.categorias_ids.length} seleccionada${form.categorias_ids.length > 1 ? "s" : ""}` : "—", ok: form.categorias_ids.length > 0 },
-                  { label:"Certificado", val: certificadoUrl ? "Subido" : "Pendiente", ok: !!certificadoUrl },
+                  { label:t("Asociación"),  val: form.asociacion || "—",               ok: !!form.asociacion },
+                  { label:t("Marca"),       val: form.nombre_marca || "—",             ok: !!form.nombre_marca },
+                  { label:t("Categorías"),  val: form.categorias_ids.length > 0 ? `${form.categorias_ids.length} seleccionada${form.categorias_ids.length > 1 ? "s" : ""}` : "—", ok: form.categorias_ids.length > 0 },
+                  { label:t("Certificado"), val: certificadoUrl ? t("Subido") : t("Pendiente"), ok: !!certificadoUrl },
                 ].map(row => (
                   <div key={row.label} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"12px" }}>
                     <span style={{ fontFamily:SANS, color:C.body, fontSize:"13px" }}>{row.label}</span>
@@ -755,7 +757,7 @@ export default function SolicitarPage() {
           <button type="button" onClick={step === 1 ? () => router.back() : goPrev}
             style={{ display:"flex", alignItems:"center", gap:"8px", background:"transparent", border:`1px solid ${C.inputBorder}`, borderRadius:"8px", padding:"11px 22px", fontFamily:SANS, fontSize:"13px", fontWeight:500, color:C.label, cursor:"pointer" }}>
             <ArrowLeft style={{ width:"14px", height:"14px" }} />
-            {step === 1 ? "Cancelar" : "Anterior"}
+            {step === 1 ? t("Cancelar") : t("Anterior")}
           </button>
 
           <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
@@ -770,14 +772,14 @@ export default function SolicitarPage() {
               disabled={isSubmitting || uploading || !certificadoUrl}
               style={{ display:"flex", alignItems:"center", gap:"8px", background:(isSubmitting || uploading || !certificadoUrl) ? "rgba(46,74,51,0.45)" : C.green, color:C.cream, border:"none", borderRadius:"8px", padding:"11px 26px", fontFamily:SANS, fontSize:"13px", fontWeight:600, letterSpacing:"0.04em", cursor:(isSubmitting || uploading || !certificadoUrl) ? "not-allowed" : "pointer", transition:"background 0.2s" }}>
               {isSubmitting
-                ? <><Loader2 className="_spin" style={{ width:"14px", height:"14px" }} />Enviando...</>
-                : "Enviar Solicitud"
+                ? <><Loader2 className="_spin" style={{ width:"14px", height:"14px" }} />{t("Enviando...")}</>
+                : t("Enviar Solicitud")
               }
             </button>
           ) : (
             <button type="button" onClick={goNext}
               style={{ display:"flex", alignItems:"center", gap:"8px", background:C.green, color:C.cream, border:"none", borderRadius:"8px", padding:"11px 26px", fontFamily:SANS, fontSize:"13px", fontWeight:600, letterSpacing:"0.04em", cursor:"pointer" }}>
-              Siguiente
+              {t("Siguiente")}
               <ArrowRight style={{ width:"14px", height:"14px" }} />
             </button>
           )}

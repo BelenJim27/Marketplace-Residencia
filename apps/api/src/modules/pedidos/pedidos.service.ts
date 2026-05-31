@@ -4,6 +4,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
 import { ComisionesService } from "../comisiones/comisiones.service";
 import { FedexService } from "../envios/fedex.service";
+import { ICarrierService } from "../envios/interfaces/carrier.interface";
 import { PaypalService } from "../pagos/paypal.service";
 import { StripeService } from "../pagos/stripe.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
@@ -21,6 +22,8 @@ type Periodo = "week" | "month" | "year";
 
 @Injectable()
 export class PedidosService {
+  private carrierService: ICarrierService;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
@@ -28,7 +31,9 @@ export class PedidosService {
     private readonly fedexService: FedexService,
     private readonly stripeService: StripeService,
     private readonly paypalService: PaypalService,
-  ) {}
+  ) {
+    this.carrierService = fedexService;
+  }
   async findAll() {
     return serializeBigInts(
       await this.prisma.pedidos.findMany({
@@ -802,16 +807,6 @@ export class PedidosService {
       include: { pedidos: true },
     });
 
-    // When delivery is confirmed, trigger Stripe Transfer for this productor's payment
-    if (nuevoEstado === 'entregado' && anterior?.estado !== 'entregado') {
-      try {
-        await this.triggerPayoutForProductor(id_pedido_big, id_productor, updated.pedidos.moneda);
-      } catch (err: any) {
-        console.error(`[pedidos] Failed to trigger payout for productor ${id_productor}:`, err?.message);
-        // Don't block the status update; payout can be retried manually
-      }
-    }
-
     await this.prisma.auditoria.create({
       data: {
         accion: 'cambiar_estado_pedido_productor',
@@ -1246,7 +1241,7 @@ export class PedidosService {
       largo_cm: 40,
     };
 
-    const quotes = await this.fedexService.cotizarEnvio(dto);
+    const quotes = await this.carrierService.cotizarEnvio(dto);
 
     for (const q of quotes) {
       await this.prisma.envio_cotizaciones.create({

@@ -32,11 +32,11 @@ export class ArchivosController {
     if (!file) throw new BadRequestException('Archivo requerido');
     ensureAllowedFile(file.originalname);
 
-    const cloudinaryUrl = await this.service.uploadToCloudinary(file.buffer, file.originalname);
+    const localUrl = await this.service.uploadToLocal(file.buffer, file.originalname);
 
     return this.service.create({
       ...dto,
-      url: cloudinaryUrl,
+      url: localUrl,
       tipo: dto.tipo?.trim() || inferTipo(file.originalname),
     });
   }

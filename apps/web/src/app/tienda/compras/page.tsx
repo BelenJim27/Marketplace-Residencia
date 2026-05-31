@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Package, ChevronRight, ShoppingBag } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useLocale } from "@/context/LocaleContext";
 import { getCookie } from "@/lib/cookies";
 import { formatPrice } from "@/lib/format-number";
 
@@ -38,6 +39,7 @@ const ESTADO_COLORES: Record<string, { bg: string; text: string; border: string 
 
 export default function MisComprasPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -75,14 +77,14 @@ export default function MisComprasPage() {
       <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
         <div style={{ marginBottom: "32px" }}>
           <h1 style={{ fontFamily: "var(--font-family-store)", fontSize: "36px", fontWeight: "700", background: `linear-gradient(90deg, ${COLOR_PALETTE.green} 0%, ${COLOR_PALETTE.copper} 100%)`, backgroundClip: "text", color: "transparent", marginBottom: "8px" }}>
-            Mis Compras
+            {t("compras_title")}
           </h1>
           <p style={{ fontSize: "14px", color: COLOR_PALETTE.copper, fontWeight: "500", marginTop: "8px" }}>
-            Tu historial de pedidos
+            {t("compras_subtitle")}
           </p>
         </div>
         <div className="flex min-h-[200px] items-center justify-center">
-          <p style={{ color: "#999999" }}>Cargando pedidos...</p>
+          <p style={{ color: "#999999" }}>{t("compras_loading")}</p>
         </div>
       </main>
     );
@@ -93,16 +95,16 @@ export default function MisComprasPage() {
       <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
         <div style={{ marginBottom: "32px" }}>
           <h1 style={{ fontFamily: "var(--font-family-store)", fontSize: "36px", fontWeight: "700", background: `linear-gradient(90deg, ${COLOR_PALETTE.green} 0%, ${COLOR_PALETTE.copper} 100%)`, backgroundClip: "text", color: "transparent", marginBottom: "8px" }}>
-            Mis Compras
+            {t("compras_title")}
           </h1>
           <p style={{ fontSize: "14px", color: COLOR_PALETTE.copper, fontWeight: "500", marginTop: "8px" }}>
-            Tu historial de pedidos
+            {t("compras_subtitle")}
           </p>
         </div>
         <div style={{ borderRadius: "12px", background: `linear-gradient(135deg, ${COLOR_PALETTE.white} 0%, ${COLOR_PALETTE.cream}08 100%)`, padding: "32px", textAlign: "center", border: `1px solid ${COLOR_PALETTE.border}` }}>
-          <p style={{ marginBottom: "16px", color: "#666666", fontSize: "15px" }}>Inicia sesión para ver tu historial de compras.</p>
+          <p style={{ marginBottom: "16px", color: "#666666", fontSize: "15px" }}>{t("compras_sign_in_prompt")}</p>
           <Link href="/auth/sign-in" style={{ display: "inline-block", borderRadius: "8px", background: COLOR_PALETTE.green, color: COLOR_PALETTE.white, padding: "12px 24px", fontSize: "14px", fontWeight: "600", transition: "all 200ms ease", textDecoration: "none" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#1f3a25"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(46,74,51,0.2)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = COLOR_PALETTE.green; e.currentTarget.style.boxShadow = "none"; }}>
-            Iniciar sesión
+            {t("compras_sign_in_button")}
           </Link>
         </div>
       </main>
@@ -113,19 +115,19 @@ export default function MisComprasPage() {
     <main className="mx-auto max-w-screen-2xl px-4 py-8 md:px-8">
       <div style={{ marginBottom: "32px" }}>
         <h1 style={{ fontFamily: "var(--font-family-store)", fontSize: "36px", fontWeight: "700", background: `linear-gradient(90deg, ${COLOR_PALETTE.green} 0%, ${COLOR_PALETTE.copper} 100%)`, backgroundClip: "text", color: "transparent", marginBottom: "8px" }}>
-          Mis Compras
+          {t("compras_title")}
         </h1>
         <p style={{ fontSize: "14px", color: COLOR_PALETTE.copper, fontWeight: "500", marginTop: "8px" }}>
-          Tu historial de pedidos
+          {t("compras_subtitle")}
         </p>
       </div>
 
       {pedidos.length === 0 ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", borderRadius: "12px", background: `linear-gradient(135deg, ${COLOR_PALETTE.white} 0%, ${COLOR_PALETTE.cream}08 100%)`, padding: "40px", textAlign: "center", border: `1px solid ${COLOR_PALETTE.border}` }}>
           <ShoppingBag size={56} style={{ color: COLOR_PALETTE.border }} aria-hidden="true" />
-          <p style={{ color: "#666666", fontSize: "15px" }}>Aún no tienes compras.</p>
+          <p style={{ color: "#666666", fontSize: "15px" }}>{t("compras_empty_state")}</p>
           <Link href="/cliente/producto" style={{ display: "inline-block", borderRadius: "8px", background: COLOR_PALETTE.green, color: COLOR_PALETTE.white, padding: "12px 24px", fontSize: "14px", fontWeight: "600", transition: "all 200ms ease", textDecoration: "none", marginTop: "8px" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#1f3a25"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(46,74,51,0.2)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = COLOR_PALETTE.green; e.currentTarget.style.boxShadow = "none"; }}>
-            Explorar mezcales
+            {t("compras_explore_button")}
           </Link>
         </div>
       ) : (

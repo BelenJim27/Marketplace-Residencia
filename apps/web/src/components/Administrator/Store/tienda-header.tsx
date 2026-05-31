@@ -8,6 +8,7 @@ import {
   Store, Home, ShoppingBag, Menu, X,
 } from "lucide-react";
 import { UserInfo } from "@/components/Layouts/header/user-info";
+import { LocaleSwitcher } from "@/components/Store/LocaleSwitcher";
 import { useAuth } from "@/context/AuthContext";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -223,6 +224,7 @@ export function TiendaHeader() {
           {/* Right spacer + Account (derecha) */}
           <div className="flex-1 flex justify-end items-center">
           <div className="flex items-center gap-4 border-l border-[rgba(244,240,227,0.15)] pl-4">
+            <LocaleSwitcher />
             {/* Profile / Guest Auth */}
             {!isAuthenticated ? (
               <div className="relative">
@@ -341,6 +343,14 @@ export function TiendaHeader() {
                     </Link>
                   </div>
                 )}
+              </div>
+
+              {/* Idioma / Moneda — drawer móvil */}
+              <div className="px-4 py-3 border-b border-[rgba(244,240,227,0.15)] flex items-center justify-between">
+                <span style={{ color: "rgba(244,240,227,0.6)" }} className="text-xs uppercase tracking-widest font-semibold">
+                  Idioma / Moneda
+                </span>
+                <LocaleSwitcher />
               </div>
 
               {/* Navigation Items (extras for clients with 6+ items) */}

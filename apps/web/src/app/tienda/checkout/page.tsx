@@ -12,6 +12,7 @@ import { useCarrito } from "@/context/CarritoContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/format-number";
 import { usePaises } from "@/hooks/usePaises";
+import { api } from "@/lib/api";
 import { getStripe, isTestMode, isStripeConfigured } from "@/lib/stripe";
 import { isPaypalConfigured, getPaypalClientId } from "@/lib/paypal";
 import PaypalCheckoutButton from "@/components/PaypalCheckoutButton";
@@ -81,6 +82,31 @@ export default function CheckoutPage() {
 
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState<'MXN' | 'USD' | 'EUR'>('MXN');
+  const [tasas, setTasas] = useState<{ USD: number | null; EUR: number | null }>({ USD: null, EUR: null });
+  const [tasasLoading, setTasasLoading] = useState(true);
+
+  // Cargar tasas del backend
+  useEffect(() => {
+    api.tasasCambio.actuales()
+      .then((data) => {
+        setTasas(data.MXN);
+      })
+      .catch((err) => console.error('Error loading exchange rates:', err))
+      .finally(() => setTasasLoading(false));
+  }, []);
+
+  const displayCurrency = selectedCurrency;
+
+  const convertToDisplay = (mxnAmount: number): number => {
+    if (selectedCurrency === 'USD' && tasas.USD) {
+      return Math.round(mxnAmount * tasas.USD * 100) / 100;
+    }
+    if (selectedCurrency === 'EUR' && tasas.EUR) {
+      return Math.round(mxnAmount * tasas.EUR * 100) / 100;
+    }
+    return mxnAmount;
+  };
 
   const stripeConfigured = isStripeConfigured();
   const stripePromise = stripeConfigured ? getStripe() : null;
@@ -468,6 +494,8 @@ export default function CheckoutPage() {
                           pedidoId={pedidoIdCreado}
                           clientSecret={clientSecret!}
                           onError={setErrorMensaje}
+                          convertToDisplay={convertToDisplay}
+                          displayCurrency={displayCurrency}
                         />
                       </Elements>
                     )}
@@ -534,6 +562,8 @@ export default function CheckoutPage() {
                           direccionSeleccionada={direccionSeleccionada}
                           envioSeleccionado={envioSeleccionado}
                           pedidoId={pedidoIdCreado}
+                          convertToDisplay={convertToDisplay}
+                          displayCurrency={displayCurrency}
                         />
                       </div>
                     )}
@@ -655,13 +685,42 @@ export default function CheckoutPage() {
                 <div style={{ width: "4px", height: "24px", background: `linear-gradient(180deg, ${COLOR_PALETTE.copper}, ${COLOR_PALETTE.amber})`, borderRadius: "2px" }} />
                 <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "24px", fontWeight: 400, color: COLOR_PALETTE.green, margin: 0 }}>Resumen</h3>
               </div>
-            <div style={{ display: "space-y-2", borderBottom: `1px solid ${COLOR_PALETTE.border}`, paddingBottom: "16px", fontSize: "14px" }}>
-              {items.slice(0, 3).map((item) => (
-                <div key={item.id_producto} style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px", fontSize: "13px" }}>
-                  <span style={{ truncate: "true", maxWidth: "140px" }}>{item.nombre} x{item.cantidad}</span>
-                  <span style={{ fontWeight: 500 }}>${formatPrice(Number(item.precio_base) * item.cantidad, { showCurrency: false })}</span>
-                </div>
+            {/* Selector de moneda */}
+            <div style={{ display: "flex", gap: "4px", marginBottom: "12px" }}>
+              {(['MXN', 'USD', 'EUR'] as const).map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setSelectedCurrency(c)}
+                  style={{
+                    flex: 1,
+                    padding: "6px 8px",
+                    borderRadius: "8px",
+                    border: `1px solid ${selectedCurrency === c ? COLOR_PALETTE.copper : COLOR_PALETTE.border}`,
+                    background: selectedCurrency === c ? `${COLOR_PALETTE.copper}15` : 'transparent',
+                    color: selectedCurrency === c ? COLOR_PALETTE.copper : COLOR_PALETTE.green,
+                    fontWeight: selectedCurrency === c ? 700 : 400,
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    transition: "all 150ms ease",
+                  }}
+                  disabled={c !== 'MXN' && !tasas[c]}
+                  title={c !== 'MXN' && !tasas[c] ? 'Tasas aún cargando' : undefined}
+                >
+                  {c}
+                </button>
               ))}
+            </div>
+            <div style={{ display: "space-y-2", borderBottom: `1px solid ${COLOR_PALETTE.border}`, paddingBottom: "16px", fontSize: "14px" }}>
+              {items.slice(0, 3).map((item) => {
+                const itemTotal = Number(item.precio_base) * item.cantidad;
+                const displayAmount = convertToDisplay(itemTotal);
+                return (
+                  <div key={item.id_producto} style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px", fontSize: "13px" }}>
+                    <span style={{ truncate: "true", maxWidth: "140px" }}>{item.nombre} x{item.cantidad}</span>
+                    <span style={{ fontWeight: 500 }}>${formatPrice(displayAmount, { showCurrency: false })}</span>
+                  </div>
+                );
+              })}
               {items.length > 3 && (
                 <p style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "8px" }}>+{items.length - 3} producto(s) más</p>
               )}
@@ -669,17 +728,21 @@ export default function CheckoutPage() {
             <div style={{ display: "space-y-2", paddingTop: "12px", paddingBottom: "12px", fontSize: "14px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
                 <span>Subtotal</span>
-                <span style={{ fontWeight: 500 }}>${formatPrice(Number(items.reduce((a, i) => a + Number(i.precio_base) * i.cantidad, 0)), { showCurrency: false })}</span>
+                <span style={{ fontWeight: 500 }}>
+                  ${formatPrice(convertToDisplay(Number(items.reduce((a, i) => a + Number(i.precio_base) * i.cantidad, 0))), { showCurrency: false })}
+                </span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
                 <span>Envío</span>
-                <span style={{ fontWeight: 500 }}>{envioSeleccionado ? `$${formatPrice(envioSeleccionado.precioTotal, { showCurrency: false })}` : "—"}</span>
+                <span style={{ fontWeight: 500 }}>
+                  {envioSeleccionado ? `$${formatPrice(convertToDisplay(envioSeleccionado.precioTotal), { showCurrency: false })}` : "—"}
+                </span>
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${COLOR_PALETTE.border}`, paddingTop: "12px" }}>
               <span style={{ fontWeight: 600, color: COLOR_PALETTE.green }}>Total</span>
               <span style={{ fontSize: "18px", fontWeight: 700, color: COLOR_PALETTE.copper }}>
-                ${formatPrice(totalConEnvio, { showCurrency: false })} MXN
+                ${formatPrice(convertToDisplay(totalConEnvio), { showCurrency: false })} {displayCurrency}
               </span>
             </div>
             </div>
@@ -695,7 +758,7 @@ export default function CheckoutPage() {
       <PayPalScriptProvider
         options={{
           clientId: getPaypalClientId(),
-          currency: 'MXN',
+          currency: displayCurrency,
           intent: 'capture',
         }}
       >
@@ -735,7 +798,8 @@ function DireccionStep({
     const tel = (nuevaDireccion.telefono ?? "").replace(/\D/g, "");
     if (tel.length > 0 && tel.length !== 10) errors.telefono = "El teléfono debe tener 10 dígitos";
     const cp = nuevaDireccion.codigo_postal ?? "";
-    if (!nuevaDireccion.es_internacional && cp && !/^\d{5}$/.test(cp)) errors.cp = "El código postal debe tener 5 dígitos";
+    if (nuevaDireccion.pais_iso2 === "MX" && cp && !/^\d{5}$/.test(cp)) errors.cp = "El código postal debe tener 5 dígitos";
+    if (nuevaDireccion.pais_iso2 === "US" && cp && !/^\d{5}(-\d{4})?$/.test(cp)) errors.cp = "El ZIP code debe tener 5 dígitos (ej. 90210)";
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
     setFormErrors({});
     guardarNuevaDireccion();
@@ -796,60 +860,175 @@ function DireccionStep({
       {mostrarFormDireccion && (
         <div className="space-y-5">
           <div>
-            <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">País de envío *</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">País de envío *</label>
             <select
               value={nuevaDireccion.pais_iso2 || "MX"}
-              onChange={(e) => setNuevaDireccion((p: any) => ({
-                ...p,
-                pais_iso2: e.target.value,
-                es_internacional: e.target.value !== "MX",
-              }))}
-              disabled={paisesLoading}
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-900/30 dark:disabled:text-gray-500"
+              onChange={(e) =>
+                setNuevaDireccion((p: any) => ({
+                  ...p,
+                  pais_iso2: e.target.value,
+                  es_internacional: e.target.value !== "MX",
+                }))
+              }
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none transition-all dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
-              {paisesLoading && <option value="MX">Cargando...</option>}
-              {!paisesLoading && paises.length === 0 && <option value="MX">México</option>}
-              {paises.map((p: any) => (
-                <option key={p.iso2} value={p.iso2}>
-                  {p.nombre_local || p.nombre}
-                </option>
-              ))}
+              <option value="MX">🇲🇽 México</option>
+              <option value="US">🇺🇸 Estados Unidos</option>
             </select>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">¿A quién va dirigido? *</label>
-            <input
-              type="text"
-              value={nuevaDireccion.nombre_destinatario || ""}
-              onChange={(e) => {
-                const val = e.target.value.replace(NOMBRE_REGEX_CHECKOUT, "");
-                setNuevaDireccion((p: any) => ({ ...p, nombre_destinatario: val }));
-                setFormErrors((prev) => ({ ...prev, nombre_destinatario: undefined }));
-              }}
-              placeholder="Nombre completo"
-              className={`w-full rounded-xl border px-4 py-3 text-sm focus:ring-2 focus:outline-none transition-all dark:bg-gray-800 dark:text-white ${formErrors.nombre_destinatario ? "border-red-400 focus:border-red-400 focus:ring-red-400/20" : "border-gray-300 focus:border-green-500 focus:ring-green-500/20 dark:border-gray-600"}`}
-            />
-            {formErrors.nombre_destinatario && <p aria-live="polite" className="mt-1 text-xs text-red-500">{formErrors.nombre_destinatario}</p>}
-          </div>
+          {/* Formulario dinámico por país */}
+          {nuevaDireccion.pais_iso2 === "US" ? (
+            <>
+              {/* USA: Nombre, Teléfono, Línea 1, Línea 2, Ciudad, Estado, ZIP, Predeterminada */}
+              <div>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Nombre completo *</label>
+                <input
+                  type="text"
+                  required
+                  value={nuevaDireccion.nombre_destinatario || ""}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(NOMBRE_REGEX_CHECKOUT, "");
+                    setNuevaDireccion((p: any) => ({ ...p, nombre_destinatario: val }));
+                    setFormErrors((prev) => ({ ...prev, nombre_destinatario: undefined }));
+                  }}
+                  placeholder="John Doe"
+                  className={`w-full rounded-xl border px-4 py-3 text-sm focus:ring-2 focus:outline-none transition-all dark:bg-gray-800 dark:text-white ${formErrors.nombre_destinatario ? "border-red-400 focus:border-red-400 focus:ring-red-400/20" : "border-gray-300 focus:border-green-500 focus:ring-green-500/20 dark:border-gray-600"}`}
+                />
+                {formErrors.nombre_destinatario && <p aria-live="polite" className="mt-1 text-xs text-red-500">{formErrors.nombre_destinatario}</p>}
+              </div>
 
-          <div>
-            <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Teléfono (para entregas)</label>
-            <input
-              type="tel"
-              value={nuevaDireccion.telefono || ""}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                setNuevaDireccion((p: any) => ({ ...p, telefono: val }));
-                setFormErrors((prev) => ({ ...prev, telefono: undefined }));
-              }}
-              placeholder="10 dígitos, ej. 9511234567"
-              maxLength={10}
-              className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.telefono ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
-            />
-            {formErrors.telefono && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
-          </div>
+              <div>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Teléfono</label>
+                <input
+                  type="tel"
+                  value={nuevaDireccion.telefono || ""}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                    setNuevaDireccion((p: any) => ({ ...p, telefono: val }));
+                    setFormErrors((prev) => ({ ...prev, telefono: undefined }));
+                  }}
+                  placeholder="10 dígitos"
+                  maxLength={10}
+                  className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.telefono ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
+                />
+                {formErrors.telefono && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
+              </div>
 
+              <Field label="Dirección - Línea 1 *" value={nuevaDireccion.linea_1 || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, linea_1: v }))} placeholder="123 Main Street" />
+              <Field label="Dirección - Línea 2" value={nuevaDireccion.linea_2 || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, linea_2: v }))} placeholder="Apt 4B (opcional)" />
+              <Field label="Ciudad *" value={nuevaDireccion.ciudad || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, ciudad: v }))} placeholder="New York" />
+              <Field label="Estado *" value={nuevaDireccion.estado || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, estado: v }))} placeholder="NY" />
+
+              <div>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">ZIP Code *</label>
+                <input
+                  type="text"
+                  required
+                  value={nuevaDireccion.codigo_postal || ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNuevaDireccion((p: any) => ({ ...p, codigo_postal: val }));
+                    setFormErrors((prev) => ({ ...prev, cp: undefined }));
+                  }}
+                  maxLength={10}
+                  placeholder="90210 o 90210-1234"
+                  className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.cp ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
+                />
+                {formErrors.cp && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.cp}</p>}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  id="predeterminada"
+                  type="checkbox"
+                  checked={nuevaDireccion.es_predeterminada ?? false}
+                  onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, es_predeterminada: e.target.checked }))}
+                  className="accent-green-600"
+                />
+                <label htmlFor="predeterminada" className="text-sm text-gray-700 dark:text-gray-300">
+                  Guardar como dirección predeterminada
+                </label>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* México: Nombre, Calle, Número, Colonia, Ciudad, Estado, CP, Teléfono, Referencias, Predeterminada */}
+              <div>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Nombre completo</label>
+                <input
+                  type="text"
+                  value={nuevaDireccion.nombre_destinatario || ""}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(NOMBRE_REGEX_CHECKOUT, "");
+                    setNuevaDireccion((p: any) => ({ ...p, nombre_destinatario: val }));
+                    setFormErrors((prev) => ({ ...prev, nombre_destinatario: undefined }));
+                  }}
+                  placeholder="Juan Pérez"
+                  className={`w-full rounded-xl border px-4 py-3 text-sm focus:ring-2 focus:outline-none transition-all dark:bg-gray-800 dark:text-white ${formErrors.nombre_destinatario ? "border-red-400 focus:border-red-400 focus:ring-red-400/20" : "border-gray-300 focus:border-green-500 focus:ring-green-500/20 dark:border-gray-600"}`}
+                />
+                {formErrors.nombre_destinatario && <p aria-live="polite" className="mt-1 text-xs text-red-500">{formErrors.nombre_destinatario}</p>}
+              </div>
+
+              <Field label="Calle *" value={nuevaDireccion.calle || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, calle: v }))} placeholder="Avenida Reforma" />
+              <Field label="Número *" value={nuevaDireccion.numero || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, numero: v }))} placeholder="123 / 123-A" />
+              <Field label="Colonia / Barrio *" value={nuevaDireccion.colonia || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, colonia: v }))} placeholder="Centro" />
+              <Field label="Ciudad *" value={nuevaDireccion.ciudad || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, ciudad: v }))} placeholder="Oaxaca de Juárez" />
+              <Field label="Estado *" value={nuevaDireccion.estado || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, estado: v }))} placeholder="Oaxaca" />
+
+              <div>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Código Postal *</label>
+                <input
+                  type="text"
+                  required
+                  value={nuevaDireccion.codigo_postal || ""}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 5);
+                    setNuevaDireccion((p: any) => ({ ...p, codigo_postal: val }));
+                    setFormErrors((prev) => ({ ...prev, cp: undefined }));
+                  }}
+                  placeholder="68000"
+                  maxLength={5}
+                  className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.cp ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
+                />
+                {formErrors.cp && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.cp}</p>}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Teléfono</label>
+                <input
+                  type="tel"
+                  value={nuevaDireccion.telefono || ""}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                    setNuevaDireccion((p: any) => ({ ...p, telefono: val }));
+                    setFormErrors((prev) => ({ ...prev, telefono: undefined }));
+                  }}
+                  placeholder="10 dígitos, ej. 9511234567"
+                  maxLength={10}
+                  className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.telefono ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
+                />
+                {formErrors.telefono && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
+              </div>
+
+              <Field label="Referencias (opcional)" value={nuevaDireccion.referencia || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, referencia: v }))} placeholder="Casa color azul, frente al parque" />
+
+              <div className="flex items-center gap-2">
+                <input
+                  id="predeterminada"
+                  type="checkbox"
+                  checked={nuevaDireccion.es_predeterminada ?? false}
+                  onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, es_predeterminada: e.target.checked }))}
+                  className="accent-green-600"
+                />
+                <label htmlFor="predeterminada" className="text-sm text-gray-700 dark:text-gray-300">
+                  Guardar como dirección predeterminada
+                </label>
+              </div>
+            </>
+          )}
+
+          {/* GPS button al final */}
           <div>
             <button
               type="button"
@@ -861,70 +1040,6 @@ function DireccionStep({
               {gpsLoading ? "Obteniendo ubicación..." : "Usar mi ubicación actual"}
             </button>
             {gpsError && <p className="mt-1 text-xs text-red-500">{gpsError}</p>}
-          </div>
-
-          {nuevaDireccion.es_internacional ? (
-            <>
-              <Field label="Línea 1 (Dirección) *" value={nuevaDireccion.linea_1 || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, linea_1: v }))} placeholder="Ej. 123 Main Street" />
-              <Field label="Línea 2 (Opcional)" value={nuevaDireccion.linea_2 || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, linea_2: v }))} placeholder="Ej. Apt 4B" />
-            </>
-          ) : (
-            <>
-              <Field label="Calle *" value={nuevaDireccion.calle || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, calle: v }))} placeholder="Ej. Avenida Reforma" />
-              <Field label="Número *" value={nuevaDireccion.numero || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, numero: v }))} placeholder="Ej. 123 / 123-A" />
-              <Field label="Colonia / Barrio *" value={nuevaDireccion.colonia || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, colonia: v }))} placeholder="Ej. Centro" />
-            </>
-          )}
-
-          <Field label="Ciudad *" value={nuevaDireccion.ciudad || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, ciudad: v }))} placeholder="Ej. Oaxaca de Juárez" />
-          <Field label="Estado / Provincia *" value={nuevaDireccion.estado || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, estado: v }))} placeholder="Ej. Oaxaca" />
-          <div>
-            <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Código Postal *</label>
-            <input
-              type="text"
-              value={nuevaDireccion.codigo_postal || ""}
-              onChange={(e) => {
-                const val = nuevaDireccion.es_internacional
-                  ? e.target.value
-                  : e.target.value.replace(/\D/g, "").slice(0, 5);
-                setNuevaDireccion((p: any) => ({ ...p, codigo_postal: val }));
-                setFormErrors((prev) => ({ ...prev, cp: undefined }));
-              }}
-              placeholder={nuevaDireccion.es_internacional ? "Código postal" : "5 dígitos, ej. 68000"}
-              maxLength={nuevaDireccion.es_internacional ? 20 : 5}
-              className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.cp ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
-            />
-            {formErrors.cp && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.cp}</p>}
-          </div>
-          <Field label="Referencia (opcional)" value={nuevaDireccion.referencia || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, referencia: v }))} placeholder="Ej. Casa color azul, frente al parque. Ayuda al repartidor." />
-
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Etiqueta (opcional)" value={nuevaDireccion.nombre_etiqueta || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, nombre_etiqueta: v }))} placeholder="Ej. Casa, Oficina" />
-            <div>
-              <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Tipo</label>
-              <select
-                value={nuevaDireccion.tipo || "hogar"}
-                onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, tipo: e.target.value }))}
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none transition-all dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-              >
-                <option value="hogar">Hogar</option>
-                <option value="trabajo">Trabajo</option>
-                <option value="otro">Otro</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              id="predeterminada"
-              type="checkbox"
-              checked={nuevaDireccion.es_predeterminada ?? false}
-              onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, es_predeterminada: e.target.checked }))}
-              className="accent-green-600"
-            />
-            <label htmlFor="predeterminada" className="text-sm text-gray-700 dark:text-gray-300">
-              Guardar como dirección predeterminada
-            </label>
           </div>
           <div className="flex gap-3 pt-2">
             <button
@@ -1042,7 +1157,10 @@ function EnvioStep({ cotizaciones, cotizandoLoading, cotizandoError, envioSelecc
       <div className="space-y-3">
         {cotizaciones.map((cot: any) => {
           const isSelected = envioSeleccionado?.carrier === cot.carrier && envioSeleccionado?.productCode === cot.productCode;
-          const carrierLabel = cot.carrier === 'fedex' ? 'FedEx' : (cot.carrier ?? '').toUpperCase();
+          const carrierNames: Record<string, string> = {
+            fedex: 'FedEx',
+          };
+          const carrierLabel = carrierNames[cot.carrier] ?? (cot.carrier ?? '').toUpperCase();
           const carrierColor = 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300';
           return (
             <label
@@ -1083,6 +1201,8 @@ function PagoYResumen({
   pedidoId,
   clientSecret,
   onError,
+  convertToDisplay,
+  displayCurrency,
 }: {
   paso: CheckoutStep;
   items: any[];
@@ -1091,6 +1211,8 @@ function PagoYResumen({
   pedidoId: string | null;
   clientSecret: string;
   onError: (msg: string | null) => void;
+  convertToDisplay: (amount: number) => number;
+  displayCurrency: string;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -1258,7 +1380,7 @@ function PagoYResumen({
                 <p className="text-gray-500">x{item.cantidad}</p>
               </div>
               <p className="text-sm font-medium text-gray-900 dark:text-white">
-                ${formatPrice(Number(item.precio_base) * item.cantidad, { showCurrency: false })}
+                ${formatPrice(convertToDisplay(Number(item.precio_base) * item.cantidad), { showCurrency: false })}
               </p>
             </div>
           ))}
@@ -1299,7 +1421,7 @@ function PagoYResumen({
           <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
             <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">Método de envío:</p>
             <p className="text-gray-600 dark:text-gray-400">{envioSeleccionado.productName} — {envioSeleccionado.diasHabilesEstimados} días hábiles</p>
-            <p className="text-gray-600 dark:text-gray-400">${formatPrice(envioSeleccionado.precioTotal, { showCurrency: false })} {envioSeleccionado.moneda}</p>
+            <p className="text-gray-600 dark:text-gray-400">${formatPrice(convertToDisplay(envioSeleccionado.precioTotal), { showCurrency: false })} {displayCurrency}</p>
           </div>
         )}
 
@@ -1326,6 +1448,8 @@ function PagoYResumenPaypal({
   direccionSeleccionada,
   envioSeleccionado,
   pedidoId,
+  convertToDisplay,
+  displayCurrency,
 }: any) {
   const router = useRouter();
 
@@ -1360,7 +1484,7 @@ function PagoYResumenPaypal({
               <p className="text-gray-500">x{item.cantidad}</p>
             </div>
             <p className="text-sm font-medium text-gray-900 dark:text-white">
-              ${formatPrice(Number(item.precio_base) * item.cantidad, { showCurrency: false })}
+              ${formatPrice(convertToDisplay(Number(item.precio_base) * item.cantidad), { showCurrency: false })}
             </p>
           </div>
         ))}
@@ -1403,7 +1527,7 @@ function PagoYResumenPaypal({
             {envioSeleccionado.productName} — {envioSeleccionado.diasHabilesEstimados} días hábiles
           </p>
           <p className="text-gray-600 dark:text-gray-400">
-            ${formatPrice(envioSeleccionado.precioTotal, { showCurrency: false })} {envioSeleccionado.moneda}
+            ${formatPrice(convertToDisplay(envioSeleccionado.precioTotal), { showCurrency: false })} {displayCurrency}
           </p>
         </div>
       )}

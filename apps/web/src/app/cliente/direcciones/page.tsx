@@ -5,7 +5,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
-import { usePaises } from "@/hooks/usePaises";
 import { AlertCircle, CheckCircle2, Loader2, MapPin, Trash2, Edit2, Plus } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
@@ -48,7 +47,6 @@ export default function DireccionesPage() {
   const [eliminando, setEliminando] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [formErrors, setFormErrors] = useState<{ telefono?: string; cp?: string }>({});
-  const { paises, loading: paisesLoading } = usePaises("envio");
 
   const [formData, setFormData] = useState<Direccion>({
     nombre_destinatario: "",
@@ -179,7 +177,8 @@ export default function DireccionesPage() {
     const tel = formData.telefono?.replace(/\D/g, "") ?? "";
     if (tel && tel.length !== 10) errors.telefono = "El teléfono debe tener 10 dígitos";
     const cp = formData.codigo_postal ?? "";
-    if (!formData.es_internacional && cp && !/^\d{5}$/.test(cp)) errors.cp = "El código postal debe tener 5 dígitos";
+    if (formData.pais_iso2 === "MX" && cp && !/^\d{5}$/.test(cp)) errors.cp = "El código postal debe tener 5 dígitos";
+    if (formData.pais_iso2 === "US" && cp && !/^\d{5}(-\d{4})?$/.test(cp)) errors.cp = "El ZIP code debe tener 5 dígitos (ej. 90210)";
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
     setFormErrors({});
 
@@ -230,7 +229,7 @@ export default function DireccionesPage() {
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Cargando direcciones" role="status" />
       </div>
     );
   }
@@ -259,8 +258,8 @@ export default function DireccionesPage() {
         </div>
 
         {error && (
-          <div className="mb-6 flex items-center gap-2 rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20">
-            <AlertCircle className="h-5 w-5 shrink-0" />
+          <div role="alert" aria-live="polite" className="mb-6 flex items-center gap-2 rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20">
+            <AlertCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>
         )}
@@ -273,55 +272,69 @@ export default function DireccionesPage() {
 
             <form onSubmit={guardarDireccion} className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                    Nombre de contacto
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.nombre_destinatario || ""}
-                    onChange={(e) => setFormData({ ...formData, nombre_destinatario: e.target.value })}
-                    className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
-                    placeholder="Juan Pérez"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                    Teléfono
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.telefono || ""}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                      setFormData({ ...formData, telefono: val });
-                      setFormErrors((prev) => ({ ...prev, telefono: undefined }));
-                    }}
-                    className={`w-full rounded-lg border bg-white px-4 py-3 text-dark focus:outline-none dark:bg-dark dark:text-white ${formErrors.telefono ? "border-red-400 focus:border-red-400" : "border-gray-4 focus:border-primary dark:border-dark-3"}`}
-                    placeholder="10 dígitos, ej. 9511234567"
-                    maxLength={10}
-                  />
-                  {formErrors.telefono && <p className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
-                </div>
-
+                {/* País selector — primer campo */}
                 <div className="sm:col-span-2">
-                  <label className="mb-2 flex items-center gap-2 text-sm font-medium text-dark dark:text-white">
-                    <input
-                      type="checkbox"
-                      checked={formData.es_internacional || false}
-                      onChange={(e) => setFormData({ ...formData, es_internacional: e.target.checked })}
-                      className="rounded border-gray-4"
-                    />
-                    Dirección internacional
+                  <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                    País *
                   </label>
+                  <select
+                    value={formData.pais_iso2 || "MX"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        pais_iso2: e.target.value,
+                        es_internacional: e.target.value !== "MX",
+                      })
+                    }
+                    className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                  >
+                    <option value="MX">🇲🇽 México</option>
+                    <option value="US">🇺🇸 Estados Unidos</option>
+                  </select>
                 </div>
 
-                {formData.es_internacional ? (
+                {/* Formulario dinámico por país */}
+                {formData.pais_iso2 === "US" ? (
                   <>
+                    {/* USA: Nombre, Teléfono, Línea 1, Línea 2, Ciudad, Estado, ZIP, Predeterminada */}
                     <div className="sm:col-span-2">
                       <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                        Línea 1 (Dirección) *
+                        Nombre completo *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.nombre_destinatario || ""}
+                        onChange={(e) => setFormData({ ...formData, nombre_destinatario: e.target.value })}
+                        className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                        placeholder="John Doe"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                        Teléfono
+                      </label>
+                      <input
+                        type="tel"
+                        aria-describedby={formErrors.telefono ? "telefono-error-us" : undefined}
+                        aria-invalid={!!formErrors.telefono}
+                        value={formData.telefono || ""}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                          setFormData({ ...formData, telefono: val });
+                          setFormErrors((prev) => ({ ...prev, telefono: undefined }));
+                        }}
+                        className={`w-full rounded-lg border bg-white px-4 py-3 text-dark focus:outline-none dark:bg-dark dark:text-white ${formErrors.telefono ? "border-red-400 focus:border-red-400" : "border-gray-4 focus:border-primary dark:border-dark-3"}`}
+                        placeholder="10 dígitos"
+                        maxLength={10}
+                      />
+                      {formErrors.telefono && <p id="telefono-error-us" className="mt-1 text-xs text-red-500" role="status">{formErrors.telefono}</p>}
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                        Dirección - Línea 1 *
                       </label>
                       <input
                         type="text"
@@ -335,19 +348,96 @@ export default function DireccionesPage() {
 
                     <div className="sm:col-span-2">
                       <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                        Línea 2 (Opcional)
+                        Dirección - Línea 2
                       </label>
                       <input
                         type="text"
                         value={formData.linea_2 || ""}
                         onChange={(e) => setFormData({ ...formData, linea_2: e.target.value })}
                         className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
-                        placeholder="Apt 4B"
+                        placeholder="Apt 4B (opcional)"
                       />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                        Ciudad *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.ciudad || ""}
+                        onChange={(e) => setFormData({ ...formData, ciudad: e.target.value })}
+                        className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                        placeholder="New York"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                        Estado *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.estado || ""}
+                        onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+                        className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                        placeholder="NY"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                        ZIP Code *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        aria-describedby={formErrors.cp ? "cp-error-us" : undefined}
+                        aria-invalid={!!formErrors.cp}
+                        value={formData.codigo_postal || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormData({ ...formData, codigo_postal: val });
+                          setFormErrors((prev) => ({ ...prev, cp: undefined }));
+                        }}
+                        maxLength={10}
+                        className={`w-full rounded-lg border bg-white px-4 py-3 text-dark focus:outline-none dark:bg-dark dark:text-white ${formErrors.cp ? "border-red-400 focus:border-red-400" : "border-gray-4 focus:border-primary dark:border-dark-3"}`}
+                        placeholder="90210 o 90210-1234"
+                      />
+                      {formErrors.cp && <p id="cp-error-us" className="mt-1 text-xs text-red-500" role="status">{formErrors.cp}</p>}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="predeterminada"
+                        checked={formData.es_predeterminada || false}
+                        onChange={(e) => setFormData({ ...formData, es_predeterminada: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <label htmlFor="predeterminada" className="text-sm font-medium text-dark dark:text-white">
+                        Usar como dirección predeterminada
+                      </label>
                     </div>
                   </>
                 ) : (
                   <>
+                    {/* México: Nombre, Calle, Número, Colonia, Ciudad, Estado, CP, Teléfono, Referencias, Predeterminada */}
+                    <div className="sm:col-span-2">
+                      <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                        Nombre completo
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.nombre_destinatario || ""}
+                        onChange={(e) => setFormData({ ...formData, nombre_destinatario: e.target.value })}
+                        className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                        placeholder={user?.nombre || "Juan Pérez"}
+                      />
+                    </div>
+
                     <div>
                       <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
                         Calle *
@@ -389,132 +479,105 @@ export default function DireccionesPage() {
                         placeholder="Centro"
                       />
                     </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                        Ciudad *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.ciudad || ""}
+                        onChange={(e) => setFormData({ ...formData, ciudad: e.target.value })}
+                        className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                        placeholder="Oaxaca de Juárez"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                        Estado *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.estado || ""}
+                        onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+                        className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                        placeholder="Oaxaca"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                        Código Postal *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        aria-describedby={formErrors.cp ? "cp-error-mx" : undefined}
+                        aria-invalid={!!formErrors.cp}
+                        value={formData.codigo_postal || ""}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 5);
+                          setFormData({ ...formData, codigo_postal: val });
+                          setFormErrors((prev) => ({ ...prev, cp: undefined }));
+                        }}
+                        maxLength={5}
+                        className={`w-full rounded-lg border bg-white px-4 py-3 text-dark focus:outline-none dark:bg-dark dark:text-white ${formErrors.cp ? "border-red-400 focus:border-red-400" : "border-gray-4 focus:border-primary dark:border-dark-3"}`}
+                        placeholder="68000"
+                      />
+                      {formErrors.cp && <p id="cp-error-mx" className="mt-1 text-xs text-red-500" role="status">{formErrors.cp}</p>}
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                        Teléfono
+                      </label>
+                      <input
+                        type="tel"
+                        aria-describedby={formErrors.telefono ? "telefono-error-mx" : undefined}
+                        aria-invalid={!!formErrors.telefono}
+                        value={formData.telefono || ""}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                          setFormData({ ...formData, telefono: val });
+                          setFormErrors((prev) => ({ ...prev, telefono: undefined }));
+                        }}
+                        className={`w-full rounded-lg border bg-white px-4 py-3 text-dark focus:outline-none dark:bg-dark dark:text-white ${formErrors.telefono ? "border-red-400 focus:border-red-400" : "border-gray-4 focus:border-primary dark:border-dark-3"}`}
+                        placeholder="10 dígitos, ej. 9511234567"
+                        maxLength={10}
+                      />
+                      {formErrors.telefono && <p id="telefono-error-mx" className="mt-1 text-xs text-red-500" role="status">{formErrors.telefono}</p>}
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
+                        Referencias (opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.referencia || ""}
+                        onChange={(e) => setFormData({ ...formData, referencia: e.target.value })}
+                        className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
+                        placeholder="Casa color azul, frente al parque"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="predeterminada"
+                        checked={formData.es_predeterminada || false}
+                        onChange={(e) => setFormData({ ...formData, es_predeterminada: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <label htmlFor="predeterminada" className="text-sm font-medium text-dark dark:text-white">
+                        Usar como dirección predeterminada
+                      </label>
+                    </div>
                   </>
                 )}
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                    Ciudad *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.ciudad || ""}
-                    onChange={(e) => setFormData({ ...formData, ciudad: e.target.value })}
-                    className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
-                    placeholder="Ciudad de México"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                    Estado *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.estado || ""}
-                    onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                    className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
-                    placeholder="CDMX"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                    Código Postal *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.codigo_postal || ""}
-                    onChange={(e) => {
-                      const val = formData.es_internacional
-                        ? e.target.value
-                        : e.target.value.replace(/\D/g, "").slice(0, 5);
-                      setFormData({ ...formData, codigo_postal: val });
-                      setFormErrors((prev) => ({ ...prev, cp: undefined }));
-                    }}
-                    maxLength={formData.es_internacional ? 10 : 5}
-                    className={`w-full rounded-lg border bg-white px-4 py-3 text-dark focus:outline-none dark:bg-dark dark:text-white ${formErrors.cp ? "border-red-400 focus:border-red-400" : "border-gray-4 focus:border-primary dark:border-dark-3"}`}
-                    placeholder={formData.es_internacional ? "Código postal" : "5 dígitos, ej. 68000"}
-                  />
-                  {formErrors.cp && <p className="mt-1 text-xs text-red-500">{formErrors.cp}</p>}
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                    País
-                  </label>
-                  <select
-                    value={formData.pais_iso2 || "MX"}
-                    onChange={(e) => setFormData({ ...formData, pais_iso2: e.target.value })}
-                    disabled={paisesLoading}
-                    className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white disabled:opacity-60"
-                  >
-                    {paisesLoading && <option value="MX">Cargando...</option>}
-                    {!paisesLoading && paises.length === 0 && <option value="MX">México</option>}
-                    {paises.map((p) => (
-                      <option key={p.iso2} value={p.iso2}>
-                        {p.nombre_local || p.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                    Referencia (ej: "cerca de la tienda") (opcional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.referencia || ""}
-                    onChange={(e) => setFormData({ ...formData, referencia: e.target.value })}
-                    className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
-                    placeholder="Punto de referencia o indicaciones"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                    Etiqueta (ej: "Casa", "Oficina")
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.nombre_etiqueta || ""}
-                    onChange={(e) => setFormData({ ...formData, nombre_etiqueta: e.target.value })}
-                    className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
-                    placeholder="Casa"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-dark dark:text-white">
-                    Tipo de dirección
-                  </label>
-                  <select
-                    value={formData.tipo || "hogar"}
-                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                    className="w-full rounded-lg border border-gray-4 bg-white px-4 py-3 text-dark focus:border-primary focus:outline-none dark:border-dark-3 dark:bg-dark dark:text-white"
-                  >
-                    <option value="hogar">Hogar</option>
-                    <option value="trabajo">Trabajo</option>
-                    <option value="otro">Otro</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="predeterminada"
-                    checked={formData.es_predeterminada || false}
-                    onChange={(e) => setFormData({ ...formData, es_predeterminada: e.target.checked })}
-                    className="h-4 w-4"
-                  />
-                  <label htmlFor="predeterminada" className="text-sm font-medium text-dark dark:text-white">
-                    Usar como dirección predeterminada
-                  </label>
-                </div>
               </div>
 
               <div className="flex gap-2">
@@ -532,6 +595,7 @@ export default function DireccionesPage() {
                 <button
                   type="submit"
                   disabled={enviando}
+                  aria-busy={enviando}
                   className="flex-1 rounded-lg bg-primary px-4 py-3 font-medium text-white hover:bg-opacity-90 disabled:opacity-50"
                 >
                   {enviando ? "Guardando..." : "Guardar"}
@@ -566,37 +630,41 @@ export default function DireccionesPage() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-dark dark:text-white">
+                    <h3 className="truncate font-semibold text-dark dark:text-white">
                       {dir.nombre_etiqueta || dir.tipo || "Dirección"}
                     </h3>
                     {dir.es_predeterminada && (
-                      <span className="inline-block rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-600 dark:bg-blue-900/30">
+                      <span className="inline-block shrink-0 rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-600 dark:bg-blue-900/30">
                         Predeterminada
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  <p className="mt-2 truncate text-sm text-gray-600 dark:text-gray-400">
                     {dir.nombre_destinatario}
                     {dir.telefono && <span> • {dir.telefono}</span>}
                   </p>
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                     {dir.es_internacional ? (
                       <>
-                        {dir.linea_1}
-                        {dir.linea_2 && <span>, {dir.linea_2}</span>}
+                        <span className="line-clamp-2">
+                          {dir.linea_1}
+                          {dir.linea_2 && <span>, {dir.linea_2}</span>}
+                        </span>
                       </>
                     ) : (
                       <>
-                        {dir.calle} {dir.numero}
-                        {dir.colonia && <span>, {dir.colonia}</span>}
+                        <span className="line-clamp-2">
+                          {dir.calle} {dir.numero}
+                          {dir.colonia && <span>, {dir.colonia}</span>}
+                        </span>
                       </>
                     )}
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="truncate text-sm text-gray-600 dark:text-gray-400">
                     {dir.ciudad}, {dir.estado} {dir.codigo_postal}
                   </p>
                   {dir.referencia && (
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
+                    <p className="mt-1 line-clamp-2 text-sm text-gray-500 dark:text-gray-500">
                       Ref: {dir.referencia}
                     </p>
                   )}
@@ -613,16 +681,17 @@ export default function DireccionesPage() {
                   )}
                   <button
                     onClick={() => abrirFormulario(dir)}
-                    className="rounded p-2 text-gray-600 hover:bg-gray-1 dark:hover:bg-dark-2"
+                    aria-label={`Editar dirección ${dir.nombre_etiqueta || dir.tipo || "dirección"}`}
+                    className="rounded p-3 text-gray-600 hover:bg-gray-1 dark:hover:bg-dark-2"
                   >
-                    <Edit2 className="h-5 w-5" />
+                    <Edit2 className="h-5 w-5" aria-hidden="true" />
                   </button>
                   {confirmDelete === dir.id_direccion ? (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" role="alertdialog" aria-label="Confirmar eliminación de dirección">
                       <button
                         onClick={() => eliminarDireccion(dir.id_direccion || 0)}
                         disabled={eliminando === dir.id_direccion}
-                        className="rounded bg-red-100 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-200"
+                        className="rounded bg-red-100 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-200 disabled:opacity-50"
                       >
                         {eliminando === dir.id_direccion ? "..." : "Confirmar"}
                       </button>
@@ -636,9 +705,10 @@ export default function DireccionesPage() {
                   ) : (
                     <button
                       onClick={() => setConfirmDelete(dir.id_direccion || null)}
-                      className="rounded p-2 text-red-600 hover:bg-red-50"
+                      aria-label={`Eliminar dirección ${dir.nombre_etiqueta || dir.tipo || "dirección"}`}
+                      className="rounded p-3 text-red-600 hover:bg-red-50 dark:hover:bg-dark-2"
                     >
-                      <Trash2 className="h-5 w-5" />
+                      <Trash2 className="h-5 w-5" aria-hidden="true" />
                     </button>
                   )}
                 </div>

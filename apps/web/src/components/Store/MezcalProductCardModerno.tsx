@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { Heart, Share2, ChevronRight } from "lucide-react";
+import { useLocale } from "@/context/LocaleContext";
 import { MEZCAL_COLORS, FONTS } from "./mezcal-constants";
 
 interface Mezcal {
@@ -43,6 +44,8 @@ export default function MezcalProductCardModerno({
   onToggleWishlist,
   customImage,
 }: Props) {
+  const { t } = useLocale();
+
   return (
     <motion.div
       className="flex flex-col h-full group"
@@ -126,7 +129,7 @@ export default function MezcalProductCardModerno({
                 fontFamily: FONTS.mono,
               }}
             >
-              Maestro
+              {t("Maestro")}
             </p>
             <p
               className="font-semibold"
@@ -229,7 +232,7 @@ export default function MezcalProductCardModerno({
             }}
             whileTap={{ scale: 0.95 }}
           >
-            Ver detalle
+            {t("Ver detalle")}
             <ChevronRight size={16} />
           </motion.button>
         </div>

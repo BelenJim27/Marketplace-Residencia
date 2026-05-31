@@ -1,9 +1,12 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, ParseUUIDPipe, ParseIntPipe, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
-import { uploadToCloudinary } from '../shared/cloudinary';
+import { diskStorage, memoryStorage } from 'multer';
+import { extname, join } from 'path';
+import { randomUUID } from 'crypto';
 import { AssignUsuarioRolDto, CreateUsuarioDto, UpdateUsuarioDto } from './dto/usuarios.dto';
 import { UsuariosService } from './usuarios.service';
+
+const USUARIOS_DIR = join(process.cwd(), 'uploads', 'usuarios');
 
 @Controller('usuarios')
 export class UsuariosController {
@@ -30,7 +33,26 @@ export class UsuariosController {
   }
 
   @Patch(':id/foto')
-  @UseInterceptors(FileInterceptor('foto', { storage: memoryStorage() }))
+  @UseInterceptors(
+    FileInterceptor('foto', {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => cb(null, USUARIOS_DIR),
+        filename: (_req, file, cb) => {
+          const ext = extname(file.originalname).toLowerCase() || '.jpg';
+          cb(null, `${randomUUID()}${ext}`);
+        },
+      }),
+      fileFilter: (_req, file, cb) => {
+        const allowed = ['.jpg', '.jpeg', '.png', '.webp'];
+        const ext = extname(file.originalname).toLowerCase();
+        if (!allowed.includes(ext)) {
+          return cb(new BadRequestException('Solo se permiten imágenes JPG, PNG o WebP'), false);
+        }
+        cb(null, true);
+      },
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+    }),
+  )
   async uploadPhoto(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file?: Express.Multer.File
@@ -38,8 +60,7 @@ export class UsuariosController {
     if (!file) {
       throw new BadRequestException('Archivo de foto requerido');
     }
-
-    const fotoUrl = await uploadToCloudinary(file.buffer, 'usuarios');
+    const fotoUrl = `/uploads/usuarios/${file.filename}`;
     return this.service.update(id, { foto_url: fotoUrl });
   }
 

@@ -2,14 +2,19 @@ import { ConflictException, Injectable, NotFoundException, UnprocessableEntityEx
 import { PrismaService } from "../../prisma/prisma.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
 import { CreateEnvioDto, UpdateEnvioDto } from "./dto/envios.dto";
+import { ICarrierService } from "./interfaces/carrier.interface";
 import { FedexService } from "./fedex.service";
 
 @Injectable()
 export class EnviosService {
+  private carrierService: ICarrierService;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly fedexService: FedexService,
-  ) {}
+  ) {
+    this.carrierService = fedexService;
+  }
   async findAll() {
     return serializeBigInts(
       await this.prisma.envios.findMany({
@@ -96,9 +101,20 @@ export class EnviosService {
   private async detectarFirmaAdulto(id_pedido: number): Promise<boolean> {
     const detalles = await this.prisma.detalle_pedido.findMany({
       where: { id_pedido: BigInt(id_pedido) },
-      select: { productos: { select: { requiere_firma_adulto: true } } },
+      select: {
+        productos: {
+          select: {
+            requiere_firma_adulto: true,
+            requiere_edad_minima: true,
+          },
+        },
+      },
     });
-    return detalles.some((d) => d.productos?.requiere_firma_adulto === true);
+    return detalles.some((d) => {
+      const requiereFirma = d.productos?.requiere_firma_adulto === true;
+      const esAlcohol = (d.productos?.requiere_edad_minima ?? 0) >= 18;
+      return requiereFirma || esAlcohol;
+    });
   }
   async update(id: string, dto: UpdateEnvioDto) {
     return serializeBigInts(
@@ -169,7 +185,7 @@ export class EnviosService {
     let eventos: any[] = [];
     if (envio.numero_rastreo) {
       try {
-        const carrierEventos = await this.fedexService.getTracking(
+        const carrierEventos = await this.carrierService.getTracking(
           envio.numero_rastreo,
         );
         if (carrierEventos && carrierEventos.length > 0) {
@@ -212,12 +228,7 @@ export class EnviosService {
       where: { id_envio: toBigIntId(id_envio) },
       include: {
         pedidos: {
-          include: {
-            detalle_pedido: {
-              take: 3,
-              select: { productos: { select: { nombre: true } } },
-            },
-          },
+          select: { direccion_envio_snapshot: true },
         },
         servicios_envio: true,
         transportistas: true,
@@ -226,19 +237,69 @@ export class EnviosService {
     });
 
     if (!envio) throw new NotFoundException('Envío no encontrado');
-    if (envio.envio_guias.length > 0) throw new ConflictException('GUIA_YA_EXISTE');
+    if (envio.envio_guias?.length > 0) throw new ConflictException('GUIA_YA_EXISTE');
     if (!envio.pedidos?.direccion_envio_snapshot) throw new UnprocessableEntityException('SIN_DIRECCION');
 
-    const productNames = (envio.pedidos as any)?.detalle_pedido
-      ?.map((d: any) => d.productos?.nombre)
+    const snap = envio.pedidos.direccion_envio_snapshot as any;
+    const destPais = snap.pais_iso2 ?? snap.pais ?? 'MX';
+    const destEstado = snap.estado || '';
+
+    const detalles = await this.prisma.detalle_pedido.findMany({
+      where: { id_pedido: envio.id_pedido },
+      include: {
+        productos: {
+          select: {
+            nombre: true,
+            requiere_edad_minima: true,
+          },
+          include: {
+            categorias_productos: {
+              select: { id_categoria: true },
+            },
+          },
+        },
+      },
+    });
+
+    for (const detalle of detalles) {
+      const prod = detalle.productos;
+      if (!prod?.requiere_edad_minima || prod.requiere_edad_minima < 18) continue;
+
+      for (const catProd of prod.categorias_productos || []) {
+        const restriction = await this.prisma.restricciones_envio_categoria.findUnique({
+          where: {
+            pais_iso2_estado_codigo_id_categoria: {
+              id_categoria: catProd.id_categoria,
+              pais_iso2: destPais,
+              estado_codigo: destEstado,
+            },
+          },
+        });
+
+        if (restriction && !restriction.permitido) {
+          throw new UnprocessableEntityException(
+            `El producto "${prod.nombre}" no puede enviarse a ${destEstado || destPais} por restricciones legales de alcohol.`,
+          );
+        }
+      }
+    }
+
+    const productNames = detalles
+      .map((d) => d.productos?.nombre)
       .filter(Boolean)
       .slice(0, 3)
       .join(', ');
 
-    const result = await this.fedexService.createShipment({
+    const result = await this.carrierService.createShipment({
       ...envio,
       contenido_descripcion: productNames || 'Mezcal artesanal',
     });
+
+    if (!result.labelBuffer) {
+      throw new UnprocessableEntityException(
+        'FedEx generó la guía pero no devolvió el PDF de la etiqueta. Intenta de nuevo.',
+      );
+    }
 
     return serializeBigInts(
       await this.prisma.$transaction(async (tx) => {
@@ -247,19 +308,84 @@ export class EnviosService {
             id_envio: toBigIntId(id_envio),
             id_transportista: envio.id_transportista ?? null,
             numero_guia: result.trackingNumber,
-            url_etiqueta: result.labelUrl ?? null,
+            label_pdf: result.labelBuffer,
             formato_etiqueta: result.labelFormat,
             estado_paqueteria: 'creada',
-            payload_response: result as any,
+            payload_response: { trackingNumber: result.trackingNumber, labelFormat: result.labelFormat } as any,
           },
         });
         await tx.envios.update({
           where: { id_envio: toBigIntId(id_envio) },
           data: { numero_rastreo: result.trackingNumber },
         });
-        return guia;
+        // No serializar label_pdf (Buffer) — devolver solo metadata
+        const { label_pdf: _, ...guiaMeta } = guia as any;
+        return { ...guiaMeta, tiene_pdf: true };
       }),
     );
+  }
+
+  async getGuiaPdf(id_envio: string): Promise<{ numero_guia: string; label_pdf: Buffer }> {
+    const envio = await this.prisma.envios.findUnique({
+      where: { id_envio: toBigIntId(id_envio) },
+      include: {
+        envio_guias: {
+          where: { eliminado_en: null },
+          take: 1,
+          orderBy: { fecha_creacion: 'desc' },
+        },
+      },
+    });
+
+    if (!envio) throw new NotFoundException('Envío no encontrado');
+    const guia = envio.envio_guias?.[0];
+    if (!guia) throw new NotFoundException('Este envío no tiene guía generada');
+    if (!guia.label_pdf) throw new NotFoundException('El PDF de la etiqueta no está disponible');
+
+    return { numero_guia: guia.numero_guia, label_pdf: guia.label_pdf as Buffer };
+  }
+
+  /**
+   * Registra un evento de tracking buscando por numero_guia (tracking number de FedEx).
+   * Usado por el webhook real de FedEx que envía su propio tracking number.
+   */
+  async registrarEventoPorGuia(
+    numero_guia: string,
+    descripcion: string,
+    estado: string,
+    fecha?: Date,
+  ) {
+    const guia = await this.prisma.envio_guias.findUnique({
+      where: { numero_guia },
+      include: { envios: true },
+    });
+
+    if (!guia) {
+      throw new NotFoundException(`Guía con número ${numero_guia} no encontrada`);
+    }
+
+    const estadoNormalizado = this.normalizarEstadoFedex(estado);
+
+    await this.prisma.envio_eventos.create({
+      data: {
+        id_guia: guia.id_guia,
+        id_transportista: guia.id_transportista ?? undefined,
+        numero_guia: guia.numero_guia,
+        origen: 'webhook',
+        estado_paqueteria: estado,
+        estado_normalizado: estadoNormalizado ?? undefined,
+        descripcion,
+        payload: {},
+        fecha_evento: fecha ?? new Date(),
+      },
+    });
+
+    const updated = await this.prisma.envios.update({
+      where: { id_envio: guia.id_envio },
+      data: { estado: estadoNormalizado ?? estado },
+    });
+
+    return serializeBigInts({ id_envio: updated.id_envio, estado: updated.estado, numero_guia });
   }
 
   private normalizarEstadoFedex(estado: string): string | null {

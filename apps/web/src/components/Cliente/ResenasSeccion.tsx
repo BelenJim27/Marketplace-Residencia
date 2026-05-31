@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Star } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useLocale } from "@/context/LocaleContext";
 import { getCookie } from "@/lib/cookies";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -71,6 +72,7 @@ function ResenaForm({
   onCreada: () => void;
 }) {
   const { user, isAuthenticated } = useAuth();
+  const { t } = useLocale();
   const [calificacion, setCalificacion] = useState(0);
   const [comentario, setComentario] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -84,15 +86,15 @@ function ResenaForm({
         style={{ backgroundColor: "#f0ebe0", border: "1px solid #e8dcc8" }}
       >
         <a href="/auth/sign-in" style={{ color: "var(--bio-color-precio, #8b6914)" }} className="underline">
-          Inicia sesión
+          {t("Inicia sesión")}
         </a>{" "}
-        para dejar una reseña.
+        {t("para dejar una reseña.")}
       </div>
     );
   }
 
   const handleSubmit = async () => {
-    if (calificacion === 0) { setError("Selecciona una calificación."); return; }
+    if (calificacion === 0) { setError(t("Selecciona una calificación.")); return; }
     setEnviando(true);
     setError(null);
     try {
@@ -108,7 +110,7 @@ function ResenaForm({
       setComentario("");
       onCreada();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al enviar reseña.");
+      setError(e instanceof Error ? e.message : t("Error al enviar reseña."));
     } finally {
       setEnviando(false);
     }
@@ -117,7 +119,7 @@ function ResenaForm({
   if (exito) {
     return (
       <div className="rounded-lg p-4 text-center text-sm" style={{ backgroundColor: "#f0ebe0", border: "1px solid #e8dcc8", color: "var(--bio-color-titulo, #5c3d1e)" }}>
-        ¡Gracias por tu reseña! 🎉
+        {t("¡Gracias por tu reseña! 🎉")}
       </div>
     );
   }
@@ -125,7 +127,7 @@ function ResenaForm({
   return (
     <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: "#f0ebe0", border: "1px solid #e8dcc8" }}>
       <h4 className="font-semibold text-base" style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}>
-        Escribe tu reseña
+        {t("Escribe tu reseña")}
       </h4>
 
       <StarInput value={calificacion} onChange={setCalificacion} />
@@ -133,7 +135,7 @@ function ResenaForm({
       <textarea
         value={comentario}
         onChange={(e) => setComentario(e.target.value)}
-        placeholder="Comparte tu experiencia con este producto... (opcional)"
+        placeholder={t("Comparte tu experiencia con este producto... (opcional)")}
         rows={3}
         className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1"
         style={{ "--tw-ring-color": "var(--bio-color-precio, #8b6914)" } as React.CSSProperties}
@@ -147,7 +149,7 @@ function ResenaForm({
         className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         style={{ backgroundColor: "var(--bio-color-titulo, #5c3d1e)" }}
       >
-        {enviando ? "Enviando..." : "Publicar reseña"}
+        {enviando ? t("Enviando...") : t("Publicar reseña")}
       </button>
     </div>
   );
@@ -179,7 +181,7 @@ function ResenaCard({ resena }: { resena: Resena }) {
               {nombreCompleto}
             </p>
             {resena.compra_verificada && (
-              <span className="text-xs text-green-600 font-medium whitespace-nowrap">✓ Compra verificada</span>
+              <span className="text-xs text-green-600 font-medium whitespace-nowrap">{useLocale().t("✓ Compra verificada")}</span>
             )}
           </div>
           <p className="text-xs text-gray-400">{fecha}</p>
@@ -205,7 +207,7 @@ function ResenaCard({ resena }: { resena: Resena }) {
       {resena.respuesta_vendedor && (
         <div className="mt-3 ml-10 pl-3 border-l-2 border-amber-200">
           <p className="text-xs font-semibold mb-0.5" style={{ color: "var(--bio-color-precio, #8b6914)" }}>
-            Respuesta del productor
+            {useLocale().t("Respuesta del productor")}
           </p>
           <p className="text-xs text-gray-500">{resena.respuesta_vendedor}</p>
         </div>
@@ -217,6 +219,7 @@ function ResenaCard({ resena }: { resena: Resena }) {
 // ─── Lista con filtro y paginación ────────────────────────────────────────────
 
 export default function ResenasSeccion({ productoId }: Props) {
+  const { t } = useLocale();
   const [datos, setDatos] = useState<ResenasPaginadas | null>(null);
   const [filtro, setFiltro] = useState<number | undefined>(undefined);
   const [pagina, setPagina] = useState(1);
@@ -250,7 +253,7 @@ export default function ResenasSeccion({ productoId }: Props) {
         className="text-xl font-bold"
         style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-titulo, #5c3d1e)" }}
       >
-        Reseñas
+        {t("Reseñas")}
       </h3>
 
       {/* Formulario */}
@@ -272,17 +275,17 @@ export default function ResenasSeccion({ productoId }: Props) {
               borderColor: "var(--bio-color-titulo, #5c3d1e)",
             }}
           >
-            {n === undefined ? "Todas" : `${n} ★`}
+            {n === undefined ? t("Todas") : `${n} ★`}
           </button>
         ))}
       </div>
 
       {/* Lista */}
       {cargando ? (
-        <p className="text-sm text-gray-400">Cargando reseñas...</p>
+        <p className="text-sm text-gray-400">{t("Cargando reseñas...")}</p>
       ) : datos?.data.length === 0 ? (
         <p className="text-sm text-gray-400">
-          {filtro ? `No hay reseñas de ${filtro} estrella${filtro !== 1 ? "s" : ""}.` : "Sé el primero en dejar una reseña."}
+          {filtro ? `${t("No hay reseñas de")} ${filtro} estrella${filtro !== 1 ? "s" : ""}.` : t("Sé el primero en dejar una reseña.")}
         </p>
       ) : (
         <div>

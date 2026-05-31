@@ -18,8 +18,17 @@ export interface TrackingEvent {
   ubicacion: string;
 }
 
+export interface ShipmentResult {
+  trackingNumber: string;
+  labelBuffer?: Buffer;
+  labelFormat: string;
+  cost?: number;
+  currency?: string;
+}
+
 export interface ICarrierService {
   readonly carrierCode: string;
   cotizarEnvio(dto: CotizarEnvioDto, adultSignature?: boolean): Promise<ShippingQuote[]>;
   getTracking(trackingNumber: string): Promise<TrackingEvent[]>;
+  createShipment(envio: any): Promise<ShipmentResult>;
 }
