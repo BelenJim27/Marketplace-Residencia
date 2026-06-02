@@ -4,6 +4,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide browser-native password reveal button (Edge/IE) to avoid duplicating custom eye icon */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+}
+
 @layer base {
   html, body {
     font-family: var(--font-family-ui) !important;

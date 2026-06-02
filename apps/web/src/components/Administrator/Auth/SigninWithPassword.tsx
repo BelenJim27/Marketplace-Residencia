@@ -118,6 +118,7 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
             type={showPassword ? "text" : "password"}
             name="password"
             placeholder="••••••••"
+            autoComplete="current-password"
             value={data.password}
             onChange={handleChange}
             className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent px-5.5 py-[15px] pr-12 text-dark outline-none transition focus:border-green-500 placeholder:text-dark-6 dark:border-dark-3 dark:bg-dark-2 dark:text-white dark:focus:border-green-500"

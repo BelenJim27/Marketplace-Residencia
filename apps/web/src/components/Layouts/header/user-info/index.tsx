@@ -15,14 +15,14 @@ import { useSession } from "next-auth/react";
 import { MapPin } from "lucide-react";
 
 /* ─── Role badges ─────────────────────────────────────────────────────────── */
-const ROLE_LABELS: Record<string, { label: string; className: string }> = {
-  administrador: { label: "Administrador", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
-  admin:         { label: "Administrador", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
-  ADMIN:         { label: "Administrador", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
-  productor:     { label: "Productor",     className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
-  PRODUCTOR:     { label: "Productor",     className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
-  cliente:       { label: "Cliente",       className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
-  CLIENTE:       { label: "Cliente",       className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+const ROLE_LABELS: Record<string, { label: string; subtitle: string; className: string }> = {
+  administrador: { label: "Administrador", subtitle: "Super admin",         className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  admin:         { label: "Administrador", subtitle: "Super admin",         className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  ADMIN:         { label: "Administrador", subtitle: "Super admin",         className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  productor:     { label: "Productor",     subtitle: "Productor mezcalero", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+  PRODUCTOR:     { label: "Productor",     subtitle: "Productor mezcalero", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+  cliente:       { label: "Cliente",       subtitle: "Cliente",             className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+  CLIENTE:       { label: "Cliente",       subtitle: "Cliente",             className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
 };
 
 function getRoleBadge(roles: string[] | undefined) {
@@ -129,17 +129,27 @@ export function UserInfo({ whiteText = false }: { whiteText?: boolean }) {
       <DropdownTrigger className="rounded align-middle outline-none ring-primary ring-offset-2 focus-visible:ring-1 dark:ring-offset-gray-dark">
         <span className="sr-only">Mi cuenta</span>
 
-        <figure className="flex items-center gap-3">
-          <Avatar photo={userPhoto} initials={initials} size={40} />
+        <figure className="flex items-center gap-2.5">
+          <Avatar photo={userPhoto} initials={initials} size={36} />
 
           <figcaption className={cn(
-            "flex items-center gap-1 font-medium max-[1024px]:sr-only",
+            "flex items-center gap-1.5 max-[1024px]:sr-only",
             whiteText ? "text-white" : "text-dark dark:text-white",
           )}>
-            <span>{firstName}</span>
+            <div className="flex flex-col items-start leading-none">
+              <span className="text-sm font-semibold">{firstName}</span>
+              {badge && (
+                <span className={cn(
+                  "text-[11px] font-medium mt-0.5",
+                  whiteText ? "text-white/60" : "text-gray-500 dark:text-gray-400",
+                )}>
+                  {badge.subtitle}
+                </span>
+              )}
+            </div>
             <ChevronUpIcon
               aria-hidden
-              className={cn("rotate-180 transition-transform", isOpen && "rotate-0")}
+              className={cn("rotate-180 transition-transform flex-shrink-0", isOpen && "rotate-0")}
               strokeWidth={1.5}
             />
           </figcaption>

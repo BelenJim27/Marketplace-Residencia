@@ -112,6 +112,7 @@ function ResetPasswordForm() {
                 <Input
                   type={showPassword ? "text" : "password"}
                   placeholder="Mínimo 6 caracteres"
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -134,6 +135,7 @@ function ResetPasswordForm() {
                 <Input
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Repite tu contraseña"
+                  autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required

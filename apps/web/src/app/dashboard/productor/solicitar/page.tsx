@@ -12,10 +12,12 @@ import {
   AlertCircle, CheckCircle2, Loader2, UploadIcon,
   Check, ChevronDown, ChevronUp, Users, Tag,
   LayoutGrid, ShieldCheck, ArrowRight, ArrowLeft,
-  MapPin, Building2, FileText, X,
+  MapPin, Building2, FileText, X, UserCircle,
   Wine, FlaskConical, Landmark, UtensilsCrossed,
   Scissors, Hammer, Leaf, Palette, Package,
 } from "lucide-react";
+import SigninWithPassword from "@/components/Administrator/Auth/SigninWithPassword";
+import { SignUpForm } from "@/app/auth/sign-up/_components/sign-up-form";
 
 /* ─── Interfaces ─────────────────────────────────────────────────────────── */
 interface Region    { id_region: number; nombre: string; estado_prov?: string; }
@@ -40,6 +42,11 @@ const STEPS = [
   { n: 2, label: "Tu Marca",    eyebrow: "02", Icon: Tag,         hint: "Identidad" },
   { n: 3, label: "Categorías",  eyebrow: "03", Icon: LayoutGrid,  hint: "Productos" },
   { n: 4, label: "Certificado", eyebrow: "04", Icon: ShieldCheck, hint: "Verificación" },
+];
+
+const ALL_STEPS = [
+  { n: 0, label: "Cuenta", eyebrow: "00", Icon: UserCircle, hint: "Acceso" },
+  ...STEPS,
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -83,6 +90,8 @@ export default function SolicitarPage() {
 
   /* ── state ────────────────────────────────────────────────────────────── */
   const [step, setStep]                   = useState(1);
+  const [authTab, setAuthTab]             = useState<"login" | "register">("login");
+  const [mostrarOtras, setMostrarOtras]   = useState(false);
   const [isSubmitting, setIsSubmitting]   = useState(false);
   const [error, setError]                 = useState("");
   const [success, setSuccess]             = useState(false);
@@ -146,7 +155,16 @@ export default function SolicitarPage() {
   /* ── init ─────────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated) { router.push("/auth/sign-in"); return; }
+
+    if (!isAuthenticated) {
+      // Mostrar paso 0 de registro/login en lugar de redirigir
+      setStep(0);
+      setLoadingInit(false);
+      return;
+    }
+
+    // Usuario autenticado: avanzar desde paso 0 si venía del auth step
+    setStep(s => s === 0 ? 1 : s);
 
     const init = async () => {
       try {
@@ -374,7 +392,7 @@ export default function SolicitarPage() {
       {/* ── Step indicator ────────────────────────────────────────────── */}
       <div style={{ background:C.card, borderLeft:`1px solid ${C.border}`, borderRight:`1px solid ${C.border}`, borderBottom:`1px solid ${C.border}`, padding:"12px clamp(16px,4vw,32px)" }}>
         <div style={{ display:"flex", alignItems:"center" }}>
-          {STEPS.map((s, i) => {
+          {ALL_STEPS.map((s, i) => {
             const past   = step > s.n;
             const active = step === s.n;
             const Icon   = s.Icon;
@@ -405,7 +423,7 @@ export default function SolicitarPage() {
                     </span>
                   </div>
                 </div>
-                {i < STEPS.length - 1 && (
+                {i < ALL_STEPS.length - 1 && (
                   <div style={{ flex:1, height:"2px", margin:"0 10px",
                     background: past ? `linear-gradient(90deg,${C.stepPast},${step > s.n + 1 ? C.stepPast : C.border})` : C.stepLine,
                     transition:"background 0.3s", borderRadius:"1px" }} />
@@ -417,7 +435,10 @@ export default function SolicitarPage() {
 
         {/* Step counter */}
         <p style={{ fontFamily:MONO, fontSize:"10px", color:C.body, margin:"8px 0 0", letterSpacing:"0.12em" }}>
-          {t("PASO")} {step} {t("DE")} {STEPS.length} — {t(STEPS[step - 1].label).toUpperCase()}
+          {step === 0
+            ? `${t("PASO")} 0 ${t("DE")} ${ALL_STEPS.length - 1} — ${t("CUENTA").toUpperCase()}`
+            : `${t("PASO")} ${step} ${t("DE")} ${STEPS.length} — ${t(STEPS[step - 1]?.label ?? "").toUpperCase()}`
+          }
         </p>
       </div>
 
@@ -430,6 +451,46 @@ export default function SolicitarPage() {
             <AlertCircle style={{ width:"15px", height:"15px", color:C.error, flexShrink:0, marginTop:"1px" }} />
             <span style={{ fontFamily:SANS, color:C.error, fontSize:"13px", lineHeight:1.5, flex:1 }}>{error}</span>
             <button onClick={() => setError("")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, color:C.error }}><X style={{ width:"14px", height:"14px" }} /></button>
+          </div>
+        )}
+
+        {/* ══════════════ STEP 0 — Cuenta / Acceso ═══════════════════ */}
+        {step === 0 && (
+          <div>
+            <StepHeader
+              eyebrow={t("00 · Acceso")} title={t("Tu Cuenta")}
+              desc={t("Para continuar necesitas una cuenta. Inicia sesión si ya tienes una, o regístrate gratis.")}
+              C={C} SERIF={SERIF} SANS={SANS} MONO={MONO}
+            />
+
+            {/* Tabs login / registro */}
+            <div style={{ display:"flex", gap:"6px", marginBottom:"24px", background:C.section, borderRadius:"10px", padding:"4px" }}>
+              {(["login", "register"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setAuthTab(tab)}
+                  style={{
+                    flex:1, padding:"9px 16px", borderRadius:"7px", border:"none",
+                    fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer",
+                    transition:"all 0.2s",
+                    background: authTab === tab ? C.green : "transparent",
+                    color:       authTab === tab ? C.cream : C.body,
+                    boxShadow:   authTab === tab ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+                  }}
+                >
+                  {tab === "login" ? t("Ya tengo cuenta") : t("Crear cuenta nueva")}
+                </button>
+              ))}
+            </div>
+
+            {authTab === "login" ? (
+              <SigninWithPassword isVenderFlow={true} />
+            ) : (
+              <div style={{ background:C.section, borderRadius:"12px", padding:"20px" }}>
+                <SignUpForm isVenderFlow={true} />
+              </div>
+            )}
           </div>
         )}
 
@@ -567,103 +628,200 @@ export default function SolicitarPage() {
         )}
 
         {/* ══════════════ STEP 3 — Categorías ════════════════════════ */}
-        {step === 3 && (
-          <div>
-            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"16px", marginBottom:"24px" }}>
+        {step === 3 && (() => {
+          const bebidas     = catRaiz.find(c => c.nombre.toLowerCase() === "bebidas");
+          const hijasBebs   = bebidas ? subDe(bebidas.id_categoria) : [];
+          const otrosCats   = catRaiz.filter(c => c.nombre.toLowerCase() !== "bebidas");
+          const anyBebs     = hijasBebs.some(h => form.categorias_ids.includes(h.id_categoria));
+          const anyOtros    = otrosCats.some(c => {
+            const hijas = subDe(c.id_categoria);
+            return form.categorias_ids.includes(c.id_categoria) || hijas.some(h => form.categorias_ids.includes(h.id_categoria));
+          });
+
+          return (
+            <div>
               <StepHeader
                 eyebrow={t("03 · Oferta")} title={t("Categorías de Productos")}
                 desc={t("Selecciona las categorías de lo que vas a vender. Puedes elegir varias.")}
                 C={C} SERIF={SERIF} SANS={SANS} MONO={MONO}
               />
-              <button type="button" onClick={toggleAll} disabled={categorias.length === 0}
-                style={{ fontFamily:SANS, fontSize:"12px", fontWeight:600, color:C.copper, background:"none", border:"none", cursor:"pointer", padding:0, flexShrink:0, whiteSpace:"nowrap", textDecoration:"underline", textUnderlineOffset:"2px", marginTop:"4px", opacity: categorias.length === 0 ? 0.4 : 1 }}>
-                {allSel ? t("Deseleccionar todas") : t("Seleccionar todas")}
-              </button>
-            </div>
 
-            {categorias.length === 0 ? (
-              <div style={{ display:"flex", alignItems:"center", gap:"10px", padding:"24px 0" }}>
-                <Loader2 className="_spin" style={{ width:"16px", height:"16px", color:C.copper }} />
-                <span style={{ fontFamily:SANS, color:C.body, fontSize:"13px" }}>{t("Cargando categorías...")}</span>
-              </div>
-            ) : (
-              <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
-                {catRaiz.map(cat => {
-                  const hijas      = subDe(cat.id_categoria);
-                  const expanded   = expandidas.includes(cat.id_categoria);
-                  const CatIconEl  = CAT_ICONS[cat.nombre] ?? Package;
+              {categorias.length === 0 ? (
+                <div style={{ display:"flex", alignItems:"center", gap:"10px", padding:"24px 0" }}>
+                  <Loader2 className="_spin" style={{ width:"16px", height:"16px", color:C.copper }} />
+                  <span style={{ fontFamily:SANS, color:C.body, fontSize:"13px" }}>{t("Cargando categorías...")}</span>
+                </div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
 
-                  if (hijas.length > 0) {
-                    const anyChild = form.categorias_ids.includes(cat.id_categoria) || hijas.some(h => form.categorias_ids.includes(h.id_categoria));
-                    return (
-                      <div key={cat.id_categoria} style={{ flex:"0 0 100%", border:`1.5px solid ${anyChild ? C.copper : showErr.categorias ? C.error : C.inputBorder}`, borderRadius:"10px", overflow:"hidden", transition:"border-color 0.2s" }}>
-                        {/* parent row */}
-                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background: anyChild ? (isDark ? "rgba(201,122,62,0.10)" : "rgba(201,122,62,0.05)") : C.section }}>
-                          <button type="button" onClick={() => toggleCat(cat.id_categoria)}
-                            style={{ display:"flex", alignItems:"center", gap:"10px", background:"none", border:"none", cursor:"pointer", padding:"9px 14px", flex:1, textAlign:"left" }}>
-                            <Radio checked={form.categorias_ids.includes(cat.id_categoria)} C={C} />
-                            <CatIcon Icon={CatIconEl} selected={anyChild} isDark={isDark} />
-                            <span style={{ fontFamily:SANS, color: anyChild ? (isDark ? C.cream : C.green) : C.label, fontSize:"13.5px", fontWeight: anyChild ? 600 : 400 }}>
-                              {cat.nombre}
-                            </span>
-                          </button>
-                          <button type="button" onClick={() => toggleExpandida(cat.id_categoria)}
-                            style={{ background:"none", border:"none", cursor:"pointer", padding:"9px 14px", display:"flex", alignItems:"center", gap:"5px", color:C.body }}>
-                            <span style={{ fontFamily:SANS, fontSize:"11px" }}>{hijas.length} {t("tipos")}</span>
-                            {expanded ? <ChevronUp style={{ width:"12px", height:"12px" }} /> : <ChevronDown style={{ width:"12px", height:"12px" }} />}
-                          </button>
+                  {/* ── Bebidas (primaria, siempre expandida) ───────────── */}
+                  {bebidas && (
+                    <div style={{ border:`1.5px solid ${anyBebs ? C.copper : showErr.categorias ? C.error : C.inputBorder}`, borderRadius:"12px", overflow:"hidden", transition:"border-color 0.2s" }}>
+                      {/* cabecera */}
+                      <div style={{ display:"flex", alignItems:"center", gap:"10px", padding:"12px 16px", background: anyBebs ? (isDark ? "rgba(201,122,62,0.12)" : "rgba(46,74,51,0.06)") : C.section }}>
+                        <CatIcon Icon={Wine} selected={anyBebs} isDark={isDark} />
+                        <div style={{ flex:1 }}>
+                          <span style={{ fontFamily:SANS, color: anyBebs ? (isDark ? C.cream : C.green) : C.label, fontSize:"14px", fontWeight:700 }}>
+                            {bebidas.nombre}
+                          </span>
+                          <span style={{ fontFamily:SANS, color:C.body, fontSize:"11px", marginLeft:"8px" }}>
+                            · {t("Categoría principal")}
+                          </span>
                         </div>
-                        {/* subcategories */}
-                        {expanded && (
-                          <div style={{ background: isDark ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.02)", borderTop:`1px solid ${C.border}` }}>
-                            {hijas.map(h => {
-                              const hSel = form.categorias_ids.includes(h.id_categoria);
-                              return (
-                                <button key={h.id_categoria} type="button" onClick={() => toggleCat(h.id_categoria)}
-                                  style={{ display:"flex", alignItems:"center", gap:"10px", background:"none", border:"none", borderBottom:`1px solid ${C.border}`, cursor:"pointer", padding:"8px 14px 8px 40px", width:"100%", textAlign:"left", transition:"background 0.15s",
-                                    ...(hSel ? { background: isDark ? "rgba(201,122,62,0.06)" : "rgba(201,122,62,0.04)" } : {}),
-                                  }}>
-                                  <Radio checked={hSel} C={C} size={14} />
-                                  <span style={{ fontFamily:SANS, color: hSel ? (isDark ? C.cream : C.green) : C.body, fontSize:"13px", fontWeight: hSel ? 600 : 400 }}>
-                                    {h.nombre}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
+                        {anyBebs && (
+                          <span style={{ fontFamily:SANS, color:C.copper, fontSize:"11px", fontWeight:600 }}>
+                            {hijasBebs.filter(h => form.categorias_ids.includes(h.id_categoria)).length} {t("selec.")}
+                          </span>
                         )}
                       </div>
-                    );
-                  }
 
-                  const sel = form.categorias_ids.includes(cat.id_categoria);
-                  return (
-                    <button key={cat.id_categoria} type="button" onClick={() => toggleCat(cat.id_categoria)}
-                      style={{ display:"flex", alignItems:"center", gap:"12px", background: sel ? (isDark ? "rgba(201,122,62,0.10)" : "rgba(201,122,62,0.05)") : C.section, border:`1.5px solid ${sel ? C.copper : showErr.categorias ? C.error : C.inputBorder}`, borderRadius:"10px", padding:"9px 14px", cursor:"pointer", textAlign:"left", transition:"all 0.2s", width:"100%" }}>
-                      <Radio checked={sel} C={C} />
-                      <CatIcon Icon={CatIconEl} selected={sel} isDark={isDark} />
-                      <span style={{ fontFamily:SANS, color: sel ? (isDark ? C.cream : C.green) : C.label, fontSize:"14px", fontWeight: sel ? 600 : 400 }}>
-                        {cat.nombre}
-                      </span>
-                    </button>
-                  );
-                })}
+                      {/* subcategorías siempre visibles */}
+                      <div style={{ borderTop:`1px solid ${C.border}` }}>
+                        {hijasBebs.map((h, idx) => {
+                          const hSel = form.categorias_ids.includes(h.id_categoria);
+                          return (
+                            <button key={h.id_categoria} type="button" onClick={() => toggleCat(h.id_categoria)}
+                              style={{
+                                display:"flex", alignItems:"center", gap:"12px",
+                                background: hSel ? (isDark ? "rgba(201,122,62,0.08)" : "rgba(46,74,51,0.05)") : "transparent",
+                                border:"none",
+                                borderBottom: idx < hijasBebs.length - 1 ? `1px solid ${C.border}` : "none",
+                                cursor:"pointer", padding:"11px 16px 11px 20px", width:"100%", textAlign:"left",
+                                transition:"background 0.15s",
+                              }}>
+                              <div style={{
+                                width:"18px", height:"18px", borderRadius:"4px", flexShrink:0,
+                                border:`2px solid ${hSel ? C.copper : C.inputBorder}`,
+                                background: hSel ? C.copper : "transparent",
+                                display:"flex", alignItems:"center", justifyContent:"center",
+                                transition:"all 0.2s",
+                              }}>
+                                {hSel && <Check style={{ width:"10px", height:"10px", color:"#fff" }} strokeWidth={3} />}
+                              </div>
+                              <span style={{ fontFamily:SANS, color: hSel ? (isDark ? C.cream : C.green) : C.label, fontSize:"13.5px", fontWeight: hSel ? 600 : 400 }}>
+                                {h.nombre}
+                              </span>
+                            </button>
+                          );
+                        })}
+                        {hijasBebs.length === 0 && (
+                          <p style={{ fontFamily:SANS, color:C.body, fontSize:"13px", padding:"12px 16px", margin:0 }}>
+                            {t("Sin subcategorías")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Otras categorías (colapsable) ───────────────────── */}
+                  {otrosCats.length > 0 && (
+                    <div style={{ border:`1.5px solid ${anyOtros && mostrarOtras ? C.copper : C.inputBorder}`, borderRadius:"12px", overflow:"hidden", transition:"border-color 0.2s" }}>
+                      {/* toggle header */}
+                      <button type="button" onClick={() => setMostrarOtras(v => !v)}
+                        style={{
+                          width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+                          background: anyOtros ? (isDark ? "rgba(201,122,62,0.08)" : "rgba(46,74,51,0.04)") : C.section,
+                          border:"none", cursor:"pointer", padding:"12px 16px", textAlign:"left",
+                        }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+                          <Package style={{ width:"16px", height:"16px", color: anyOtros ? C.copper : C.body }} />
+                          <span style={{ fontFamily:SANS, color: anyOtros ? (isDark ? C.cream : C.green) : C.label, fontSize:"14px", fontWeight:600 }}>
+                            {t("Otras categorías")}
+                          </span>
+                          {anyOtros && (
+                            <span style={{ fontFamily:SANS, color:C.copper, fontSize:"11px", fontWeight:600 }}>
+                              · {t("tienes selecciones")}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:"6px", color:C.body }}>
+                          <span style={{ fontFamily:SANS, fontSize:"11px", color:C.body }}>{otrosCats.length} {t("categorías")}</span>
+                          {mostrarOtras
+                            ? <ChevronUp style={{ width:"14px", height:"14px" }} />
+                            : <ChevronDown style={{ width:"14px", height:"14px" }} />}
+                        </div>
+                      </button>
+
+                      {/* contenido colapsable */}
+                      {mostrarOtras && (
+                        <div style={{ borderTop:`1px solid ${C.border}`, display:"flex", flexDirection:"column", gap:"0" }}>
+                          {otrosCats.map((cat, catIdx) => {
+                            const hijas     = subDe(cat.id_categoria);
+                            const expanded  = expandidas.includes(cat.id_categoria);
+                            const CatIconEl = CAT_ICONS[cat.nombre] ?? Package;
+
+                            if (hijas.length > 0) {
+                              const anyChild = form.categorias_ids.includes(cat.id_categoria) || hijas.some(h => form.categorias_ids.includes(h.id_categoria));
+                              return (
+                                <div key={cat.id_categoria} style={{ borderBottom: catIdx < otrosCats.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background: anyChild ? (isDark ? "rgba(201,122,62,0.06)" : "rgba(201,122,62,0.03)") : "transparent" }}>
+                                    <button type="button" onClick={() => toggleCat(cat.id_categoria)}
+                                      style={{ display:"flex", alignItems:"center", gap:"10px", background:"none", border:"none", cursor:"pointer", padding:"10px 16px", flex:1, textAlign:"left" }}>
+                                      <Radio checked={form.categorias_ids.includes(cat.id_categoria)} C={C} />
+                                      <CatIcon Icon={CatIconEl} selected={anyChild} isDark={isDark} />
+                                      <span style={{ fontFamily:SANS, color: anyChild ? (isDark ? C.cream : C.green) : C.label, fontSize:"13.5px", fontWeight: anyChild ? 600 : 400 }}>
+                                        {cat.nombre}
+                                      </span>
+                                    </button>
+                                    <button type="button" onClick={() => toggleExpandida(cat.id_categoria)}
+                                      style={{ background:"none", border:"none", cursor:"pointer", padding:"10px 16px", display:"flex", alignItems:"center", gap:"5px", color:C.body }}>
+                                      <span style={{ fontFamily:SANS, fontSize:"11px" }}>{hijas.length} {t("tipos")}</span>
+                                      {expanded ? <ChevronUp style={{ width:"12px", height:"12px" }} /> : <ChevronDown style={{ width:"12px", height:"12px" }} />}
+                                    </button>
+                                  </div>
+                                  {expanded && (
+                                    <div style={{ background: isDark ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.02)", borderTop:`1px solid ${C.border}` }}>
+                                      {hijas.map(h => {
+                                        const hSel = form.categorias_ids.includes(h.id_categoria);
+                                        return (
+                                          <button key={h.id_categoria} type="button" onClick={() => toggleCat(h.id_categoria)}
+                                            style={{ display:"flex", alignItems:"center", gap:"10px", background: hSel ? (isDark ? "rgba(201,122,62,0.06)" : "rgba(201,122,62,0.04)") : "none", border:"none", borderBottom:`1px solid ${C.border}`, cursor:"pointer", padding:"8px 16px 8px 44px", width:"100%", textAlign:"left", transition:"background 0.15s" }}>
+                                            <Radio checked={hSel} C={C} size={14} />
+                                            <span style={{ fontFamily:SANS, color: hSel ? (isDark ? C.cream : C.green) : C.body, fontSize:"13px", fontWeight: hSel ? 600 : 400 }}>
+                                              {h.nombre}
+                                            </span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+
+                            const sel = form.categorias_ids.includes(cat.id_categoria);
+                            return (
+                              <button key={cat.id_categoria} type="button" onClick={() => toggleCat(cat.id_categoria)}
+                                style={{ display:"flex", alignItems:"center", gap:"12px", background: sel ? (isDark ? "rgba(201,122,62,0.08)" : "rgba(201,122,62,0.03)") : "transparent", border:"none", borderBottom: catIdx < otrosCats.length - 1 ? `1px solid ${C.border}` : "none", cursor:"pointer", padding:"10px 16px", textAlign:"left", transition:"all 0.2s", width:"100%" }}>
+                                <Radio checked={sel} C={C} />
+                                <CatIcon Icon={CatIconEl} selected={sel} isDark={isDark} />
+                                <span style={{ fontFamily:SANS, color: sel ? (isDark ? C.cream : C.green) : C.label, fontSize:"14px", fontWeight: sel ? 600 : 400 }}>
+                                  {cat.nombre}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* feedback */}
+              <div style={{ marginTop:"14px" }}>
+                {showErr.categorias
+                  ? <ErrMsg msg={t("Selecciona al menos una categoría")} C={C} SANS={SANS} />
+                  : form.categorias_ids.length > 0 && (
+                    <p style={{ fontFamily:SANS, color:C.success, fontSize:"12px", display:"flex", alignItems:"center", gap:"6px", margin:0 }}>
+                      <CheckCircle2 style={{ width:"12px", height:"12px" }} />
+                      {form.categorias_ids.length} {form.categorias_ids.length === 1 ? t("categoría") : t("categorías")} seleccionada{form.categorias_ids.length > 1 ? "s" : ""}
+                    </p>
+                  )}
               </div>
-            )}
-
-            {/* feedback */}
-            <div style={{ marginTop:"14px" }}>
-              {showErr.categorias
-                ? <ErrMsg msg={t("Selecciona al menos una categoría")} C={C} SANS={SANS} />
-                : form.categorias_ids.length > 0 && (
-                  <p style={{ fontFamily:SANS, color:C.success, fontSize:"12px", display:"flex", alignItems:"center", gap:"6px", margin:0 }}>
-                    <CheckCircle2 style={{ width:"12px", height:"12px" }} />
-                    {form.categorias_ids.length} {form.categorias_ids.length === 1 ? t("categoría") : t("categorías")} seleccionada{form.categorias_ids.length > 1 ? "s" : ""}
-                  </p>
-                )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ══════════════ STEP 4 — Certificado ═══════════════════════ */}
         {step === 4 && (
@@ -752,38 +910,40 @@ export default function SolicitarPage() {
           </div>
         )}
 
-        {/* ── Navigation buttons ────────────────────────────────────── */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:"24px", paddingTop:"16px", borderTop:`1px solid ${C.border}` }}>
-          <button type="button" onClick={step === 1 ? () => router.back() : goPrev}
-            style={{ display:"flex", alignItems:"center", gap:"8px", background:"transparent", border:`1px solid ${C.inputBorder}`, borderRadius:"8px", padding:"11px 22px", fontFamily:SANS, fontSize:"13px", fontWeight:500, color:C.label, cursor:"pointer" }}>
-            <ArrowLeft style={{ width:"14px", height:"14px" }} />
-            {step === 1 ? t("Cancelar") : t("Anterior")}
-          </button>
+        {/* ── Navigation buttons (solo para pasos 1-4) ─────────────── */}
+        {step > 0 && (
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:"24px", paddingTop:"16px", borderTop:`1px solid ${C.border}` }}>
+            <button type="button" onClick={step === 1 ? () => router.push("/cliente/producto") : goPrev}
+              style={{ display:"flex", alignItems:"center", gap:"8px", background:"transparent", border:`1px solid ${C.inputBorder}`, borderRadius:"8px", padding:"11px 22px", fontFamily:SANS, fontSize:"13px", fontWeight:500, color:C.label, cursor:"pointer" }}>
+              <ArrowLeft style={{ width:"14px", height:"14px" }} />
+              {step === 1 ? t("Cancelar") : t("Anterior")}
+            </button>
 
-          <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
-            {/* step dots */}
-            {STEPS.map(s => (
-              <div key={s.n} style={{ width: step === s.n ? "20px" : "6px", height:"6px", borderRadius:"3px", background: step === s.n ? C.copper : stepValid[s.n - 1] ? C.stepPast : C.border, transition:"all 0.3s ease" }} />
-            ))}
+            <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+              {/* step dots (solo pasos 1-4) */}
+              {STEPS.map(s => (
+                <div key={s.n} style={{ width: step === s.n ? "20px" : "6px", height:"6px", borderRadius:"3px", background: step === s.n ? C.copper : stepValid[s.n - 1] ? C.stepPast : C.border, transition:"all 0.3s ease" }} />
+              ))}
+            </div>
+
+            {isLast ? (
+              <button type="button" onClick={handleSubmit}
+                disabled={isSubmitting || uploading || !certificadoUrl}
+                style={{ display:"flex", alignItems:"center", gap:"8px", background:(isSubmitting || uploading || !certificadoUrl) ? "rgba(46,74,51,0.45)" : C.green, color:C.cream, border:"none", borderRadius:"8px", padding:"11px 26px", fontFamily:SANS, fontSize:"13px", fontWeight:600, letterSpacing:"0.04em", cursor:(isSubmitting || uploading || !certificadoUrl) ? "not-allowed" : "pointer", transition:"background 0.2s" }}>
+                {isSubmitting
+                  ? <><Loader2 className="_spin" style={{ width:"14px", height:"14px" }} />{t("Enviando...")}</>
+                  : t("Enviar Solicitud")
+                }
+              </button>
+            ) : (
+              <button type="button" onClick={goNext}
+                style={{ display:"flex", alignItems:"center", gap:"8px", background:C.green, color:C.cream, border:"none", borderRadius:"8px", padding:"11px 26px", fontFamily:SANS, fontSize:"13px", fontWeight:600, letterSpacing:"0.04em", cursor:"pointer" }}>
+                {t("Siguiente")}
+                <ArrowRight style={{ width:"14px", height:"14px" }} />
+              </button>
+            )}
           </div>
-
-          {isLast ? (
-            <button type="button" onClick={handleSubmit}
-              disabled={isSubmitting || uploading || !certificadoUrl}
-              style={{ display:"flex", alignItems:"center", gap:"8px", background:(isSubmitting || uploading || !certificadoUrl) ? "rgba(46,74,51,0.45)" : C.green, color:C.cream, border:"none", borderRadius:"8px", padding:"11px 26px", fontFamily:SANS, fontSize:"13px", fontWeight:600, letterSpacing:"0.04em", cursor:(isSubmitting || uploading || !certificadoUrl) ? "not-allowed" : "pointer", transition:"background 0.2s" }}>
-              {isSubmitting
-                ? <><Loader2 className="_spin" style={{ width:"14px", height:"14px" }} />{t("Enviando...")}</>
-                : t("Enviar Solicitud")
-              }
-            </button>
-          ) : (
-            <button type="button" onClick={goNext}
-              style={{ display:"flex", alignItems:"center", gap:"8px", background:C.green, color:C.cream, border:"none", borderRadius:"8px", padding:"11px 26px", fontFamily:SANS, fontSize:"13px", fontWeight:600, letterSpacing:"0.04em", cursor:"pointer" }}>
-              {t("Siguiente")}
-              <ArrowRight style={{ width:"14px", height:"14px" }} />
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

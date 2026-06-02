@@ -73,7 +73,7 @@ function getNotifIcon(tipo: string) {
   return NOTIF_ICON[tipo] ?? NOTIF_ICON.default;
 }
 
-export function Notification() {
+export function Notification({ dark = false }: { dark?: boolean }) {
   const { user, isAdmin, isProductor } = useAuth();
   const token = getCookie("token") ?? "";
   const [isOpen, setIsOpen] = useState(false);
@@ -182,13 +182,21 @@ export function Notification() {
   return (
     <Dropdown isOpen={isOpen} setIsOpen={setIsOpen}>
       <DropdownTrigger
-        className="grid size-12 place-items-center rounded-full border bg-gray-2 text-dark outline-none hover:text-primary focus-visible:border-primary focus-visible:text-primary dark:border-dark-4 dark:bg-dark-3 dark:text-white dark:focus-visible:border-primary"
+        className={cn(
+          "grid place-items-center outline-none transition-all duration-200",
+          dark
+            ? "rounded-xl border border-white/20 bg-white/10 p-2 text-white hover:bg-white/20"
+            : "size-12 rounded-full border bg-gray-2 text-dark hover:text-primary focus-visible:border-primary focus-visible:text-primary dark:border-dark-4 dark:bg-dark-3 dark:text-white dark:focus-visible:border-primary",
+        )}
         aria-label="Ver notificaciones"
       >
         <span className="relative">
           <BellIcon />
           {alertCount > 0 && (
-            <span className="absolute -right-1 -top-1 z-1 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white ring-2 ring-gray-2 dark:ring-dark-3">
+            <span className={cn(
+              "absolute -right-1 -top-1 z-1 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white",
+              dark ? "ring-2 ring-[#1F3A2E]" : "ring-2 ring-gray-2 dark:ring-dark-3",
+            )}>
               {alertCount}
             </span>
           )}

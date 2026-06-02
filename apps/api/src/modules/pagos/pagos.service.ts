@@ -290,11 +290,52 @@ export class PagosService {
       if (buyer?.email) {
         try {
           const incluyeAlcohol = await this.pedidoIncluyeAlcohol(pago.id_pedido);
+
+          const pedidoCompleto = await this.prisma.pedidos.findUnique({
+            where: { id_pedido: pago.id_pedido },
+            select: {
+              shipping_amount: true,
+              tax_amount: true,
+              moneda: true,
+              detalle_pedido: {
+                select: {
+                  cantidad: true,
+                  precio_compra: true,
+                  moneda_compra: true,
+                  productos: { select: { nombre: true } },
+                },
+              },
+            },
+          });
+
+          const items = pedidoCompleto?.detalle_pedido.map((d) => ({
+            nombre: d.productos?.nombre ?? 'Producto',
+            cantidad: d.cantidad,
+            precio_unitario: Number(d.precio_compra),
+            moneda: d.moneda_compra ?? pedidoCompleto.moneda ?? 'MXN',
+          })) ?? [];
+
+          const subtotalCalculado = items.reduce(
+            (acc, i) => acc + i.precio_unitario * i.cantidad, 0,
+          );
+
+          const nombreCliente = [buyer.nombre, buyer.apellido_paterno].filter(Boolean).join(' ');
+
           await this.emailService.sendOrderConfirmationEmail(
             buyer.email,
             String(pago.id_pedido),
             Number(pago.monto),
-            { incluyeAlcohol },
+            {
+              incluyeAlcohol,
+              items,
+              subtotal: subtotalCalculado,
+              shipping: pedidoCompleto ? Number(pedidoCompleto.shipping_amount) : 0,
+              tax: pedidoCompleto ? Number(pedidoCompleto.tax_amount) : 0,
+              moneda: pedidoCompleto?.moneda ?? 'MXN',
+              nombreCliente,
+              fecha: new Date().toISOString(),
+              metodoPago: pago.proveedor === 'paypal' ? 'PayPal' : 'Tarjeta de crédito/débito',
+            },
           );
         } catch (err: any) {
           console.error('[pagos] sendOrderConfirmationEmail failed:', err?.message);

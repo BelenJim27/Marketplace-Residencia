@@ -7,7 +7,7 @@ import GoogleSigninButton from "@/components/Administrator/Auth/GoogleSigninButt
 import { useAuth } from "@/context/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
 
-export function SignUpForm() {
+export function SignUpForm({ isVenderFlow: isVenderFlowProp }: { isVenderFlow?: boolean } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
@@ -16,7 +16,7 @@ export function SignUpForm() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const isVenderFlow = searchParams.get("vender") === "true";
+  const isVenderFlow = isVenderFlowProp ?? searchParams.get("vender") === "true";
 
   const NOMBRE_REGEX = /[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s'\-]/g;
 
@@ -240,6 +240,7 @@ export function SignUpForm() {
             <input
               type={showPassword ? "text" : "password"}
               required
+              autoComplete="new-password"
               className="w-full rounded-lg border border-green-200 bg-white p-3 pr-12 outline-none focus:border-green-400 dark:bg-gray-dark"
               placeholder="Ingresa tu contraseña"
               value={formData.password}
@@ -285,6 +286,7 @@ export function SignUpForm() {
             <input
               type={showConfirmPassword ? "text" : "password"}
               required
+              autoComplete="new-password"
               className={`w-full rounded-lg border p-3 pr-12 outline-none dark:bg-gray-dark ${
                 formData.confirmarPassword.length > 0
                   ? passwordsMatch

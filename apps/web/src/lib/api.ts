@@ -486,6 +486,12 @@ export const api = {
         headers: headers(token),
         body: JSON.stringify(data),
       }),
+    addFactura: (token: string, pedidoId: string, data: any) =>
+      fetchJson(endpoint(`/pedidos/${pedidoId}/facturas`), {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify(data),
+      }),
     update: (token: string, id: string, data: any) =>
       fetchJson(endpoint(`/pedidos/${id}`), {
         method: "PATCH",
