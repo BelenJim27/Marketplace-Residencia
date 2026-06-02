@@ -833,23 +833,29 @@ export class PagosService {
     const MAX_INTENTOS = 5;
     this.logger.debug('[pagos] Iniciando retry de transfers fallidos');
 
-    const failed = await this.prisma.payouts.findMany({
-      where: {
-        estado: 'fallido',
-        intentos: { lt: MAX_INTENTOS },
-        OR: [{ proximo_reintento: null }, { proximo_reintento: { lte: new Date() } }],
-      },
-      include: {
-        pedido_productor: {
-          take: 1,
-          include: {
-            productores: {
-              select: { stripe_account_id: true, stripe_onboarding_completed: true },
+    let failed: any[];
+    try {
+      failed = await this.prisma.payouts.findMany({
+        where: {
+          estado: 'fallido',
+          intentos: { lt: MAX_INTENTOS },
+          OR: [{ proximo_reintento: null }, { proximo_reintento: { lte: new Date() } }],
+        },
+        include: {
+          pedido_productor: {
+            take: 1,
+            include: {
+              productores: {
+                select: { stripe_account_id: true, stripe_onboarding_completed: true, paypal_email: true },
+              },
             },
           },
         },
-      },
-    });
+      });
+    } catch (dbErr: any) {
+      this.logger.warn(`[pagos] retryFailedTransfers: DB no disponible, se reintentará en el siguiente ciclo. ${dbErr?.message}`);
+      return;
+    }
 
     if (failed.length === 0) return;
 
@@ -857,57 +863,102 @@ export class PagosService {
 
     for (const payout of failed) {
       const pp = payout.pedido_productor[0];
-      if (!pp?.productores?.stripe_account_id || !pp.productores.stripe_onboarding_completed) {
-        this.logger.warn(`[pagos] Skipping retry para productor ${pp.id_productor}: sin onboarding`);
-        continue;
-      }
+      const nuevosIntentos = payout.intentos + 1;
+      const backoffMs = Math.min(24 * 60, 15 * Math.pow(2, nuevosIntentos)) * 60_000;
 
-      try {
-        const transfer = await this.stripeService.createTransfer({
-          amountCents: Math.round(Number(payout.monto_neto) * 100),
-          currency: payout.moneda,
-          destination: pp.productores.stripe_account_id,
-          transferGroup: `pedido-${pp.id_pedido}`,
-          idempotencyKey: `transfer-${pp.id_pedido}-${pp.id_productor}`,
-          metadata: {
-            id_pedido: String(pp.id_pedido),
-            id_productor: String(pp.id_productor),
-          },
-        });
-
-        await this.prisma.payouts.update({
-          where: { id_payout: payout.id_payout },
-          data: {
-            estado: 'procesado',
-            referencia_externa: transfer.id,
-            procesado_en: new Date(),
-            ultimo_error: null,
-          },
-        });
-
-        this.logger.log(`[pagos] Transfer exitoso en retry para productor ${pp.id_productor}: ${transfer.id}`);
-      } catch (error: any) {
-        const nuevosIntentos = payout.intentos + 1;
-        const backoffMs = Math.min(24 * 60, 15 * Math.pow(2, nuevosIntentos)) * 60_000;
-
+      const markFailed = async (errorMsg: string) => {
         await this.prisma.payouts.update({
           where: { id_payout: payout.id_payout },
           data: {
             intentos: nuevosIntentos,
-            ultimo_error: error?.message?.slice(0, 500),
+            ultimo_error: errorMsg.slice(0, 500),
             estado: nuevosIntentos >= MAX_INTENTOS ? 'agotado' : 'fallido',
             proximo_reintento: new Date(Date.now() + backoffMs),
           },
         });
-
         if (nuevosIntentos >= MAX_INTENTOS) {
-          this.logger.error(
-            `[pagos] Transfer AGOTADO para productor ${pp.id_productor} pedido ${pp.id_pedido}: requiere revisión manual. Error: ${error?.message}`,
-          );
+          this.logger.error(`[pagos] Payout AGOTADO productor ${pp?.id_productor} pedido ${pp?.id_pedido}: revisión manual requerida. Error: ${errorMsg}`);
         } else {
-          this.logger.warn(
-            `[pagos] Retry intento ${nuevosIntentos}/${MAX_INTENTOS} para productor ${pp.id_productor}: ${error?.message}`,
-          );
+          this.logger.warn(`[pagos] Retry intento ${nuevosIntentos}/${MAX_INTENTOS} productor ${pp?.id_productor}: ${errorMsg}`);
+        }
+      };
+
+      if (payout.proveedor === 'paypal') {
+        if (!pp?.productores?.paypal_email) {
+          this.logger.warn(`[pagos] Skipping retry PayPal para productor ${pp?.id_productor}: sin paypal_email`);
+          continue;
+        }
+
+        try {
+          let amountUSD = Number(payout.monto_neto);
+          if (payout.moneda !== 'USD') {
+            const tasa = await this.prisma.tasas_cambio.findFirst({
+              where: {
+                moneda_origen: payout.moneda,
+                moneda_destino: 'USD' as any,
+                vigente_desde: { lte: new Date() },
+                OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: new Date() } }],
+              },
+              orderBy: { vigente_desde: 'desc' },
+            });
+            amountUSD = amountUSD / (tasa ? Number(tasa.tasa) : 20);
+          }
+          amountUSD = parseFloat(amountUSD.toFixed(2));
+
+          const payoutResult = await this.paypalService.createPayout({
+            paypalEmail: pp.productores.paypal_email,
+            amountUSD,
+            referenceId: `pedido-${pp.id_pedido}-prod-${pp.id_productor}`,
+            senderBatchId: `retry-${payout.id_payout}`,
+          });
+
+          await this.prisma.payouts.update({
+            where: { id_payout: payout.id_payout },
+            data: {
+              estado: 'procesado',
+              referencia_externa: payoutResult.batchId,
+              procesado_en: new Date(),
+              ultimo_error: null,
+            },
+          });
+
+          this.logger.log(`[pagos] PayPal payout exitoso en retry productor ${pp.id_productor}: ${payoutResult.batchId}`);
+        } catch (error: any) {
+          await markFailed(error?.message ?? 'Unknown error');
+        }
+      } else {
+        // Stripe Connect flow
+        if (!pp?.productores?.stripe_account_id || !pp.productores.stripe_onboarding_completed) {
+          this.logger.warn(`[pagos] Skipping retry Stripe para productor ${pp?.id_productor}: sin onboarding`);
+          continue;
+        }
+
+        try {
+          const transfer = await this.stripeService.createTransfer({
+            amountCents: Math.round(Number(payout.monto_neto) * 100),
+            currency: payout.moneda,
+            destination: pp.productores.stripe_account_id,
+            transferGroup: `pedido-${pp.id_pedido}`,
+            idempotencyKey: `transfer-${pp.id_pedido}-${pp.id_productor}`,
+            metadata: {
+              id_pedido: String(pp.id_pedido),
+              id_productor: String(pp.id_productor),
+            },
+          });
+
+          await this.prisma.payouts.update({
+            where: { id_payout: payout.id_payout },
+            data: {
+              estado: 'procesado',
+              referencia_externa: transfer.id,
+              procesado_en: new Date(),
+              ultimo_error: null,
+            },
+          });
+
+          this.logger.log(`[pagos] Stripe transfer exitoso en retry productor ${pp.id_productor}: ${transfer.id}`);
+        } catch (error: any) {
+          await markFailed(error?.message ?? 'Unknown error');
         }
       }
     }

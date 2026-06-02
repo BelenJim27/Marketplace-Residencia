@@ -28,7 +28,7 @@ interface OrderDetail {
     direccion_envio_snapshot: any;
   };
   detalles: any[];
-  envio: { id_envio?: number; numero_rastreo?: string; estado?: string } | null;
+  envio: { id_envio?: number; numero_rastreo?: string; estado?: string; valor_declarado_aduana?: string | null } | null;
   desglose?: {
     subtotal_bruto: string | null;
     comision_marketplace: string;
@@ -69,6 +69,9 @@ function DetalleModal({
   const [numeroRastreo, setNumeroRastreo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showInternacionalModal, setShowInternacionalModal] = useState(false);
+  const [internacionalConfig, setInternacionalConfig] = useState({ valor_declarado_aduana: '', codigo_hs: '220890' });
+  const [guardandoConfig, setGuardandoConfig] = useState(false);
 
   useEffect(() => {
     const fetchOrden = async () => {
@@ -110,7 +113,7 @@ function DetalleModal({
     }
   };
 
-  const handleGenerarGuia = async () => {
+  const ejecutarGenerarGuia = async () => {
     if (!orden?.envio?.id_envio) return;
     setGenerandoGuia(true);
     setError(null);
@@ -118,12 +121,52 @@ function DetalleModal({
     try {
       const token = getCookie("token") || "";
       const guia = await api.envios.crearGuia(token, String(orden.envio.id_envio));
-      setSuccess(`Guía generada: ${guia.numero_guia}`);
+      setSuccess(`Guía generada: ${guia.numero_guia}. Ya puedes descargar la etiqueta.`);
       setNumeroRastreo(guia.numero_guia);
+      setOrden((prev) =>
+        prev ? { ...prev, envio: { ...prev.envio, numero_rastreo: guia.numero_guia } } : prev
+      );
     } catch (err: any) {
       setError(err?.details?.message || err?.message || "Error al generar la guía");
     } finally {
       setGenerandoGuia(false);
+    }
+  };
+
+  const handleGenerarGuia = async () => {
+    if (!orden?.envio?.id_envio) return;
+    const snap = orden.pedido?.direccion_envio_snapshot as any;
+    const pais = snap?.pais_iso2 ?? snap?.pais ?? 'MX';
+    if (pais !== 'MX' && !orden.envio?.valor_declarado_aduana) {
+      setShowInternacionalModal(true);
+      return;
+    }
+    await ejecutarGenerarGuia();
+  };
+
+  const handleGuardarConfigInternacional = async () => {
+    if (!orden?.envio?.id_envio) return;
+    if (!internacionalConfig.valor_declarado_aduana) {
+      setError('El valor declarado en USD es requerido para envíos internacionales.');
+      return;
+    }
+    setGuardandoConfig(true);
+    setError(null);
+    try {
+      const token = getCookie('token') || '';
+      await api.envios.update(token, String(orden.envio.id_envio), {
+        valor_declarado_aduana: internacionalConfig.valor_declarado_aduana,
+        codigo_hs: internacionalConfig.codigo_hs || '220890',
+      });
+      setOrden((prev) =>
+        prev ? { ...prev, envio: { ...prev.envio, valor_declarado_aduana: internacionalConfig.valor_declarado_aduana } } : prev
+      );
+      setShowInternacionalModal(false);
+      await ejecutarGenerarGuia();
+    } catch (err: any) {
+      setError(err?.details?.message || err?.message || 'Error al guardar la configuración aduanal');
+    } finally {
+      setGuardandoConfig(false);
     }
   };
 
@@ -153,6 +196,66 @@ function DetalleModal({
       style={{ backgroundColor: "rgba(31,58,46,0.45)", backdropFilter: "blur(4px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
+      {showInternacionalModal && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(31,58,46,0.6)', backdropFilter: 'blur(4px)' }}
+        >
+          <div className="w-full max-w-md rounded-2xl border border-[#C5CFB0] bg-[#FDFBF5] p-6 shadow-2xl">
+            <h3 className="mb-1 text-base font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
+              Configuración de envío internacional
+            </h3>
+            <p className="mb-4 text-xs text-[#3D6B3F]/70">
+              El carrier y la aduana requieren el valor declarado y el código arancelario
+              de la mercancía para generar la guía de exportación.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-[#3D6B3F]/70">
+                  Valor declarado (USD) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number" min="1" step="0.01"
+                  value={internacionalConfig.valor_declarado_aduana}
+                  onChange={(e) => setInternacionalConfig((p) => ({ ...p, valor_declarado_aduana: e.target.value }))}
+                  placeholder="Ej: 50"
+                  className="w-full rounded-lg border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#1F3A2E] focus:outline-none focus:ring-2 focus:ring-[#3D6B3F]/30"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-[#3D6B3F]/70">Código arancelario (HS)</label>
+                <input
+                  type="text"
+                  value={internacionalConfig.codigo_hs}
+                  onChange={(e) => setInternacionalConfig((p) => ({ ...p, codigo_hs: e.target.value }))}
+                  placeholder="220890"
+                  className="w-full rounded-lg border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#1F3A2E] focus:outline-none focus:ring-2 focus:ring-[#3D6B3F]/30"
+                />
+                <p className="mt-1 text-xs text-[#3D6B3F]/60">Para mezcal el código estándar es 220890.</p>
+              </div>
+            </div>
+            {error && (
+              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+            )}
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => { setShowInternacionalModal(false); setError(null); }}
+                disabled={guardandoConfig}
+                className="flex-1 rounded-lg border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#F4F0E3] disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleGuardarConfigInternacional}
+                disabled={guardandoConfig || !internacionalConfig.valor_declarado_aduana}
+                className="flex-1 rounded-lg bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1F3A2E] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {guardandoConfig ? 'Guardando...' : 'Guardar y generar guía'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[#C5CFB0] bg-[#FDFBF5] shadow-2xl">
         {/* Header modal */}
         <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-[#C5CFB0] bg-[#1F3A2E] px-6 py-4">
@@ -314,12 +417,12 @@ function DetalleModal({
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-[#3D6B3F]/70">Número de Rastreo FedEx</label>
+                    <label className="mb-1 block text-xs font-medium text-[#3D6B3F]/70">Número de Rastreo</label>
                     <input
                       type="text"
                       value={numeroRastreo}
                       onChange={(e) => setNumeroRastreo(e.target.value)}
-                      placeholder="Ingresa el número de guía FedEx"
+                      placeholder="Ingresa el número de guía"
                       className="w-full rounded-lg border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#1F3A2E] focus:outline-none focus:ring-2 focus:ring-[#3D6B3F]/30"
                     />
                   </div>
@@ -337,14 +440,45 @@ function DetalleModal({
                         disabled={generandoGuia || saving}
                         className="rounded-lg border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#F4F0E3] disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {generandoGuia ? "Generando guía..." : "Generar Guía FedEx"}
+                        {generandoGuia ? "Generando guía..." : "Generar Guía"}
                       </button>
                     )}
                   </div>
-                  {orden.envio?.numero_rastreo && (
-                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
-                      <div className="text-xs text-blue-600/70">Rastreo registrado:</div>
-                      <div className="font-medium text-blue-800">{orden.envio.numero_rastreo}</div>
+                  {orden.envio?.numero_rastreo && orden.envio?.id_envio && (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm space-y-3">
+                      <div>
+                        <div className="text-xs text-blue-600/70">Rastreo registrado:</div>
+                        <div className="font-medium text-blue-800 font-mono">{orden.envio.numero_rastreo}</div>
+                      </div>
+                      <a
+                        href={`/envios/${orden.envio.id_envio}/guia/download`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-lg bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1F3A2E]"
+                        onClick={(e) => {
+                          const token = getCookie("token");
+                          if (token) {
+                            e.preventDefault();
+                            const url = `/envios/${orden.envio!.id_envio}/guia/download`;
+                            fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+                              .then((res) => res.blob())
+                              .then((blob) => {
+                                const blobUrl = URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = blobUrl;
+                                a.download = `guia-${orden.envio!.numero_rastreo ?? orden.envio!.id_envio}.pdf`;
+                                a.click();
+                                URL.revokeObjectURL(blobUrl);
+                              })
+                              .catch(() => setError("Error al descargar la etiqueta PDF"));
+                          }
+                        }}
+                      >
+                        Descargar etiqueta PDF
+                      </a>
+                      <p className="text-xs text-blue-600/70">
+                        Imprime esta etiqueta y pégala en el paquete antes de enviarlo.
+                      </p>
                     </div>
                   )}
                 </div>

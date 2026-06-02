@@ -6,8 +6,8 @@ import { CotizarEnvioDto } from './dto/envios.dto';
 import { ICarrierService, ShippingQuote, TrackingEvent, ShipmentResult } from './interfaces/carrier.interface';
 
 const SKYDROPX_SUPPORTED_COUNTRIES = ['MX', 'US', 'CA', 'CO', 'ES', 'FR', 'GB', 'CN'];
-const POLL_MAX_ATTEMPTS = 6;
-const POLL_DELAY_MS = 1500;
+const POLL_MAX_ATTEMPTS = 10;
+const POLL_DELAY_MS = 2000;
 
 @Injectable()
 export class SkydropxService implements ICarrierService {
@@ -19,6 +19,7 @@ export class SkydropxService implements ICarrierService {
   private readonly clientSecret: string;
   private cachedToken: string | null = null;
   private tokenExpiresAt = 0;
+  private cachedConsignmentCodes: string[] | null = null;
 
   private shipperName: string;
   private shipperPhone: string;
@@ -172,6 +173,8 @@ export class SkydropxService implements ICarrierService {
           length: dto.largo_cm ?? 40,
           width: dto.ancho_cm ?? 30,
           height: dto.alto_cm ?? 20,
+          consignment_note: 'Mezcal artesanal',
+          package_type: 'box',
         },
       },
     });
@@ -210,6 +213,31 @@ export class SkydropxService implements ICarrierService {
       });
   }
 
+  // Fetches valid consignment_note class codes from SkydropX catalog. Cached after first call.
+  private async getConsignmentNoteCode(): Promise<string> {
+    if (!this.cachedConsignmentCodes) {
+      try {
+        // Try the Pro API catalog endpoint path
+        const data = await this.get<any>('/consignment_notes/packagings');
+        const items: any[] = Array.isArray(data) ? data : (data?.data ?? data?.packagings ?? []);
+        this.cachedConsignmentCodes = items
+          .map((i: any) => i?.code ?? i?.attributes?.code ?? String(i?.id ?? ''))
+          .filter(Boolean);
+        this.logger.log(`SkydropX consignment_note codes (${this.cachedConsignmentCodes.length}): ${this.cachedConsignmentCodes.slice(0, 10).join(', ')}`);
+      } catch (err: any) {
+        this.logger.warn(`Catálogo consignment_notes no disponible: ${err?.message}`);
+        this.cachedConsignmentCodes = [];
+      }
+    }
+    // UNSPSC/SAT class codes for mezcal/spirits. Package codes like "1H1" are for consignment_note_packaging_code (different field).
+    const preferred = ['50202200', '50202300', '50202306', '1H1', '1H2', 'BV', 'BO', '4B'];
+    for (const code of preferred) {
+      if (this.cachedConsignmentCodes.includes(code)) return code;
+    }
+    // If catalog returned codes, use first; otherwise use known valid SAT class code for spirits
+    return this.cachedConsignmentCodes[0] ?? '50202200';
+  }
+
   async createShipment(envio: any): Promise<ShipmentResult> {
     const snap = (envio.pedidos?.direccion_envio_snapshot ?? {}) as Record<string, any>;
     const destPais = (snap.pais_iso2 ?? snap.pais ?? 'MX').toUpperCase();
@@ -232,10 +260,13 @@ export class SkydropxService implements ICarrierService {
           area_level3: snap.colonia || snap.ciudad || 'Centro',
         },
         parcel: {
-          weight: envio.peso_kg ?? 1,
-          length: envio.largo_cm ?? 40,
-          width: envio.ancho_cm ?? 30,
-          height: envio.alto_cm ?? 20,
+          weight: Number(envio.peso_kg ?? 1),
+          length: Number(envio.largo_cm ?? 40),
+          width: Number(envio.ancho_cm ?? 30),
+          height: Number(envio.alto_cm ?? 20),
+          // SAT Carta Porte codes: BX = Caja (c_TipoEmbalaje), CP = Carta Porte
+          consignment_note: 'CP',
+          package_type: 'BX',
         },
       },
     });
@@ -243,6 +274,9 @@ export class SkydropxService implements ICarrierService {
     const quotation = quotationRaw.is_completed
       ? quotationRaw
       : await this.pollQuotation(quotationRaw.id);
+
+    const quotationKeys = Object.keys(quotation).filter(k => k !== 'rates');
+    this.logger.debug(`[createShipment] quotation keys=${quotationKeys.join(',')} packages=${JSON.stringify(quotation.packages ?? quotation.parcel ?? quotation.parcels ?? '?')}`);
 
     const rates: any[] = (quotation.rates ?? []).filter((r: any) => r.success !== false);
     if (rates.length === 0) {
@@ -252,23 +286,41 @@ export class SkydropxService implements ICarrierService {
       );
     }
 
-    // Seleccionar la tarifa más barata (o la que coincida con el servicio elegido)
-    const codigoServicio = envio.servicios_envio?.codigo_servicio?.toLowerCase();
+    // Rate IDs are ephemeral UUIDs that expire after each quotation session.
+    // Match against the stable provider/service names saved at checkout time instead.
+    const preferred_provider = ((envio as any).preferred_provider ?? '').toLowerCase();
+    const preferred_service = ((envio as any).preferred_service ?? '').toLowerCase();
+
     const selectedRate = (
-      rates.find((r) =>
-        r.carrier_name?.toLowerCase() === codigoServicio ||
-        r.service?.toLowerCase() === codigoServicio,
-      ) ??
+      rates.find((r) => {
+        const rProvider = (
+          r.provider_display_name ?? r.provider_name ?? r.carrier_name ?? r.provider ?? ''
+        ).toLowerCase();
+        const rService = (
+          r.provider_service_name ?? r.service ?? r.service_level_name ?? ''
+        ).toLowerCase();
+        return (
+          (preferred_provider &&
+            (rProvider.includes(preferred_provider) || preferred_provider.includes(rProvider))) ||
+          (preferred_service &&
+            (rService.includes(preferred_service) || preferred_service.includes(rService)))
+        );
+      }) ??
       [...rates].sort((a, b) =>
         parseFloat(a.total ?? a.price ?? '0') - parseFloat(b.total ?? b.price ?? '0'),
       )[0]
     );
 
     const pedidoRef = String(envio.id_pedido ?? envio.id ?? 'ORD');
+    this.logger.debug(`[createShipment] selectedRate.id=${selectedRate.id} packaging_type=${selectedRate.packaging_type} shipment_creation_type=${selectedRate.shipment_creation_type}`);
 
-    // 2. Crear guía (shipment también envuelto en root key)
-    const shipment = await this.post<any>('/shipments', {
+    // package_type: SAT c_TipoEmbalaje code for outer shipping container (4G = caja de fibra/cartón)
+    // consignment_note: SAT c_TipoEmbalaje code for inner product packaging, fetched from catalog
+    const consignmentNoteCode = await this.getConsignmentNoteCode();
+
+    const shipmentBody = {
       shipment: {
+        quotation_id: quotation.id,
         rate_id: selectedRate.id ?? selectedRate.rate_id,
         address_from: {
           name: this.shipperName,
@@ -286,45 +338,90 @@ export class SkydropxService implements ICarrierService {
           phone: snap.telefono ?? snap.phone ?? '0000000000',
           email: snap.email || this.shipperEmail,
         },
-        parcels: [
+        packages: [
           {
-            weight: envio.peso_kg ?? 1,
-            length: envio.largo_cm ?? 40,
-            width: envio.ancho_cm ?? 30,
-            height: envio.alto_cm ?? 20,
-            consignment_note: 'Mezcal artesanal',
-            package_type: 'box',
+            package_number: 1,
+            weight: Number(envio.peso_kg ?? 1),
+            length: Number(envio.largo_cm ?? 40),
+            width: Number(envio.ancho_cm ?? 30),
+            height: Number(envio.alto_cm ?? 20),
+            consignment_note: consignmentNoteCode,
+            package_type: '4G',
           },
         ],
       },
-    });
+    };
+    this.logger.debug(`[createShipment] body=${JSON.stringify(shipmentBody)}`);
+    // 2. Crear guía — quotation_id + rate_id ambos requeridos según la API
+    const shipment = await this.post<any>('/shipments', shipmentBody);
 
-    // 3. Extraer tracking + label de la respuesta JSON:API
-    const included: any[] = shipment?.included ?? [];
-    const firstIncluded = included[0]?.attributes ?? {};
+    // 3. SkydropX creates shipments asynchronously — poll until tracking_number + label_url are ready
+    const shipmentId: string = shipment?.data?.id ?? shipment?.data?.attributes?.id;
+    if (!shipmentId) {
+      throw new HttpException('SkydropX: no se obtuvo ID del shipment creado', HttpStatus.BAD_GATEWAY);
+    }
+
+    let resolvedShipment = shipment;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const pkg = (resolvedShipment?.included ?? []).find(
+        (i: any) => i?.type === 'package' || i?.type === 'packages',
+      );
+      const pkgA = pkg?.attributes ?? {};
+      if (pkgA.tracking_number && pkgA.label_url) break;
+      if (pkgA.tracking_status === 'error') {
+        throw new HttpException('SkydropX: error al generar la guía', HttpStatus.UNPROCESSABLE_ENTITY);
+      }
+      await this.delay(2000);
+      resolvedShipment = await this.get<any>(`/shipments/${shipmentId}`);
+      this.logger.debug(`[createShipment] poll attempt=${attempt + 1} tracking_status=${pkgA.tracking_status} tracking_number=${pkgA.tracking_number}`);
+    }
+
+    const shipAttrs = resolvedShipment?.data?.attributes ?? {};
+    const included: any[] = resolvedShipment?.included ?? [];
+    const pkgIncluded = included.find((i: any) => i?.type === 'package' || i?.type === 'packages');
+    const pkgAttrs = pkgIncluded?.attributes ?? included[0]?.attributes ?? {};
+
     const trackingNumber: string =
-      firstIncluded.tracking_number ??
-      shipment?.data?.attributes?.tracking_number ??
-      shipment?.data?.id ?? '';
-    const labelUrl: string | undefined =
-      firstIncluded.label_url ?? shipment?.data?.attributes?.label_url;
-    const carrierName: string =
-      selectedRate.carrier_name ?? selectedRate.provider ?? '';
+      pkgAttrs.tracking_number ??
+      shipAttrs.master_tracking_number ??
+      shipAttrs.tracking_number ??
+      shipmentId;
 
-    // 4. Descargar PDF
+    const labelUrl: string | undefined =
+      pkgAttrs.label_url ??
+      shipAttrs.label_url;
+
+    this.logger.log(`[createShipment] done: tracking=${trackingNumber} labelUrl=${labelUrl}`);
+
+    const carrierName: string =
+      shipAttrs.carrier_name ??
+      selectedRate.provider_display_name ??
+      selectedRate.carrier_name ??
+      selectedRate.provider ?? '';
+
+    // 4. Descargar PDF — la URL es pre-firmada (JWT en el path), no requiere Bearer token
     let labelBuffer: Buffer | undefined;
     if (labelUrl) {
-      try {
-        const token = await this.getToken();
-        const pdfRes = await firstValueFrom(
-          this.http.get(labelUrl, {
-            headers: { Authorization: `Bearer ${token}` },
-            responseType: 'arraybuffer',
-          }),
-        );
-        labelBuffer = Buffer.from(pdfRes.data as ArrayBuffer);
-      } catch (err: any) {
-        this.logger.warn(`No se pudo descargar label PDF: ${err?.message}`);
+      // Try without auth first (pre-signed URL), then with Bearer as fallback
+      for (const useAuth of [false, true]) {
+        try {
+          const reqConfig: any = { responseType: 'arraybuffer', timeout: 15000 };
+          if (useAuth) {
+            const token = await this.getToken();
+            reqConfig.headers = { Authorization: `Bearer ${token}` };
+          }
+          const pdfRes = await firstValueFrom(this.http.get(labelUrl, reqConfig));
+          const buf = Buffer.from(pdfRes.data as ArrayBuffer);
+          const magic = buf.slice(0, 4).toString('ascii');
+          this.logger.debug(`[createShipment] PDF download useAuth=${useAuth} bytes=${buf.length} magic=${magic}`);
+          if (magic === '%PDF') {
+            labelBuffer = buf;
+            break;
+          }
+          this.logger.warn(`[createShipment] PDF descargado pero no es PDF válido (magic=${magic}), ${useAuth ? 'desistiendo' : 'intentando con auth'}`);
+        } catch (err: any) {
+          this.logger.warn(`[createShipment] PDF download useAuth=${useAuth} failed: ${err?.message}`);
+        }
       }
     }
 

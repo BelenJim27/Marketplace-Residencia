@@ -315,10 +315,19 @@ export class EnviosService {
     });
 
     const carrier = this.selectCarrier(envio.transportistas?.codigo ?? undefined);
+
+    const cotizacion = await this.prisma.envio_cotizaciones.findFirst({
+      where: { id_pedido: envio.id_pedido },
+      orderBy: { fecha_solicitud: 'desc' },
+    });
+    const cotPayload = cotizacion?.payload_response as any;
+
     const result = await carrier.createShipment({
       ...envio,
       productor: primerDetalle?.productores ?? null,
       contenido_descripcion: productNames || 'Mezcal artesanal',
+      preferred_provider: cotPayload?.providerName ?? cotPayload?.carrier ?? null,
+      preferred_service: cotPayload?.productName ?? cotPayload?.productCode ?? null,
     });
 
     if (!result.labelBuffer) {
