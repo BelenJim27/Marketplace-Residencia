@@ -612,9 +612,24 @@ export const api = {
         headers: headers(token),
       }),
     reembolsar: (token: string, idPago: number | string) =>
-      fetchJson<{ mensaje: string }>(`${API_BASE}/pagos/${idPago}/reembolso`, {
+      fetchJson<{ mensaje: string }>(endpoint(`/pagos/${idPago}/reembolso`), {
         method: "POST",
         headers: headers(token),
+      }),
+    listar: (token: string, filtros?: { estado?: string; proveedor?: string }) => {
+      const params = new URLSearchParams();
+      if (filtros?.estado) params.set("estado", filtros.estado);
+      if (filtros?.proveedor) params.set("proveedor", filtros.proveedor);
+      const qs = params.toString();
+      return fetchJson<any[]>(`${API_BASE}/pagos${qs ? `?${qs}` : ""}`, {
+        headers: headers(token),
+      });
+    },
+    resolverManual: (token: string, idPago: number | string, notas?: string) =>
+      fetchJson<any>(`${API_BASE}/pagos/${idPago}/resolver-manual`, {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify({ notas }),
       }),
     stripe: {
       createIntent: (
@@ -634,16 +649,15 @@ export const api = {
           };
           recipient_name?: string;
           customer_id?: string;
-          automatic_tax?: boolean;
         },
       ): Promise<{
         clientSecret: string;
         paymentIntentId: string;
         subtotal: number;
         taxAmount: number;
+        taxBreakdown?: { tipo: string; nombre: string; tasa: number; monto: number }[];
         shippingAmount: number;
         totalAmount: number;
-        taxCalculationId?: string;
       }> =>
         fetchJson(endpoint("/pagos/stripe/intent"), {
           method: "POST",
@@ -673,6 +687,7 @@ export const api = {
         approveUrl: string;
         subtotal: number;
         taxAmount: number;
+        taxBreakdown?: { tipo: string; nombre: string; tasa: number; monto: number }[];
         shippingAmount: number;
         totalAmount: number;
       }> =>
@@ -1348,7 +1363,6 @@ export const api = {
       fetchJson<{
         MXN: {
           USD: number | null;
-          EUR: number | null;
         };
       }>(endpoint("/tasas-cambio/actuales")),
     list: (origen?: string, destino?: string) => {

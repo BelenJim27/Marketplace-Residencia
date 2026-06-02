@@ -10,7 +10,6 @@ const LOCALES = ["es", "en", "fr", "pt", "zh", "ja"] as const;
 const CURRENCIES: { code: Currency; symbol: string; name: string }[] = [
   { code: "MXN", symbol: "$", name: "Peso mexicano" },
   { code: "USD", symbol: "$", name: "Dólar estadounidense" },
-  { code: "EUR", symbol: "€", name: "Euro" },
 ];
 
 export default function PreferenciasPage() {

@@ -3,18 +3,8 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-const MONEDAS = [
-  { codigo: 'MXN', nombre: 'Peso Mexicano',         simbolo: '$' },
-  { codigo: 'USD', nombre: 'Dólar Estadounidense',  simbolo: 'US$' },
-  { codigo: 'EUR', nombre: 'Euro',                  simbolo: '€' },
-  { codigo: 'GBP', nombre: 'Libra Esterlina',       simbolo: '£' },
-  { codigo: 'CAD', nombre: 'Dólar Canadiense',      simbolo: 'C$' },
-  { codigo: 'COP', nombre: 'Peso Colombiano',       simbolo: 'COL$' },
-  { codigo: 'CLP', nombre: 'Peso Chileno',          simbolo: 'CLP$' },
-  { codigo: 'ARS', nombre: 'Peso Argentino',        simbolo: 'AR$' },
-  { codigo: 'BRL', nombre: 'Real Brasileño',        simbolo: 'R$' },
-  { codigo: 'JPY', nombre: 'Yen Japonés',           simbolo: '¥' },
-];
+// Monedas soportadas por el enum Moneda en schema.prisma: MXN, USD.
+// Las monedas adicionales (EUR, GBP, etc.) serán añadidas cuando se expanda el enum.
 
 const IDIOMAS = [
   { codigo: 'es',    nombre: 'Spanish',                  nombre_local: 'Español' },
@@ -30,20 +20,22 @@ const IDIOMAS = [
   { codigo: 'pt-BR', nombre: 'Portuguese (Brazil)',      nombre_local: 'Português (Brasil)' },
 ];
 
+// moneda_default usa el enum Moneda {MXN, USD}. Países con otras monedas usan 'USD'
+// hasta que el enum se expanda en una migración futura.
 const PAISES = [
   { iso2: 'MX', iso3: 'MEX', nombre: 'Mexico',         nombre_local: 'México',         moneda_default: 'MXN', idioma_default: 'es', prefijo_telefono: '+52', activo_venta: true,  activo_envio: true  },
   { iso2: 'US', iso3: 'USA', nombre: 'United States',  nombre_local: 'United States',  moneda_default: 'USD', idioma_default: 'en', prefijo_telefono: '+1',  activo_venta: false, activo_envio: false },
-  { iso2: 'CA', iso3: 'CAN', nombre: 'Canada',         nombre_local: 'Canada',         moneda_default: 'CAD', idioma_default: 'en', prefijo_telefono: '+1',  activo_venta: false, activo_envio: false },
-  { iso2: 'ES', iso3: 'ESP', nombre: 'Spain',          nombre_local: 'España',         moneda_default: 'EUR', idioma_default: 'es', prefijo_telefono: '+34', activo_venta: false, activo_envio: false },
-  { iso2: 'FR', iso3: 'FRA', nombre: 'France',         nombre_local: 'France',         moneda_default: 'EUR', idioma_default: 'fr', prefijo_telefono: '+33', activo_venta: false, activo_envio: false },
-  { iso2: 'DE', iso3: 'DEU', nombre: 'Germany',        nombre_local: 'Deutschland',    moneda_default: 'EUR', idioma_default: 'de', prefijo_telefono: '+49', activo_venta: false, activo_envio: false },
-  { iso2: 'IT', iso3: 'ITA', nombre: 'Italy',          nombre_local: 'Italia',         moneda_default: 'EUR', idioma_default: 'it', prefijo_telefono: '+39', activo_venta: false, activo_envio: false },
-  { iso2: 'GB', iso3: 'GBR', nombre: 'United Kingdom', nombre_local: 'United Kingdom', moneda_default: 'GBP', idioma_default: 'en', prefijo_telefono: '+44', activo_venta: false, activo_envio: false },
-  { iso2: 'CO', iso3: 'COL', nombre: 'Colombia',       nombre_local: 'Colombia',       moneda_default: 'COP', idioma_default: 'es', prefijo_telefono: '+57', activo_venta: false, activo_envio: false },
-  { iso2: 'CL', iso3: 'CHL', nombre: 'Chile',          nombre_local: 'Chile',          moneda_default: 'CLP', idioma_default: 'es', prefijo_telefono: '+56', activo_venta: false, activo_envio: false },
-  { iso2: 'AR', iso3: 'ARG', nombre: 'Argentina',      nombre_local: 'Argentina',      moneda_default: 'ARS', idioma_default: 'es', prefijo_telefono: '+54', activo_venta: false, activo_envio: false },
-  { iso2: 'BR', iso3: 'BRA', nombre: 'Brazil',         nombre_local: 'Brasil',         moneda_default: 'BRL', idioma_default: 'pt', prefijo_telefono: '+55', activo_venta: false, activo_envio: false },
-  { iso2: 'JP', iso3: 'JPN', nombre: 'Japan',          nombre_local: '日本',            moneda_default: 'JPY', idioma_default: 'en', prefijo_telefono: '+81', activo_venta: false, activo_envio: false },
+  { iso2: 'CA', iso3: 'CAN', nombre: 'Canada',         nombre_local: 'Canada',         moneda_default: 'USD', idioma_default: 'en', prefijo_telefono: '+1',  activo_venta: false, activo_envio: false },
+  { iso2: 'ES', iso3: 'ESP', nombre: 'Spain',          nombre_local: 'España',         moneda_default: 'USD', idioma_default: 'es', prefijo_telefono: '+34', activo_venta: false, activo_envio: false },
+  { iso2: 'FR', iso3: 'FRA', nombre: 'France',         nombre_local: 'France',         moneda_default: 'USD', idioma_default: 'fr', prefijo_telefono: '+33', activo_venta: false, activo_envio: false },
+  { iso2: 'DE', iso3: 'DEU', nombre: 'Germany',        nombre_local: 'Deutschland',    moneda_default: 'USD', idioma_default: 'de', prefijo_telefono: '+49', activo_venta: false, activo_envio: false },
+  { iso2: 'IT', iso3: 'ITA', nombre: 'Italy',          nombre_local: 'Italia',         moneda_default: 'USD', idioma_default: 'it', prefijo_telefono: '+39', activo_venta: false, activo_envio: false },
+  { iso2: 'GB', iso3: 'GBR', nombre: 'United Kingdom', nombre_local: 'United Kingdom', moneda_default: 'USD', idioma_default: 'en', prefijo_telefono: '+44', activo_venta: false, activo_envio: false },
+  { iso2: 'CO', iso3: 'COL', nombre: 'Colombia',       nombre_local: 'Colombia',       moneda_default: 'USD', idioma_default: 'es', prefijo_telefono: '+57', activo_venta: false, activo_envio: false },
+  { iso2: 'CL', iso3: 'CHL', nombre: 'Chile',          nombre_local: 'Chile',          moneda_default: 'USD', idioma_default: 'es', prefijo_telefono: '+56', activo_venta: false, activo_envio: false },
+  { iso2: 'AR', iso3: 'ARG', nombre: 'Argentina',      nombre_local: 'Argentina',      moneda_default: 'USD', idioma_default: 'es', prefijo_telefono: '+54', activo_venta: false, activo_envio: false },
+  { iso2: 'BR', iso3: 'BRA', nombre: 'Brazil',         nombre_local: 'Brasil',         moneda_default: 'USD', idioma_default: 'pt', prefijo_telefono: '+55', activo_venta: false, activo_envio: false },
+  { iso2: 'JP', iso3: 'JPN', nombre: 'Japan',          nombre_local: '日本',            moneda_default: 'USD', idioma_default: 'en', prefijo_telefono: '+81', activo_venta: false, activo_envio: false },
 ];
 
 const COMISIONES_DEFAULT = [
@@ -54,25 +46,11 @@ const COMISIONES_DEFAULT = [
   { alcance: 'pais', pais_iso2: 'MX', porcentaje: 0.1500, prioridad: 500 },
 ];
 
+// Solo pares soportados por el enum Moneda {MXN, USD}. Actualizar vía ExchangeRate-API cron en prod.
 const TASAS_INICIALES = [
-  { moneda_origen: 'MXN', moneda_destino: 'USD', tasa: '0.05000000', fuente: 'manual' },
-  { moneda_origen: 'USD', moneda_destino: 'MXN', tasa: '20.00000000', fuente: 'manual' },
-  { moneda_origen: 'MXN', moneda_destino: 'EUR', tasa: '0.04500000', fuente: 'manual' },
-  { moneda_origen: 'EUR', moneda_destino: 'MXN', tasa: '22.00000000', fuente: 'manual' },
+  { moneda_origen: 'MXN', moneda_destino: 'USD', tasa: '0.05882353', fuente: 'manual' }, // ~1/17
+  { moneda_origen: 'USD', moneda_destino: 'MXN', tasa: '17.00000000', fuente: 'manual' },
 ];
-
-async function seedMonedas() {
-  console.log('\n=== Monedas ===');
-  for (const m of MONEDAS) {
-    const existing = await prisma.monedas.findUnique({ where: { codigo: m.codigo } });
-    if (existing) {
-      console.log(`  ✓ Already exists: ${m.codigo}`);
-    } else {
-      await prisma.monedas.create({ data: m });
-      console.log(`  ✓ Created: ${m.codigo} (${m.nombre})`);
-    }
-  }
-}
 
 async function seedIdiomas() {
   console.log('\n=== Idiomas ===');
@@ -149,14 +127,95 @@ async function seedTasasCambio() {
   }
 }
 
+// Categoría de mezcal/destilados — puede ser null si se quiere global
+// Si la categoría mezcal tiene un id diferente en tu BD, ajusta MEZCAL_CATEGORIA_SLUG
+const MEZCAL_CATEGORIA_SLUG = 'mezcal';
+
+const TASAS_IMPUESTO = [
+  // IVA México — aplica a todos los productos (id_categoria null = global)
+  {
+    pais_iso2: 'MX',
+    id_categoria_slug: null,
+    tipo: 'IVA',
+    nombre: 'IVA México 16%',
+    tasa_porcentaje: '0.1600',
+    incluido_en_precio: false,
+    activo: true,
+    vigente_desde: new Date('2024-01-01'),
+  },
+  // IEPS Mezcal México — ya está en el precio del productor, solo informativo
+  {
+    pais_iso2: 'MX',
+    id_categoria_slug: MEZCAL_CATEGORIA_SLUG,
+    tipo: 'IEPS',
+    nombre: 'IEPS Destilados (incluido en precio)',
+    tasa_porcentaje: '0.2650',
+    incluido_en_precio: true,  // NO se cobra de nuevo, solo documentación
+    activo: true,
+    vigente_desde: new Date('2024-01-01'),
+  },
+  // Sales Tax USA promedio — estimado para pedidos MX→USA con PayPal
+  {
+    pais_iso2: 'US',
+    id_categoria_slug: null,
+    tipo: 'SALES_TAX',
+    nombre: 'Sales Tax USA (estimado 8%)',
+    tasa_porcentaje: '0.0800',
+    incluido_en_precio: false,
+    activo: true,
+    vigente_desde: new Date('2024-01-01'),
+  },
+];
+
+async function seedTasasImpuesto() {
+  console.log('\n=== Tasas de Impuesto ===');
+  for (const t of TASAS_IMPUESTO) {
+    let id_categoria = null;
+    if (t.id_categoria_slug) {
+      const cat = await prisma.categorias.findFirst({ where: { slug: t.id_categoria_slug } });
+      id_categoria = cat?.id_categoria ?? null;
+      if (!cat) {
+        console.log(`  ⚠ Categoría "${t.id_categoria_slug}" no encontrada — tasa guardada sin categoría`);
+      }
+    }
+
+    const existing = await prisma.tasas_impuesto.findFirst({
+      where: {
+        pais_iso2: t.pais_iso2,
+        tipo: t.tipo,
+        id_categoria: id_categoria,
+        activo: true,
+      },
+    });
+
+    if (existing) {
+      console.log(`  ✓ Already exists: ${t.tipo} ${t.pais_iso2}${id_categoria ? `/cat:${id_categoria}` : ''} → ${(Number(t.tasa_porcentaje) * 100).toFixed(2)}%`);
+    } else {
+      await prisma.tasas_impuesto.create({
+        data: {
+          pais_iso2: t.pais_iso2,
+          id_categoria,
+          tipo: t.tipo,
+          nombre: t.nombre,
+          tasa_porcentaje: t.tasa_porcentaje,
+          incluido_en_precio: t.incluido_en_precio,
+          activo: t.activo,
+          vigente_desde: t.vigente_desde,
+        },
+      });
+      console.log(`  ✓ Created: ${t.tipo} ${t.pais_iso2}${id_categoria ? `/cat:${id_categoria}` : ''} → ${(Number(t.tasa_porcentaje) * 100).toFixed(2)}% (incluido: ${t.incluido_en_precio})`);
+    }
+  }
+}
+
 async function main() {
   console.log('🌍 Starting internacionalización seed...');
   try {
-    await seedMonedas();
     await seedIdiomas();
     await seedPaises();
     await seedComisiones();
     await seedTasasCambio();
+    await seedTasasImpuesto();
     console.log('\n✅ Internacionalización seed completed.');
   } catch (error) {
     console.error('\n❌ Error during seed:', error);

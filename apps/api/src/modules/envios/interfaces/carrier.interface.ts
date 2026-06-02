@@ -4,6 +4,8 @@ export interface ShippingQuote {
   productCode: string;
   productName: string;
   carrier: string;
+  /** Sub-carrier real (ej. "DHL", "Paquetexpress") cuando el carrier es un agregador */
+  providerName?: string;
   tipo: 'nacional' | 'internacional';
   precioTotal: number;
   moneda: string;
@@ -24,11 +26,12 @@ export interface ShipmentResult {
   labelFormat: string;
   cost?: number;
   currency?: string;
+  carrierName?: string;
 }
 
 export interface ICarrierService {
   readonly carrierCode: string;
   cotizarEnvio(dto: CotizarEnvioDto, adultSignature?: boolean): Promise<ShippingQuote[]>;
-  getTracking(trackingNumber: string): Promise<TrackingEvent[]>;
+  getTracking(trackingNumber: string, options?: Record<string, any>): Promise<TrackingEvent[]>;
   createShipment(envio: any): Promise<ShipmentResult>;
 }

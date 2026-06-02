@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -61,6 +61,8 @@ export default function CheckoutPage() {
     errorMensaje,
     setErrorMensaje,
     totalConEnvio,
+    taxAmount,
+    taxBreakdown,
     obtenerUbicacionGPS,
     clientSecret,
     pedidoIdCreado,
@@ -75,8 +77,9 @@ export default function CheckoutPage() {
 
   const { t, locale, rates } = useLocale();
 
-  // Moneda determinada automáticamente por idioma (sin selector manual)
-  const displayCurrency = locale === 'en' ? 'USD' : 'MXN';
+  // USD si locale='en' o país destino ≠ MX; de lo contrario MXN
+  const pais_destino = direccionSeleccionada?.pais_iso2 ?? (direccionSeleccionada?.ubicacion as any)?.pais ?? "MX";
+  const displayCurrency: 'MXN' | 'USD' = (locale === 'en' || pais_destino !== 'MX') ? 'USD' : 'MXN';
 
   const PASOS = [
     { key: "direccion" as CheckoutStep, label: t('checkout_step_address'), icon: <Truck size={16} />, hint: t('checkout_step_destination') },
@@ -106,6 +109,11 @@ export default function CheckoutPage() {
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
 
+  // Ref para evitar que cambios de referencia en prepararPago (causados por ratesMXN async)
+  // redispa ren el efecto de pago y creen pedidos duplicados.
+  const prepararPagoRef = useRef(prepararPago);
+  useEffect(() => { prepararPagoRef.current = prepararPago; });
+
   const stripeConfigured = isStripeConfigured();
   const stripePromise = stripeConfigured ? getStripe() : null;
 
@@ -134,15 +142,18 @@ export default function CheckoutPage() {
   }, [items.length, isAuthenticated, authLoading, router]);
 
   // Crear el PaymentIntent/PayPal Order al entrar al paso "pago" (idempotente).
+  // prepararPago se accede vía ref para que cambios de referencia (p.ej. cuando ratesMXN
+  // se carga de forma asíncrona) no disparen este efecto y creen pedidos duplicados.
   useEffect(() => {
     if (paso === "pago" && envioSeleccionado && direccionSeleccionada) {
       if (metodoPago === 'stripe' && !clientSecret) {
-        prepararPago();
+        prepararPagoRef.current().catch(() => {});
       } else if (metodoPago === 'paypal' && !paypalOrderId) {
-        prepararPago();
+        prepararPagoRef.current().catch(() => {});
       }
     }
-  }, [paso, clientSecret, paypalOrderId, metodoPago, envioSeleccionado, direccionSeleccionada, prepararPago]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paso, clientSecret, paypalOrderId, metodoPago, envioSeleccionado, direccionSeleccionada]);
 
   if (authLoading) {
     return (
@@ -715,11 +726,43 @@ export default function CheckoutPage() {
                   {envioSeleccionado ? `$${formatPrice(getShippingDisplayAmount() ?? 0, { showCurrency: false })}` : "—"}
                 </span>
               </div>
+              {taxAmount > 0 && taxBreakdown.length > 0 ? (
+                taxBreakdown.map((line, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
+                    <span>{line.nombre} ({(line.tasa * 100).toFixed(0)}%)</span>
+                    <span style={{ fontWeight: 500 }}>
+                      ${formatPrice(convertFromMXN(line.monto), { showCurrency: false })}
+                    </span>
+                  </div>
+                ))
+              ) : taxAmount > 0 ? (
+                <div style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
+                  <span>{t('cart_summary_tax')}</span>
+                  <span style={{ fontWeight: 500 }}>
+                    ${formatPrice(convertFromMXN(taxAmount), { showCurrency: false })}
+                  </span>
+                </div>
+              ) : null}
+              {/* Nota IEPS para México */}
+              {(() => {
+                const pais = direccionSeleccionada?.pais_iso2 ?? (direccionSeleccionada?.ubicacion as any)?.pais ?? "MX";
+                return pais === "MX" ? (
+                  <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "4px 0 0 0" }}>
+                    {locale === 'en' ? 'IEPS (spirits excise) included in product price.' : 'IEPS incluido en el precio del productor.'}
+                  </p>
+                ) : pais === "US" ? (
+                  <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "4px 0 0 0" }}>
+                    {locale === 'en'
+                      ? 'Federal Excise Tax (TTB) is settled at customs by the importer — not included here.'
+                      : 'El Federal Excise Tax (TTB) se liquida en aduana por el importador.'}
+                  </p>
+                ) : null;
+              })()}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${COLOR_PALETTE.border}`, paddingTop: "12px" }}>
               <span style={{ fontWeight: 600, color: COLOR_PALETTE.green }}>{t('checkout_summary_total')}</span>
               <span style={{ fontSize: "18px", fontWeight: 700, color: COLOR_PALETTE.copper }}>
-                ${formatPrice(convertFromMXN(totalConEnvio), { showCurrency: false })} {displayCurrency}
+                ${formatPrice(convertFromMXN(totalConEnvio + taxAmount), { showCurrency: false })} {displayCurrency}
               </span>
             </div>
             </div>
@@ -1136,9 +1179,24 @@ function EnvioStep({ cotizaciones, cotizandoLoading, cotizandoError, envioSelecc
           const isSelected = envioSeleccionado?.carrier === cot.carrier && envioSeleccionado?.productCode === cot.productCode;
           const carrierNames: Record<string, string> = {
             fedex: 'FedEx',
+            skydropx: 'SkydropX',
           };
-          const carrierLabel = carrierNames[cot.carrier] ?? (cot.carrier ?? '').toUpperCase();
-          const carrierColor = 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300';
+          const providerColors: Record<string, string> = {
+            fedex:        'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+            dhl:          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
+            ups:          'bg-amber-100  text-amber-700  dark:bg-amber-900/40  dark:text-amber-300',
+            estafeta:     'bg-red-100    text-red-700    dark:bg-red-900/40    dark:text-red-300',
+            paquetexpress:'bg-blue-100   text-blue-700   dark:bg-blue-900/40   dark:text-blue-300',
+            redpack:      'bg-rose-100   text-rose-700   dark:bg-rose-900/40   dark:text-rose-300',
+          };
+          // Para sub-carriers de SkydropX, mostrar el nombre real (DHL, Paquetexpress…)
+          const carrierLabel = cot.providerName
+            ?? carrierNames[cot.carrier]
+            ?? (cot.carrier ?? '').toUpperCase();
+          const colorKey = carrierLabel.toLowerCase().replace(/\s+/g, '');
+          const carrierColor = providerColors[colorKey]
+            ?? providerColors[cot.carrier]
+            ?? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300';
           return (
             <label
               key={`${cot.carrier}-${cot.productCode}`}
@@ -1243,8 +1301,10 @@ function PagoYResumen({
     if (error) {
       onError(error.message ?? "El pago no se pudo procesar.");
       setConfirming(false);
+    } else {
+      // Pago confirmado (tarjetas sin 3DS). Redirigir manualmente a la página de éxito.
+      window.location.assign(returnUrl);
     }
-    // En éxito, Stripe redirige a return_url y la página se desmonta.
   };
 
   return (

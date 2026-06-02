@@ -58,12 +58,20 @@ const ESTADO_INDEX: Record<string, number> = {
 };
 
 const ESTADO_BADGE: Record<string, { label: string; bg: string; text: string; dot: string; pulse: boolean }> = {
-  pendiente:  { label: "Pendiente",  bg: "rgba(201,122,62,0.08)", text: "#C97A3E", dot: "#C97A3E",  pulse: true  },
-  pagado:     { label: "Pagado",     bg: "rgba(61,107,63,0.08)", text: "#3D6B3F", dot: "#3D6B3F",    pulse: false },
-  preparando: { label: "Preparando", bg: "rgba(168,194,107,0.08)", text: "#A8C26B", dot: "#A8C26B", pulse: true  },
-  enviado:    { label: "Enviado",    bg: "rgba(61,107,63,0.08)", text: "#3D6B3F", dot: "#3D6B3F", pulse: true  },
-  entregado:  { label: "Entregado", bg: "rgba(61,107,63,0.08)", text: "#3D6B3F", dot: "#3D6B3F", pulse: false },
-  cancelado:  { label: "Cancelado", bg: "rgba(100,100,100,0.08)", text: "#666666", dot: "#999999",   pulse: false },
+  // Estados de pedido
+  pendiente:    { label: "Pendiente",        bg: "rgba(201,122,62,0.08)",  text: "#C97A3E", dot: "#C97A3E",  pulse: true  },
+  pagado:       { label: "Pagado",           bg: "rgba(61,107,63,0.08)",   text: "#3D6B3F", dot: "#3D6B3F",  pulse: false },
+  preparando:   { label: "Preparando",       bg: "rgba(168,194,107,0.08)", text: "#A8C26B", dot: "#A8C26B",  pulse: true  },
+  enviado:      { label: "Enviado",          bg: "rgba(61,107,63,0.08)",   text: "#3D6B3F", dot: "#3D6B3F",  pulse: true  },
+  entregado:    { label: "Entregado",        bg: "rgba(61,107,63,0.08)",   text: "#3D6B3F", dot: "#3D6B3F",  pulse: false },
+  cancelado:    { label: "Cancelado",        bg: "rgba(100,100,100,0.08)", text: "#666666", dot: "#999999",  pulse: false },
+  // Estados de envío (tracking normalizado)
+  recogido:     { label: "Recogido",         bg: "rgba(59,130,246,0.08)",  text: "#3B82F6", dot: "#3B82F6",  pulse: true  },
+  en_transito:  { label: "En tránsito",      bg: "rgba(59,130,246,0.08)",  text: "#3B82F6", dot: "#3B82F6",  pulse: true  },
+  en_reparto:   { label: "En reparto",       bg: "rgba(99,102,241,0.08)",  text: "#6366F1", dot: "#6366F1",  pulse: true  },
+  retrasado:    { label: "Retrasado",        bg: "rgba(245,158,11,0.08)",  text: "#D97706", dot: "#D97706",  pulse: true  },
+  fallido:      { label: "Problema en entrega", bg: "rgba(239,68,68,0.08)", text: "#DC2626", dot: "#DC2626", pulse: false },
+  devuelto:     { label: "Devuelto",         bg: "rgba(100,100,100,0.08)", text: "#666666", dot: "#999999",  pulse: false },
 };
 
 /* ── Section card wrapper ────────────────────────────────────────────────── */
@@ -442,72 +450,96 @@ export default function DetallePedidoPage() {
             </Card>
           )}
 
-          {/* Tracking events */}
-          {trackingLoading ? (
-            <Card accentColor={COLOR_PALETTE.green}>
+          {/* Tracking events — siempre visible */}
+          <Card accentColor={COLOR_PALETTE.green}>
+            <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <SectionTitle>Seguimiento</SectionTitle>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {[1, 2, 3].map((i) => (
-                  <div key={i} style={{ height: "48px", borderRadius: "8px", background: COLOR_PALETTE.border, animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }} />
-                ))}
-              </div>
-            </Card>
-          ) : tracking ? (
-            <Card accentColor={COLOR_PALETTE.green}>
-              <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <SectionTitle>Seguimiento</SectionTitle>
+              {envio?.id_envio && (
                 <button
-                  onClick={() => envio?.id_envio && fetchTracking(envio.id_envio)}
+                  onClick={() => fetchTracking(envio.id_envio)}
                   disabled={trackingLoading}
                   aria-label={trackingLoading ? "Actualizando información de seguimiento" : "Actualizar información de seguimiento"}
-                  style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px", borderRadius: "6px", background: COLOR_PALETTE.cream, color: COLOR_PALETTE.copper, padding: "8px 12px", fontSize: "11px", fontWeight: "700", border: `1px solid ${COLOR_PALETTE.border}`, transition: "all 200ms ease", cursor: "pointer", opacity: trackingLoading ? 0.5 : 1 }}
+                  style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px", borderRadius: "6px", background: COLOR_PALETTE.cream, color: COLOR_PALETTE.copper, padding: "8px 12px", fontSize: "11px", fontWeight: "700", border: `1px solid ${COLOR_PALETTE.border}`, transition: "all 200ms ease", cursor: trackingLoading ? "not-allowed" : "pointer", opacity: trackingLoading ? 0.5 : 1 }}
                   onMouseEnter={(e) => { if (!trackingLoading) { e.currentTarget.style.background = COLOR_PALETTE.copper; e.currentTarget.style.color = COLOR_PALETTE.white; } }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = COLOR_PALETTE.cream; e.currentTarget.style.color = COLOR_PALETTE.copper; }}
                 >
                   <RefreshCw size={12} style={{ animation: trackingLoading ? "spin 1s linear infinite" : "none" }} />
                   {trackingLoading ? "Actualizando…" : "Actualizar"}
                 </button>
-              </div>
+              )}
+            </div>
 
-              {tracking.eventos && tracking.eventos.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-                  {tracking.eventos.map((evento: any, idx: number) => (
-                    <div key={idx} style={{ display: "flex", gap: "12px" }}>
-                      {/* Dot + line */}
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                        <div style={{ marginTop: "2px", height: "10px", width: "10px", flexShrink: 0, borderRadius: "50%", border: `2px solid ${COLOR_PALETTE.white}`, background: idx === 0 ? COLOR_PALETTE.copper : COLOR_PALETTE.border, boxShadow: idx === 0 ? `0 0 0 2px ${COLOR_PALETTE.copper}40` : "none" }} />
-                        {idx < tracking.eventos.length - 1 && (
-                          <div style={{ marginTop: "4px", width: "2px", flex: 1, background: COLOR_PALETTE.border, minHeight: "32px" }} />
+            {/* Estado actual badge */}
+            {tracking?.estado_actual && (
+              <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: "#999999" }}>Estado:</span>
+                <span style={{ display: "inline-block", borderRadius: "20px", padding: "3px 10px", fontSize: "11px", fontWeight: "700", background: ESTADO_BADGE[tracking.estado_actual]?.bg ?? "rgba(100,100,100,0.08)", color: ESTADO_BADGE[tracking.estado_actual]?.text ?? "#666666", border: `1px solid rgba(201,122,62,0.15)` }}>
+                  {ESTADO_BADGE[tracking.estado_actual]?.label ?? tracking.estado_actual}
+                </span>
+                {tracking.fecha_entrega_estimada && (
+                  <span style={{ fontSize: "12px", color: "#999999" }}>
+                    · Entrega est. {new Date(tracking.fecha_entrega_estimada).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {trackingLoading ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} style={{ height: "48px", borderRadius: "8px", background: COLOR_PALETTE.border, animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }} />
+                ))}
+              </div>
+            ) : !envio ? (
+              <p style={{ fontSize: "14px", color: "#999999", margin: 0 }}>
+                Aún no hay información de envío para este pedido.
+              </p>
+            ) : !envio.numero_rastreo ? (
+              <p style={{ fontSize: "14px", color: "#999999", margin: 0 }}>
+                La guía de envío aún no ha sido generada. Recibirás una notificación cuando esté lista.
+              </p>
+            ) : tracking?.eventos && tracking.eventos.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+                {tracking.eventos.map((evento: any, idx: number) => (
+                  <div key={idx} style={{ display: "flex", gap: "12px" }}>
+                    {/* Dot + line */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      <div style={{ marginTop: "2px", height: "10px", width: "10px", flexShrink: 0, borderRadius: "50%", border: `2px solid ${COLOR_PALETTE.white}`, background: idx === 0 ? COLOR_PALETTE.copper : COLOR_PALETTE.border, boxShadow: idx === 0 ? `0 0 0 2px ${COLOR_PALETTE.copper}40` : "none" }} />
+                      {idx < tracking.eventos.length - 1 && (
+                        <div style={{ marginTop: "4px", width: "2px", flex: 1, background: COLOR_PALETTE.border, minHeight: "32px" }} />
+                      )}
+                    </div>
+                    {/* Content */}
+                    <div style={{ paddingBottom: idx === tracking.eventos.length - 1 ? 0 : "16px" }}>
+                      <p style={{ fontSize: "14px", fontWeight: "600", color: idx === 0 ? COLOR_PALETTE.green : "#999999", margin: 0 }}>
+                        {evento.descripcion}
+                      </p>
+                      <div style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "#999999" }}>
+                        <span>
+                          {new Date(evento.fecha).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
+                          {" "}
+                          {new Date(evento.fecha).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        {evento.ubicacion && (
+                          <>
+                            <span>·</span>
+                            <span style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                              <MapPin size={11} />
+                              {evento.ubicacion}
+                            </span>
+                          </>
                         )}
                       </div>
-                      {/* Content */}
-                      <div style={{ paddingBottom: idx === tracking.eventos.length - 1 ? 0 : "16px" }}>
-                        <p style={{ fontSize: "14px", fontWeight: "600", color: idx === 0 ? COLOR_PALETTE.green : "#999999", margin: 0 }}>
-                          {evento.descripcion}
-                        </p>
-                        <div style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "#999999" }}>
-                          <span>{new Date(evento.fecha).toLocaleDateString("es-MX")}</span>
-                          {evento.ubicacion && (
-                            <>
-                              <span>·</span>
-                              <span style={{ display: "flex", alignItems: "center", gap: "2px" }}>
-                                <MapPin size={11} />
-                                {evento.ubicacion}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ padding: "8px", fontSize: "14px", color: "#999999", margin: 0 }}>
-                  Sin información de seguimiento disponible.
-                </p>
-              )}
-            </Card>
-          ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: "14px", color: "#999999", margin: 0 }}>
+                Guía generada. Los eventos de rastreo aparecerán aquí en cuanto el paquete sea recolectado.
+              </p>
+            )}
+          </Card>
         </div>
       </div>
     </main>

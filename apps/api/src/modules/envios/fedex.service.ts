@@ -103,6 +103,13 @@ export class FedexService implements ICarrierService {
     const MX_DOMESTIC_SERVICES = ['PRIORITY_OVERNIGHT', 'STANDARD_OVERNIGHT'];
     const isInternational = dto.destino.pais !== 'MX';
 
+    if (isInternational && (dto.valor_declarado_usd == null || dto.valor_declarado_usd <= 0)) {
+      throw new HttpException(
+        'valor_declarado_usd es obligatorio y debe ser mayor a 0 para envíos internacionales (requerido por aduanas)',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     try {
       const token = await this.getAccessToken();
 
@@ -162,8 +169,8 @@ export class FedexService implements ICarrierService {
             countryOfManufacture: 'MX',
             quantity: 1,
             quantityUnits: 'PCS',
-            unitPrice: { amount: dto.valor_declarado_usd ?? 20.00, currency: 'USD' },
-            customsValue: { amount: dto.valor_declarado_usd ?? 20.00, currency: 'USD' },
+            unitPrice: { amount: dto.valor_declarado_usd, currency: 'USD' },
+            customsValue: { amount: dto.valor_declarado_usd, currency: 'USD' },
             weight: { units: 'KG', value: Number(dto.peso_kg) }
           }]
         };
@@ -233,21 +240,23 @@ export class FedexService implements ICarrierService {
       }
 
       if (quotes.length === 0) {
-        // Sandbox fallback: FedEx sandbox has limited coverage for Mexico routes.
-        // Return mock rates so the checkout flow can be tested in development.
         const isSandbox = this.config.get('FEDEX_ENV', 'sandbox') === 'sandbox';
         if (isSandbox) {
+          // Mocks solo en desarrollo/sandbox; en producción FEDEX_ENV debe ser 'production'.
+          // Si ves estas tarifas en prod, verifica la variable de entorno FEDEX_ENV.
+          this.logger.warn(
+            `[FedEx] SANDBOX: sin cotizaciones reales. Retornando tarifas mock. ` +
+            `PRODUCCIÓN requiere FEDEX_ENV=production. Ruta: ${isInternational ? 'internacional' : 'nacional'}`,
+          );
           if (isInternational) {
-            this.logger.warn('FedEx sandbox returned no international quotes — using development mock rates');
             return [
-              { productCode: 'FEDEX_INTERNATIONAL_PRIORITY', productName: 'FedEx International Priority', carrier: 'fedex', tipo: 'internacional' as const, precioTotal: 85, moneda: 'USD', fechaEntregaEstimada: '', diasHabilesEstimados: 3 },
-              { productCode: 'FEDEX_INTERNATIONAL_ECONOMY', productName: 'FedEx International Economy', carrier: 'fedex', tipo: 'internacional' as const, precioTotal: 55, moneda: 'USD', fechaEntregaEstimada: '', diasHabilesEstimados: 6 },
+              { productCode: 'FEDEX_INTERNATIONAL_PRIORITY', productName: 'FedEx International Priority (SANDBOX)', carrier: 'fedex', tipo: 'internacional' as const, precioTotal: 85, moneda: 'USD', fechaEntregaEstimada: '', diasHabilesEstimados: 3 },
+              { productCode: 'FEDEX_INTERNATIONAL_ECONOMY', productName: 'FedEx International Economy (SANDBOX)', carrier: 'fedex', tipo: 'internacional' as const, precioTotal: 55, moneda: 'USD', fechaEntregaEstimada: '', diasHabilesEstimados: 6 },
             ];
           }
-          this.logger.warn('FedEx sandbox returned no MX domestic quotes — using development mock rates');
           return [
-            { productCode: 'PRIORITY_OVERNIGHT', productName: 'FedEx Priority Overnight', carrier: 'fedex', tipo: 'nacional' as const, precioTotal: 450, moneda: 'MXN', fechaEntregaEstimada: '', diasHabilesEstimados: 1 },
-            { productCode: 'STANDARD_OVERNIGHT', productName: 'FedEx Standard Overnight', carrier: 'fedex', tipo: 'nacional' as const, precioTotal: 320, moneda: 'MXN', fechaEntregaEstimada: '', diasHabilesEstimados: 1 },
+            { productCode: 'PRIORITY_OVERNIGHT', productName: 'FedEx Priority Overnight (SANDBOX)', carrier: 'fedex', tipo: 'nacional' as const, precioTotal: 450, moneda: 'MXN', fechaEntregaEstimada: '', diasHabilesEstimados: 1 },
+            { productCode: 'STANDARD_OVERNIGHT', productName: 'FedEx Standard Overnight (SANDBOX)', carrier: 'fedex', tipo: 'nacional' as const, precioTotal: 320, moneda: 'MXN', fechaEntregaEstimada: '', diasHabilesEstimados: 1 },
           ];
         }
         if (lastError) {
@@ -384,9 +393,13 @@ export class FedexService implements ICarrierService {
     ].filter((s) => typeof s === 'string' && s.trim().length > 0);
     if (streetLines.length === 0) streetLines.push('Sin direccion');
 
-    // FedEx acepta exactamente 10 dígitos para MX; limpiamos el teléfono
-    const cleanPhone = (raw: string | undefined) =>
-      (raw ?? '').replace(/\D/g, '').slice(-10).padStart(10, '0');
+    // FedEx rejects all-zero phone numbers; fall back to a fictitious but well-formed number.
+    const cleanPhone = (raw: string | undefined) => {
+      const digits = (raw ?? '').replace(/\D/g, '');
+      if (!digits) return '5550000000';
+      const trimmed = digits.slice(-10).padStart(10, '0');
+      return trimmed === '0000000000' ? '5550000000' : trimmed;
+    };
 
     const body: any = {
       labelResponseOptions: 'LABEL',
@@ -394,16 +407,16 @@ export class FedexService implements ICarrierService {
       requestedShipment: {
         shipper: {
           contact: {
-            personName: this.shipperName || 'Remitente',
-            phoneNumber: cleanPhone(this.shipperPhone),
+            personName: envio.productor?.nombre_marca || this.shipperName || 'Remitente',
+            phoneNumber: cleanPhone(envio.productor?.bodega_telefono ?? this.shipperPhone),
             ...(this.shipperCompany && { companyName: this.shipperCompany }),
           },
           address: {
-            streetLines: [this.shipperStreet || 'Sin direccion'],
-            city: this.shipperCity || 'Oaxaca de Juarez',
+            streetLines: [envio.productor?.bodega_calle || this.shipperStreet || 'Sin direccion'],
+            city: envio.productor?.bodega_ciudad || this.shipperCity || 'Oaxaca de Juarez',
             stateOrProvinceCode: this.shipperStateCode || 'OA',
-            postalCode: this.shipperPostalCode || '68000',
-            countryCode: this.shipperCountryCode || 'MX',
+            postalCode: envio.productor?.bodega_codigo_postal || this.shipperPostalCode || '68000',
+            countryCode: envio.productor?.bodega_pais_iso2 || this.shipperCountryCode || 'MX',
           },
         },
         recipients: [{
@@ -420,6 +433,7 @@ export class FedexService implements ICarrierService {
             residential: true,
           },
         }],
+        pickupType: 'DROPOFF_AT_FEDEX_LOCATION',
         serviceType,
         packagingType: 'YOUR_PACKAGING',
         labelSpecification: {
@@ -431,7 +445,6 @@ export class FedexService implements ICarrierService {
           paymentType: 'SENDER',
           payor: { responsibleParty: { accountNumber: { value: this.accountNumber } } },
         },
-        totalWeight: { units: 'KG', value: Number(envio.peso_kg || 1) },
         requestedPackageLineItems: [{
           weight: { units: 'KG', value: Number(envio.peso_kg || 1) },
           dimensions: {
@@ -454,8 +467,11 @@ export class FedexService implements ICarrierService {
       if (!envio.valor_declarado_aduana || Number(envio.valor_declarado_aduana) < 1) {
         this.logger.warn(`Envío ${envio.id_envio ?? 'N/A'}: valor_declarado_aduana no definido; usando $20 USD. Actualiza el envío con el valor real del pedido.`);
       }
+      // FedEx international customs always requires USD regardless of the DB default (MXN).
+      const declaredCurrency = 'USD';
       const declaredValue = Number(envio.valor_declarado_aduana || 20);
-      const declaredCurrency = envio.moneda_aduana ?? 'USD';
+      // US Customs requires English. Never use the Spanish product name as fallback.
+      const customsDescription = envio.contenido_descripcion_en ?? 'Artisanal Mezcal - Distilled Agave Spirit';
       body.requestedShipment.customsClearanceDetail = {
         dutiesPayment: {
           paymentType: 'SENDER',
@@ -463,22 +479,20 @@ export class FedexService implements ICarrierService {
         },
         documentShipment: false,
         commodities: [{
-          // US Customs requires English descriptions for international shipments.
-          description: envio.contenido_descripcion_en ?? envio.contenido_descripcion ?? 'Artisanal Mezcal - Distilled Agave Spirit',
+          description: customsDescription,
           countryOfManufacture: 'MX',
           quantity: 1,
           quantityUnits: 'PCS',
           unitPrice: { amount: declaredValue, currency: declaredCurrency },
           customsValue: { amount: declaredValue, currency: declaredCurrency },
           weight: { units: 'KG', value: Number(envio.peso_kg || 1) },
-          // HS 2208.90 = bebidas destiladas (mezcal, tequila, otros destilados de agave)
           harmonizedCode: envio.codigo_hs ?? '220890',
         }],
       };
     }
 
     try {
-      this.logger.debug('FedEx Ship request body:', JSON.stringify(body, null, 2));
+      this.logger.debug('FedEx Ship: enviando solicitud');
       const response = await firstValueFrom(
         this.http.post(`${this.baseUrl}/ship/v1/shipments`, body, {
           headers: {

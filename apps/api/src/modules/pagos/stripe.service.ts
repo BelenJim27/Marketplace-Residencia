@@ -13,13 +13,13 @@ export interface StripeShippingAddress {
 
 export interface CreatePaymentIntentInput {
   subtotal: number;                 // pre-tax, in major units (e.g. 49.99)
-  shippingAmount?: number;          // shipping cost in major units, taxed if applicable
+  shippingAmount?: number;          // shipping cost in major units
+  taxAmount?: number;               // pre-computed tax amount (manual, from tasas_impuesto)
   currency: string;                 // ISO 4217 (case-insensitive)
   shippingAddress: StripeShippingAddress;
   recipientName?: string;
   customerId?: string;              // Stripe customer id (optional)
   metadata?: Record<string, any>;
-  automaticTax?: boolean;           // default true
   /**
    * Stripe Connect Direct Charge: when set, the platform charges on behalf of the
    * connected account, takes `applicationFeeAmount` (in major units) as marketplace
@@ -38,7 +38,6 @@ export interface CreatePaymentIntentResult {
   shippingAmount: number;
   totalAmount: number;
   currency: string;
-  taxCalculationId?: string;        // Stripe Tax calculation id, used to record the tax transaction on success
 }
 
 @Injectable()
@@ -57,12 +56,12 @@ export class StripeService {
     const {
       subtotal,
       shippingAmount = 0,
+      taxAmount = 0,
       currency,
       shippingAddress,
       recipientName,
       customerId,
       metadata = {},
-      automaticTax = true,
     } = input;
 
     if (!subtotal || subtotal <= 0) {
@@ -75,6 +74,8 @@ export class StripeService {
     const cur = currency.toLowerCase();
     const subtotalCents = Math.round(subtotal * 100);
     const shippingCents = Math.round(shippingAmount * 100);
+    const taxCents = Math.round(taxAmount * 100);
+    const totalCents = subtotalCents + shippingCents + taxCents;
 
     const stripeAddress = {
       line1: shippingAddress.line1,
@@ -84,41 +85,6 @@ export class StripeService {
       postal_code: shippingAddress.postal_code,
       country: shippingAddress.country.toUpperCase(),
     };
-
-    let taxCents = 0;
-    let totalCents = subtotalCents + shippingCents;
-    let taxCalculationId: string | undefined;
-
-    if (automaticTax) {
-      try {
-        const calc = await this.stripe.tax.calculations.create({
-          currency: cur,
-          line_items: [
-            {
-              amount: subtotalCents,
-              reference: metadata?.id_pedido ? `pedido-${metadata.id_pedido}` : 'pedido',
-              tax_behavior: 'exclusive',
-            },
-          ],
-          shipping_cost: shippingCents > 0
-            ? { amount: shippingCents, tax_behavior: 'exclusive' }
-            : undefined,
-          customer_details: {
-            address: stripeAddress,
-            address_source: 'shipping',
-          },
-        });
-        taxCalculationId = calc.id;
-        taxCents = calc.tax_amount_exclusive ?? 0;
-        totalCents = calc.amount_total;
-      } catch (error: any) {
-        // Stripe Tax not configured / calculation failed — fall back to a no-tax PI.
-        // The order will record tax_amount = 0 and the operator can reconcile manually.
-        // Logged so ops can spot persistent failures.
-        // eslint-disable-next-line no-console
-        console.warn('[stripe] tax.calculations.create failed, continuing without tax:', error?.message);
-      }
-    }
 
     const connectedAccountId = input.connectedAccountId;
     const applicationFeeCents = input.applicationFeeAmount != null
@@ -147,7 +113,6 @@ export class StripeService {
         ...(input.transferGroup ? { transfer_group: input.transferGroup } : {}),
         metadata: {
           ...metadata,
-          ...(taxCalculationId ? { tax_calculation: taxCalculationId } : {}),
           subtotal_cents: String(subtotalCents),
           shipping_cents: String(shippingCents),
           tax_cents: String(taxCents),
@@ -165,7 +130,6 @@ export class StripeService {
         shippingAmount: shippingCents / 100,
         totalAmount: totalCents / 100,
         currency: cur,
-        taxCalculationId,
       };
     } catch (error: any) {
       throw new BadRequestException(`Stripe error: ${error.message}`);

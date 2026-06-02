@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Moneda, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
 import { CreateTasaCambioDto } from './dto/tasas-cambio.dto';
@@ -10,8 +10,8 @@ export class TasasCambioService {
 
   async findAll(origen?: string, destino?: string) {
     const where: Prisma.tasas_cambioWhereInput = {};
-    if (origen) where.moneda_origen = origen.toUpperCase();
-    if (destino) where.moneda_destino = destino.toUpperCase();
+    if (origen) where.moneda_origen = origen.toUpperCase() as Moneda;
+    if (destino) where.moneda_destino = destino.toUpperCase() as Moneda;
     return serializeBigInts(
       await this.prisma.tasas_cambio.findMany({
         where,
@@ -21,8 +21,8 @@ export class TasasCambioService {
   }
 
   async getVigente(origen: string, destino: string, fecha: Date = new Date()) {
-    const o = origen.toUpperCase();
-    const d = destino.toUpperCase();
+    const o = origen.toUpperCase() as Moneda;
+    const d = destino.toUpperCase() as Moneda;
     if (o === d) return { tasa: '1', moneda_origen: o, moneda_destino: d, vigente_desde: fecha };
 
     const tasa = await this.prisma.tasas_cambio.findFirst({
@@ -54,8 +54,8 @@ export class TasasCambioService {
   }
 
   async create(dto: CreateTasaCambioDto) {
-    const o = dto.moneda_origen.toUpperCase();
-    const d = dto.moneda_destino.toUpperCase();
+    const o = dto.moneda_origen as Moneda;
+    const d = dto.moneda_destino as Moneda;
     if (o === d) throw new BadRequestException('Origen y destino no pueden ser iguales');
 
     const vigente_desde = dto.vigente_desde ? new Date(dto.vigente_desde) : new Date();

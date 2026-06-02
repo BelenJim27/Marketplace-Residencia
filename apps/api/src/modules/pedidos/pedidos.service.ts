@@ -1,10 +1,10 @@
-import { Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { BadRequestException, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { Moneda, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
 import { ComisionesService } from "../comisiones/comisiones.service";
 import { FedexService } from "../envios/fedex.service";
-import { ICarrierService } from "../envios/interfaces/carrier.interface";
+import { SkydropxService } from "../envios/skydropx.service";
 import { PaypalService } from "../pagos/paypal.service";
 import { StripeService } from "../pagos/stripe.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
@@ -22,18 +22,15 @@ type Periodo = "week" | "month" | "year";
 
 @Injectable()
 export class PedidosService {
-  private carrierService: ICarrierService;
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
     private readonly comisionesService: ComisionesService,
     private readonly fedexService: FedexService,
+    private readonly skydropxService: SkydropxService,
     private readonly stripeService: StripeService,
     private readonly paypalService: PaypalService,
-  ) {
-    this.carrierService = fedexService;
-  }
+  ) {}
   async findAll() {
     return serializeBigInts(
       await this.prisma.pedidos.findMany({
@@ -51,7 +48,6 @@ export class PedidosService {
           },
           facturas: true,
           usuarios: true,
-          monedas: true,
         },
         orderBy: { fecha_creacion: 'desc' },
       }),
@@ -64,7 +60,6 @@ export class PedidosService {
         detalle_pedido: true,
         facturas: true,
         usuarios: true,
-        monedas: true,
       },
     });
     if (!item || item.eliminado_en)
@@ -223,7 +218,7 @@ export class PedidosService {
         total: dto.total,
         moneda: dto.moneda,
         tipo_cambio: dto.tipo_cambio ?? undefined,
-        moneda_referencia: dto.moneda_referencia?.trim() ?? "USD",
+        moneda_referencia: (dto.moneda_referencia?.trim() ?? "USD") as Moneda,
         pais_destino_iso2: dto.pais_destino_iso2 ?? undefined,
         direccion_envio_snapshot: dto.direccion_envio_snapshot as
           | any
@@ -262,7 +257,7 @@ export class PedidosService {
         total: dto.total,
         moneda: dto.moneda,
         tipo_cambio: dto.tipo_cambio,
-        moneda_referencia: dto.moneda_referencia?.trim(),
+        moneda_referencia: dto.moneda_referencia?.trim() as Moneda | undefined,
         pais_destino_iso2: dto.pais_destino_iso2,
         direccion_envio_snapshot: dto.direccion_envio_snapshot as
           | any
@@ -344,7 +339,7 @@ export class PedidosService {
           id_tienda,
           cantidad: dto.cantidad,
           precio_compra: dto.precio_compra,
-          moneda_compra: dto.moneda_compra?.trim() ?? "MXN",
+          moneda_compra: (dto.moneda_compra?.trim() ?? "MXN") as Moneda,
           impuesto: dto.impuesto ?? "0",
         },
         include: { productos: { include: { lotes: true } } },
@@ -361,6 +356,12 @@ export class PedidosService {
 
       const cantidadADecretar = Number(dto.cantidad);
       const stockResultante = inventario.stock - cantidadADecretar;
+
+      if (stockResultante < 0) {
+        throw new BadRequestException(
+          `Stock insuficiente para el producto ${dto.id_producto}. Disponible: ${inventario.stock}, solicitado: ${cantidadADecretar}.`,
+        );
+      }
 
       await tx.inventario.update({
         where: { id_inventario: inventario.id_inventario },
@@ -518,9 +519,11 @@ export class PedidosService {
         subtotal_bruto,
         comision,
       );
-    } catch {
-      console.warn(
-        `[pedidos] Sin regla de comisión para productor ${args.id_productor} / país ${args.pais_operacion}. Comisión aplicada: 0.`,
+    } catch (err: any) {
+      // No silenciar: una comisión de 0% implica pérdida de ingresos sin alerta.
+      // El admin debe garantizar que siempre exista una regla global activa en la tabla comisiones.
+      throw new Error(
+        `[pedidos] Sin regla de comisión para productor ${args.id_productor} / país ${args.pais_operacion}. Asegúrate de que exista una regla con alcance='global' y activo=true. Error original: ${err?.message}`,
       );
     }
 
@@ -564,7 +567,7 @@ export class PedidosService {
           id_producto: dto.id_producto,
           cantidad: dto.cantidad,
           precio_compra: dto.precio_compra,
-          moneda_compra: dto.moneda_compra?.trim(),
+          moneda_compra: dto.moneda_compra?.trim() as Moneda | undefined,
           impuesto: dto.impuesto,
         },
       }),
@@ -820,7 +823,7 @@ export class PedidosService {
     return serializeBigInts(updated);
   }
 
-  private async triggerPayoutForProductor(id_pedido: bigint, id_productor: number, moneda: string) {
+  private async triggerPayoutForProductor(id_pedido: bigint, id_productor: number, moneda: Moneda) {
     const pp = (await this.prisma.pedido_productor.findUnique({
       where: {
         id_pedido_id_productor: { id_pedido, id_productor },
@@ -872,11 +875,11 @@ export class PedidosService {
       try {
         // Convert to USD for PayPal
         let amountUSD = monto_neto;
-        if (moneda.toUpperCase() !== 'USD') {
+        if (moneda !== 'USD') {
           const tasa = await this.prisma.tasas_cambio.findFirst({
             where: {
-              moneda_origen: moneda.toUpperCase(),
-              moneda_destino: 'USD',
+              moneda_origen: moneda,
+              moneda_destino: Moneda.USD,
               vigente_desde: { lte: new Date() },
               OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: new Date() } }],
             },
@@ -897,7 +900,7 @@ export class PedidosService {
         const payout = await this.prisma.payouts.create({
           data: {
             id_productor,
-            moneda: moneda.toLowerCase(),
+            moneda,
             monto_bruto: pp.subtotal_bruto ?? monto_neto ?? 0,
             monto_comision: pp.comision_marketplace,
             monto_neto: monto_neto ?? 0,
@@ -921,7 +924,7 @@ export class PedidosService {
         const payoutFallido = await this.prisma.payouts.create({
           data: {
             id_productor,
-            moneda: moneda.toLowerCase(),
+            moneda,
             monto_bruto: pp.subtotal_bruto ?? monto_neto ?? 0,
             monto_comision: pp.comision_marketplace,
             monto_neto: monto_neto ?? 0,
@@ -1000,7 +1003,7 @@ export class PedidosService {
         const payout = await this.prisma.payouts.create({
           data: {
             id_productor,
-            moneda: moneda.toLowerCase(),
+            moneda,
             monto_bruto: pp.subtotal_bruto ?? monto_neto ?? 0,
             monto_comision: pp.comision_marketplace,
             monto_neto: monto_neto ?? 0,
@@ -1024,7 +1027,7 @@ export class PedidosService {
         const payoutFallido = await this.prisma.payouts.create({
           data: {
             id_productor,
-            moneda: moneda.toLowerCase(),
+            moneda,
             monto_bruto: pp.subtotal_bruto ?? monto_neto ?? 0,
             monto_comision: pp.comision_marketplace,
             monto_neto: monto_neto ?? 0,
@@ -1241,7 +1244,16 @@ export class PedidosService {
       largo_cm: 40,
     };
 
-    const quotes = await this.carrierService.cotizarEnvio(dto);
+    const esInternacional = snapshot.pais && snapshot.pais !== 'MX';
+    const [fedexResult, skydropxResult] = await Promise.allSettled([
+      this.fedexService.cotizarEnvio(dto),
+      esInternacional ? Promise.resolve([]) : this.skydropxService.cotizarEnvio(dto),
+    ]);
+
+    const quotes = [
+      ...(fedexResult.status === 'fulfilled' ? fedexResult.value : []),
+      ...(skydropxResult.status === 'fulfilled' ? skydropxResult.value : []),
+    ];
 
     for (const q of quotes) {
       await this.prisma.envio_cotizaciones.create({
@@ -1249,7 +1261,7 @@ export class PedidosService {
           id_pedido,
           precio_total: String(q.precioTotal),
           tiempo_entrega_estimado: q.fechaEntregaEstimada ?? null,
-          moneda: q.moneda ?? 'USD',
+          moneda: (q.moneda ?? 'USD') as Moneda,
           valida_hasta: new Date(Date.now() + 4 * 3600000),
           payload_request: dto as any,
           payload_response: q as any,

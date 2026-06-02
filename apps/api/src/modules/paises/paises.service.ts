@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Moneda, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
 import { CreatePaisDto, ListPaisesQueryDto, UpdatePaisDto } from './dto/paises.dto';
@@ -22,7 +22,7 @@ export class PaisesService {
   async findOne(iso2: string) {
     const pais = await this.prisma.paises.findUnique({
       where: { iso2: iso2.toUpperCase() },
-      include: { monedas: true, idiomas: true },
+      include: { idiomas: true },
     });
     if (!pais) throw new NotFoundException('País no encontrado');
     return serializeBigInts(pais);
@@ -37,7 +37,7 @@ export class PaisesService {
             iso3: dto.iso3.toUpperCase(),
             nombre: dto.nombre.trim(),
             nombre_local: dto.nombre_local?.trim(),
-            moneda_default: dto.moneda_default.toUpperCase(),
+            moneda_default: dto.moneda_default.toUpperCase() as Moneda,
             idioma_default: dto.idioma_default?.trim() ?? 'es',
             prefijo_telefono: dto.prefijo_telefono?.trim(),
             activo_venta: dto.activo_venta ?? false,
@@ -63,7 +63,7 @@ export class PaisesService {
           iso3: dto.iso3?.toUpperCase(),
           nombre: dto.nombre?.trim(),
           nombre_local: dto.nombre_local?.trim(),
-          moneda_default: dto.moneda_default?.toUpperCase(),
+          moneda_default: dto.moneda_default?.toUpperCase() as Moneda | undefined,
           idioma_default: dto.idioma_default?.trim(),
           prefijo_telefono: dto.prefijo_telefono?.trim(),
           activo_venta: dto.activo_venta,

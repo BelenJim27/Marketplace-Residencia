@@ -1,11 +1,12 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Req } from '@nestjs/common';
-import { CreateMonedaDto, CreatePagoDto, CreateStripeIntentDto, UpdateMonedaDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
+import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { CreatePagoDto, CreateStripeIntentDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
 import { ConnectService } from './connect.service';
 import { PagosService } from './pagos.service';
 import { PaypalService } from './paypal.service';
 import { StripeService } from './stripe.service';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
+import { AuthGuard } from '../auth/guards/auth.guard';
 
 @Controller('pagos')
 export class PagosController {
@@ -16,17 +17,21 @@ export class PagosController {
     private readonly connectService: ConnectService,
     private readonly configService: ConfigService,
   ) {}
-  @Get('monedas') listMonedas() { return this.service.listMonedas(); }
-  @Post('monedas') createMoneda(@Body() dto: CreateMonedaDto) { return this.service.createMoneda(dto); }
-  @Patch('monedas/:codigo') updateMoneda(@Param('codigo') codigo: string, @Body() dto: UpdateMonedaDto) { return this.service.updateMoneda(codigo, dto); }
-  @Delete('monedas/:codigo') removeMoneda(@Param('codigo') codigo: string) { return this.service.removeMoneda(codigo); }
-
+  @UseGuards(AuthGuard)
   @Get('ingresos/:id_productor')
-  getIngresosResumen(@Param('id_productor', ParseIntPipe) id_productor: number) {
+  getIngresosResumen(@Param('id_productor', ParseIntPipe) id_productor: number, @Req() req: Request) {
+    const user = (req as any).user;
+    const isAdmin = user?.roles?.includes('admin') || user?.permisos?.includes('admin');
+    if (!isAdmin && user?.id_productor !== id_productor) {
+      throw new UnauthorizedException('Solo puedes ver tus propios ingresos');
+    }
     return this.service.getIngresosResumen(id_productor);
   }
 
-  @Post('stripe/intent') createStripeIntent(@Body() dto: CreateStripeIntentDto) {
+  @UseGuards(AuthGuard)
+  @Post('stripe/intent')
+  async createStripeIntent(@Body() dto: CreateStripeIntentDto, @Req() req: Request) {
+    await this.service.validatePedidoOwnership(dto.id_pedido, (req as any).user.id_usuario);
     return this.service.createStripePaymentIntent(dto);
   }
 
@@ -52,11 +57,14 @@ export class PagosController {
     return { received: true };
   }
 
+  @UseGuards(AuthGuard)
   @Post('paypal/order')
-  createPaypalOrder(@Body() dto: CreatePaypalOrderDto) {
+  async createPaypalOrder(@Body() dto: CreatePaypalOrderDto, @Req() req: Request) {
+    await this.service.validatePedidoOwnership(dto.id_pedido, (req as any).user.id_usuario);
     return this.service.createPaypalOrder(dto);
   }
 
+  @UseGuards(AuthGuard)
   @Post('paypal/capture')
   capturePaypalOrder(@Body() dto: CapturePaypalOrderDto) {
     return this.service.capturePaypalOrder(dto);
@@ -68,7 +76,7 @@ export class PagosController {
     const isValid = await this.paypalService.verifyWebhookSignature(headers, (req as any).rawBody as Buffer);
 
     if (!isValid) {
-      return { received: true };
+      throw new UnauthorizedException('Invalid PayPal webhook signature');
     }
 
     const event = JSON.parse(((req as any).rawBody as Buffer).toString());
@@ -77,9 +85,10 @@ export class PagosController {
     if (eventType === 'PAYMENT.CAPTURE.COMPLETED') {
       const capture = event.resource as any;
       const captureId = capture.id;
-      const purchaseUnit = event.resource.supplementary_data?.related_ids?.order_id;
-
-      // Use captur ID to find the payment
+      const captureCurrency = (capture.amount?.currency_code ?? '').toUpperCase();
+      if (captureCurrency && captureCurrency !== 'USD') {
+        throw new BadRequestException(`Moneda de capture inesperada: ${captureCurrency}. Solo se acepta USD.`);
+      }
       await this.service.updatePaymentStatus(captureId, 'completado');
     } else if (eventType === 'PAYMENT.CAPTURE.DENIED' || eventType === 'PAYMENT.CAPTURE.REFUNDED') {
       const capture = event.resource as any;
@@ -90,14 +99,28 @@ export class PagosController {
     return { received: true };
   }
 
+  @UseGuards(AuthGuard)
   @Post(':id/reembolso')
   reembolsarPago(@Param('id') id: string) {
     return this.service.reembolsarPago(id);
   }
 
-  @Get() findAll() { return this.service.findAll(); }
+  @UseGuards(AuthGuard)
+  @Get() findAll(@Query('estado') estado?: string, @Query('proveedor') proveedor?: string) {
+    return this.service.findAll({ estado, proveedor });
+  }
+  @UseGuards(AuthGuard)
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
+  @UseGuards(AuthGuard)
   @Post() create(@Body() dto: CreatePagoDto) { return this.service.create(dto); }
+  @UseGuards(AuthGuard)
   @Patch(':id') update(@Param('id') id: string, @Body() dto: UpdatePagoDto) { return this.service.update(id, dto); }
+  @UseGuards(AuthGuard)
   @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }
+
+  @UseGuards(AuthGuard)
+  @Post(':id/resolver-manual')
+  resolverManual(@Param('id') id: string, @Body() body: { notas?: string }) {
+    return this.service.resolverManual(id, body.notas);
+  }
 }

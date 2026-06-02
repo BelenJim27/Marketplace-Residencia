@@ -240,11 +240,12 @@ export class ProductosService {
       );
     }
 
-    // Vista pública: todos los productos activos (con o sin lote de trazabilidad)
+    // Vista pública: solo productos activos con stock disponible
     const items = await this.prisma.productos.findMany({
       where: {
         ...where,
         status: 'activo',
+        inventario: { some: { stock: { gt: 0 } } },
       },
       include: productoInclude as any,
       orderBy: { creado_en: 'desc' },

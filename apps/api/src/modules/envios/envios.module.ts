@@ -5,11 +5,12 @@ import { PrismaModule } from '../../prisma/prisma.module';
 import { EnviosController } from './envios.controller';
 import { EnviosService } from './envios.service';
 import { FedexService } from './fedex.service';
+import { SkydropxService } from './skydropx.service';
 
 @Module({
   imports: [ConfigModule, PrismaModule, HttpModule],
   controllers: [EnviosController],
-  providers: [FedexService, EnviosService],
-  exports: [FedexService, EnviosService],
+  providers: [FedexService, SkydropxService, EnviosService],
+  exports: [FedexService, SkydropxService, EnviosService],
 })
 export class EnviosModule {}

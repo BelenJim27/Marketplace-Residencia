@@ -56,6 +56,9 @@ export function useCheckout() {
 
   const [dobRequired, setDobRequired] = useState<DobRequiredState | null>(null);
 
+  // Mutex para prevenir doble creación de pedido por doble click o llamadas concurrentes.
+  const isCreatingPedidoRef = useRef(false);
+
   const pesoTotal = items.reduce(
     (sum, item) => sum + ((item as any).peso_kg ?? 0.75) * item.cantidad,
     0,
@@ -80,20 +83,17 @@ export function useCheckout() {
 
   const hasLoadedRatesRef = useRef(false);
   const hasLoadedDireccionesRef = useRef(false);
-  const [ratesMXN, setRatesMXN] = useState<{ USD: number | null; EUR: number | null }>({ USD: null, EUR: null });
+  const [ratesMXN, setRatesMXN] = useState<Record<string, number | null>>({ USD: null });
+  const [taxAmount, setTaxAmount] = useState<number>(0);
+  const [taxBreakdown, setTaxBreakdown] = useState<{ tipo: string; nombre: string; tasa: number; monto: number }[]>([]);
 
-  useEffect(() => {
-    if (seleccionado) {
-      setEnvioSeleccionado(seleccionado);
-    }
-  }, [seleccionado]);
 
   // Cargar tasas del backend
   useEffect(() => {
     if (!hasLoadedRatesRef.current) {
       hasLoadedRatesRef.current = true;
       api.tasasCambio.actuales()
-        .then(setRatesMXN)
+        .then(data => setRatesMXN(data.MXN))
         .catch((err) => console.error('Error loading exchange rates:', err));
     }
   }, []);
@@ -335,6 +335,10 @@ export function useCheckout() {
     setCargando(true);
     setErrorMensaje(null);
 
+    // Declarados fuera del try para que el catch exterior pueda cancelar el pedido si el setup falla
+    let pedidoId!: string;
+    let pedidoRecienCreado = false;
+
     try {
       const costoEnvioOriginal = envioSeleccionado.precioTotal;
       const envioMoneda = (envioSeleccionado.moneda ?? 'MXN').toUpperCase();
@@ -345,12 +349,13 @@ export function useCheckout() {
         : costoEnvioOriginal;
       const subtotal = parseFloat(precioTotal.toFixed(2));
       const totalConEnvio = parseFloat((precioTotal + costoEnvioMXN).toFixed(2));
-
-      let pedidoId: string;
-      let pedidoRecienCreado = false;
       if (pedidoIdCreado) {
         pedidoId = pedidoIdCreado;
+      } else if (isCreatingPedidoRef.current) {
+        // Otra llamada concurrente ya está creando el pedido; abortar silenciosamente.
+        return null;
       } else {
+        isCreatingPedidoRef.current = true;
         const pedido = await api.pedidos.create(token, {
           id_usuario: user.id_usuario,
           estado: "pendiente",
@@ -369,7 +374,8 @@ export function useCheckout() {
         }
         pedidoId = String(pedido.id_pedido ?? pedido.id);
         pedidoRecienCreado = true;
-        setPedidoIdCreado(pedidoId);
+        // No setar pedidoIdCreado aquí: si addDetalle/envio falla, el estado
+        // quedaría con un pedido sin ítems y el siguiente intento saltaría la creación.
 
         for (const item of items) {
           await api.pedidos.addDetalle(token, pedidoId, {
@@ -380,15 +386,14 @@ export function useCheckout() {
           });
         }
 
-        // CAMBIO 2: Inclusión de transportista_codigo y codigo_servicio
         await api.envios.create(token, {
           id_pedido: Number(pedidoId),
           costo_envio: String(costoEnvioMXN),
           moneda_costo: 'MXN',
           peso_kg: String(pesoTotal),
           estado: "preparando",
-          transportista_codigo: (envioSeleccionado as any).carrier, // nuevo
-          codigo_servicio: envioSeleccionado.productCode,           // nuevo
+          transportista_codigo: (envioSeleccionado as any).carrier,
+          codigo_servicio: envioSeleccionado.productCode,
         });
 
         await api.envios.guardarCotizacion(token, {
@@ -406,6 +411,9 @@ export function useCheckout() {
             moneda: envioSeleccionado.moneda,
           },
         });
+
+        // Solo persistir el ID después de que TODO el setup fue exitoso
+        setPedidoIdCreado(pedidoId);
       }
 
       const recipientName =
@@ -424,6 +432,8 @@ export function useCheckout() {
             shipping_address: buildShippingAddressForStripe(direccionSeleccionada),
           });
           setPaypalOrderId(pagoResponse.orderId);
+          setTaxAmount(pagoResponse.taxAmount ?? 0);
+          setTaxBreakdown(pagoResponse.taxBreakdown ?? []);
           return { pedidoId, paypalOrderId: pagoResponse.orderId };
         } else {
           pagoResponse = await api.pagos.stripe.createIntent(token, {
@@ -433,10 +443,11 @@ export function useCheckout() {
             moneda: "MXN",
             shipping_address: buildShippingAddressForStripe(direccionSeleccionada),
             recipient_name: recipientName,
-            automatic_tax: true,
           });
           setClientSecret(pagoResponse.clientSecret);
           setPaymentIntentId(pagoResponse.paymentIntentId);
+          setTaxAmount(pagoResponse.taxAmount ?? 0);
+          setTaxBreakdown(pagoResponse.taxBreakdown ?? []);
           return { pedidoId, clientSecret: pagoResponse.clientSecret };
         }
       } catch (err) {
@@ -459,10 +470,17 @@ export function useCheckout() {
         throw err;
       }
     } catch (err) {
+      // Si el pedido fue creado en esta llamada pero el setup falló (addDetalle/envio),
+      // hay que cancelarlo para que el siguiente intento pueda crear uno nuevo limpio.
+      if (pedidoRecienCreado) {
+        try { await api.pedidos.update(token, pedidoId, { estado: "cancelado" }); } catch {}
+        setPedidoIdCreado(null);
+      }
       setErrorMensaje(err instanceof Error ? err.message : "Error desconocido");
       return null;
     } finally {
       setCargando(false);
+      isCreatingPedidoRef.current = false;
     }
   }, [
     user,
@@ -560,6 +578,8 @@ export function useCheckout() {
     clientSecret,
     paymentIntentId,
     pedidoIdCreado,
+    taxAmount,
+    taxBreakdown,
     metodoPago,
     setMetodoPago,
     paypalOrderId,

@@ -1,16 +1,19 @@
-import { Type } from 'class-transformer';
-import { IsDateString, IsNumberString, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsDateString, IsEnum, IsNumberString, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+
+export enum Moneda {
+  MXN = 'MXN',
+  USD = 'USD',
+}
 
 export class CreateTasaCambioDto {
-  @IsString()
-  @Length(3, 3)
-  moneda_origen!: string;
+  @IsEnum(Moneda)
+  moneda_origen!: Moneda;
 
-  @IsString()
-  @Length(3, 3)
-  moneda_destino!: string;
+  @IsEnum(Moneda)
+  moneda_destino!: Moneda;
 
   @IsNumberString()
+  @Matches(/^[0-9]+(\.[0-9]+)?$/, { message: 'tasa debe ser un número positivo' })
   tasa!: string;
 
   @IsOptional()
@@ -24,13 +27,11 @@ export class CreateTasaCambioDto {
 }
 
 export class ConvertirQueryDto {
-  @IsString()
-  @Length(3, 3)
-  origen!: string;
+  @IsEnum(Moneda)
+  origen!: Moneda;
 
-  @IsString()
-  @Length(3, 3)
-  destino!: string;
+  @IsEnum(Moneda)
+  destino!: Moneda;
 
   @IsNumberString()
   monto!: string;

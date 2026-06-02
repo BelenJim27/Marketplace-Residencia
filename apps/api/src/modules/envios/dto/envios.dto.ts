@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsDateString, IsInt, IsNumber, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { IsBoolean, IsDateString, IsInt, IsNumber, IsOptional, IsPositive, IsString, MaxLength, ValidateNested } from 'class-validator';
 
 export class CreateEnvioDto {
   @IsInt() @Type(() => Number) id_pedido!: number;
@@ -10,10 +10,10 @@ export class CreateEnvioDto {
   @IsOptional() @IsString() valor_declarado_aduana?: string;
   @IsOptional() @IsString() @MaxLength(3) moneda_aduana?: string;
   @IsOptional() @IsString() codigo_hs?: string;
-  @IsOptional() @IsString() peso_kg?: string;
-  @IsOptional() @IsString() alto_cm?: string;
-  @IsOptional() @IsString() ancho_cm?: string;
-  @IsOptional() @IsString() largo_cm?: string;
+  @IsOptional() @IsNumber() @IsPositive() @Type(() => Number) peso_kg?: number;
+  @IsOptional() @IsNumber() @IsPositive() @Type(() => Number) alto_cm?: number;
+  @IsOptional() @IsNumber() @IsPositive() @Type(() => Number) ancho_cm?: number;
+  @IsOptional() @IsNumber() @IsPositive() @Type(() => Number) largo_cm?: number;
   @IsOptional() @IsString() costo_envio?: string;
   @IsOptional() @IsString() @MaxLength(3) moneda_costo?: string;
   @IsOptional() @IsString() @MaxLength(30) estado?: string;
@@ -31,6 +31,7 @@ export class DireccionDestinoDto {
   @IsString() ciudad!: string;
   @IsString() estado!: string;
   @IsString() codigo_postal!: string;
+  @IsOptional() @IsString() colonia?: string;
 }
 
 export class CotizarEnvioDto {

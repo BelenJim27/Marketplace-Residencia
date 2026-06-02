@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { Moneda } from './dto/tasas-cambio.dto';
 import { TasasCambioService } from './tasas-cambio.service';
 
 @Injectable()
@@ -29,14 +30,13 @@ export class TasasCambioSyncService {
       const { conversion_rates } = response.data;
 
       const now = new Date();
-      const pares = [
-        { destino: 'USD', tasa: conversion_rates.USD },
-        { destino: 'EUR', tasa: conversion_rates.EUR },
+      const pares: { destino: Moneda; tasa: number }[] = [
+        { destino: Moneda.USD, tasa: conversion_rates.USD },
       ];
 
       for (const par of pares) {
         await this.tasasService.create({
-          moneda_origen: 'MXN',
+          moneda_origen: Moneda.MXN,
           moneda_destino: par.destino,
           tasa: String(par.tasa),
           vigente_desde: now.toISOString(),
@@ -46,8 +46,13 @@ export class TasasCambioSyncService {
       }
 
       this.logger.debug(`Exchange rates synced at ${now.toISOString()}`);
-    } catch (error) {
-      this.logger.error(`Error syncing exchange rates: ${error instanceof Error ? error.message : String(error)}`);
+    } catch (error: any) {
+      const status = error?.response?.status ?? error?.status;
+      if (status === 429) {
+        this.logger.warn('ExchangeRate-API rate limit reached (429) — keeping existing DB rates until next cycle');
+      } else {
+        this.logger.error(`Error syncing exchange rates: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
   }
 }

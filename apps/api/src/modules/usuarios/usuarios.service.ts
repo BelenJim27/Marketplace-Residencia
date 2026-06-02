@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, usuarios } from '@prisma/client';
+import { Moneda, Prisma, usuarios } from '@prisma/client';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
@@ -40,7 +40,7 @@ export class UsuariosService {
       telefono: dto.telefono?.trim() ?? null,
       foto_url: dto.foto_url?.trim() ?? null,
       idioma_preferido: dto.idioma_preferido?.trim() ?? 'es',
-      moneda_preferida: dto.moneda_preferida?.trim() ?? 'MXN',
+      moneda_preferida: (dto.moneda_preferida?.trim() ?? 'MXN') as Moneda,
     };
 
     const user = await this.prisma.usuarios.create({ data });
@@ -75,7 +75,7 @@ export class UsuariosService {
         biografia: dto.biografia?.trim(),
         foto_url: dto.foto_url?.trim(),
         idioma_preferido: dto.idioma_preferido?.trim(),
-        moneda_preferida: dto.moneda_preferida?.trim(),
+        moneda_preferida: dto.moneda_preferida?.trim() as Moneda | undefined,
         fecha_nacimiento: dto.fecha_nacimiento ? new Date(dto.fecha_nacimiento) : undefined,
       }),
     });

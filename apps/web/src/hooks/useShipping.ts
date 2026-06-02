@@ -16,6 +16,8 @@ export interface ShippingQuote {
   productCode: string;
   productName: string;
   carrier: string;
+  /** Sub-carrier real cuando el carrier es un agregador (ej. "DHL", "Paquetexpress") */
+  providerName?: string;
   tipo: 'nacional' | 'internacional';
   precioTotal: number;
   moneda: string;

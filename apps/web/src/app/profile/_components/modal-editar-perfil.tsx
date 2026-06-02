@@ -34,7 +34,6 @@ const IDIOMA_OPTIONS = [
 const MONEDA_OPTIONS = [
   { value: "MXN", label: "MXN - Peso Mexicano" },
   { value: "USD", label: "USD - Dólar Americano" },
-  { value: "EUR", label: "EUR - Euro" },
 ];
 
 function ModalShell({ isOpen, onClose, title, subtitle, maxWidth = "max-w-lg", children }: { isOpen: boolean; onClose: () => void; title: string; subtitle?: string; maxWidth?: string; children: React.ReactNode }) {

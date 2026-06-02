@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Moneda } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 import { CreateCarritoItemDto, UpdateCarritoItemDto } from './dto/carrito.dto';
@@ -15,11 +16,11 @@ export class CarritoService {
       await this.prisma.carrito_item.upsert({
         where: { id_usuario_id_producto: { id_usuario: usuarioId, id_producto: productoId } },
         update: { cantidad: { increment: dto.cantidad }, precio_unitario_snapshot: dto.precio_unitario_snapshot },
-        create: { id_usuario: usuarioId, id_producto: productoId, cantidad: dto.cantidad, precio_unitario_snapshot: dto.precio_unitario_snapshot, moneda_snapshot: dto.moneda_snapshot ?? 'MXN' }
+        create: { id_usuario: usuarioId, id_producto: productoId, cantidad: dto.cantidad, precio_unitario_snapshot: dto.precio_unitario_snapshot, moneda_snapshot: (dto.moneda_snapshot ?? 'MXN') as Moneda }
       })
     );
   }
-  async update(id: string, dto: UpdateCarritoItemDto) { return serializeBigInts(await this.prisma.carrito_item.update({ where: { id_item: toBigIntId(id) }, data: { id_usuario: dto.id_usuario ? String(dto.id_usuario) : undefined, id_producto: dto.id_producto ? toBigIntId(dto.id_producto) : undefined, cantidad: dto.cantidad, precio_unitario_snapshot: dto.precio_unitario_snapshot, moneda_snapshot: dto.moneda_snapshot } })); }
+  async update(id: string, dto: UpdateCarritoItemDto) { return serializeBigInts(await this.prisma.carrito_item.update({ where: { id_item: toBigIntId(id) }, data: { id_usuario: dto.id_usuario ? String(dto.id_usuario) : undefined, id_producto: dto.id_producto ? toBigIntId(dto.id_producto) : undefined, cantidad: dto.cantidad, precio_unitario_snapshot: dto.precio_unitario_snapshot, moneda_snapshot: dto.moneda_snapshot as Moneda | undefined } })); }
   async remove(id: string) { await this.prisma.carrito_item.delete({ where: { id_item: toBigIntId(id) } }); return { message: 'Item eliminado' }; }
   async clearByUser(id_usuario: string) { await this.prisma.carrito_item.deleteMany({ where: { id_usuario } }); return { message: 'Carrito limpiado' }; }
 }

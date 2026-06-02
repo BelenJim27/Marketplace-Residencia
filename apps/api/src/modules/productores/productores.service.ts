@@ -18,8 +18,12 @@ import { ArchivosService } from "../archivos/archivos.service";
 import { EmailService } from "../email/email.service";
 import { createCipheriv, randomBytes, createDecipheriv } from "crypto";
 
-const ENCRYPTION_KEY =
-  process.env.ENCRYPTION_KEY || randomBytes(32).toString("hex");
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ?? '';
+if (!ENCRYPTION_KEY) {
+  throw new Error(
+    'ENCRYPTION_KEY environment variable is required. Generate one with: node -e "require(\'crypto\').randomBytes(32).toString(\'hex\')"',
+  );
+}
 const IV_LENGTH = 16;
 
 function encrypt(text: string): string {
@@ -34,17 +38,23 @@ function encrypt(text: string): string {
   return iv.toString("hex") + ":" + encrypted;
 }
 
-function decrypt(text: string): string {
-  const [ivHex, encrypted] = text.split(":");
-  const iv = Buffer.from(ivHex, "hex");
-  const decipher = createDecipheriv(
-    "aes-256-cbc",
-    Buffer.from(ENCRYPTION_KEY, "hex"),
-    iv,
-  );
-  let decrypted = decipher.update(encrypted, "hex", "utf8");
-  decrypted += decipher.final("utf8");
-  return decrypted;
+function decrypt(text: string): string | null {
+  try {
+    const [ivHex, encrypted] = text.split(":");
+    if (!ivHex || !encrypted) return null;
+    const iv = Buffer.from(ivHex, "hex");
+    const decipher = createDecipheriv(
+      "aes-256-cbc",
+      Buffer.from(ENCRYPTION_KEY, "hex"),
+      iv,
+    );
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch {
+    // Key mismatch (e.g. ENCRYPTION_KEY changed between restarts) — return null
+    return null;
+  }
 }
 
 @Injectable()

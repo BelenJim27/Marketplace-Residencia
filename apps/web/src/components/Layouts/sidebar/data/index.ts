@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Tag,
+  RotateCcw,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -105,6 +106,11 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         title: "Payouts",
         url: "/Administrador/payouts",
         icon: BadgeDollarSign,
+      },
+      {
+        title: "Reembolsos",
+        url: "/Administrador/reembolsos",
+        icon: RotateCcw,
       },
 
       {

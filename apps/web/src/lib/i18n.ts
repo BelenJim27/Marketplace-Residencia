@@ -1,4 +1,4 @@
-// Configuración de idiomas → moneda
+// Configuración de idiomas → moneda (solo MXN y USD)
 export const LOCALE_CONFIG: Record<string, {
   label: string;
   flag: string;
@@ -6,29 +6,27 @@ export const LOCALE_CONFIG: Record<string, {
   numberLocale: string;
   langCode: string;
 }> = {
-  es: { label: "Español",  flag: "🇲🇽", currency: "MXN", numberLocale: "es-MX", langCode: "es" },
-  en: { label: "English",  flag: "🇺🇸", currency: "USD", numberLocale: "en-US", langCode: "en" },
-  fr: { label: "Français", flag: "🇫🇷", currency: "EUR", numberLocale: "fr-FR", langCode: "fr" },
-  pt: { label: "Português",flag: "🇧🇷", currency: "BRL", numberLocale: "pt-BR", langCode: "pt" },
-  zh: { label: "中文",      flag: "🇨🇳", currency: "CNY", numberLocale: "zh-CN", langCode: "zh" },
-  ja: { label: "日本語",    flag: "🇯🇵", currency: "JPY", numberLocale: "ja-JP", langCode: "ja" },
+  es: { label: "Español", flag: "🇲🇽", currency: "MXN", numberLocale: "es-MX", langCode: "es" },
+  en: { label: "English", flag: "🇺🇸", currency: "USD", numberLocale: "en-US", langCode: "en" },
 };
 
 // Traducciones estáticas se importan desde ui-strings.ts
 // No hay más llamadas a MyMemory — se usan lookup directo desde LocaleContext
 
 // ─── Moneda con ExchangeRate-API ───────────────────────────────────────────
-// Tasas aproximadas de respaldo (1 MXN → X moneda) actualizadas manualmente
-const FALLBACK_RATES: Record<string, number> = {
+// Tasas estáticas de último recurso — solo se usan si NUNCA se ha podido
+// contactar al backend. En producción el cron actualiza las tasas en BD cada hora.
+const LAST_RESORT_RATES: Record<string, number> = {
   MXN: 1,
-  USD: 0.050,
-  EUR: 0.046,
-  BRL: 0.27,
-  CNY: 0.36,
-  JPY: 7.8,
+  USD: 1 / 17, // ~0.0588 MXN→USD (actualizar si el cron no responde)
 };
 
 let ratesCache: { data: Record<string, number>; ts: number } | null = null;
+// Se mantiene la última tasa exitosa del backend para usar como stale fallback
+let lastGoodRates: Record<string, number> | null = null;
+
+/** Indica si la última respuesta usó tasas de respaldo (UI puede mostrar aviso) */
+export let ratesAreFallback = false;
 
 export async function getExchangeRates(): Promise<Record<string, number>> {
   const now = Date.now();
@@ -36,18 +34,21 @@ export async function getExchangeRates(): Promise<Record<string, number>> {
   if (ratesCache && now - ratesCache.ts < 600_000) return ratesCache.data;
 
   try {
-    const KEY = process.env.NEXT_PUBLIC_EXCHANGERATE_API_KEY;
-    if (!KEY) {
-      ratesCache = { data: FALLBACK_RATES, ts: now };
-      return FALLBACK_RATES;
-    }
-    const res = await fetch(`https://v6.exchangerate-api.com/v6/${KEY}/latest/MXN`);
-    const data = await res.json();
-    const rates = data.conversion_rates || FALLBACK_RATES;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+    const res = await fetch(`${apiUrl}/tasas-cambio/actuales`);
+    if (!res.ok) throw new Error('backend no disponible');
+    const data = await res.json(); // { MXN: { USD } }
+    const fromMXN = data?.MXN ?? {};
+    const rates: Record<string, number> = { MXN: 1 };
+    rates['USD'] = fromMXN['USD'] ?? LAST_RESORT_RATES['USD'];
     ratesCache = { data: rates, ts: now };
-    return ratesCache.data;
+    lastGoodRates = rates;
+    ratesAreFallback = false;
+    return rates;
   } catch {
-    return FALLBACK_RATES;
+    ratesAreFallback = true;
+    // Preferir la última tasa válida del backend sobre las hardcodeadas
+    return lastGoodRates ?? LAST_RESORT_RATES;
   }
 }
 

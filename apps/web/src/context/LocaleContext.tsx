@@ -12,7 +12,7 @@ import checkoutEN from "@/i18n/locales/en/checkout.json";
 import legalES from "@/i18n/locales/es/legal.json";
 import legalEN from "@/i18n/locales/en/legal.json";
 
-export type Currency = "MXN" | "USD" | "EUR" | "BRL" | "CNY" | "JPY";
+export type Currency = "MXN" | "USD";
 
 interface LocaleContextType {
   locale: string;
@@ -45,7 +45,7 @@ const translations: Record<string, Record<string, string>> = {
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState("es");
-  const [rates, setRates] = useState<Record<string, number>>({ MXN: 1, USD: 0.050, EUR: 0.046, BRL: 0.27, CNY: 0.36, JPY: 7.8 });
+  const [rates, setRates] = useState<Record<string, number>>({ MXN: 1, USD: 0.050 });
   const [loadingRates, setLoadingRates] = useState(false);
   const [currency, setCurrencyState] = useState<Currency>("MXN");
 
@@ -55,7 +55,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const detectarMoneda = async () => {
       const saved = localStorage.getItem("currency") as Currency;
-      const VALID: Currency[] = ["MXN", "USD", "EUR", "BRL", "CNY", "JPY"];
+      const VALID: Currency[] = ["MXN", "USD"];
       if (VALID.includes(saved)) {
         setCurrencyState(saved);
         return;

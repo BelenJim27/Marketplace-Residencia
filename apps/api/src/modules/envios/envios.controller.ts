@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { CreateEnvioDto, UpdateEnvioDto, CotizarEnvioDto } from './dto/envios.dto';
 import { EnviosService } from './envios.service';
 import { FedexService } from './fedex.service';
+import { SkydropxService } from './skydropx.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { ShippingQuote } from './interfaces/carrier.interface';
 import { TasasCambioService } from '../tasas-cambio/tasas-cambio.service';
@@ -16,6 +17,7 @@ export class EnviosController {
   constructor(
     private readonly service: EnviosService,
     private readonly fedexService: FedexService,
+    private readonly skydropxService: SkydropxService,
     private readonly config: ConfigService,
     private readonly tasasCambio: TasasCambioService,
   ) {}
@@ -48,21 +50,37 @@ export class EnviosController {
   @UseGuards(AuthGuard)
   async cotizar(@Body() dto: CotizarEnvioDto, @Query('carrier') carrier = 'all'): Promise<ShippingQuote[]> {
     const adultSig = dto.adult_signature ?? false;
-    let quotes: ShippingQuote[];
-    try {
-      quotes = await this.fedexService.cotizarEnvio(dto, adultSig);
-      if (quotes.length === 0) {
-        throw new HttpException(
-          { message: 'FedEx: sin tarifas disponibles para esta dirección' },
-          HttpStatus.UNPROCESSABLE_ENTITY,
-        );
-      }
-    } catch (err: unknown) {
-      if (err instanceof HttpException) throw err;
-      const msg = (err as any)?.message || 'Error al cotizar con FedEx';
-      throw new HttpException({ message: msg }, HttpStatus.UNPROCESSABLE_ENTITY);
+    const esInternacional = dto.destino?.pais && dto.destino.pais !== 'MX';
+
+    const [fedexResult, skydropxResult] = await Promise.allSettled([
+      this.fedexService.cotizarEnvio(dto, adultSig),
+      esInternacional
+        ? Promise.resolve<ShippingQuote[]>([])
+        : this.skydropxService.cotizarEnvio(dto, adultSig),
+    ]);
+
+    if (skydropxResult.status === 'rejected') {
+      this.logger.warn(`SkydropX cotizar falló: ${(skydropxResult.reason as any)?.message}`);
     }
 
+    const quotes: ShippingQuote[] = [
+      ...(fedexResult.status === 'fulfilled' ? fedexResult.value : []),
+      ...(skydropxResult.status === 'fulfilled' ? skydropxResult.value : []),
+    ];
+
+    if (quotes.length === 0) {
+      const fedexMsg = fedexResult.status === 'rejected' ? (fedexResult.reason as any)?.message : null;
+      throw new HttpException(
+        { message: fedexMsg ?? 'Sin tarifas disponibles para esta dirección' },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+
+    if (carrier !== 'all') {
+      return quotes.filter((q) => q.carrier === carrier);
+    }
+
+    // Convertir a MXN para envíos nacionales
     if (dto.destino.pais === 'MX') {
       for (const q of quotes) {
         if (q.moneda !== 'MXN') {
@@ -71,7 +89,7 @@ export class EnviosController {
             q.precioTotal = conv.monto_destino;
             q.moneda = 'MXN';
           } catch (err: any) {
-            this.logger.warn(`Sin tasa de cambio ${q.moneda}→MXN para cotización ${q.productCode}: ${err?.message}`);
+            this.logger.warn(`Sin tasa de cambio ${q.moneda}→MXN para ${q.productCode}: ${err?.message}`);
           }
         }
       }
@@ -189,6 +207,69 @@ export class EnviosController {
         } catch (err: any) {
           results.push({ error: err?.message, trackingNumber });
         }
+      }
+    }
+
+    return { procesados: results.length, resultados: results };
+  }
+
+  // ─── Webhook SkydropX (sin AuthGuard — verificado por secret header) ─────
+  /**
+   * SkydropX envía eventos de tracking a esta URL cuando hay actualizaciones.
+   * Configura la URL en app.skydropx.com → Integraciones → Webhooks.
+   *
+   * Payload de ejemplo SkydropX:
+   * {
+   *   "tracking_number": "1234567890",
+   *   "status": "in_transit",
+   *   "events": [{
+   *     "status": "in_transit",
+   *     "description": "Paquete en camino",
+   *     "location": "Ciudad de México",
+   *     "timestamp": "2026-05-31T12:00:00Z"
+   *   }]
+   * }
+   */
+  @Post('webhook/skydropx')
+  async registrarEventoSkydropx(
+    @Body() data: any,
+    @Headers('x-skydropx-secret') secret: string,
+  ) {
+    const configuredSecret = this.config.get('SKYDROPX_WEBHOOK_SECRET');
+    if (!configuredSecret || secret !== configuredSecret) {
+      throw new UnauthorizedException('Invalid SkydropX webhook secret');
+    }
+
+    const trackingNumber: string =
+      data.tracking_number ??
+      data.shipment?.tracking_number ??
+      data.data?.tracking_number ??
+      '';
+
+    if (!trackingNumber) {
+      this.logger.warn('SkydropX webhook: payload sin tracking_number');
+      return { procesados: 0 };
+    }
+
+    const events: any[] = data.events ?? (data.status ? [data] : []);
+    const results: any[] = [];
+
+    for (const event of events) {
+      const estado: string = event.status ?? 'UNKNOWN';
+      const descripcion: string = event.description ?? event.status ?? 'Actualización SkydropX';
+      const fecha = event.timestamp ? new Date(event.timestamp) : undefined;
+
+      try {
+        const result = await this.service.registrarEventoPorGuia(
+          trackingNumber,
+          descripcion,
+          estado,
+          fecha,
+        );
+        results.push(result);
+      } catch (err: any) {
+        this.logger.warn(`SkydropX webhook error para ${trackingNumber}: ${err?.message}`);
+        results.push({ error: err?.message, trackingNumber });
       }
     }
 
