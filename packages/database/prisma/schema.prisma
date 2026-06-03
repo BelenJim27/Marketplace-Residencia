@@ -7,6 +7,11 @@ datasource db {
   url      = env("DIRECT_URL")
 }
 
+enum Moneda {
+  MXN
+  USD
+}
+
 model archivos {
   id_archivo   BigInt    @id @default(autoincrement())
   entidad_tipo String    @db.VarChar(30)
@@ -43,7 +48,7 @@ model carrito_item {
   id_producto              BigInt
   cantidad                 Int
   precio_unitario_snapshot Decimal   @db.Decimal(12, 2)
-  moneda_snapshot          String    @default("MXN") @db.Char(3)
+  moneda_snapshot          Moneda    @default(MXN)
   fecha_agregado           DateTime  @default(now()) @db.Timestamptz(6)
   productos                productos @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
   usuarios                 usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
@@ -67,7 +72,6 @@ model categorias {
   categorias                    categorias?                     @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
   other_categorias              categorias[]                    @relation("categoriasTocategorias")
   categorias_productos          categorias_productos[]
-  categorias_traducciones       categorias_traducciones[]
   comisiones                    comisiones[]
   productor_categoria           productor_categoria[]
   restricciones_envio_categoria restricciones_envio_categoria[]
@@ -92,7 +96,7 @@ model detalle_pedido {
   id_producto   BigInt
   cantidad      Int
   precio_compra Decimal      @db.Decimal(12, 2)
-  moneda_compra String       @default("MXN") @db.Char(3)
+  moneda_compra Moneda       @default(MXN)
   impuesto      Decimal      @default(0) @db.Decimal(12, 2)
   id_productor  Int?
   id_tienda     Int?
@@ -101,6 +105,7 @@ model detalle_pedido {
   productores   productores? @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
   tiendas       tiendas?     @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
 
+  @@index([id_pedido], map: "idx_detalle_pedido")
   @@index([id_productor], map: "idx_detalle_productor")
   @@index([id_tienda], map: "idx_detalle_tienda")
 }
@@ -143,7 +148,7 @@ model envio_cotizaciones {
   id_servicio             Int?
   payload_request         Json
   payload_response        Json?
-  moneda                  String?          @db.Char(3)
+  moneda                  Moneda?
   precio_total            Decimal?         @db.Decimal(14, 2)
   tiempo_entrega_estimado String?          @db.VarChar(100)
   valida_hasta            DateTime?        @db.Timestamptz(6)
@@ -202,14 +207,14 @@ model envios {
   id_servicio              Int?
   numero_rastreo           String?            @db.VarChar(200)
   valor_declarado_aduana   Decimal?           @db.Decimal(14, 2)
-  moneda_aduana            String             @default("MXN") @db.Char(3)
+  moneda_aduana            Moneda             @default(MXN)
   codigo_hs                String?            @db.VarChar(20)
   peso_kg                  Decimal?           @db.Decimal(8, 3)
   alto_cm                  Decimal?           @db.Decimal(8, 2)
   ancho_cm                 Decimal?           @db.Decimal(8, 2)
   largo_cm                 Decimal?           @db.Decimal(8, 2)
   costo_envio              Decimal?           @db.Decimal(14, 2)
-  moneda_costo             String             @default("MXN") @db.Char(3)
+  moneda_costo             Moneda             @default(MXN)
   estado                   String             @default("preparando") @db.VarChar(30)
   requires_adult_signature Boolean            @default(false)
   fecha_envio              DateTime?          @db.Timestamptz(6)
@@ -239,10 +244,12 @@ model facturas {
   subtotal        Decimal? @db.Decimal(14, 2)
   impuestos_total Decimal? @db.Decimal(14, 2)
   total           Decimal? @db.Decimal(14, 2)
-  moneda          String?  @db.Char(3)
+  moneda          Moneda?
   estado          String   @default("pendiente") @db.VarChar(20)
   actualizado_en  DateTime @default(now()) @db.Timestamptz(6)
   pedidos         pedidos? @relation(fields: [id_pedido], references: [id_pedido], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([id_pedido], map: "idx_facturas_pedido")
 }
 
 model integraciones_envio {
@@ -301,7 +308,7 @@ model lotes {
   actualizado_en    DateTime         @default(now()) @db.Timestamptz(6)
   eliminado_en      DateTime?        @db.Timestamptz(6)
   unidades          Int?
-  grado_alcohol     Float?
+  grado_alcohol     Decimal?         @db.Decimal(5, 2)
   marca             String?          @db.VarChar(100)
   descripcion       String?
   nombre_comun      String?          @db.VarChar(100)
@@ -317,6 +324,7 @@ model lotes {
   productos         productos[]
 
   @@index([codigo_lote], map: "idx_lotes_codigo")
+  @@index([id_productor], map: "idx_lotes_productor")
 }
 
 model ListaDeseosItem {
@@ -324,7 +332,7 @@ model ListaDeseosItem {
   id_usuario      String    @db.Uuid
   id_producto     BigInt
   precio_snapshot Decimal?  @db.Decimal(12, 2)
-  moneda_snapshot String?   @default("MXN") @db.Char(3)
+  moneda_snapshot Moneda?   @default(MXN)
   nota            String?
   fecha_agregado  DateTime  @default(now()) @db.Timestamptz(6)
   producto        productos @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade)
@@ -334,22 +342,6 @@ model ListaDeseosItem {
   @@index([id_usuario], map: "idx_lista_deseos_usuario")
   @@index([id_producto], map: "idx_lista_deseos_producto")
   @@map("lista_deseos_item")
-}
-
-model monedas {
-  codigo           String             @id @db.Char(3)
-  nombre           String             @db.VarChar(100)
-  simbolo          String?            @db.VarChar(10)
-  activo           Boolean            @default(true)
-  pagos            pagos[]
-  paises           paises[]
-  payouts          payouts[]
-  pedido_productor pedido_productor[]
-  pedidos          pedidos[]
-  productos        productos[]
-  tasas_destino    tasas_cambio[]     @relation("TasaDestino")
-  tasas_origen     tasas_cambio[]     @relation("TasaOrigen")
-  tasas_impuesto   tasas_impuesto[]
 }
 
 model movimientos_inventario {
@@ -405,20 +397,23 @@ model oauth_cuentas {
 }
 
 model pagos {
-  id_pago           BigInt   @id @default(autoincrement())
-  id_pedido         BigInt
-  proveedor         String?  @db.VarChar(50)
-  payment_intent_id String?  @db.VarChar(150)
-  estado            String   @default("pendiente") @db.VarChar(50)
-  monto             Decimal  @db.Decimal(10, 2)
-  moneda            String   @db.Char(3)
-  creado_en         DateTime @default(now()) @db.Timestamptz(6)
-  actualizado_en    DateTime @default(now()) @db.Timestamptz(6)
-  pedidos           pedidos  @relation(fields: [id_pedido], references: [id_pedido], onUpdate: NoAction)
-  monedas           monedas  @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
+  id_pago            BigInt         @id @default(autoincrement())
+  id_pedido          BigInt
+  proveedor          String?        @db.VarChar(50)
+  payment_intent_id  String?        @db.VarChar(150)
+  estado             String         @default("pendiente") @db.VarChar(50)
+  monto              Decimal        @db.Decimal(14, 2)
+  monto_reembolsado  Decimal        @default(0) @db.Decimal(14, 2)
+  moneda             Moneda
+  creado_en          DateTime       @default(now()) @db.Timestamptz(6)
+  actualizado_en     DateTime       @default(now()) @db.Timestamptz(6)
+  pedidos            pedidos        @relation(fields: [id_pedido], references: [id_pedido], onUpdate: NoAction)
+  payment_fees       payment_fees[]
+  refunds            refunds[]
 
   @@index([estado], map: "idx_pagos_estado")
   @@index([id_pedido], map: "idx_pagos_pedido")
+  @@index([proveedor], map: "idx_pagos_proveedor")
 }
 
 model pedidos {
@@ -429,9 +424,9 @@ model pedidos {
   tax_amount                     Decimal                  @default(0) @db.Decimal(14, 2)
   shipping_amount                Decimal                  @default(0) @db.Decimal(14, 2)
   discount_amount                Decimal                  @default(0) @db.Decimal(14, 2)
-  moneda                         String                   @db.Char(3)
+  moneda                         Moneda
   tipo_cambio                    Decimal?                 @db.Decimal(10, 4)
-  moneda_referencia              String                   @default("USD") @db.Char(3)
+  moneda_referencia              Moneda                   @default(USD)
   pais_destino_iso2              String?                  @db.Char(2)
   fecha_creacion                 DateTime                 @default(now()) @db.Timestamptz(6)
   actualizado_en                 DateTime                 @default(now()) @db.Timestamptz(6)
@@ -450,9 +445,9 @@ model pedidos {
   movimientos_inventario         movimientos_inventario[]
   pagos                          pagos[]
   pedido_productor               pedido_productor[]
+  refunds                        refunds[]
   direccion_envio                direcciones?             @relation("DireccionEnvioPedido", fields: [id_direccion_envio], references: [id_direccion], onUpdate: NoAction)
   usuarios                       usuarios                 @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
-  monedas                        monedas                  @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
   paises                         paises?                  @relation(fields: [pais_destino_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([estado], map: "idx_pedidos_estado")
@@ -515,6 +510,13 @@ model productores {
   asociacion                  String?               @db.VarChar(150)
   nombre_marca                String?               @db.VarChar(150)
   certificado_url             String?               @db.VarChar(500)
+  // Dirección de la bodega/punto de despacho (remitente en guías FedEx)
+  bodega_calle                String?               @db.VarChar(200)
+  bodega_ciudad               String?               @db.VarChar(100)
+  bodega_estado               String?               @db.VarChar(100)
+  bodega_codigo_postal        String?               @db.VarChar(20)
+  bodega_pais_iso2            String?               @default("MX") @db.Char(2)
+  bodega_telefono             String?               @db.VarChar(30)
   comisiones                  comisiones[]
   detalle_pedido              detalle_pedido[]
   lotes                       lotes[]
@@ -536,7 +538,7 @@ model productos {
   descripcion                                  String?
   traducciones                                 Json                     @default("{}")
   precio_base                                  Decimal                  @db.Decimal(12, 2)
-  moneda_base                                  String                   @default("MXN") @db.Char(3)
+  moneda_base                                  Moneda                   @default(MXN)
   metadata                                     Json                     @default("{}")
   peso_kg                                      Decimal?                 @db.Decimal(8, 3)
   alto_cm                                      Decimal?                 @db.Decimal(8, 2)
@@ -565,8 +567,6 @@ model productos {
   usuarios_productos_creado_porTousuarios      usuarios?                @relation("productos_creado_porTousuarios", fields: [creado_por], references: [id_usuario], onUpdate: NoAction)
   lotes                                        lotes?                   @relation(fields: [id_lote], references: [id_lote], onUpdate: NoAction)
   tiendas                                      tiendas                  @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
-  monedas                                      monedas                  @relation(fields: [moneda_base], references: [codigo], onUpdate: NoAction)
-  productos_traducciones                       productos_traducciones[]
   resenas                                      resenas[]
 
   @@index([metadata], map: "idx_productos_metadata", type: Gin)
@@ -587,6 +587,8 @@ model refresh_tokens {
   revocado_en DateTime? @db.Timestamptz(6)
   creado_en   DateTime  @default(now()) @db.Timestamptz(6)
   usuarios    usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_usuario], map: "idx_refresh_tokens_usuario")
 }
 
 model regiones {
@@ -618,6 +620,7 @@ model resenas {
 
   @@unique([id_usuario, id_producto])
   @@index([id_producto], map: "idx_resenas_producto")
+  @@index([id_producto, eliminado_en], map: "idx_resenas_prod_eliminado")
 }
 
 model rol_permiso {
@@ -662,14 +665,13 @@ model tasas_impuesto {
   nombre             String      @db.VarChar(150)
   tasa_porcentaje    Decimal?    @db.Decimal(6, 4)
   monto_fijo         Decimal?    @db.Decimal(12, 4)
-  moneda_monto_fijo  String?     @db.Char(3)
+  moneda_monto_fijo  Moneda?
   vigente_desde      DateTime    @default(dbgenerated("CURRENT_DATE")) @db.Date
   vigente_hasta      DateTime?   @db.Date
   incluido_en_precio Boolean     @default(false)
   activo             Boolean     @default(true)
   creado_en          DateTime    @default(now()) @db.Timestamptz(6)
   categorias         categorias? @relation(fields: [id_categoria], references: [id_categoria], onUpdate: NoAction)
-  monedas            monedas?    @relation(fields: [moneda_monto_fijo], references: [codigo], onDelete: Restrict, onUpdate: NoAction)
   paises             paises      @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
 
   @@index([id_categoria], map: "idx_tasas_categoria")
@@ -695,8 +697,6 @@ model tiendas {
   productos            productos[]
   productores          productores            @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
   paises               paises                 @relation(fields: [pais_operacion], references: [iso2], onUpdate: NoAction)
-  tiendas_traducciones tiendas_traducciones[]
-
   @@index([id_productor], map: "idx_tiendas_productor")
   @@index([nombre], map: "idx_tiendas_nombre")
 }
@@ -740,7 +740,7 @@ model usuarios {
   telefono                                      String?                  @db.VarChar(30)
   password_hash                                 String?                  @db.VarChar(255)
   idioma_preferido                              String                   @default("es") @db.VarChar(10)
-  moneda_preferida                              String                   @default("MXN") @db.Char(3)
+  moneda_preferida                              Moneda                   @default(MXN)
   version_token                                 Int                      @default(1)
   fecha_registro                                DateTime                 @default(now()) @db.Timestamptz(6)
   eliminado_en                                  DateTime?                @db.Timestamptz(6)
@@ -789,7 +789,7 @@ model pedido_productor {
   subtotal_bruto       Decimal?    @db.Decimal(14, 2)
   comision_marketplace Decimal     @default(0) @db.Decimal(14, 2)
   monto_neto_productor Decimal?    @db.Decimal(14, 2)
-  moneda               String?     @db.Char(3)
+  moneda               Moneda?
   id_comision_aplicada Int?
   id_payout            BigInt?
   comision_aplicada    comisiones? @relation(fields: [id_comision_aplicada], references: [id_comision], onUpdate: NoAction)
@@ -797,7 +797,6 @@ model pedido_productor {
   payout               payouts?    @relation(fields: [id_payout], references: [id_payout], onUpdate: NoAction)
   pedidos              pedidos     @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade, onUpdate: NoAction)
   productores          productores @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
-  monedas              monedas?    @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
 
   @@id([id_pedido, id_productor])
   @@index([id_pedido], map: "idx_pedido_prod_pedido")
@@ -811,7 +810,7 @@ model paises {
   iso3                          String                          @unique @db.Char(3)
   nombre                        String                          @db.VarChar(120)
   nombre_local                  String?                         @db.VarChar(120)
-  moneda_default                String                          @db.Char(3)
+  moneda_default                Moneda
   idioma_default                String                          @default("es") @db.VarChar(10)
   prefijo_telefono              String?                         @db.VarChar(8)
   activo_venta                  Boolean                         @default(false)
@@ -820,7 +819,6 @@ model paises {
   comisiones                    comisiones[]
   direcciones                   direcciones[]
   idiomas                       idiomas                         @relation(fields: [idioma_default], references: [codigo], onUpdate: NoAction)
-  monedas                       monedas                         @relation(fields: [moneda_default], references: [codigo], onUpdate: NoAction)
   pedidos                       pedidos[]
   regiones                      regiones[]
   restricciones_envio_categoria restricciones_envio_categoria[]
@@ -832,27 +830,22 @@ model paises {
 }
 
 model idiomas {
-  codigo                  String                    @id @db.VarChar(10)
-  nombre                  String                    @db.VarChar(80)
-  nombre_local            String?                   @db.VarChar(80)
-  activo                  Boolean                   @default(true)
-  rtl                     Boolean                   @default(false)
-  categorias_traducciones categorias_traducciones[]
-  paises                  paises[]
-  productos_traducciones  productos_traducciones[]
-  tiendas_traducciones    tiendas_traducciones[]
+  codigo       String  @id @db.VarChar(10)
+  nombre       String  @db.VarChar(80)
+  nombre_local String? @db.VarChar(80)
+  activo       Boolean @default(true)
+  rtl          Boolean @default(false)
+  paises       paises[]
 }
 
 model tasas_cambio {
-  moneda_origen  String    @db.Char(3)
-  moneda_destino String    @db.Char(3)
+  moneda_origen  Moneda
+  moneda_destino Moneda
   vigente_desde  DateTime  @db.Timestamptz(6)
   tasa           Decimal   @db.Decimal(18, 8)
   fuente         String    @default("manual") @db.VarChar(50)
   vigente_hasta  DateTime? @db.Timestamptz(6)
   creado_en      DateTime  @default(now()) @db.Timestamptz(6)
-  destino        monedas   @relation("TasaDestino", fields: [moneda_destino], references: [codigo], onUpdate: NoAction)
-  origen         monedas   @relation("TasaOrigen", fields: [moneda_origen], references: [codigo], onUpdate: NoAction)
 
   @@id([moneda_origen, moneda_destino, vigente_desde])
   @@index([moneda_origen, moneda_destino, vigente_hasta], map: "idx_tasas_cambio_lookup")
@@ -866,7 +859,7 @@ model comisiones {
   id_productor      Int?
   porcentaje        Decimal            @db.Decimal(6, 4)
   monto_fijo        Decimal?           @db.Decimal(12, 2)
-  moneda_monto_fijo String?            @db.Char(3)
+  moneda_monto_fijo Moneda?
   prioridad         Int                @default(100)
   vigente_desde     DateTime           @default(now()) @db.Timestamptz(6)
   vigente_hasta     DateTime?          @db.Timestamptz(6)
@@ -884,7 +877,7 @@ model comisiones {
 model payouts {
   id_payout          BigInt             @id @default(autoincrement())
   id_productor       Int
-  moneda             String             @db.Char(3)
+  moneda             Moneda
   monto_bruto        Decimal            @db.Decimal(14, 2)
   monto_comision     Decimal            @db.Decimal(14, 2)
   monto_neto         Decimal            @db.Decimal(14, 2)
@@ -902,7 +895,6 @@ model payouts {
   aprobado_por       String?            @db.Uuid
   aprobado_en        DateTime?          @db.Timestamptz(6)
   productores        productores        @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
-  monedas            monedas            @relation(fields: [moneda], references: [codigo], onUpdate: NoAction)
   pedido_productor   pedido_productor[]
   aprobador          usuarios?          @relation("PayoutAprobador", fields: [aprobado_por], references: [id_usuario])
 
@@ -910,40 +902,51 @@ model payouts {
   @@index([estado, proximo_reintento], map: "idx_payouts_retry")
 }
 
-model productos_traducciones {
-  id_producto    BigInt
+model payment_fees {
+  id_fee      BigInt   @id @default(autoincrement())
+  id_pago     BigInt
+  proveedor   String   @db.VarChar(50)
+  monto_fee   Decimal  @db.Decimal(14, 6)
+  moneda      Moneda
+  porcentaje  Decimal? @db.Decimal(6, 4)
+  monto_fijo  Decimal? @db.Decimal(14, 2)
+  descripcion String?  @db.VarChar(200)
+  creado_en   DateTime @default(now()) @db.Timestamptz(6)
+  pagos       pagos    @relation(fields: [id_pago], references: [id_pago], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_pago], map: "idx_payment_fees_pago")
+}
+
+model refunds {
+  id_refund        BigInt    @id @default(autoincrement())
+  id_pago          BigInt
+  id_pedido        BigInt
+  monto            Decimal   @db.Decimal(14, 2)
+  moneda           Moneda
+  motivo           String?   @db.VarChar(500)
+  estado           String    @default("pendiente") @db.VarChar(30)
+  tipo             String    @default("total") @db.VarChar(20)
+  proveedor_ref_id String?   @db.VarChar(150)
+  solicitado_en    DateTime  @default(now()) @db.Timestamptz(6)
+  procesado_en     DateTime? @db.Timestamptz(6)
+  pagos            pagos     @relation(fields: [id_pago], references: [id_pago], onDelete: Cascade, onUpdate: NoAction)
+  pedidos          pedidos   @relation(fields: [id_pedido], references: [id_pedido], onUpdate: NoAction)
+
+  @@index([id_pago], map: "idx_refunds_pago")
+  @@index([id_pedido], map: "idx_refunds_pedido")
+  @@index([estado], map: "idx_refunds_estado")
+}
+
+model traducciones {
+  entidad_tipo   String    @db.VarChar(30)
+  entidad_id     Int
   idioma         String    @db.VarChar(10)
-  nombre         String    @db.VarChar(200)
+  nombre         String?   @db.VarChar(200)
   descripcion    String?
-  metadata       Json      @default("{}")
-  actualizado_en DateTime  @default(now()) @db.Timestamptz(6)
-  productos      productos @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
-  idiomas        idiomas   @relation(fields: [idioma], references: [codigo], onUpdate: NoAction)
+  actualizado_en DateTime? @db.Timestamptz(6)
 
-  @@id([id_producto, idioma])
-  @@index([idioma], map: "idx_prod_trad_idioma")
-}
-
-model categorias_traducciones {
-  id_categoria Int
-  idioma       String     @db.VarChar(10)
-  nombre       String     @db.VarChar(150)
-  descripcion  String?
-  categorias   categorias @relation(fields: [id_categoria], references: [id_categoria], onDelete: Cascade, onUpdate: NoAction)
-  idiomas      idiomas    @relation(fields: [idioma], references: [codigo], onUpdate: NoAction)
-
-  @@id([id_categoria, idioma])
-}
-
-model tiendas_traducciones {
-  id_tienda   Int
-  idioma      String  @db.VarChar(10)
-  nombre      String  @db.VarChar(150)
-  descripcion String?
-  tiendas     tiendas @relation(fields: [id_tienda], references: [id_tienda], onDelete: Cascade, onUpdate: NoAction)
-  idiomas     idiomas @relation(fields: [idioma], references: [codigo], onUpdate: NoAction)
-
-  @@id([id_tienda, idioma])
+  @@id([entidad_tipo, entidad_id, idioma])
+  @@index([entidad_tipo, entidad_id], map: "idx_traducciones_entidad")
 }
 
 model restricciones_envio_categoria {
@@ -962,4 +965,18 @@ model restricciones_envio_categoria {
   @@unique([pais_iso2, estado_codigo, id_categoria])
   @@index([id_categoria], map: "idx_restr_envio_categoria")
   @@index([pais_iso2, estado_codigo], map: "idx_restr_envio_pais_estado")
+}
+
+// Deduplicación de webhooks entrantes (Stripe, PayPal, FedEx, SkydropX).
+// Un UNIQUE en (provider, event_id) garantiza que cada evento se procesa
+// exactamente una vez, incluso si el proveedor reintenta el envío.
+model webhook_events_log {
+  id           BigInt   @id @default(autoincrement())
+  provider     String   @db.VarChar(30)
+  event_id     String   @db.VarChar(200)
+  event_type   String   @db.VarChar(100)
+  processed_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([provider, event_id])
+  @@index([processed_at], map: "idx_webhook_events_processed_at")
 }

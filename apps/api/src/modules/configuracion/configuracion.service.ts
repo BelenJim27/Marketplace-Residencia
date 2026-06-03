@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Moneda } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
 import { CreateConfiguracionSistemaDto, CreateTasaImpuestoDto, UpdateConfiguracionSistemaDto, UpdateTasaImpuestoDto } from './dto/configuracion.dto';
@@ -203,14 +204,6 @@ export class ConfiguracionService {
       });
     }
 
-    const monedas = [
-      { codigo: 'MXN', nombre: 'Peso Mexicano', simbolo: '$', activo: true },
-      { codigo: 'USD', nombre: 'Dólar Americano', simbolo: 'US$', activo: true },
-      { codigo: 'EUR', nombre: 'Euro', simbolo: '€', activo: true },
-    ];
-    const createdMonedas = await this.prisma.monedas.createMany({ data: monedas, skipDuplicates: true });
-    results.monedas = createdMonedas;
-
     const regiones = [
       { nombre: 'Jalisco', estado_prov: 'Jalisco', pais_iso2: 'MX' },
       { nombre: 'Michoacán', estado_prov: 'Michoacán', pais_iso2: 'MX' },
@@ -296,14 +289,14 @@ export class ConfiguracionService {
     const categoriasVerduras = await this.prisma.categorias.findFirst({ where: { slug: 'verduras' } });
 
     const productos = [
-      { id_tienda: tienda.id_tienda, nombre: 'Manzana Orgánica', descripcion: 'Manzanas rojas orgánicas de temporada', precio_base: 45.00, moneda_base: 'MXN', peso_kg: 1.0 },
-      { id_tienda: tienda.id_tienda, nombre: 'Naranja Valencia', descripcion: 'Naranjas jugosas y dulces', precio_base: 35.00, moneda_base: 'MXN', peso_kg: 1.0 },
-      { id_tienda: tienda.id_tienda, nombre: 'Plátano Macho', descripcion: 'Plátanos maduros perfectos', precio_base: 25.00, moneda_base: 'MXN', peso_kg: 1.0 },
-      { id_tienda: tienda.id_tienda, nombre: 'Tomate Verde', descripcion: 'Tomates frescos para ensalada', precio_base: 30.00, moneda_base: 'MXN', peso_kg: 0.5 },
-      { id_tienda: tienda.id_tienda, nombre: 'Lechuga Romana', descripcion: 'Lechuga fresca crujiente', precio_base: 20.00, moneda_base: 'MXN', peso_kg: 0.3 },
-      { id_tienda: tienda.id_tienda, nombre: 'Zanahoria', descripcion: 'Zanahorias frescas y crujientes', precio_base: 18.00, moneda_base: 'MXN', peso_kg: 0.5 },
-      { id_tienda: tienda.id_tienda, nombre: 'Jitomate Saladet', descripcion: 'Jitomate bola fresco', precio_base: 28.00, moneda_base: 'MXN', peso_kg: 0.5 },
-      { id_tienda: tienda.id_tienda, nombre: 'Aguacate Hass', descripcion: 'Aguacates maduros listos', precio_base: 60.00, moneda_base: 'MXN', peso_kg: 0.4 },
+      { id_tienda: tienda.id_tienda, nombre: 'Manzana Orgánica', descripcion: 'Manzanas rojas orgánicas de temporada', precio_base: 45.00, moneda_base: Moneda.MXN, peso_kg: 1.0 },
+      { id_tienda: tienda.id_tienda, nombre: 'Naranja Valencia', descripcion: 'Naranjas jugosas y dulces', precio_base: 35.00, moneda_base: Moneda.MXN, peso_kg: 1.0 },
+      { id_tienda: tienda.id_tienda, nombre: 'Plátano Macho', descripcion: 'Plátanos maduros perfectos', precio_base: 25.00, moneda_base: Moneda.MXN, peso_kg: 1.0 },
+      { id_tienda: tienda.id_tienda, nombre: 'Tomate Verde', descripcion: 'Tomates frescos para ensalada', precio_base: 30.00, moneda_base: Moneda.MXN, peso_kg: 0.5 },
+      { id_tienda: tienda.id_tienda, nombre: 'Lechuga Romana', descripcion: 'Lechuga fresca crujiente', precio_base: 20.00, moneda_base: Moneda.MXN, peso_kg: 0.3 },
+      { id_tienda: tienda.id_tienda, nombre: 'Zanahoria', descripcion: 'Zanahorias frescas y crujientes', precio_base: 18.00, moneda_base: Moneda.MXN, peso_kg: 0.5 },
+      { id_tienda: tienda.id_tienda, nombre: 'Jitomate Saladet', descripcion: 'Jitomate bola fresco', precio_base: 28.00, moneda_base: Moneda.MXN, peso_kg: 0.5 },
+      { id_tienda: tienda.id_tienda, nombre: 'Aguacate Hass', descripcion: 'Aguacates maduros listos', precio_base: 60.00, moneda_base: Moneda.MXN, peso_kg: 0.4 },
     ];
 
     for (const prod of productos) {
@@ -319,7 +312,7 @@ export class ConfiguracionService {
         email: 'cliente@marketplace.local',
         password_hash: await bcrypt.hash('cliente123', 10),
         idioma_preferido: 'es',
-        moneda_preferida: 'MXN',
+        moneda_preferida: Moneda.MXN,
       },
     });
     results.cliente_usuario = buyerUser;
@@ -336,10 +329,10 @@ export class ConfiguracionService {
     return results;
   }
 
-  async listTasas() { return serializeBigInts(await this.prisma.tasas_impuesto.findMany({ include: { categorias: true, monedas: true } })); }
-  async getTasa(id_tasa: number) { const item = await this.prisma.tasas_impuesto.findUnique({ where: { id_tasa }, include: { categorias: true, monedas: true } }); if (!item) throw new NotFoundException('Tasa no encontrada'); return serializeBigInts(item); }
-  async createTasa(dto: CreateTasaImpuestoDto) { return serializeBigInts(await this.prisma.tasas_impuesto.create({ data: { pais_iso2: dto.pais_iso2.trim(), id_categoria: dto.id_categoria ?? null, tipo: dto.tipo.trim(), nombre: dto.nombre.trim(), tasa_porcentaje: dto.tasa_porcentaje ?? null, monto_fijo: dto.monto_fijo ?? null, moneda_monto_fijo: dto.moneda_monto_fijo ?? null, vigente_hasta: dto.vigente_hasta ? new Date(dto.vigente_hasta) : null, incluido_en_precio: dto.incluido_en_precio ?? false, activo: dto.activo ?? true } })); }
-  async updateTasa(id_tasa: number, dto: UpdateTasaImpuestoDto) { return serializeBigInts(await this.prisma.tasas_impuesto.update({ where: { id_tasa }, data: { pais_iso2: dto.pais_iso2?.trim(), id_categoria: dto.id_categoria ?? undefined, tipo: dto.tipo?.trim(), nombre: dto.nombre?.trim(), tasa_porcentaje: dto.tasa_porcentaje, monto_fijo: dto.monto_fijo, moneda_monto_fijo: dto.moneda_monto_fijo, vigente_hasta: dto.vigente_hasta ? new Date(dto.vigente_hasta) : undefined, incluido_en_precio: dto.incluido_en_precio, activo: dto.activo } })); }
+  async listTasas() { return serializeBigInts(await this.prisma.tasas_impuesto.findMany({ include: { categorias: true } })); }
+  async getTasa(id_tasa: number) { const item = await this.prisma.tasas_impuesto.findUnique({ where: { id_tasa }, include: { categorias: true } }); if (!item) throw new NotFoundException('Tasa no encontrada'); return serializeBigInts(item); }
+  async createTasa(dto: CreateTasaImpuestoDto) { return serializeBigInts(await this.prisma.tasas_impuesto.create({ data: { pais_iso2: dto.pais_iso2.trim(), id_categoria: dto.id_categoria ?? null, tipo: dto.tipo.trim(), nombre: dto.nombre.trim(), tasa_porcentaje: dto.tasa_porcentaje ?? null, monto_fijo: dto.monto_fijo ?? null, moneda_monto_fijo: (dto.moneda_monto_fijo ?? null) as Moneda | null, vigente_hasta: dto.vigente_hasta ? new Date(dto.vigente_hasta) : null, incluido_en_precio: dto.incluido_en_precio ?? false, activo: dto.activo ?? true } })); }
+  async updateTasa(id_tasa: number, dto: UpdateTasaImpuestoDto) { return serializeBigInts(await this.prisma.tasas_impuesto.update({ where: { id_tasa }, data: { pais_iso2: dto.pais_iso2?.trim(), id_categoria: dto.id_categoria ?? undefined, tipo: dto.tipo?.trim(), nombre: dto.nombre?.trim(), tasa_porcentaje: dto.tasa_porcentaje, monto_fijo: dto.monto_fijo, moneda_monto_fijo: dto.moneda_monto_fijo as Moneda | undefined, vigente_hasta: dto.vigente_hasta ? new Date(dto.vigente_hasta) : undefined, incluido_en_precio: dto.incluido_en_precio, activo: dto.activo } })); }
   async removeTasa(id_tasa: number) { await this.prisma.tasas_impuesto.delete({ where: { id_tasa } }); return { message: 'Tasa eliminada' }; }
 
 }

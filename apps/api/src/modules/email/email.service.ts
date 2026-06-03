@@ -1,10 +1,13 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import * as nodemailer from 'nodemailer';
+import { FacturaPdfService } from './factura-pdf.service';
 
 interface SendEmailOptions {
   to: string;
   subject: string;
   html: string;
+  attachments?: { filename: string; content: Buffer; type: string }[];
 }
 
 @Injectable()
@@ -12,14 +15,27 @@ export class EmailService {
   private apiKey: string;
   private fromEmail: string;
   private isProduction: boolean;
+  private gmailTransport: nodemailer.Transporter | null = null;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly facturaPdfService: FacturaPdfService,
+  ) {
     this.apiKey = process.env.SENDGRID_API_KEY || '';
     this.fromEmail = process.env.EMAIL_FROM || 'noreply@marketplace.com';
     this.isProduction = process.env.NODE_ENV === 'production';
 
-    if (!this.apiKey) {
-      console.warn('⚠️  SENDGRID_API_KEY no configurado. Los emails serán simulados.');
+    const gmailUser = process.env.GMAIL_USER || '';
+    const gmailPass = process.env.GMAIL_APP_PASSWORD || '';
+
+    if (gmailUser && gmailPass) {
+      this.gmailTransport = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user: gmailUser, pass: gmailPass },
+      });
+      console.log(`✅ Gmail SMTP configurado (${gmailUser})`);
+    } else if (!this.apiKey) {
+      console.warn('⚠️  Sin GMAIL_APP_PASSWORD ni SENDGRID_API_KEY. Los emails serán simulados.');
     }
   }
 
@@ -119,6 +135,7 @@ export class EmailService {
       nombreCliente?: string;
       fecha?: string;
       metodoPago?: string;
+      lang?: 'es' | 'en';
     },
   ): Promise<void> {
     const incluyeAlcohol = !!options?.incluyeAlcohol;
@@ -405,54 +422,87 @@ export class EmailService {
     });
   }
 
+  async testEmail(to: string): Promise<{ ok: boolean; transporte: string; destino: string; mensaje: string }> {
+    if (!to) return { ok: false, transporte: 'ninguno', destino: '', mensaje: 'Falta el parámetro ?to=' };
+    const transporte = this.gmailTransport ? 'Gmail SMTP' : this.apiKey ? 'SendGrid' : 'simulado';
+    try {
+      await this.sendEmail({
+        to,
+        subject: 'Test de correo - Marketplace',
+        html: '<p>Si ves este mensaje, el correo funciona correctamente. ✅</p>',
+      });
+      return { ok: true, transporte, destino: to, mensaje: `Correo enviado correctamente a ${to}` };
+    } catch (err: any) {
+      return { ok: false, transporte, destino: to, mensaje: err?.message ?? String(err) };
+    }
+  }
+
   private async sendEmail(options: SendEmailOptions): Promise<void> {
-    if (!this.apiKey) {
-      console.log('📧 [Email] Modo simulado (sin SENDGRID_API_KEY):');
-      console.log(`   Para: ${options.to}`);
-      console.log(`   Asunto: ${options.subject}`);
-      console.log(`   HTML: ${options.html.substring(0, 100)}...`);
+    // Prioridad 1: Gmail SMTP (más confiable para desarrollo)
+    if (this.gmailTransport) {
+      await this.gmailTransport.sendMail({
+        from: `"Marketplace de Mezcal" <${process.env.GMAIL_USER}>`,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        attachments: options.attachments?.map(a => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.type,
+        })),
+      });
+      console.log(`✅ [Gmail] Email enviado a ${options.to} — "${options.subject}"`);
       return;
     }
 
-    try {
-      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          personalizations: [
-            {
-              to: [{ email: options.to }],
-            },
-          ],
-          from: {
-            email: this.fromEmail,
+    // Prioridad 2: SendGrid
+    if (this.apiKey) {
+      try {
+        const sgAttachments = options.attachments?.map(a => ({
+          content: a.content.toString('base64'),
+          filename: a.filename,
+          type: a.type,
+          disposition: 'attachment',
+        }));
+
+        const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
           },
-          subject: options.subject,
-          content: [
-            {
-              type: 'text/html',
-              value: options.html,
-            },
-          ],
-        }),
-      });
+          body: JSON.stringify({
+            personalizations: [{ to: [{ email: options.to }] }],
+            from: { email: this.fromEmail },
+            subject: options.subject,
+            content: [{ type: 'text/html', value: options.html }],
+            ...(sgAttachments?.length ? { attachments: sgAttachments } : {}),
+          }),
+        });
 
-      if (!response.ok) {
-        const error = await response.text();
-        const errorData = JSON.parse(error);
-        throw new BadRequestException(
-          `SendGrid Error: ${errorData.errors?.[0]?.message || error}`,
-        );
+        if (!response.ok) {
+          const rawError = await response.text();
+          let message = rawError;
+          try {
+            const parsed = JSON.parse(rawError);
+            message = parsed.errors?.[0]?.message || rawError;
+          } catch { /* response was not JSON */ }
+          console.error(`❌ SendGrid HTTP ${response.status}: ${message}`);
+          throw new BadRequestException(`SendGrid Error (${response.status}): ${message}`);
+        }
+
+        console.log(`✅ [SendGrid] Email enviado a ${options.to} — "${options.subject}"`);
+        return;
+      } catch (error: any) {
+        console.error('❌ Error sending email via SendGrid:', error?.message ?? error);
+        throw error;
       }
-
-      console.log(`✅ Email sent to ${options.to} (${options.subject})`);
-    } catch (error) {
-      console.error('❌ Error sending email:', error);
-      throw error;
     }
+
+    // Sin configuración: modo simulado
+    console.log('📧 [Email] Modo simulado:');
+    console.log(`   Para: ${options.to}`);
+    console.log(`   Asunto: ${options.subject}`);
   }
 
   async sendSolicitudRecibidaEmail(email: string, nombre: string): Promise<void> {
@@ -578,6 +628,340 @@ export class EmailService {
       to: email,
       subject: 'Actualización sobre tu solicitud de productor',
       html,
+    });
+  }
+
+  async sendFacturaSolicitudEmail(
+    email: string,
+    datos: {
+      pedidoId: string;
+      rfc: string;
+      nombreRazonSocial: string;
+      usoCfdi: string;
+      regimenFiscal: string;
+      total: number;
+      moneda: string;
+    },
+  ): Promise<void> {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const year = new Date().getFullYear();
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitud de Factura #${datos.pedidoId}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f0ece0; font-family:Arial, Helvetica, sans-serif;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0ece0">
+  <tr><td align="center" style="padding:20px 10px;">
+    <table width="620" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff; border:1px solid #c8bfa8; max-width:620px;">
+
+      <!-- Barra superior -->
+      <tr>
+        <td height="5" style="background:linear-gradient(90deg,#2E4A33,#C97A3E,#C89B4A,#C97A3E,#2E4A33); font-size:1px; line-height:1px;">&nbsp;</td>
+      </tr>
+
+      <!-- Encabezado -->
+      <tr>
+        <td style="padding:24px 28px 16px; border-bottom:1px solid #c8bfa8;">
+          <p style="margin:0 0 4px; font-size:11px; font-weight:bold; color:#C97A3E; text-transform:uppercase; letter-spacing:1px;">Marketplace de Mezcal</p>
+          <h1 style="margin:0; font-size:22px; font-weight:bold; color:#2E4A33;">Solicitud de Factura Recibida</h1>
+          <p style="margin:6px 0 0; font-size:13px; color:#666;">Pedido <strong style="color:#2E4A33;">#${datos.pedidoId}</strong></p>
+        </td>
+      </tr>
+
+      <!-- Cuerpo -->
+      <tr>
+        <td style="padding:24px 28px;">
+          <p style="margin:0 0 20px; font-size:14px; color:#333; line-height:1.6;">
+            Hemos recibido tu solicitud de factura CFDI. A continuación encontrarás los datos con los que se generará:
+          </p>
+
+          <!-- Tabla de datos fiscales -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c8bfa8; font-size:13px;">
+            <tr bgcolor="#f7f3ec">
+              <td colspan="2" style="padding:8px 12px; font-weight:bold; color:#2E4A33; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; border:1px solid #c8bfa8;">
+                Datos Fiscales del Receptor
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#777; width:40%;">RFC</td>
+              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#1a1a1a; font-weight:600; font-family:monospace; letter-spacing:0.08em;">${datos.rfc}</td>
+            </tr>
+            <tr bgcolor="#fafaf8">
+              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#777;">Nombre / Razón Social</td>
+              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#1a1a1a; font-weight:600;">${datos.nombreRazonSocial}</td>
+            </tr>
+            <tr>
+              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#777;">Uso CFDI</td>
+              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#1a1a1a;">${datos.usoCfdi}</td>
+            </tr>
+            ${datos.regimenFiscal ? `<tr bgcolor="#fafaf8">
+              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#777;">Régimen Fiscal</td>
+              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#1a1a1a;">${datos.regimenFiscal}</td>
+            </tr>` : ''}
+            <tr>
+              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#777;">Total del Pedido</td>
+              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#C97A3E; font-weight:700; font-size:14px;">$${datos.total.toFixed(2)} ${datos.moneda}</td>
+            </tr>
+          </table>
+
+          <!-- Aviso de tiempo -->
+          <div style="margin:20px 0 0; padding:14px 16px; background:#f7f3ec; border-left:4px solid #C97A3E; border-radius:0 6px 6px 0;">
+            <p style="margin:0; font-size:13px; color:#2E4A33; line-height:1.6;">
+              <strong>⏱ Tiempo de procesamiento:</strong> Tu CFDI será generado y enviado a este correo en un plazo de <strong>24 a 48 horas hábiles</strong>.
+            </p>
+          </div>
+
+          <p style="margin:20px 0 0; font-size:13px; color:#888; line-height:1.6;">
+            Si los datos no son correctos o necesitas hacer algún cambio, contáctanos lo antes posible respondiendo a este correo.
+          </p>
+        </td>
+      </tr>
+
+      <!-- Botón -->
+      <tr>
+        <td style="padding:0 28px 24px; text-align:center;">
+          <a href="${frontendUrl}/tienda/compras"
+             style="display:inline-block; background:#2E4A33; color:#ffffff; text-decoration:none; padding:11px 28px; border-radius:6px; font-size:13px; font-weight:bold; letter-spacing:0.3px;">
+            Ver mis compras
+          </a>
+        </td>
+      </tr>
+
+      <!-- Pie -->
+      <tr>
+        <td bgcolor="#2E4A33" style="padding:10px 16px;">
+          <p style="margin:0; font-size:11px; color:#a8c4a2; text-align:center;">
+            MARKETPLACE DE MEZCAL · OAXACA, MÉXICO
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:8px 16px 12px; border-top:1px solid #c8bfa8;">
+          <p style="margin:0; font-size:10px; color:#aaa; text-align:center;">
+            © ${year} Marketplace de Mezcal · Solicitud de factura para el pedido #${datos.pedidoId}
+          </p>
+        </td>
+      </tr>
+
+    </table>
+  </td></tr>
+</table>
+
+</body>
+</html>`;
+
+    await this.sendEmail({
+      to: email,
+      subject: `Solicitud de factura recibida — Pedido #${datos.pedidoId}`,
+      html,
+    });
+  }
+
+  async sendFacturaEmail(
+    email: string,
+    datos: {
+      pedidoId: string;
+      folio: string;
+      fecha: Date;
+      rfc: string;
+      nombreRazonSocial: string;
+      usoCfdi: string;
+      regimenFiscal: string;
+      domicilioFiscal?: string;
+      conceptos: { descripcion: string; clave?: string; unidad?: string; cantidad: number; precioUnitario: number; descuento?: number; importe: number; objImpuesto?: string }[];
+      subtotal: number;
+      iva?: number;
+      total: number;
+      moneda: string;
+      formaPago?: string;
+      metodoPago?: string;
+    },
+  ): Promise<void> {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const year = new Date().getFullYear();
+    const fechaStr = new Date(datos.fecha).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+    const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const filasConceptos = datos.conceptos.map(c => `
+      <tr>
+        <td style="padding:8px 12px;border:1px solid #e0d9c8;">${c.descripcion}</td>
+        <td style="padding:8px 12px;border:1px solid #e0d9c8;text-align:center;">${c.cantidad}</td>
+        <td style="padding:8px 12px;border:1px solid #e0d9c8;text-align:right;">$${fmt(c.precioUnitario)}</td>
+        <td style="padding:8px 12px;border:1px solid #e0d9c8;text-align:right;font-weight:600;">$${fmt(c.importe)}</td>
+      </tr>`).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Factura ${datos.folio}</title>
+</head>
+<body style="margin:0;padding:0;background:#f0ece0;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0ece0">
+  <tr><td align="center" style="padding:24px 10px;">
+  <table width="620" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border:1px solid #c8bfa8;max-width:620px;">
+
+    <!-- Barra superior -->
+    <tr><td height="5" style="background:linear-gradient(90deg,#2E4A33,#C97A3E,#C89B4A,#C97A3E,#2E4A33);font-size:1px;line-height:1px;">&nbsp;</td></tr>
+
+    <!-- Encabezado -->
+    <tr><td style="padding:24px 28px 16px;border-bottom:1px solid #c8bfa8;">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td>
+          <p style="margin:0 0 2px;font-size:11px;font-weight:bold;color:#C97A3E;text-transform:uppercase;letter-spacing:1px;">Marketplace de Mezcal</p>
+          <h1 style="margin:0;font-size:22px;font-weight:bold;color:#2E4A33;">Factura</h1>
+        </td>
+        <td align="right">
+          <p style="margin:0;font-size:13px;color:#555;">Folio: <strong style="font-family:monospace;color:#2E4A33;">${datos.folio}</strong></p>
+          <p style="margin:4px 0 0;font-size:12px;color:#888;">Fecha: ${fechaStr}</p>
+          <p style="margin:4px 0 0;font-size:12px;color:#888;">Pedido: #${datos.pedidoId}</p>
+        </td>
+      </tr></table>
+    </td></tr>
+
+    <!-- Datos fiscales -->
+    <tr><td style="padding:20px 28px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <!-- Emisor -->
+          <td width="48%" valign="top" style="padding-right:8px;">
+            <p style="margin:0 0 6px;font-size:10px;font-weight:bold;color:#C97A3E;text-transform:uppercase;letter-spacing:0.5px;">Emisor</p>
+            <p style="margin:0;font-size:12px;font-weight:bold;color:#1a1a1a;">Marketplace de Mezcal</p>
+            <p style="margin:2px 0;font-size:11px;color:#666;">RFC: MAR010101AAA</p>
+            <p style="margin:2px 0;font-size:11px;color:#666;">Régimen: 601 - General de Ley</p>
+            <p style="margin:2px 0;font-size:11px;color:#666;">Oaxaca, México</p>
+          </td>
+          <!-- Receptor -->
+          <td width="4%"></td>
+          <td width="48%" valign="top" style="padding-left:8px;border-left:1px solid #e0d9c8;">
+            <p style="margin:0 0 6px;font-size:10px;font-weight:bold;color:#C97A3E;text-transform:uppercase;letter-spacing:0.5px;">Receptor</p>
+            <p style="margin:0;font-size:12px;font-weight:bold;color:#1a1a1a;">${datos.nombreRazonSocial}</p>
+            <p style="margin:2px 0;font-size:11px;color:#666;font-family:monospace;">RFC: ${datos.rfc}</p>
+            ${datos.regimenFiscal ? `<p style="margin:2px 0;font-size:11px;color:#666;">Régimen: ${datos.regimenFiscal}</p>` : ''}
+            <p style="margin:2px 0;font-size:11px;color:#666;">Uso CFDI: ${datos.usoCfdi}</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+
+    <!-- Conceptos -->
+    <tr><td style="padding:20px 28px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="1" style="border-collapse:collapse;border-color:#c8bfa8;font-size:12px;">
+        <tr bgcolor="#f7f3ec">
+          <td style="padding:8px 12px;border:1px solid #c8bfa8;font-weight:bold;color:#2E4A33;font-size:11px;text-transform:uppercase;">Descripción</td>
+          <td style="padding:8px 12px;border:1px solid #c8bfa8;font-weight:bold;color:#2E4A33;font-size:11px;text-align:center;">Cant.</td>
+          <td style="padding:8px 12px;border:1px solid #c8bfa8;font-weight:bold;color:#2E4A33;font-size:11px;text-align:right;">Precio Unit.</td>
+          <td style="padding:8px 12px;border:1px solid #c8bfa8;font-weight:bold;color:#2E4A33;font-size:11px;text-align:right;">Importe</td>
+        </tr>
+        ${filasConceptos}
+      </table>
+    </td></tr>
+
+    <!-- Totales -->
+    <tr><td style="padding:12px 28px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td></td>
+          <td width="220" style="border:1px solid #e0d9c8;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
+              <tr>
+                <td style="padding:7px 12px;color:#777;border-bottom:1px solid #f0ece0;">Subtotal</td>
+                <td style="padding:7px 12px;text-align:right;color:#1a1a1a;border-bottom:1px solid #f0ece0;">$${fmt(datos.subtotal)} ${datos.moneda}</td>
+              </tr>
+              <tr>
+                <td style="padding:7px 12px;color:#777;border-bottom:1px solid #f0ece0;">IVA (incluido)</td>
+                <td style="padding:7px 12px;text-align:right;color:#1a1a1a;border-bottom:1px solid #f0ece0;">—</td>
+              </tr>
+              <tr bgcolor="#f7f3ec">
+                <td style="padding:9px 12px;font-weight:bold;color:#2E4A33;font-size:13px;">Total</td>
+                <td style="padding:9px 12px;text-align:right;font-weight:bold;color:#C97A3E;font-size:14px;">$${fmt(datos.total)} ${datos.moneda}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+
+
+    <!-- Botón -->
+    <tr><td style="padding:20px 28px;text-align:center;">
+      <a href="${frontendUrl}/tienda/compras" style="display:inline-block;background:#2E4A33;color:#fff;text-decoration:none;padding:11px 28px;border-radius:6px;font-size:13px;font-weight:bold;">
+        Ver mis compras
+      </a>
+    </td></tr>
+
+    <!-- Pie -->
+    <tr><td bgcolor="#2E4A33" style="padding:10px 16px;">
+      <p style="margin:0;font-size:11px;color:#a8c4a2;text-align:center;">MARKETPLACE DE MEZCAL · OAXACA, MÉXICO</p>
+    </td></tr>
+    <tr><td style="padding:8px 16px 12px;border-top:1px solid #c8bfa8;">
+      <p style="margin:0;font-size:10px;color:#aaa;text-align:center;">© ${year} Marketplace de Mezcal · Folio ${datos.folio}</p>
+    </td></tr>
+
+  </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+
+    // Generar PDF adjunto
+    let pdfBuffer: Buffer | undefined;
+    try {
+      const iva = datos.iva ?? Math.round(datos.subtotal * 0.16 * 100) / 100;
+      pdfBuffer = await this.facturaPdfService.generate({
+        serie: 'F',
+        folio: datos.folio,
+        fecha: datos.fecha,
+        pedidoId: datos.pedidoId,
+        emisor: {
+          nombre: 'Marketplace de Mezcal',
+          rfc: 'MAR010101AAA',
+          regimen: '601 - General de Ley Personas Morales',
+          direccion: 'Oaxaca de Juárez, Oaxaca, México',
+          cp: '68000',
+          lugarExpedicion: '68000',
+        },
+        receptor: {
+          nombre: datos.nombreRazonSocial,
+          rfc: datos.rfc,
+          regimen: datos.regimenFiscal || '616 - Sin obligaciones fiscales',
+          usoCfdi: datos.usoCfdi,
+          domicilioFiscal: datos.domicilioFiscal ?? '68000',
+        },
+        conceptos: datos.conceptos.map(c => ({
+          descripcion: c.descripcion,
+          clave: c.clave ?? '50202306',
+          unidad: c.unidad ?? 'H87 · Pieza',
+          cantidad: c.cantidad,
+          precioUnitario: c.precioUnitario,
+          descuento: c.descuento ?? 0,
+          importe: c.importe,
+          objImpuesto: c.objImpuesto ?? '02',
+        })),
+        subtotal: datos.subtotal,
+        iva,
+        total: datos.total,
+        moneda: datos.moneda,
+        formaPago: datos.formaPago ?? '03',
+        metodoPago: datos.metodoPago ?? 'Pago en una sola exhibición',
+      });
+    } catch (e: any) {
+      console.error('[factura-pdf] Error generando PDF:', e?.message);
+    }
+
+    await this.sendEmail({
+      to: email,
+      subject: `Factura ${datos.folio} — Pedido #${datos.pedidoId} · Marketplace de Mezcal`,
+      html,
+      attachments: pdfBuffer
+        ? [{ filename: `factura-${datos.folio}.pdf`, content: pdfBuffer, type: 'application/pdf' }]
+        : [],
     });
   }
 }

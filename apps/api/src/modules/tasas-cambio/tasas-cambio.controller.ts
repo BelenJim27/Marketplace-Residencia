@@ -16,14 +16,20 @@ export class TasasCambioController {
 
   @Get('actuales')
   async getActuales() {
-    const [usd, eur] = await Promise.allSettled([
+    const [usd, eur, brl, cny, jpy] = await Promise.allSettled([
       this.service.getVigente('MXN', 'USD'),
       this.service.getVigente('MXN', 'EUR'),
+      this.service.getVigente('MXN', 'BRL'),
+      this.service.getVigente('MXN', 'CNY'),
+      this.service.getVigente('MXN', 'JPY'),
     ]);
     return {
       MXN: {
         USD: usd.status === 'fulfilled' ? Number(usd.value.tasa) : null,
         EUR: eur.status === 'fulfilled' ? Number(eur.value.tasa) : null,
+        BRL: brl.status === 'fulfilled' ? Number(brl.value.tasa) : null,
+        CNY: cny.status === 'fulfilled' ? Number(cny.value.tasa) : null,
+        JPY: jpy.status === 'fulfilled' ? Number(jpy.value.tasa) : null,
       },
     };
   }

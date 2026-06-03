@@ -403,7 +403,7 @@ export default function UsuariosUI() {
                 <div>
                   <label className={labelCls}>Moneda Preferida</label>
                   <select value={userFormData.moneda_preferida} onChange={(e) => setUserFormData({ ...userFormData, moneda_preferida: e.target.value })} className={inputCls}>
-                    <option value="MXN">MXN - Peso Mexicano</option><option value="USD">USD - Dólar</option><option value="EUR">EUR - Euro</option><option value="GBP">GBP - Libra</option><option value="BRL">BRL - Real</option>
+                    <option value="MXN">MXN - Peso Mexicano</option><option value="USD">USD - Dólar</option>
                   </select>
                 </div>
               </div>

@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { BadRequestException, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { Moneda, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
 import { ComisionesService } from "../comisiones/comisiones.service";
+import { EmailService } from "../email/email.service";
 import { FedexService } from "../envios/fedex.service";
-import { ICarrierService } from "../envios/interfaces/carrier.interface";
+import { SkydropxService } from "../envios/skydropx.service";
 import { PaypalService } from "../pagos/paypal.service";
 import { StripeService } from "../pagos/stripe.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
@@ -22,24 +23,23 @@ type Periodo = "week" | "month" | "year";
 
 @Injectable()
 export class PedidosService {
-  private carrierService: ICarrierService;
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
     private readonly comisionesService: ComisionesService,
+    private readonly emailService: EmailService,
     private readonly fedexService: FedexService,
+    private readonly skydropxService: SkydropxService,
     private readonly stripeService: StripeService,
     private readonly paypalService: PaypalService,
-  ) {
-    this.carrierService = fedexService;
-  }
+  ) {}
   async findAll() {
     return serializeBigInts(
       await this.prisma.pedidos.findMany({
         include: {
           detalle_pedido: {
             include: {
+              productos: { select: { nombre: true, imagen_principal_url: true } },
               productores: {
                 select: {
                   id_productor: true,
@@ -51,7 +51,6 @@ export class PedidosService {
           },
           facturas: true,
           usuarios: true,
-          monedas: true,
         },
         orderBy: { fecha_creacion: 'desc' },
       }),
@@ -61,10 +60,20 @@ export class PedidosService {
     const item = await this.prisma.pedidos.findUnique({
       where: { id_pedido: toBigIntId(id) },
       include: {
-        detalle_pedido: true,
+        detalle_pedido: {
+          include: {
+            productos: {
+              select: {
+                nombre: true,
+                imagen_principal_url: true,
+                producto_imagenes: { select: { url: true }, take: 1 },
+              },
+            },
+          },
+        },
+        envios: true,
         facturas: true,
         usuarios: true,
-        monedas: true,
       },
     });
     if (!item || item.eliminado_en)
@@ -223,7 +232,7 @@ export class PedidosService {
         total: dto.total,
         moneda: dto.moneda,
         tipo_cambio: dto.tipo_cambio ?? undefined,
-        moneda_referencia: dto.moneda_referencia?.trim() ?? "USD",
+        moneda_referencia: (dto.moneda_referencia?.trim() ?? "USD") as Moneda,
         pais_destino_iso2: dto.pais_destino_iso2 ?? undefined,
         direccion_envio_snapshot: dto.direccion_envio_snapshot as
           | any
@@ -249,7 +258,12 @@ export class PedidosService {
       },
     });
 
-    return serializeBigInts(pedido);
+    // Calcular el número de orden del usuario (cuántos pedidos ha hecho)
+    const numeroOrden = await this.prisma.pedidos.count({
+      where: { id_usuario: pedido.id_usuario, eliminado_en: null },
+    });
+
+    return { ...serializeBigInts(pedido), numero_orden: numeroOrden };
   }
   async update(id: string, dto: UpdatePedidoDto) {
     const id_pedido = toBigIntId(id);
@@ -262,7 +276,7 @@ export class PedidosService {
         total: dto.total,
         moneda: dto.moneda,
         tipo_cambio: dto.tipo_cambio,
-        moneda_referencia: dto.moneda_referencia?.trim(),
+        moneda_referencia: dto.moneda_referencia?.trim() as Moneda | undefined,
         pais_destino_iso2: dto.pais_destino_iso2,
         direccion_envio_snapshot: dto.direccion_envio_snapshot as
           | any
@@ -344,7 +358,7 @@ export class PedidosService {
           id_tienda,
           cantidad: dto.cantidad,
           precio_compra: dto.precio_compra,
-          moneda_compra: dto.moneda_compra?.trim() ?? "MXN",
+          moneda_compra: (dto.moneda_compra?.trim() ?? "MXN") as Moneda,
           impuesto: dto.impuesto ?? "0",
         },
         include: { productos: { include: { lotes: true } } },
@@ -361,6 +375,12 @@ export class PedidosService {
 
       const cantidadADecretar = Number(dto.cantidad);
       const stockResultante = inventario.stock - cantidadADecretar;
+
+      if (stockResultante < 0) {
+        throw new BadRequestException(
+          `Stock insuficiente para el producto ${dto.id_producto}. Disponible: ${inventario.stock}, solicitado: ${cantidadADecretar}.`,
+        );
+      }
 
       await tx.inventario.update({
         where: { id_inventario: inventario.id_inventario },
@@ -518,9 +538,11 @@ export class PedidosService {
         subtotal_bruto,
         comision,
       );
-    } catch {
-      console.warn(
-        `[pedidos] Sin regla de comisión para productor ${args.id_productor} / país ${args.pais_operacion}. Comisión aplicada: 0.`,
+    } catch (err: any) {
+      // No silenciar: una comisión de 0% implica pérdida de ingresos sin alerta.
+      // El admin debe garantizar que siempre exista una regla global activa en la tabla comisiones.
+      throw new Error(
+        `[pedidos] Sin regla de comisión para productor ${args.id_productor} / país ${args.pais_operacion}. Asegúrate de que exista una regla con alcance='global' y activo=true. Error original: ${err?.message}`,
       );
     }
 
@@ -564,7 +586,7 @@ export class PedidosService {
           id_producto: dto.id_producto,
           cantidad: dto.cantidad,
           precio_compra: dto.precio_compra,
-          moneda_compra: dto.moneda_compra?.trim(),
+          moneda_compra: dto.moneda_compra?.trim() as Moneda | undefined,
           impuesto: dto.impuesto,
         },
       }),
@@ -588,25 +610,94 @@ export class PedidosService {
     return { message: "Detalle eliminado" };
   }
   async addFactura(id: string, dto: CreateFacturaDto) {
-    return serializeBigInts(
-      await this.prisma.facturas.create({
-        data: {
-          id_pedido: toBigIntId(id),
-          uuid_fiscal: dto.uuid_fiscal ?? null,
-          pdf_url: dto.pdf_url ?? null,
-          xml_url: dto.xml_url ?? null,
-          rfc_emisor: dto.rfc_emisor ?? null,
-          rfc_receptor: dto.rfc_receptor ?? null,
-          uso_cfdi: dto.uso_cfdi ?? null,
-          regimen_fiscal: dto.regimen_fiscal ?? null,
-          subtotal: dto.subtotal ?? null,
-          impuestos_total: dto.impuestos_total ?? null,
-          total: dto.total ?? null,
-          moneda: dto.moneda ?? null,
-          estado: dto.estado?.trim() ?? "pendiente",
+    const factura = await this.prisma.facturas.create({
+      data: {
+        id_pedido: toBigIntId(id),
+        uuid_fiscal: dto.uuid_fiscal ?? null,
+        pdf_url: dto.pdf_url ?? null,
+        xml_url: dto.xml_url ?? null,
+        rfc_emisor: dto.rfc_emisor ?? null,
+        rfc_receptor: dto.rfc_receptor ?? null,
+        uso_cfdi: dto.uso_cfdi ?? null,
+        regimen_fiscal: dto.regimen_fiscal ?? null,
+        subtotal: dto.subtotal ?? null,
+        impuestos_total: dto.impuestos_total ?? null,
+        total: dto.total ?? null,
+        moneda: dto.moneda ?? null,
+        estado: dto.estado?.trim() ?? "pendiente",
+      },
+    });
+
+    // Enviar factura por correo
+    try {
+      const pedido = await this.prisma.pedidos.findUnique({
+        where: { id_pedido: toBigIntId(id) },
+        select: {
+          total: true,
+          moneda: true,
+          fecha_creacion: true,
+          usuarios: { select: { email: true, nombre: true, apellido_paterno: true } },
+          detalle_pedido: {
+            select: {
+              cantidad: true,
+              precio_compra: true,
+              moneda_compra: true,
+              productos: { select: { nombre: true } },
+            },
+          },
         },
-      }),
-    );
+      });
+
+      const emailFactura = dto.email_factura?.trim() || null;
+      const emailDestino = emailFactura ?? pedido?.usuarios?.email;
+
+      const nombreCliente = dto.nombre_razon_social
+        || [pedido?.usuarios?.nombre, pedido?.usuarios?.apellido_paterno].filter(Boolean).join(' ')
+        || 'Cliente';
+
+      const subtotal = (pedido?.detalle_pedido ?? []).reduce(
+        (s: number, d: any) => s + Number(d.cantidad) * Number(d.precio_compra), 0
+      );
+      const total = pedido?.total ? Number(pedido.total) : subtotal;
+      const iva = Math.round((total - subtotal) * 100) / 100 > 0
+        ? Math.round((total - subtotal) * 100) / 100
+        : Math.round(subtotal * 0.16 * 100) / 100;
+
+      const conceptos = (pedido?.detalle_pedido ?? []).map((d: any) => ({
+        descripcion: d.productos?.nombre ?? 'Producto',
+        clave: '50202306',
+        unidad: 'H87 · Pieza',
+        cantidad: Number(d.cantidad),
+        precioUnitario: Number(d.precio_compra),
+        descuento: 0,
+        importe: Number(d.cantidad) * Number(d.precio_compra),
+        objImpuesto: '02',
+      }));
+
+      if (emailDestino) {
+        await this.emailService.sendFacturaEmail(emailDestino, {
+          pedidoId: id,
+          folio: `F-${id.padStart(6, '0')}`,
+          fecha: pedido?.fecha_creacion ?? new Date(),
+          rfc: dto.rfc_receptor ?? 'XAXX010101000',
+          nombreRazonSocial: nombreCliente,
+          usoCfdi: dto.uso_cfdi ?? 'G03',
+          regimenFiscal: dto.regimen_fiscal ?? '616 - Sin obligaciones fiscales',
+          domicilioFiscal: '68000',
+          conceptos,
+          subtotal,
+          iva,
+          total,
+          moneda: pedido?.moneda ?? 'MXN',
+          formaPago: '03',
+          metodoPago: 'Pago en una sola exhibición',
+        });
+      }
+    } catch (err: any) {
+      console.error('[pedidos] Error enviando factura:', err?.message ?? err);
+    }
+
+    return serializeBigInts(factura);
   }
   async updateFactura(id_factura: string, dto: UpdateFacturaDto) {
     return serializeBigInts(
@@ -636,11 +727,29 @@ export class PedidosService {
     return { message: "Factura eliminada" };
   }
 
+  async testEmail(to: string) {
+    return this.emailService.testEmail(to);
+  }
+
   async getMisCompras(accessToken: string) {
     const user = await this.authService.getMe(accessToken);
     const pedidos = await this.prisma.pedidos.findMany({
       where: { id_usuario: user.id_usuario, eliminado_en: null },
-      include: { detalle_pedido: true, facturas: true, envios: true },
+      include: {
+        detalle_pedido: {
+          include: {
+            productos: {
+              select: {
+                nombre: true,
+                imagen_principal_url: true,
+                producto_imagenes: { select: { url: true }, take: 1 },
+              },
+            },
+          },
+        },
+        facturas: true,
+        envios: true,
+      },
       orderBy: { fecha_creacion: "desc" },
     });
     return serializeBigInts(pedidos);
@@ -820,7 +929,7 @@ export class PedidosService {
     return serializeBigInts(updated);
   }
 
-  private async triggerPayoutForProductor(id_pedido: bigint, id_productor: number, moneda: string) {
+  private async triggerPayoutForProductor(id_pedido: bigint, id_productor: number, moneda: Moneda) {
     const pp = (await this.prisma.pedido_productor.findUnique({
       where: {
         id_pedido_id_productor: { id_pedido, id_productor },
@@ -872,11 +981,11 @@ export class PedidosService {
       try {
         // Convert to USD for PayPal
         let amountUSD = monto_neto;
-        if (moneda.toUpperCase() !== 'USD') {
+        if (moneda !== 'USD') {
           const tasa = await this.prisma.tasas_cambio.findFirst({
             where: {
-              moneda_origen: moneda.toUpperCase(),
-              moneda_destino: 'USD',
+              moneda_origen: moneda,
+              moneda_destino: Moneda.USD,
               vigente_desde: { lte: new Date() },
               OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: new Date() } }],
             },
@@ -897,7 +1006,7 @@ export class PedidosService {
         const payout = await this.prisma.payouts.create({
           data: {
             id_productor,
-            moneda: moneda.toLowerCase(),
+            moneda,
             monto_bruto: pp.subtotal_bruto ?? monto_neto ?? 0,
             monto_comision: pp.comision_marketplace,
             monto_neto: monto_neto ?? 0,
@@ -921,7 +1030,7 @@ export class PedidosService {
         const payoutFallido = await this.prisma.payouts.create({
           data: {
             id_productor,
-            moneda: moneda.toLowerCase(),
+            moneda,
             monto_bruto: pp.subtotal_bruto ?? monto_neto ?? 0,
             monto_comision: pp.comision_marketplace,
             monto_neto: monto_neto ?? 0,
@@ -1000,7 +1109,7 @@ export class PedidosService {
         const payout = await this.prisma.payouts.create({
           data: {
             id_productor,
-            moneda: moneda.toLowerCase(),
+            moneda,
             monto_bruto: pp.subtotal_bruto ?? monto_neto ?? 0,
             monto_comision: pp.comision_marketplace,
             monto_neto: monto_neto ?? 0,
@@ -1024,7 +1133,7 @@ export class PedidosService {
         const payoutFallido = await this.prisma.payouts.create({
           data: {
             id_productor,
-            moneda: moneda.toLowerCase(),
+            moneda,
             monto_bruto: pp.subtotal_bruto ?? monto_neto ?? 0,
             monto_comision: pp.comision_marketplace,
             monto_neto: monto_neto ?? 0,
@@ -1241,7 +1350,16 @@ export class PedidosService {
       largo_cm: 40,
     };
 
-    const quotes = await this.carrierService.cotizarEnvio(dto);
+    const esInternacional = snapshot.pais && snapshot.pais !== 'MX';
+    const [fedexResult, skydropxResult] = await Promise.allSettled([
+      this.fedexService.cotizarEnvio(dto),
+      esInternacional ? Promise.resolve([]) : this.skydropxService.cotizarEnvio(dto),
+    ]);
+
+    const quotes = [
+      ...(fedexResult.status === 'fulfilled' ? fedexResult.value : []),
+      ...(skydropxResult.status === 'fulfilled' ? skydropxResult.value : []),
+    ];
 
     for (const q of quotes) {
       await this.prisma.envio_cotizaciones.create({
@@ -1249,7 +1367,7 @@ export class PedidosService {
           id_pedido,
           precio_total: String(q.precioTotal),
           tiempo_entrega_estimado: q.fechaEntregaEstimada ?? null,
-          moneda: q.moneda ?? 'USD',
+          moneda: (q.moneda ?? 'USD') as Moneda,
           valida_hasta: new Date(Date.now() + 4 * 3600000),
           payload_request: dto as any,
           payload_response: q as any,

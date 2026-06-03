@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Moneda, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
 import { CreateComisionDto, ResolverComisionQueryDto, UpdateComisionDto } from './dto/comisiones.dto';
@@ -40,7 +40,7 @@ export class ComisionesService {
           id_productor: dto.id_productor,
           porcentaje: dto.porcentaje,
           monto_fijo: dto.monto_fijo,
-          moneda_monto_fijo: dto.moneda_monto_fijo?.toUpperCase(),
+          moneda_monto_fijo: dto.moneda_monto_fijo?.toUpperCase() as Moneda | undefined,
           prioridad: dto.prioridad ?? this.prioridadDefault(dto.alcance),
           activo: dto.activo ?? true,
         },
@@ -60,7 +60,7 @@ export class ComisionesService {
           id_productor: dto.id_productor,
           porcentaje: dto.porcentaje,
           monto_fijo: dto.monto_fijo,
-          moneda_monto_fijo: dto.moneda_monto_fijo?.toUpperCase(),
+          moneda_monto_fijo: dto.moneda_monto_fijo?.toUpperCase() as Moneda | undefined,
           prioridad: dto.prioridad,
           activo: dto.activo,
         },

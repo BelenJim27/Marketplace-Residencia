@@ -1,10 +1,11 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { Moneda } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { calcularEdadEnAnios } from '../productos/edad.helper';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
-import { CreateMonedaDto, CreatePagoDto, CreateStripeIntentDto, UpdateMonedaDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
+import { CreatePagoDto, CreateStripeIntentDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
 import { PaypalService } from './paypal.service';
 import { StripeService } from './stripe.service';
 
@@ -18,16 +19,46 @@ export class PagosService {
     private readonly paypalService: PaypalService,
     private readonly emailService: EmailService,
   ) {}
-  async findAll() { return serializeBigInts(await this.prisma.pagos.findMany({ include: { pedidos: true, monedas: true } })); }
-  async findOne(id_pago: string) { const item = await this.prisma.pagos.findUnique({ where: { id_pago: toBigIntId(id_pago) }, include: { pedidos: true, monedas: true } }); if (!item) throw new NotFoundException('Pago no encontrado'); return serializeBigInts(item); }
+  async findAll(filtros?: { estado?: string; proveedor?: string }) {
+    const where: any = {};
+    if (filtros?.estado) where.estado = filtros.estado;
+    if (filtros?.proveedor) where.proveedor = filtros.proveedor;
+    return serializeBigInts(
+      await this.prisma.pagos.findMany({
+        where,
+        orderBy: { creado_en: 'desc' },
+        include: {
+          pedidos: {
+            select: {
+              id_pedido: true,
+              estado: true,
+              total: true,
+              moneda: true,
+              usuarios: { select: { nombre: true, apellido_paterno: true, email: true } },
+            },
+          },
+        },
+      }),
+    );
+  }
+
+  async resolverManual(id_pago: string, notas?: string) {
+    const pago = await this.prisma.pagos.findUnique({ where: { id_pago: toBigIntId(id_pago) } });
+    if (!pago) throw new NotFoundException('Pago no encontrado');
+    if (pago.estado !== 'reembolso_pendiente_manual') {
+      throw new BadRequestException(`Solo se pueden resolver pagos en estado 'reembolso_pendiente_manual'. Estado actual: ${pago.estado}`);
+    }
+    const updated = await this.prisma.pagos.update({
+      where: { id_pago: pago.id_pago },
+      data: { estado: 'reembolsado' },
+    });
+    this.logger.log(`[pagos] Reembolso manual resuelto por admin: pago=${id_pago}${notas ? ` notas="${notas}"` : ''}`);
+    return serializeBigInts(updated);
+  }
+  async findOne(id_pago: string) { const item = await this.prisma.pagos.findUnique({ where: { id_pago: toBigIntId(id_pago) }, include: { pedidos: true } }); if (!item) throw new NotFoundException('Pago no encontrado'); return serializeBigInts(item); }
   async create(dto: CreatePagoDto) { return serializeBigInts(await this.prisma.pagos.create({ data: { id_pedido: toBigIntId(dto.id_pedido), proveedor: dto.proveedor ?? null, payment_intent_id: dto.payment_intent_id ?? null, estado: dto.estado?.trim() ?? 'pendiente', monto: dto.monto, moneda: dto.moneda } })); }
   async update(id_pago: string, dto: UpdatePagoDto) { return serializeBigInts(await this.prisma.pagos.update({ where: { id_pago: toBigIntId(id_pago) }, data: { id_pedido: dto.id_pedido ? toBigIntId(dto.id_pedido) : undefined, proveedor: dto.proveedor, payment_intent_id: dto.payment_intent_id, estado: dto.estado?.trim(), monto: dto.monto, moneda: dto.moneda } })); }
   async remove(id_pago: string) { await this.prisma.pagos.delete({ where: { id_pago: toBigIntId(id_pago) } }); return { message: 'Pago eliminado' }; }
-  async listMonedas() { return serializeBigInts(await this.prisma.monedas.findMany()); }
-  async createMoneda(dto: CreateMonedaDto) { return serializeBigInts(await this.prisma.monedas.create({ data: { codigo: dto.codigo.trim(), nombre: dto.nombre.trim(), simbolo: dto.simbolo ?? null, activo: dto.activo ?? true } })); }
-  async updateMoneda(codigo: string, dto: UpdateMonedaDto) { return serializeBigInts(await this.prisma.monedas.update({ where: { codigo }, data: { codigo: dto.codigo?.trim(), nombre: dto.nombre?.trim(), simbolo: dto.simbolo, activo: dto.activo } })); }
-  async removeMoneda(codigo: string) { await this.prisma.monedas.delete({ where: { codigo } }); return { message: 'Moneda eliminada' }; }
-
   async getIngresosResumen(id_productor: number) {
     const pedidoProductores = await this.prisma.pedido_productor.findMany({
       where: { id_productor },
@@ -81,32 +112,40 @@ export class PagosService {
     };
   }
 
-  async createStripePaymentIntent(dto: CreateStripeIntentDto) {
-    const moneda = dto.moneda.toUpperCase();
-
-    const monedaRow = await this.prisma.monedas.findUnique({ where: { codigo: moneda } });
-    if (!monedaRow || monedaRow.activo === false) {
-      throw new BadRequestException(`Moneda no soportada: ${moneda}`);
+  async validatePedidoOwnership(id_pedido: string, id_usuario: string): Promise<void> {
+    const pedido = await this.prisma.pedidos.findUnique({
+      where: { id_pedido: toBigIntId(id_pedido) },
+      select: { id_pedido: true, id_usuario: true },
+    });
+    if (!pedido) throw new NotFoundException('Pedido no encontrado');
+    if (pedido.id_usuario !== id_usuario) {
+      throw new ForbiddenException('No tienes permiso para operar sobre este pedido');
     }
+  }
+
+  async createStripePaymentIntent(dto: CreateStripeIntentDto) {
+    const moneda = dto.moneda as Moneda;
 
     const id_pedido_bi = toBigIntId(dto.id_pedido);
     const pedido = await this.prisma.pedidos.findUnique({ where: { id_pedido: id_pedido_bi } });
     if (!pedido) throw new NotFoundException('Pedido no encontrado');
 
-    // Trigger 3 (autoritativo): bloqueo por edad. Si algún ítem requiere edad mínima,
-    // exigir DOB del comprador y validar que cumpla la más restrictiva del carrito.
     await this.validarEdadDelComprador(id_pedido_bi, pedido.id_usuario);
+    await this.validarSubtotalContraDB(id_pedido_bi, dto.subtotal);
+
+    const paisDestino = dto.shipping_address.country;
+    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino);
 
     const directCharge = await this.resolveDirectCharge(id_pedido_bi, dto.subtotal, dto.shipping_amount ?? 0);
 
     const intent = await this.stripeService.createPaymentIntent({
       subtotal: dto.subtotal,
       shippingAmount: dto.shipping_amount ?? 0,
+      taxAmount,
       currency: moneda,
       shippingAddress: dto.shipping_address,
       recipientName: dto.recipient_name,
       customerId: dto.customer_id,
-      automaticTax: dto.automatic_tax ?? true,
       metadata: {
         id_pedido: dto.id_pedido,
         ...(directCharge ? { id_productor: String(directCharge.id_productor) } : {}),
@@ -143,30 +182,27 @@ export class PagosService {
       paymentIntentId: intent.paymentIntentId,
       subtotal: intent.subtotal,
       taxAmount: intent.taxAmount,
+      taxBreakdown,
       shippingAmount: intent.shippingAmount,
       totalAmount: intent.totalAmount,
-      taxCalculationId: intent.taxCalculationId,
     });
   }
 
   async createPaypalOrder(dto: CreatePaypalOrderDto) {
-    const moneda = dto.moneda.toUpperCase();
-
-    const monedaRow = await this.prisma.monedas.findUnique({ where: { codigo: moneda } });
-    if (!monedaRow || monedaRow.activo === false) {
-      throw new BadRequestException(`Moneda no soportada: ${moneda}`);
-    }
+    const moneda = dto.moneda as Moneda;
 
     const id_pedido_bi = toBigIntId(dto.id_pedido);
     const pedido = await this.prisma.pedidos.findUnique({ where: { id_pedido: id_pedido_bi } });
     if (!pedido) throw new NotFoundException('Pedido no encontrado');
 
-    // Autoritative age validation
     await this.validarEdadDelComprador(id_pedido_bi, pedido.id_usuario);
+    await this.validarSubtotalContraDB(id_pedido_bi, dto.subtotal);
 
-    const totalAmount = dto.subtotal + (dto.shipping_amount ?? 0);
+    const paisDestino = dto.shipping_address?.country ?? 'MX';
+    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino);
 
-    // Create PayPal order (no tax calculation for PayPal)
+    const totalAmount = dto.subtotal + (dto.shipping_amount ?? 0) + taxAmount;
+
     const paypalOrder = await this.paypalService.createOrder({
       totalAmount,
       currency: moneda,
@@ -174,18 +210,16 @@ export class PagosService {
       shippingAddress: dto.shipping_address,
     });
 
-    // Update pedido with amounts
     await this.prisma.pedidos.update({
       where: { id_pedido: id_pedido_bi },
       data: {
         shipping_amount: (dto.shipping_amount ?? 0).toFixed(2),
+        tax_amount: taxAmount.toFixed(2),
         total: totalAmount.toFixed(2),
         moneda,
-        tax_amount: '0', // PayPal does not integrate with Stripe Tax
       },
     });
 
-    // Create pago record
     const pago = await this.prisma.pagos.create({
       data: {
         id_pedido: id_pedido_bi,
@@ -202,7 +236,8 @@ export class PagosService {
       orderId: paypalOrder.orderId,
       approveUrl: paypalOrder.approveUrl,
       subtotal: dto.subtotal,
-      taxAmount: 0,
+      taxAmount,
+      taxBreakdown,
       shippingAmount: dto.shipping_amount ?? 0,
       totalAmount,
     });
@@ -225,20 +260,17 @@ export class PagosService {
       throw new BadRequestException(`PayPal capture failed with status: ${captureResult.status}`);
     }
 
-    // Update pago with capture ID and mark as completed
-    const updated = await this.prisma.pagos.update({
+    // Actualizar solo el payment_intent_id con el captureId de PayPal.
+    // NO marcar como 'completado' aquí — updatePaymentStatus lo hará y
+    // ejecutará todos los side effects (notificaciones, orden, etc.) exactamente una vez.
+    await this.prisma.pagos.update({
       where: { id_pago: pago.id_pago },
-      data: {
-        payment_intent_id: captureResult.captureId, // Store capture ID for future refunds
-        estado: 'completado',
-      },
-      include: { pedidos: true },
+      data: { payment_intent_id: captureResult.captureId },
     });
 
-    // Call updatePaymentStatus to handle order status, notifications, etc.
-    await this.updatePaymentStatus(captureResult.captureId, 'completado');
+    const updated = await this.updatePaymentStatus(captureResult.captureId, 'completado');
 
-    return serializeBigInts(updated);
+    return updated;
   }
 
   async updatePaymentStatus(payment_intent_id: string, estado: string, isDirectCharge = false, taxCalculationId?: string) {
@@ -251,26 +283,23 @@ export class PagosService {
       throw new NotFoundException('Pago no encontrado');
     }
 
+    // Idempotencia: si el pago ya alcanzó un estado final (completado/reembolsado),
+    // ignorar cualquier evento posterior. Esto protege contra webhooks retrasados de
+    // Stripe/PayPal donde payment_intent.payment_failed llega después de succeeded.
+    if (pago.estado === 'completado' || pago.estado === 'reembolsado') {
+      this.logger.warn(
+        `[pagos] Webhook ignorado para payment_intent_id=${payment_intent_id}: estado actual=${pago.estado}, evento=${estado}`,
+      );
+      return serializeBigInts(pago);
+    }
+
     const updated = await this.prisma.pagos.update({
       where: { id_pago: pago.id_pago },
       data: { estado },
       include: { pedidos: true },
     });
 
-    // Update order status based on payment status
     if (estado === 'completado') {
-      // Record tax transaction with Stripe Tax if calculation exists
-      if (taxCalculationId) {
-        try {
-          await this.stripeService.createTaxTransactionFromCalculation(
-            taxCalculationId,
-            `pi-${payment_intent_id}`,
-          );
-        } catch (err: any) {
-          console.error('[pagos] createTaxTransactionFromCalculation failed:', err?.message);
-        }
-      }
-
       await this.prisma.pedidos.update({
         where: { id_pedido: pago.id_pedido },
         data: { estado: 'pagado' },
@@ -475,6 +504,59 @@ export class PagosService {
     }
   }
 
+  /**
+   * Recalcula el subtotal desde detalle_pedido en BD y rechaza si difiere del
+   * valor enviado por el cliente en más de $0.05 (tolerancia para redondeos de float).
+   * Previene manipulación de precio desde el frontend.
+   */
+  private async validarSubtotalContraDB(id_pedido: bigint, subtotalCliente: number): Promise<void> {
+    const detalles = await this.prisma.detalle_pedido.findMany({
+      where: { id_pedido },
+      select: { precio_compra: true, cantidad: true },
+    });
+    if (detalles.length === 0) {
+      throw new BadRequestException('El pedido no tiene ítems.');
+    }
+    const subtotalReal = detalles.reduce(
+      (sum, d) => sum + Math.round(Number(d.precio_compra) * d.cantidad * 100) / 100,
+      0,
+    );
+    const subtotalRealRounded = Math.round(subtotalReal * 100) / 100;
+    const subtotalClienteRounded = Math.round(subtotalCliente * 100) / 100;
+    if (Math.abs(subtotalRealRounded - subtotalClienteRounded) > 0.05) {
+      this.logger.error(
+        `[pagos] Monto manipulado detectado: cliente=${subtotalClienteRounded}, BD=${subtotalRealRounded}, pedido=${id_pedido}`,
+      );
+      throw new BadRequestException(
+        `El subtotal enviado (${subtotalClienteRounded}) no coincide con el total de los ítems (${subtotalRealRounded}). Recarga el carrito e intenta de nuevo.`,
+      );
+    }
+  }
+
+  private async calcularImpuestos(
+    subtotal: number,
+    shippingAmount: number,
+    paisDestino: string,
+  ): Promise<{ taxAmount: number; taxBreakdown: { tipo: string; nombre: string; tasa: number; monto: number }[] }> {
+    const ahora = new Date();
+    const tasas = await this.prisma.tasas_impuesto.findMany({
+      where: {
+        pais_iso2: paisDestino.toUpperCase(),
+        activo: true,
+        incluido_en_precio: false,
+        vigente_desde: { lte: ahora },
+        OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: ahora } }],
+      },
+    });
+    const base = subtotal + shippingAmount;
+    const taxBreakdown = tasas.map((t) => {
+      const tasa = Number(t.tasa_porcentaje ?? 0);
+      return { tipo: t.tipo, nombre: t.nombre, tasa, monto: Math.round(base * tasa * 100) / 100 };
+    });
+    const taxAmount = Math.round(taxBreakdown.reduce((acc, t) => acc + t.monto, 0) * 100) / 100;
+    return { taxAmount, taxBreakdown };
+  }
+
   private readonly DEFAULT_FEE_PCT = 0.10;
 
   /**
@@ -554,6 +636,11 @@ export class PagosService {
           orderBy: { prioridad: 'asc' },
         });
     const rule = productorRule ?? globalRule;
+    if (!rule) {
+      this.logger.error(
+        `[pagos] ALERTA CRÍTICA: Sin regla de comisión para productor ${id_productor}. Se aplica DEFAULT_FEE_PCT=${this.DEFAULT_FEE_PCT * 100}%. Agrega una regla con alcance='global' en la tabla comisiones.`,
+      );
+    }
     const pct = rule ? Number(rule.porcentaje) : this.DEFAULT_FEE_PCT;
     const gross = subtotal + shippingAmount;
     const applicationFeeAmount = Math.max(0, Math.round(gross * pct * 100) / 100);
@@ -565,7 +652,7 @@ export class PagosService {
     };
   }
 
-  private async createTransfersForPedido(id_pedido: bigint, moneda: string) {
+  private async createTransfersForPedido(id_pedido: bigint, moneda: Moneda) {
     const pedidoProductores = await this.prisma.pedido_productor.findMany({
       where: { id_pedido },
       include: { productores: { select: { stripe_account_id: true, stripe_onboarding_completed: true, id_usuario: true } } },
@@ -619,7 +706,7 @@ export class PagosService {
         const payout = await this.prisma.payouts.create({
           data: {
             id_productor: pp.id_productor,
-            moneda: moneda.toLowerCase(),
+            moneda,
             monto_bruto: pp.subtotal_bruto ?? pp.monto_neto_productor ?? 0,
             monto_comision: pp.comision_marketplace,
             monto_neto: pp.monto_neto_productor ?? 0,
@@ -644,7 +731,7 @@ export class PagosService {
         const payoutFallido = await this.prisma.payouts.create({
           data: {
             id_productor: pp.id_productor,
-            moneda: moneda.toLowerCase(),
+            moneda,
             monto_bruto: pp.subtotal_bruto ?? pp.monto_neto_productor ?? 0,
             monto_comision: pp.comision_marketplace,
             monto_neto: pp.monto_neto_productor ?? 0,
@@ -684,20 +771,32 @@ export class PagosService {
         throw new BadRequestException(`PayPal refund failed: ${err?.message}`);
       }
 
-      // Revert Stripe transfers if they exist (for producers who received payouts)
+      // Revertir transfers de Stripe si el productor ya recibió su pago
       const rows = await this.prisma.pedido_productor.findMany({
         where: { id_pedido: pago.id_pedido },
         include: { payout: { select: { referencia_externa: true } } },
       });
 
+      const reversalErrors: string[] = [];
       for (const r of rows) {
         if (r.payout?.referencia_externa) {
           try {
             await this.stripeService.createTransferReversal(r.payout.referencia_externa);
           } catch (err: any) {
-            console.error('[pagos] createTransferReversal failed for transfer', r.payout.referencia_externa, ':', err?.message);
+            this.logger.error('[pagos] createTransferReversal failed for transfer', r.payout.referencia_externa, ':', err?.message);
+            reversalErrors.push(`transfer ${r.payout.referencia_externa}: ${err?.message}`);
           }
         }
+      }
+
+      if (reversalErrors.length > 0) {
+        await this.prisma.pagos.update({
+          where: { id_pago: pago.id_pago },
+          data: { estado: 'reembolso_pendiente_manual' },
+        });
+        throw new UnprocessableEntityException(
+          `PayPal reembolsado pero ${reversalErrors.length} transfer(s) no pudo revertirse. Requiere reconciliación manual: ${reversalErrors.join('; ')}`,
+        );
       }
     } else {
       // Stripe refund logic (unchanged)
@@ -728,17 +827,29 @@ export class PagosService {
           );
         }
 
+        const stripeReversalErrors: string[] = [];
         for (const r of rows) {
           if (r.payout?.referencia_externa) {
             try {
               await this.stripeService.createTransferReversal(r.payout.referencia_externa);
             } catch (err: any) {
-              console.error('[pagos] createTransferReversal failed for transfer', r.payout.referencia_externa, ':', err?.message);
+              this.logger.error('[pagos] createTransferReversal failed for transfer', r.payout.referencia_externa, ':', err?.message);
+              stripeReversalErrors.push(`transfer ${r.payout.referencia_externa}: ${err?.message}`);
             }
           }
         }
 
-        // After reverting all transfers, refund the payment intent
+        if (stripeReversalErrors.length > 0) {
+          await this.prisma.pagos.update({
+            where: { id_pago: pago.id_pago },
+            data: { estado: 'reembolso_pendiente_manual' },
+          });
+          throw new UnprocessableEntityException(
+            `${stripeReversalErrors.length} transfer(s) no pudo revertirse. El reembolso al cliente NO fue procesado. Requiere reconciliación manual: ${stripeReversalErrors.join('; ')}`,
+          );
+        }
+
+        // Revertir todas las transferencias fue exitoso — ahora reembolsar al cliente
         await this.stripeService.createRefund({
           paymentIntentId: pago.payment_intent_id,
         });

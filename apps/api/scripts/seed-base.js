@@ -3,12 +3,6 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-const MONEDAS = [
-  { codigo: 'MXN', nombre: 'Peso Mexicano', simbolo: '$', activo: true },
-  { codigo: 'USD', nombre: 'Dólar Americano', simbolo: 'US$', activo: true },
-  { codigo: 'EUR', nombre: 'Euro', simbolo: '€', activo: true },
-];
-
 const REGIONES = [
   { nombre: 'Oaxaca', estado_prov: 'Oaxaca', pais_iso2: 'MX' },
   { nombre: 'Michoacán', estado_prov: 'Michoacán', pais_iso2: 'MX' },
@@ -68,18 +62,7 @@ async function main() {
   console.log('🌱 Starting base seed...\n');
 
   try {
-    console.log('=== Monedas ===');
-    for (const moneda of MONEDAS) {
-      const existing = await prisma.monedas.findUnique({ where: { codigo: moneda.codigo } });
-      if (existing) {
-        console.log(`  ✓ Already exists: ${moneda.codigo}`);
-      } else {
-        await prisma.monedas.create({ data: moneda });
-        console.log(`  ✓ Created: ${moneda.codigo} - ${moneda.nombre}`);
-      }
-    }
-
-    console.log('\n=== Regiones ===');
+    console.log('=== Regiones ===');
     for (const region of REGIONES) {
       const existing = await prisma.regiones.findFirst({
         where: { nombre: region.nombre, estado_prov: region.estado_prov },

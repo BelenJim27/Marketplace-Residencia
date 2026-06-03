@@ -43,7 +43,6 @@ function getInitials(nombre?: string, apellido?: string) {
 const MONEDAS = [
   { value: "MXN", label: "🇲🇽 MXN" },
   { value: "USD", label: "🇺🇸 USD" },
-  { value: "EUR", label: "🇪🇺 EUR" }
 ];
 
 export default function ClientePerfilPage() {

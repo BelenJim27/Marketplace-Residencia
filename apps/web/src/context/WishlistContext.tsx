@@ -78,11 +78,14 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     if (usuarioId && token) {
       try {
         const data = await api.wishlist.getByUsuario(usuarioId, token);
-        setItems(data as WishlistItem[]);
-      } catch (e) {
-        console.error("Error loading wishlist from API:", e);
+        const items = Array.isArray(data) ? data : [];
+        setItems(items as WishlistItem[]);
+      } catch {
+        // Fallback silencioso a localStorage — el servidor puede estar iniciando
         const stored = localStorage.getItem(getStorageKey());
-        if (stored) setItems(JSON.parse(stored));
+        if (stored) {
+          try { setItems(JSON.parse(stored)); } catch { /* ignore */ }
+        }
       }
     } else {
       const stored = localStorage.getItem(getStorageKey());
@@ -102,9 +105,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     if (stored) {
       try {
         setItems(JSON.parse(stored));
-      } catch (e) {
-        console.error("Error parsing stored wishlist:", e);
-      }
+      } catch { /* ignore corrupt localStorage */ }
     }
   }, []);
 
@@ -119,9 +120,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         setCurrentUserId(usuarioId);
         cargarWishlist();
       }
-    } catch (e) {
-      console.error("Error detecting user change:", e);
-    }
+    } catch { /* ignore */ }
   }, [currentUserId, cargarWishlist]);
 
   useEffect(() => {

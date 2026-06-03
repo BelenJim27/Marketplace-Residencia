@@ -535,39 +535,38 @@ export function AdminChartsContent() {
   const loadCharts = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const [pedidosRes, usuariosRes, , productosRes] = await Promise.all([
-        api.pedidos.getAll(),
+      const [pedidosRes, usuariosRes] = await Promise.all([
+        api.pedidos.getAll(token ?? ""),
         api.usuarios.getAll(token ?? ""),
-        api.productores.getAll(),
-        api.productos.getAll(),
       ]);
 
-      const pedidos:   any[] = Array.isArray(pedidosRes)   ? pedidosRes   : [];
-      const usuarios:  any[] = Array.isArray(usuariosRes)  ? usuariosRes  : [];
-      const productos: any[] = Array.isArray(productosRes) ? productosRes : [];
+      const pedidos:  any[] = Array.isArray(pedidosRes)  ? pedidosRes  : [];
+      const usuarios: any[] = Array.isArray(usuariosRes) ? usuariosRes : [];
 
-      // Ventas por productor
+      // Ventas por productor — el nombre viene dentro de detalle_pedido.productores
       const ventasMap = new Map<string, { total: number; pedidos: number }>();
       pedidos.forEach((p) => {
         const items: any[] = p.detalle_pedido ?? [];
         items.forEach((item) => {
-          const prod   = productos.find((pr) => pr.id_producto === item.id_producto);
-          const nombre = prod?.nombre_productor ?? "Sin nombre";
-          const total  = Number(p.total ?? 0) / items.length;
-          const prev   = ventasMap.get(nombre) ?? { total: 0, pedidos: 0 };
+          const nombre =
+            item.productores?.nombre_marca ??
+            item.productores?.usuarios?.nombre ??
+            "Sin nombre";
+          const total = Number(p.total ?? 0) / (items.length || 1);
+          const prev  = ventasMap.get(nombre) ?? { total: 0, pedidos: 0 };
           ventasMap.set(nombre, { total: prev.total + total, pedidos: prev.pedidos + 1 });
         });
       });
       const ventasPorProductor = Array.from(ventasMap.entries())
         .map(([nombre, v]) => ({ nombre, ...v }))
-        .sort((a, b) => b.total - a.total);
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 8);
 
-      // Productos más vendidos
+      // Productos más vendidos — el nombre viene en detalle_pedido.productos
       const productosMap = new Map<string, number>();
       pedidos.forEach((p) => {
         (p.detalle_pedido ?? []).forEach((item: any) => {
-          const prod   = productos.find((pr) => pr.id_producto === item.id_producto);
-          const nombre = prod?.nombre ?? `Producto #${item.id_producto}`;
+          const nombre = item.productos?.nombre ?? `Producto #${item.id_producto}`;
           productosMap.set(nombre, (productosMap.get(nombre) ?? 0) + Number(item.cantidad ?? 1));
         });
       });
@@ -584,7 +583,8 @@ export function AdminChartsContent() {
         const key = getFechaKey(fecha, usuariosPeriod);
         registrosMap.set(key, (registrosMap.get(key) ?? 0) + 1);
       });
-      const registrosUsuarios = Array.from(registrosMap.entries()).map(([fecha, total]) => ({ fecha, total }));
+      const registrosUsuarios = Array.from(registrosMap.entries())
+        .map(([fecha, total]) => ({ fecha, total }));
 
       setData({ ventasPorProductor, productosMasVendidos, registrosUsuarios });
     } catch (err) {

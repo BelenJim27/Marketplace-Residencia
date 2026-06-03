@@ -8,15 +8,16 @@ export interface ResolveOpts {
   pais_iso2?: string;
 }
 
+interface TraduccionResult {
+  idioma: string;
+  nombre: string | null;
+  descripcion: string | null;
+}
+
 @Injectable()
 export class TraduccionesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Calcula la cadena de fallback para un usuario:
-   * locale solicitado → idioma_default del país → 'es'.
-   * Devuelve los códigos en orden de preferencia, sin duplicados.
-   */
   async cadenaFallback(opts: ResolveOpts): Promise<string[]> {
     const cadena: string[] = [];
     if (opts.locale) cadena.push(opts.locale);
@@ -34,51 +35,77 @@ export class TraduccionesService {
     return Array.from(new Set(cadena));
   }
 
-  async producto(id_producto: bigint, opts: ResolveOpts) {
+  async producto(id_producto: bigint, opts: ResolveOpts): Promise<TraduccionResult | null> {
     const cadena = await this.cadenaFallback(opts);
-    const traducciones = await this.prisma.productos_traducciones.findMany({
-      where: { id_producto, idioma: { in: cadena } },
+    const prod = await this.prisma.productos.findUnique({
+      where: { id_producto },
+      select: { traducciones: true, nombre: true, descripcion: true },
     });
-    return this.elegirPorCadena(traducciones, cadena, (t) => t.idioma);
+    if (!prod) return null;
+
+    const json = prod.traducciones as Record<string, { nombre?: string; descripcion?: string }> | null;
+    for (const codigo of cadena) {
+      const t = json?.[codigo];
+      if (t?.nombre) {
+        return { idioma: codigo, nombre: t.nombre ?? null, descripcion: t.descripcion ?? null };
+      }
+    }
+    return { idioma: 'es', nombre: prod.nombre, descripcion: prod.descripcion ?? null };
   }
 
-  async categoria(id_categoria: number, opts: ResolveOpts) {
+  async categoria(id_categoria: number, opts: ResolveOpts): Promise<TraduccionResult | null> {
     const cadena = await this.cadenaFallback(opts);
-    const traducciones = await this.prisma.categorias_traducciones.findMany({
-      where: { id_categoria, idioma: { in: cadena } },
+    const rows = await this.prisma.traducciones.findMany({
+      where: { entidad_tipo: 'categoria', entidad_id: id_categoria, idioma: { in: cadena } },
     });
-    return this.elegirPorCadena(traducciones, cadena, (t) => t.idioma);
+    return this.elegirPorCadena(
+      rows.map((r) => ({ idioma: r.idioma, nombre: r.nombre ?? null, descripcion: r.descripcion ?? null })),
+      cadena,
+      (t) => t.idioma,
+    );
   }
 
-  async tienda(id_tienda: number, opts: ResolveOpts) {
+  async tienda(id_tienda: number, opts: ResolveOpts): Promise<TraduccionResult | null> {
     const cadena = await this.cadenaFallback(opts);
-    const traducciones = await this.prisma.tiendas_traducciones.findMany({
-      where: { id_tienda, idioma: { in: cadena } },
+    const rows = await this.prisma.traducciones.findMany({
+      where: { entidad_tipo: 'tienda', entidad_id: id_tienda, idioma: { in: cadena } },
     });
-    return this.elegirPorCadena(traducciones, cadena, (t) => t.idioma);
+    return this.elegirPorCadena(
+      rows.map((r) => ({ idioma: r.idioma, nombre: r.nombre ?? null, descripcion: r.descripcion ?? null })),
+      cadena,
+      (t) => t.idioma,
+    );
   }
 
-  /**
-   * Variante batch para productos: recibe N ids y devuelve un Map<id, traduccion>
-   * resolviendo el fallback con una sola query.
-   */
-  async productosBatch(ids: bigint[], opts: ResolveOpts) {
+  async productosBatch(ids: bigint[], opts: ResolveOpts): Promise<Map<string, TraduccionResult>> {
     const cadena = await this.cadenaFallback(opts);
-    const traducciones = await this.prisma.productos_traducciones.findMany({
-      where: { id_producto: { in: ids }, idioma: { in: cadena } },
+    const prods = await this.prisma.productos.findMany({
+      where: { id_producto: { in: ids } },
+      select: { id_producto: true, traducciones: true, nombre: true, descripcion: true },
     });
 
-    const result = new Map<string, typeof traducciones[number]>();
+    const result = new Map<string, TraduccionResult>();
     const ranking = new Map(cadena.map((c, i) => [c, i] as const));
 
-    for (const t of traducciones) {
-      const key = t.id_producto.toString();
-      const existing = result.get(key);
-      const rankNuevo = ranking.get(t.idioma) ?? Infinity;
-      const rankActual = existing ? (ranking.get(existing.idioma) ?? Infinity) : Infinity;
-      if (!existing || rankNuevo < rankActual) {
-        result.set(key, t);
+    for (const prod of prods) {
+      const key = prod.id_producto.toString();
+      const json = prod.traducciones as Record<string, { nombre?: string; descripcion?: string }> | null;
+
+      let best: TraduccionResult | null = null;
+      let bestRank = Infinity;
+
+      for (const codigo of cadena) {
+        const rank = ranking.get(codigo) ?? Infinity;
+        if (rank < bestRank) {
+          const t = json?.[codigo];
+          if (t?.nombre) {
+            best = { idioma: codigo, nombre: t.nombre, descripcion: t.descripcion ?? null };
+            bestRank = rank;
+          }
+        }
       }
+
+      result.set(key, best ?? { idioma: 'es', nombre: prod.nombre, descripcion: prod.descripcion ?? null });
     }
     return result;
   }

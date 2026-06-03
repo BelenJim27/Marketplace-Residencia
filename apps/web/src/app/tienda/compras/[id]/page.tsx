@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
-  ArrowLeft, Package, CheckCircle, Clock,
-  MapPin, Copy, RefreshCw, AlertCircle,
+  ArrowLeft, Package, CheckCircle, Clock, Truck,
+  MapPin, Copy, RefreshCw, AlertCircle, Star, ShieldCheck,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatPrice } from "@/lib/format-number";
@@ -16,6 +17,12 @@ interface DetallePedido {
   cantidad: number;
   precio_compra: string;
   moneda_compra?: string;
+  impuesto?: string;
+  productos?: {
+    nombre: string;
+    imagen_principal_url?: string;
+    producto_imagenes?: Array<{ url: string }>;
+  };
 }
 
 interface Envio {
@@ -38,55 +45,69 @@ interface Pedido {
   envios?: Envio[];
 }
 
-const COLOR_PALETTE = {
+const C = {
   green: "#3D6B3F",
+  greenDark: "#2A4A2C",
   copper: "#C97A3E",
   amber: "#A8C26B",
   cream: "#F4F0E3",
   white: "#FFFFFF",
+  text: "#2A2622",
+  muted: "#9A9590",
   border: "rgba(61,107,63,0.12)",
 };
 
-/* ── Timeline config ─────────────────────────────────────────────────────── */
+/* ── Timeline ─────────────────────────────────────────────────────────────── */
 const TIMELINE = [
-  { key: "pendiente", label: "Pedido recibido",  icon: Clock },
-  { key: "pagado",    label: "Pago confirmado",  icon: CheckCircle },
+  { key: "pendiente",  label: "Recibido",  icon: Clock        },
+  { key: "pagado",     label: "Pagado",    icon: CheckCircle  },
+  { key: "preparando", label: "Preparando",icon: Package      },
+  { key: "enviado",    label: "Enviado",   icon: Truck        },
+  { key: "entregado",  label: "Entregado", icon: Star         },
 ];
 
 const ESTADO_INDEX: Record<string, number> = {
-  pendiente: 0, pagado: 1, preparando: 1, enviado: 1, entregado: 1,
+  pendiente: 0, pagado: 1, preparando: 2, enviado: 3, entregado: 4, cancelado: 0,
 };
 
 const ESTADO_BADGE: Record<string, { label: string; bg: string; text: string; dot: string; pulse: boolean }> = {
-  pendiente:  { label: "Pendiente",  bg: "rgba(201,122,62,0.08)", text: "#C97A3E", dot: "#C97A3E",  pulse: true  },
-  pagado:     { label: "Pagado",     bg: "rgba(61,107,63,0.08)", text: "#3D6B3F", dot: "#3D6B3F",    pulse: false },
-  preparando: { label: "Preparando", bg: "rgba(168,194,107,0.08)", text: "#A8C26B", dot: "#A8C26B", pulse: true  },
-  enviado:    { label: "Enviado",    bg: "rgba(61,107,63,0.08)", text: "#3D6B3F", dot: "#3D6B3F", pulse: true  },
-  entregado:  { label: "Entregado", bg: "rgba(61,107,63,0.08)", text: "#3D6B3F", dot: "#3D6B3F", pulse: false },
-  cancelado:  { label: "Cancelado", bg: "rgba(100,100,100,0.08)", text: "#666666", dot: "#999999",   pulse: false },
+  pendiente:   { label: "Pendiente",           bg: "rgba(201,122,62,0.08)",  text: "#C97A3E", dot: "#C97A3E",  pulse: true  },
+  pagado:      { label: "Pagado",              bg: "rgba(61,107,63,0.08)",   text: "#3D6B3F", dot: "#3D6B3F",  pulse: false },
+  preparando:  { label: "Preparando",          bg: "rgba(168,194,107,0.10)", text: "#5E8A2E", dot: "#A8C26B",  pulse: true  },
+  enviado:     { label: "Enviado",             bg: "rgba(59,130,246,0.08)",  text: "#2563EB", dot: "#3B82F6",  pulse: true  },
+  entregado:   { label: "Entregado",           bg: "rgba(61,107,63,0.10)",   text: "#3D6B3F", dot: "#3D6B3F",  pulse: false },
+  cancelado:   { label: "Cancelado",           bg: "rgba(100,100,100,0.08)", text: "#666",    dot: "#999",     pulse: false },
+  recogido:    { label: "Recogido",            bg: "rgba(59,130,246,0.08)",  text: "#2563EB", dot: "#3B82F6",  pulse: true  },
+  en_transito: { label: "En tránsito",         bg: "rgba(59,130,246,0.08)",  text: "#2563EB", dot: "#3B82F6",  pulse: true  },
+  en_reparto:  { label: "En reparto",          bg: "rgba(99,102,241,0.08)",  text: "#6366F1", dot: "#6366F1",  pulse: true  },
+  retrasado:   { label: "Retrasado",           bg: "rgba(245,158,11,0.08)",  text: "#D97706", dot: "#D97706",  pulse: true  },
+  fallido:     { label: "Problema en entrega", bg: "rgba(239,68,68,0.08)",   text: "#DC2626", dot: "#DC2626",  pulse: false },
+  devuelto:    { label: "Devuelto",            bg: "rgba(100,100,100,0.08)", text: "#666",    dot: "#999",     pulse: false },
 };
 
-/* ── Section card wrapper ────────────────────────────────────────────────── */
-function Card({
-  children,
-  className = "",
-  accentColor,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  accentColor?: string;
-}) {
+/* ── Card ────────────────────────────────────────────────────────────────── */
+function Card({ children, accentColor }: { children: React.ReactNode; accentColor?: string }) {
   return (
-    <div style={{ overflow: "hidden", borderRadius: "12px", background: `linear-gradient(135deg, ${COLOR_PALETTE.white} 0%, ${COLOR_PALETTE.cream}04 100%)`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", border: `1px solid ${COLOR_PALETTE.border}`, ...((className?.split(' ') || []).reduce((acc, cls) => acc, {})) }}>
-      {accentColor && <div style={{ height: "2px", width: "100%", background: `linear-gradient(90deg, ${accentColor} 0%, rgba(46,74,51,0.1) 100%)` }} />}
-      <div style={{ padding: "20px" }}>{children}</div>
+    <div style={{
+      overflow: "hidden", borderRadius: "14px",
+      background: C.white,
+      boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
+      border: `1px solid ${C.border}`,
+    }}>
+      {accentColor && (
+        <div style={{ height: "3px", background: `linear-gradient(90deg, ${accentColor}, rgba(42,74,44,0.08))` }} />
+      )}
+      <div style={{ padding: "22px" }}>{children}</div>
     </div>
   );
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <p style={{ marginBottom: "16px", fontSize: "12px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: COLOR_PALETTE.copper }}>
+    <p style={{
+      marginBottom: "16px", fontSize: "11px", fontWeight: "700",
+      letterSpacing: "0.6px", textTransform: "uppercase", color: C.copper,
+    }}>
       {children}
     </p>
   );
@@ -95,25 +116,26 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 /* ── Skeleton ────────────────────────────────────────────────────────────── */
 function Skeleton() {
   return (
-    <main className="mx-auto max-w-screen-lg px-4 py-10 md:px-8">
-      <div className="mb-8 h-4 w-24 animate-pulse rounded-full bg-gray-100 dark:bg-gray-700" />
-      <div className="mb-6 flex justify-between">
-        <div className="space-y-2">
-          <div className="h-7 w-40 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700" />
-          <div className="h-4 w-28 animate-pulse rounded-full bg-gray-100 dark:bg-gray-700" />
+    <main style={{ maxWidth: "860px", margin: "0 auto", padding: "36px 20px 80px" }}>
+      <style>{`@keyframes skPulse{0%,100%{opacity:1}50%{opacity:.4}}.sk{animation:skPulse 1.6s ease infinite}`}</style>
+      <div className="sk" style={{ height: "14px", width: "80px", borderRadius: "6px", background: C.cream, marginBottom: "32px" }} />
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "28px", gap: "16px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div className="sk" style={{ height: "28px", width: "200px", borderRadius: "8px", background: C.cream }} />
+          <div className="sk" style={{ height: "14px", width: "120px", borderRadius: "6px", background: C.cream }} />
         </div>
-        <div className="h-8 w-32 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700" />
+        <div className="sk" style={{ height: "40px", width: "110px", borderRadius: "10px", background: C.cream }} />
       </div>
-      <div className="mb-6 h-28 animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-700" />
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="h-48 animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-700" />
-        <div className="h-48 animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-700" />
+      <div className="sk" style={{ height: "100px", borderRadius: "14px", background: C.cream, marginBottom: "20px" }} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+        <div className="sk" style={{ height: "180px", borderRadius: "14px", background: C.cream }} />
+        <div className="sk" style={{ height: "180px", borderRadius: "14px", background: C.cream }} />
       </div>
     </main>
   );
 }
 
-/* ── Main page ───────────────────────────────────────────────────────────── */
+/* ── Main ────────────────────────────────────────────────────────────────── */
 export default function DetallePedidoPage() {
   const params = useParams();
   const router = useRouter();
@@ -137,6 +159,7 @@ export default function DetallePedidoPage() {
       })
       .catch(() => setError("No se pudo cargar el pedido."))
       .finally(() => setCargando(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
   const fetchTracking = async (idEnvio: any) => {
@@ -164,19 +187,22 @@ export default function DetallePedidoPage() {
 
   if (error || !pedido) {
     return (
-      <main className="mx-auto max-w-screen-lg px-4 py-10 md:px-8">
+      <main style={{ maxWidth: "860px", margin: "0 auto", padding: "36px 20px" }}>
         <Card accentColor="#E74C3C">
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <AlertCircle size={20} style={{ color: "#E74C3C" }} />
-            <p style={{ fontSize: "14px", fontWeight: "500", color: COLOR_PALETTE.green, margin: 0 }}>
+            <AlertCircle size={20} style={{ color: "#E74C3C", flexShrink: 0 }} />
+            <p style={{ fontSize: "14px", fontWeight: "500", color: C.text, margin: 0 }}>
               {error || "Pedido no encontrado."}
             </p>
           </div>
           <button
             onClick={() => router.back()}
-            style={{ marginTop: "16px", display: "inline-flex", alignItems: "center", gap: "8px", borderRadius: "6px", padding: "8px 12px", fontSize: "14px", fontWeight: "600", color: COLOR_PALETTE.green, background: "transparent", border: `1px solid ${COLOR_PALETTE.green}`, transition: "all 200ms ease", cursor: "pointer", textDecoration: "none" }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = COLOR_PALETTE.green; e.currentTarget.style.color = COLOR_PALETTE.white; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = COLOR_PALETTE.green; }}
+            style={{
+              marginTop: "16px", display: "inline-flex", alignItems: "center", gap: "8px",
+              borderRadius: "8px", padding: "9px 14px", fontSize: "14px", fontWeight: "600",
+              color: C.green, background: "transparent", border: `1px solid ${C.green}`,
+              cursor: "pointer",
+            }}
           >
             <ArrowLeft size={14} /> Volver
           </button>
@@ -196,53 +222,77 @@ export default function DetallePedidoPage() {
     : "—";
   const envio = pedido.envios?.[0];
   const direccion = pedido.direccion_envio_snapshot;
+  const timelineTotal = TIMELINE.length - 1;
 
   return (
-    <main className="mx-auto max-w-screen-lg px-4 py-10 md:px-8">
+    <main style={{ maxWidth: "860px", margin: "0 auto", padding: "36px 20px 80px" }}>
       <style>{`
-        @keyframes fadeSlideUp {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .fade-in { animation: fadeSlideUp 0.35s ease-out both; }
-        @media (prefers-reduced-motion: reduce) {
-          .fade-in { animation: none; opacity: 1; }
-        }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes dotPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(.65);opacity:.5} }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .fade { animation: fadeUp .4s ease both; }
+        @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
       `}</style>
 
-      {/* Back */}
+      {/* Back link */}
       <Link
         href="/tienda/compras"
-        style={{ display: "inline-flex", alignItems: "center", gap: "8px", marginBottom: "28px", fontSize: "14px", fontWeight: "500", color: COLOR_PALETTE.copper, textDecoration: "none", transition: "color 200ms ease" }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = COLOR_PALETTE.green; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = COLOR_PALETTE.copper; }}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: "7px",
+          marginBottom: "28px", fontSize: "14px", fontWeight: "600",
+          color: C.copper, textDecoration: "none",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = C.green; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = C.copper; }}
       >
-        <ArrowLeft size={14} style={{ transition: "transform 200ms ease" }} />
+        <ArrowLeft size={14} />
         Mis Compras
       </Link>
 
       {/* ── Header ── */}
-      <div className="fade-in mb-6" style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", borderBottom: `1px solid ${COLOR_PALETTE.border}`, paddingBottom: "24px" }}>
+      <div
+        className="fade"
+        style={{
+          display: "flex", flexWrap: "wrap", alignItems: "flex-start",
+          justifyContent: "space-between", gap: "16px",
+          borderBottom: `1px solid ${C.border}`, paddingBottom: "24px", marginBottom: "24px",
+        }}
+      >
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <h1 style={{ fontFamily: 'var(--font-family-store)', fontSize: "24px", fontWeight: "700", letterSpacing: "-0.5px", color: COLOR_PALETTE.green, margin: 0 }}>
-              Pedido <span style={{ fontFamily: "monospace", color: COLOR_PALETTE.copper }}>#{id}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+            <h1 style={{
+              fontFamily: "var(--font-family-store)",
+              fontSize: "clamp(20px, 4vw, 26px)",
+              fontWeight: "700", color: C.greenDark, margin: 0,
+            }}>
+              Pedido{" "}
+              <span style={{ fontFamily: "monospace", color: C.copper }}>#{id}</span>
             </h1>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "20px", padding: "6px 12px", fontSize: "11px", fontWeight: "700", background: badge.bg, color: badge.text, border: `1px solid rgba(201,122,62,0.2)` }}>
-              <span style={{ height: "6px", width: "6px", borderRadius: "50%", background: badge.dot, animation: badge.pulse ? "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" : "none" }} />
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: "6px",
+              borderRadius: "999px", padding: "5px 12px",
+              fontSize: "11px", fontWeight: "700",
+              background: badge.bg, color: badge.text,
+              border: "1px solid rgba(201,122,62,0.2)",
+            }}>
+              <span style={{
+                height: "6px", width: "6px", borderRadius: "50%", background: badge.dot,
+                animation: badge.pulse ? "dotPulse 2s ease infinite" : "none",
+              }} />
               {badge.label}
             </span>
           </div>
-          <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", color: "#999999" }}>
+          <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: C.muted }}>
             <Clock size={12} />
             {fecha}
           </div>
         </div>
+
         <div style={{ textAlign: "right" }}>
-          <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: COLOR_PALETTE.copper, margin: 0 }}>Total</p>
-          <p style={{ fontFamily: "monospace", fontSize: "24px", fontWeight: "700", letterSpacing: "-0.5px", color: COLOR_PALETTE.green, margin: 0 }}>
+          <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.copper, margin: "0 0 2px 0" }}>Total</p>
+          <p style={{ fontFamily: "monospace", fontSize: "26px", fontWeight: "700", color: C.greenDark, margin: 0, lineHeight: 1 }}>
             ${formatPrice(Number(pedido.total || 0), { showCurrency: false })}
-            <span style={{ marginLeft: "6px", fontSize: "14px", fontWeight: "400", color: "#999999" }}>
+            <span style={{ marginLeft: "6px", fontSize: "13px", fontWeight: "400", color: C.muted }}>
               {pedido.moneda || "MXN"}
             </span>
           </p>
@@ -250,59 +300,54 @@ export default function DetallePedidoPage() {
       </div>
 
       {/* ── Timeline ── */}
-      <div className="fade-in mb-6" style={{ animationDelay: "60ms" }}>
-        <Card accentColor={COLOR_PALETTE.copper}>
+      <div className="fade" style={{ marginBottom: "20px", animationDelay: "60ms" }}>
+        <Card accentColor={C.copper}>
           <SectionTitle>Estado del pedido</SectionTitle>
-          <div style={{ position: "relative", display: "flex", alignItems: "flex-start", justifyContent: "space-between", paddingLeft: "16px", paddingRight: "16px" }}>
-            {/* Connector track */}
-            <div style={{ position: "absolute", left: 0, right: 0, top: "16px", marginLeft: "32px", marginRight: "32px", height: "1px", background: COLOR_PALETTE.border }} />
-            <div
-              style={{
-                position: "absolute",
-                left: 0,
-                top: "16px",
-                height: "1px",
-                background: `linear-gradient(90deg, ${COLOR_PALETTE.copper} 0%, ${COLOR_PALETTE.amber} 100%)`,
-                transition: "width 700ms ease",
-                marginLeft: "32px",
-                width: estadoIndex === 0
-                  ? "0%"
-                  : `calc(${(estadoIndex / (TIMELINE.length - 1)) * 100}% - 0px)`,
-              }}
-            />
+          <div style={{ position: "relative", display: "flex", alignItems: "flex-start", padding: "0 8px" }}>
+            {/* Track background */}
+            <div style={{
+              position: "absolute", left: "28px", right: "28px", top: "16px",
+              height: "2px", background: C.border, borderRadius: "2px",
+            }} />
+            {/* Track fill */}
+            <div style={{
+              position: "absolute", left: "28px", top: "16px",
+              height: "2px", borderRadius: "2px",
+              background: `linear-gradient(90deg, ${C.copper}, ${C.amber})`,
+              transition: "width 700ms cubic-bezier(.4,0,.2,1)",
+              width: estadoIndex === 0
+                ? "0%"
+                : `calc(${(estadoIndex / timelineTotal) * 100}% - 0px)`,
+            }} />
+
             {TIMELINE.map((step, idx) => {
               const Icon = step.icon;
-              const done = idx <= estadoIndex;
+              const done   = idx <= estadoIndex;
               const active = idx === estadoIndex;
               return (
-                <div key={step.key} style={{ position: "relative", zIndex: 10, display: "flex", flex: 1, flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      height: "32px",
-                      width: "32px",
-                      borderRadius: "50%",
-                      border: `2px solid ${done ? COLOR_PALETTE.copper : COLOR_PALETTE.border}`,
-                      background: done ? COLOR_PALETTE.copper : COLOR_PALETTE.white,
-                      color: done ? COLOR_PALETTE.white : "#999999",
-                      transition: "all 300ms ease",
-                      transform: active ? "scale(1.1)" : "scale(1)",
-                      boxShadow: active ? `0 0 0 4px ${COLOR_PALETTE.cream}` : "none",
-                    }}
-                  >
-                    <Icon size={14} />
+                <div key={step.key} style={{
+                  position: "relative", zIndex: 1, flex: 1,
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: "10px",
+                }}>
+                  <div style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    height: "32px", width: "32px", borderRadius: "50%",
+                    border: `2px solid ${done ? C.copper : C.border}`,
+                    background: done ? C.copper : C.white,
+                    color: done ? C.white : C.muted,
+                    transition: "all 300ms ease",
+                    transform: active ? "scale(1.15)" : "scale(1)",
+                    boxShadow: active ? `0 0 0 4px rgba(201,122,62,0.15)` : "none",
+                  }}>
+                    <Icon size={13} />
                   </div>
                   <p
-                    style={{
-                      textAlign: "center",
-                      fontSize: "11px",
-                      fontWeight: "600",
-                      color: active ? COLOR_PALETTE.copper : done ? COLOR_PALETTE.green : "#999999",
-                      display: "none",
-                    }}
                     className="hidden sm:block"
+                    style={{
+                      textAlign: "center", fontSize: "11px", fontWeight: "600",
+                      color: active ? C.copper : done ? C.green : C.muted,
+                      margin: 0,
+                    }}
                   >
                     {step.label}
                   </p>
@@ -315,52 +360,164 @@ export default function DetallePedidoPage() {
 
       {/* ── Body grid ── */}
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Products */}
-        <div className="fade-in" style={{ animationDelay: "120ms" }}>
-          <Card accentColor={COLOR_PALETTE.green}>
-            <SectionTitle>Productos</SectionTitle>
+        {/* Products + Summary */}
+        <div className="fade" style={{ animationDelay: "120ms", display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Products */}
+          <Card accentColor={C.green}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+              <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.6px", textTransform: "uppercase", color: C.copper, margin: 0 }}>
+                Productos
+              </p>
+              {pedido.detalle_pedido && pedido.detalle_pedido.length > 0 && (
+                <span style={{
+                  fontSize: "12px", fontWeight: "700", color: C.copper,
+                  background: "rgba(201,122,62,0.08)", border: "1px solid rgba(201,122,62,0.2)",
+                  borderRadius: "999px", padding: "2px 10px",
+                }}>
+                  {pedido.detalle_pedido.length}
+                </span>
+              )}
+            </div>
             {pedido.detalle_pedido && pedido.detalle_pedido.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column" }}>
-                {pedido.detalle_pedido.map((item, idx) => (
-                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 0", borderBottom: idx < pedido.detalle_pedido!.length - 1 ? `1px solid ${COLOR_PALETTE.border}` : "none" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "40px", width: "40px", flexShrink: 0, borderRadius: "8px", background: `linear-gradient(135deg, rgba(46,74,51,0.08), rgba(201,122,62,0.04))`, border: `1px solid ${COLOR_PALETTE.border}` }}>
-                      <Package size={18} style={{ color: COLOR_PALETTE.green }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: "14px", fontWeight: "600", color: COLOR_PALETTE.green, margin: "0 0 2px 0" }}>
-                        Producto <span style={{ fontFamily: "monospace", color: COLOR_PALETTE.copper }}>#{item.id_producto}</span>
+                {pedido.detalle_pedido.map((item, idx) => {
+                  const imgUrl = item.productos?.producto_imagenes?.[0]?.url
+                    || item.productos?.imagen_principal_url
+                    || null;
+                  const nombre = item.productos?.nombre || `Producto #${item.id_producto}`;
+                  const lineTotal = Number(item.precio_compra) * item.cantidad;
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "14px",
+                        padding: "14px 0",
+                        borderBottom: idx < pedido.detalle_pedido!.length - 1
+                          ? `1px solid ${C.border}` : "none",
+                      }}
+                    >
+                      {/* Thumbnail */}
+                      <div style={{
+                        position: "relative", height: "58px", width: "58px",
+                        flexShrink: 0, borderRadius: "10px", overflow: "hidden",
+                        background: C.cream, border: `1px solid ${C.border}`,
+                      }}>
+                        {imgUrl ? (
+                          <Image
+                            src={imgUrl}
+                            alt={nombre}
+                            fill
+                            sizes="58px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div style={{
+                            display: "flex", height: "100%",
+                            alignItems: "center", justifyContent: "center",
+                          }}>
+                            <Package size={20} style={{ color: C.border }} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Name + qty */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{
+                          fontSize: "14px", fontWeight: "600", color: C.greenDark,
+                          margin: "0 0 3px 0",
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>
+                          {nombre}
+                        </p>
+                        <p style={{ fontSize: "12px", color: C.muted, margin: 0 }}>
+                          {item.cantidad} × ${formatPrice(Number(item.precio_compra), { showCurrency: false })}
+                        </p>
+                      </div>
+
+                      {/* Line total */}
+                      <p style={{
+                        flexShrink: 0, fontFamily: "monospace",
+                        fontSize: "15px", fontWeight: "700", color: C.copper, margin: 0,
+                      }}>
+                        ${formatPrice(lineTotal, { showCurrency: false })}
+                        <span style={{ marginLeft: "4px", fontSize: "11px", fontWeight: "400", color: C.muted }}>
+                          {item.moneda_compra || "MXN"}
+                        </span>
                       </p>
-                      <p style={{ fontSize: "13px", color: "#999999", margin: 0 }}>
-                        {item.cantidad} {item.cantidad === 1 ? "unidad" : "unidades"}
-                      </p>
                     </div>
-                    <p style={{ flexShrink: 0, fontFamily: "monospace", fontSize: "14px", fontWeight: "700", color: COLOR_PALETTE.copper, margin: 0 }}>
-                      ${formatPrice(Number(item.precio_compra) * item.cantidad, { showCurrency: false })}
-                      <span style={{ marginLeft: "6px", fontSize: "11px", fontWeight: "400", color: "#999999" }}>
-                        {item.moneda_compra || "MXN"}
-                      </span>
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
-              <p style={{ padding: "16px", textAlign: "center", fontSize: "14px", color: "#999999", margin: 0 }}>Sin información de productos.</p>
+              <p style={{ padding: "16px 0", textAlign: "center", fontSize: "14px", color: C.muted, margin: 0 }}>
+                Sin información de productos.
+              </p>
             )}
           </Card>
+
+          {/* Cost summary */}
+          {(() => {
+            const items = pedido.detalle_pedido ?? [];
+            const subtotal = items.reduce(
+              (acc, item) => acc + Number(item.precio_compra) * item.cantidad,
+              0,
+            );
+            const costoEnvio = Number(envio?.costo_envio ?? 0);
+            const total = Number(pedido.total ?? subtotal + costoEnvio);
+            const moneda = pedido.moneda || "MXN";
+
+            return (
+              <Card accentColor={C.copper}>
+                <SectionTitle>Resumen de costos</SectionTitle>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "14px", color: C.muted }}>Subtotal</span>
+                    <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: C.text }}>
+                      ${formatPrice(subtotal, { showCurrency: false })}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "14px", color: C.muted }}>Envío</span>
+                    <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: costoEnvio === 0 ? C.green : C.text }}>
+                      {costoEnvio === 0 ? "Gratis" : `$${formatPrice(costoEnvio, { showCurrency: false })}`}
+                    </span>
+                  </div>
+                  <div style={{ height: "1px", background: C.border }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span style={{ fontSize: "15px", fontWeight: "700", color: C.text }}>Total</span>
+                    <span style={{ fontFamily: "monospace", fontSize: "20px", fontWeight: "700", color: C.copper }}>
+                      ${formatPrice(total, { showCurrency: false })}
+                      <span style={{ marginLeft: "4px", fontSize: "12px", fontWeight: "400", color: C.muted }}>{moneda}</span>
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "5px", marginTop: "2px" }}>
+                    <ShieldCheck size={13} style={{ color: C.border, flexShrink: 0 }} />
+                    <span style={{ fontSize: "12px", color: C.muted }}>Pago protegido · IVA incluido</span>
+                  </div>
+                </div>
+              </Card>
+            );
+          })()}
         </div>
 
-        {/* Shipping info */}
-        <div className="fade-in" style={{ animationDelay: "180ms", display: "flex", flexDirection: "column", gap: "16px" }}>
+        {/* Right column */}
+        <div className="fade" style={{ animationDelay: "180ms", display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Address */}
           {direccion && (
-            <Card accentColor={COLOR_PALETTE.amber}>
+            <Card accentColor={C.amber}>
               <SectionTitle>Dirección de envío</SectionTitle>
               <div style={{ display: "flex", gap: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "36px", width: "36px", flexShrink: 0, borderRadius: "8px", background: `linear-gradient(135deg, rgba(200,155,74,0.08), rgba(201,122,62,0.04))`, border: `1px solid ${COLOR_PALETTE.border}` }}>
-                  <MapPin size={16} style={{ color: COLOR_PALETTE.amber }} />
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  height: "38px", width: "38px", flexShrink: 0, borderRadius: "10px",
+                  background: `linear-gradient(135deg, rgba(168,194,107,0.10), rgba(201,122,62,0.04))`,
+                  border: `1px solid ${C.border}`,
+                }}>
+                  <MapPin size={16} style={{ color: C.amber }} />
                 </div>
                 <div>
-                  <p style={{ fontSize: "14px", color: COLOR_PALETTE.green, margin: 0 }}>
+                  <p style={{ fontSize: "14px", color: C.greenDark, margin: 0, lineHeight: "1.6" }}>
                     {direccion.es_internacional ? (
                       <>
                         {direccion.linea_1}
@@ -374,7 +531,9 @@ export default function DetallePedidoPage() {
                     )}
                   </p>
                   {direccion.referencia && (
-                    <p style={{ marginTop: "6px", fontSize: "12px", color: "#999999", margin: 0 }}>{direccion.referencia}</p>
+                    <p style={{ marginTop: "4px", fontSize: "12px", color: C.muted, margin: 0 }}>
+                      {direccion.referencia}
+                    </p>
                   )}
                 </div>
               </div>
@@ -383,30 +542,35 @@ export default function DetallePedidoPage() {
 
           {/* Envío details */}
           {envio && (
-            <Card accentColor={COLOR_PALETTE.copper}>
+            <Card accentColor={C.copper}>
               <SectionTitle>Información de envío</SectionTitle>
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {envio.numero_rastreo && (
                   <div>
-                    <p style={{ marginBottom: "6px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: COLOR_PALETTE.copper, margin: 0 }}>
+                    <p style={{ marginBottom: "6px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.copper }}>
                       Número de rastreo
                     </p>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "700", color: COLOR_PALETTE.green }}>
+                      <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "700", color: C.greenDark }}>
                         {envio.numero_rastreo}
                       </span>
                       <button
                         onClick={copiarTracking}
-                        aria-label={copied ? "Número copiado al portapapeles" : "Copiar número de rastreo"}
-                        style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "32px", width: "32px", borderRadius: "6px", background: COLOR_PALETTE.cream, color: COLOR_PALETTE.copper, border: `1px solid ${COLOR_PALETTE.border}`, transition: "all 200ms ease", cursor: "pointer" }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = COLOR_PALETTE.copper; e.currentTarget.style.color = COLOR_PALETTE.white; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = COLOR_PALETTE.cream; e.currentTarget.style.color = COLOR_PALETTE.copper; }}
-                        title="Copiar número de rastreo"
+                        aria-label={copied ? "Número copiado" : "Copiar número de rastreo"}
+                        style={{
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          height: "30px", width: "30px", borderRadius: "7px",
+                          background: C.cream, color: C.copper,
+                          border: `1px solid ${C.border}`, cursor: "pointer",
+                          transition: "all 160ms ease",
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = C.copper; e.currentTarget.style.color = C.white; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = C.cream; e.currentTarget.style.color = C.copper; }}
                       >
-                        <Copy size={14} />
+                        <Copy size={13} />
                       </button>
                       {copied && (
-                        <span style={{ fontSize: "11px", fontWeight: "600", color: COLOR_PALETTE.green }} role="status" aria-live="polite">
+                        <span style={{ fontSize: "11px", fontWeight: "600", color: C.green }} role="status">
                           ¡Copiado!
                         </span>
                       )}
@@ -416,22 +580,22 @@ export default function DetallePedidoPage() {
 
                 {envio.costo_envio && (
                   <div>
-                    <p style={{ marginBottom: "4px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: COLOR_PALETTE.copper, margin: 0 }}>
+                    <p style={{ marginBottom: "4px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.copper }}>
                       Costo de envío
                     </p>
-                    <p style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "700", color: COLOR_PALETTE.green, margin: 0 }}>
+                    <p style={{ fontFamily: "monospace", fontSize: "15px", fontWeight: "700", color: C.greenDark, margin: 0 }}>
                       ${formatPrice(Number(envio.costo_envio), { showCurrency: false })}{" "}
-                      <span style={{ fontSize: "11px", fontWeight: "400", color: "#999999" }}>MXN</span>
+                      <span style={{ fontSize: "11px", fontWeight: "400", color: C.muted }}>MXN</span>
                     </p>
                   </div>
                 )}
 
                 {envio.fecha_entrega_estimada && (
                   <div>
-                    <p style={{ marginBottom: "4px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: COLOR_PALETTE.copper, margin: 0 }}>
+                    <p style={{ marginBottom: "4px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.copper }}>
                       Entrega estimada
                     </p>
-                    <p style={{ fontSize: "14px", fontWeight: "600", color: COLOR_PALETTE.green, margin: 0 }}>
+                    <p style={{ fontSize: "15px", fontWeight: "600", color: C.greenDark, margin: 0 }}>
                       {new Date(envio.fecha_entrega_estimada).toLocaleDateString("es-MX", {
                         day: "2-digit", month: "long",
                       })}
@@ -443,71 +607,109 @@ export default function DetallePedidoPage() {
           )}
 
           {/* Tracking events */}
-          {trackingLoading ? (
-            <Card accentColor={COLOR_PALETTE.green}>
+          <Card accentColor={C.green}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
               <SectionTitle>Seguimiento</SectionTitle>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {[1, 2, 3].map((i) => (
-                  <div key={i} style={{ height: "48px", borderRadius: "8px", background: COLOR_PALETTE.border, animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }} />
-                ))}
-              </div>
-            </Card>
-          ) : tracking ? (
-            <Card accentColor={COLOR_PALETTE.green}>
-              <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <SectionTitle>Seguimiento</SectionTitle>
+              {envio?.id_envio && (
                 <button
-                  onClick={() => envio?.id_envio && fetchTracking(envio.id_envio)}
+                  onClick={() => fetchTracking(envio.id_envio)}
                   disabled={trackingLoading}
-                  aria-label={trackingLoading ? "Actualizando información de seguimiento" : "Actualizar información de seguimiento"}
-                  style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px", borderRadius: "6px", background: COLOR_PALETTE.cream, color: COLOR_PALETTE.copper, padding: "8px 12px", fontSize: "11px", fontWeight: "700", border: `1px solid ${COLOR_PALETTE.border}`, transition: "all 200ms ease", cursor: "pointer", opacity: trackingLoading ? 0.5 : 1 }}
-                  onMouseEnter={(e) => { if (!trackingLoading) { e.currentTarget.style.background = COLOR_PALETTE.copper; e.currentTarget.style.color = COLOR_PALETTE.white; } }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = COLOR_PALETTE.cream; e.currentTarget.style.color = COLOR_PALETTE.copper; }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "5px",
+                    borderRadius: "6px", background: C.cream, color: C.copper,
+                    padding: "7px 12px", fontSize: "11px", fontWeight: "700",
+                    border: `1px solid ${C.border}`, cursor: trackingLoading ? "not-allowed" : "pointer",
+                    opacity: trackingLoading ? 0.5 : 1, transition: "all 160ms ease",
+                  }}
+                  onMouseEnter={(e) => { if (!trackingLoading) { e.currentTarget.style.background = C.copper; e.currentTarget.style.color = C.white; } }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = C.cream; e.currentTarget.style.color = C.copper; }}
                 >
                   <RefreshCw size={12} style={{ animation: trackingLoading ? "spin 1s linear infinite" : "none" }} />
                   {trackingLoading ? "Actualizando…" : "Actualizar"}
                 </button>
-              </div>
+              )}
+            </div>
 
-              {tracking.eventos && tracking.eventos.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-                  {tracking.eventos.map((evento: any, idx: number) => (
-                    <div key={idx} style={{ display: "flex", gap: "12px" }}>
-                      {/* Dot + line */}
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                        <div style={{ marginTop: "2px", height: "10px", width: "10px", flexShrink: 0, borderRadius: "50%", border: `2px solid ${COLOR_PALETTE.white}`, background: idx === 0 ? COLOR_PALETTE.copper : COLOR_PALETTE.border, boxShadow: idx === 0 ? `0 0 0 2px ${COLOR_PALETTE.copper}40` : "none" }} />
-                        {idx < tracking.eventos.length - 1 && (
-                          <div style={{ marginTop: "4px", width: "2px", flex: 1, background: COLOR_PALETTE.border, minHeight: "32px" }} />
+            {tracking?.estado_actual && (
+              <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.4px", textTransform: "uppercase", color: C.muted }}>Estado:</span>
+                <span style={{
+                  display: "inline-block", borderRadius: "999px", padding: "3px 10px",
+                  fontSize: "11px", fontWeight: "700",
+                  background: ESTADO_BADGE[tracking.estado_actual]?.bg ?? "rgba(100,100,100,0.08)",
+                  color: ESTADO_BADGE[tracking.estado_actual]?.text ?? "#666",
+                  border: "1px solid rgba(201,122,62,0.15)",
+                }}>
+                  {ESTADO_BADGE[tracking.estado_actual]?.label ?? tracking.estado_actual}
+                </span>
+                {tracking.fecha_entrega_estimada && (
+                  <span style={{ fontSize: "12px", color: C.muted }}>
+                    · Entrega est.{" "}
+                    {new Date(tracking.fecha_entrega_estimada).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {trackingLoading ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} style={{ height: "44px", borderRadius: "8px", background: C.cream, animation: "skPulse 1.6s ease infinite" }} />
+                ))}
+              </div>
+            ) : !envio ? (
+              <p style={{ fontSize: "14px", color: C.muted, margin: 0 }}>
+                Aún no hay información de envío para este pedido.
+              </p>
+            ) : !envio.numero_rastreo ? (
+              <p style={{ fontSize: "14px", color: C.muted, margin: 0 }}>
+                La guía de envío aún no ha sido generada. Recibirás una notificación cuando esté lista.
+              </p>
+            ) : tracking?.eventos && tracking.eventos.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {tracking.eventos.map((evento: any, idx: number) => (
+                  <div key={idx} style={{ display: "flex", gap: "12px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      <div style={{
+                        marginTop: "3px", height: "10px", width: "10px", flexShrink: 0,
+                        borderRadius: "50%", border: `2px solid ${C.white}`,
+                        background: idx === 0 ? C.copper : C.border,
+                        boxShadow: idx === 0 ? `0 0 0 2px ${C.copper}50` : "none",
+                      }} />
+                      {idx < tracking.eventos.length - 1 && (
+                        <div style={{ width: "2px", flex: 1, background: C.border, minHeight: "28px", marginTop: "4px" }} />
+                      )}
+                    </div>
+                    <div style={{ paddingBottom: idx === tracking.eventos.length - 1 ? 0 : "16px" }}>
+                      <p style={{
+                        fontSize: "14px", fontWeight: "600",
+                        color: idx === 0 ? C.greenDark : C.muted, margin: 0,
+                      }}>
+                        {evento.descripcion}
+                      </p>
+                      <div style={{ marginTop: "3px", display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: C.muted, flexWrap: "wrap" }}>
+                        <span>
+                          {new Date(evento.fecha).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
+                          {" · "}
+                          {new Date(evento.fecha).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        {evento.ubicacion && (
+                          <span style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                            <MapPin size={11} />
+                            {evento.ubicacion}
+                          </span>
                         )}
                       </div>
-                      {/* Content */}
-                      <div style={{ paddingBottom: idx === tracking.eventos.length - 1 ? 0 : "16px" }}>
-                        <p style={{ fontSize: "14px", fontWeight: "600", color: idx === 0 ? COLOR_PALETTE.green : "#999999", margin: 0 }}>
-                          {evento.descripcion}
-                        </p>
-                        <div style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "#999999" }}>
-                          <span>{new Date(evento.fecha).toLocaleDateString("es-MX")}</span>
-                          {evento.ubicacion && (
-                            <>
-                              <span>·</span>
-                              <span style={{ display: "flex", alignItems: "center", gap: "2px" }}>
-                                <MapPin size={11} />
-                                {evento.ubicacion}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ padding: "8px", fontSize: "14px", color: "#999999", margin: 0 }}>
-                  Sin información de seguimiento disponible.
-                </p>
-              )}
-            </Card>
-          ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: "14px", color: C.muted, margin: 0 }}>
+                Guía generada. Los eventos de rastreo aparecerán aquí en cuanto el paquete sea recolectado.
+              </p>
+            )}
+          </Card>
         </div>
       </div>
     </main>

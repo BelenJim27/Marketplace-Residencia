@@ -1,14 +1,19 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsDateString, IsInt, IsObject, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsEnum, IsInt, IsObject, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
+
+export enum Moneda {
+  MXN = 'MXN',
+  USD = 'USD',
+}
 
 export class CreatePedidoDto {
   @IsString() id_usuario!: string;
   @IsOptional() @IsString() @MaxLength(30) estado?: string;
   @IsString() total!: string;
-  @IsString() @MaxLength(3) moneda!: string;
+  @IsEnum(Moneda) moneda!: Moneda;
   @IsOptional() @IsString() tipo_cambio?: string;
-  @IsOptional() @IsString() @MaxLength(3) moneda_referencia?: string;
+  @IsOptional() @IsEnum(Moneda) moneda_referencia?: Moneda;
   @IsOptional() @IsString() @MaxLength(2) pais_destino_iso2?: string;
   @IsOptional() @IsObject() direccion_envio_snapshot?: Record<string, unknown>;
   @IsOptional() @IsObject() direccion_facturacion_snapshot?: Record<string, unknown>;
@@ -21,7 +26,7 @@ export class CreateDetallePedidoDto {
   @IsInt() @Type(() => Number) id_producto!: number;
   @IsInt() @Type(() => Number) cantidad!: number;
   @IsString() precio_compra!: string;
-  @IsOptional() @IsString() @MaxLength(3) moneda_compra?: string;
+  @IsOptional() @IsEnum(Moneda) moneda_compra?: Moneda;
   @IsOptional() @IsString() impuesto?: string;
 }
 export class UpdateDetallePedidoDto extends PartialType(CreateDetallePedidoDto) {}
@@ -37,8 +42,10 @@ export class CreateFacturaDto {
   @IsOptional() @IsString() subtotal?: string;
   @IsOptional() @IsString() impuestos_total?: string;
   @IsOptional() @IsString() total?: string;
-  @IsOptional() @IsString() @MaxLength(3) moneda?: string;
+  @IsOptional() @IsEnum(Moneda) moneda?: Moneda;
   @IsOptional() @IsString() @MaxLength(20) estado?: string;
+  @IsOptional() @IsString() nombre_razon_social?: string;
+  @IsOptional() @IsString() email_factura?: string;
 }
 export class UpdateFacturaDto extends PartialType(CreateFacturaDto) {}
 

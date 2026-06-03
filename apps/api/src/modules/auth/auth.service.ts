@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Moneda, Prisma } from '@prisma/client';
 import { createHash, createHmac, randomBytes, timingSafeEqual, scrypt } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -86,7 +86,7 @@ export class AuthService {
           telefono: dto.telefono?.trim() || null,
           foto_url: dto.foto_url?.trim() || null,
           idioma_preferido: dto.idioma_preferido?.trim() || 'es',
-          moneda_preferida: dto.moneda_preferida?.trim() || 'MXN',
+          moneda_preferida: (dto.moneda_preferida?.trim() || 'MXN') as Moneda,
           usuario_rol: {
             create: {
               id_rol: 1,

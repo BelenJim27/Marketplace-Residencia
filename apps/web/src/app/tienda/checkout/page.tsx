@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Dispatch, SetStateAction } from "react";
+import { useEffect, useRef, useState, Dispatch, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,9 +10,10 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useCheckout, CheckoutStep } from "@/hooks/useCheckout";
 import { useCarrito } from "@/context/CarritoContext";
 import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
+import { useLocale } from "@/context/LocaleContext";
 import { formatPrice } from "@/lib/format-number";
 import { usePaises } from "@/hooks/usePaises";
-import { api } from "@/lib/api";
 import { getStripe, isTestMode, isStripeConfigured } from "@/lib/stripe";
 import { isPaypalConfigured, getPaypalClientId } from "@/lib/paypal";
 import PaypalCheckoutButton from "@/components/PaypalCheckoutButton";
@@ -27,13 +28,6 @@ const COLOR_PALETTE = {
   border: "rgba(46,74,51,0.12)",
 };
 
-const PASOS: { key: CheckoutStep; label: string; icon: React.ReactNode; hint?: string }[] = [
-  { key: "direccion", label: "Dirección", icon: <Truck size={16} />, hint: "Destino" },
-  { key: "envio", label: "Envío", icon: <Truck size={16} />, hint: "Entrega" },
-  { key: "pago", label: "Pago", icon: <CreditCard size={16} />, hint: "Método" },
-  { key: "resumen", label: "Confirmar", icon: <CheckCircle size={16} />, hint: "Resumen" },
-];
-
 const PASO_INDEX: Record<CheckoutStep, number> = {
   direccion: 0,
   envio: 1,
@@ -43,7 +37,7 @@ const PASO_INDEX: Record<CheckoutStep, number> = {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading, user } = useAuth();
+  const { isAuthenticated, loading: authLoading, user, token } = useAuth();
   const { items } = useCarrito();
   const { paises, loading: paisesLoading } = usePaises("envio");
 
@@ -68,9 +62,12 @@ export default function CheckoutPage() {
     errorMensaje,
     setErrorMensaje,
     totalConEnvio,
+    taxAmount,
+    taxBreakdown,
     obtenerUbicacionGPS,
     clientSecret,
     pedidoIdCreado,
+    numeroOrdenCreado,
     metodoPago,
     setMetodoPago,
     paypalOrderId,
@@ -80,11 +77,39 @@ export default function CheckoutPage() {
     cargando,
   } = useCheckout();
 
+  const { t, locale, rates } = useLocale();
+
+  // USD si locale='en' o país destino ≠ MX; de lo contrario MXN
+  const pais_destino = direccionSeleccionada?.pais_iso2 ?? (direccionSeleccionada?.ubicacion as any)?.pais ?? "MX";
+  const displayCurrency: 'MXN' | 'USD' = (locale === 'en' || pais_destino !== 'MX') ? 'USD' : 'MXN';
+
+  const PASOS = [
+    { key: "direccion" as CheckoutStep, label: t('checkout_step_address'), icon: <Truck size={16} />, hint: t('checkout_step_destination') },
+    { key: "envio"     as CheckoutStep, label: t('checkout_step_shipping'), icon: <Truck size={16} />, hint: t('checkout_step_delivery') },
+    { key: "pago"      as CheckoutStep, label: t('checkout_step_payment'), icon: <CreditCard size={16} />, hint: t('checkout_step_method') },
+    { key: "resumen"   as CheckoutStep, label: t('checkout_step_confirm'), icon: <CheckCircle size={16} />, hint: t('checkout_step_summary') },
+  ];
+
+  // Convierte un monto desde MXN a la moneda de visualización
+  const convertFromMXN = (mxn: number): number => {
+    const rate = rates[displayCurrency] ?? 1;
+    return Math.round(mxn * rate * 100) / 100;
+  };
+
+  // Normaliza el costo de envío (puede venir en USD para rutas internacionales) a MXN, luego convierte
+  const getShippingDisplayAmount = (): number | null => {
+    if (!envioSeleccionado) return null;
+    const sourceMoneda = (envioSeleccionado.moneda ?? 'MXN').toUpperCase();
+    let amountInMXN = envioSeleccionado.precioTotal;
+    if (sourceMoneda !== 'MXN') {
+      const sourceRate = rates[sourceMoneda];
+      if (sourceRate) amountInMXN = envioSeleccionado.precioTotal / sourceRate;
+    }
+    return convertFromMXN(amountInMXN);
+  };
+
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
-  const [selectedCurrency, setSelectedCurrency] = useState<'MXN' | 'USD' | 'EUR'>('MXN');
-  const [tasas, setTasas] = useState<{ USD: number | null; EUR: number | null }>({ USD: null, EUR: null });
-  const [tasasLoading, setTasasLoading] = useState(true);
 
   const [facturaData, setFacturaData] = useState({
     solicitarFactura: false,
@@ -95,27 +120,10 @@ export default function CheckoutPage() {
     email_factura: "",
   });
 
-  // Cargar tasas del backend
-  useEffect(() => {
-    api.tasasCambio.actuales()
-      .then((data) => {
-        setTasas(data.MXN);
-      })
-      .catch((err) => console.error('Error loading exchange rates:', err))
-      .finally(() => setTasasLoading(false));
-  }, []);
-
-  const displayCurrency = selectedCurrency;
-
-  const convertToDisplay = (mxnAmount: number): number => {
-    if (selectedCurrency === 'USD' && tasas.USD) {
-      return Math.round(mxnAmount * tasas.USD * 100) / 100;
-    }
-    if (selectedCurrency === 'EUR' && tasas.EUR) {
-      return Math.round(mxnAmount * tasas.EUR * 100) / 100;
-    }
-    return mxnAmount;
-  };
+  // Ref para evitar que cambios de referencia en prepararPago (causados por ratesMXN async)
+  // redisparen el efecto de pago y creen pedidos duplicados.
+  const prepararPagoRef = useRef(prepararPago);
+  useEffect(() => { prepararPagoRef.current = prepararPago; });
 
   const stripeConfigured = isStripeConfigured();
   const stripePromise = stripeConfigured ? getStripe() : null;
@@ -145,22 +153,25 @@ export default function CheckoutPage() {
   }, [items.length, isAuthenticated, authLoading, router]);
 
   // Crear el PaymentIntent/PayPal Order al entrar al paso "pago" (idempotente).
+  // prepararPago se accede vía ref para que cambios de referencia (p.ej. cuando ratesMXN
+  // se carga de forma asíncrona) no disparen este efecto y creen pedidos duplicados.
   useEffect(() => {
     if (paso === "pago" && envioSeleccionado && direccionSeleccionada) {
       if (metodoPago === 'stripe' && !clientSecret) {
-        prepararPago();
+        prepararPagoRef.current().catch(() => {});
       } else if (metodoPago === 'paypal' && !paypalOrderId) {
-        prepararPago();
+        prepararPagoRef.current().catch(() => {});
       }
     }
-  }, [paso, clientSecret, paypalOrderId, metodoPago, envioSeleccionado, direccionSeleccionada, prepararPago]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paso, clientSecret, paypalOrderId, metodoPago, envioSeleccionado, direccionSeleccionada]);
 
   if (authLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="flex flex-col items-center gap-2">
           <Loader2 size={24} className="animate-spin text-green-600" aria-label="Cargando" />
-          <p className="text-sm text-gray-600 dark:text-gray-400">Cargando tu sesión...</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{t('checkout_loading')}</p>
         </div>
       </div>
     );
@@ -178,13 +189,13 @@ export default function CheckoutPage() {
       {/* Header */}
       <div style={{ background: COLOR_PALETTE.green, borderRadius: "0 0 16px 16px", padding: "clamp(20px, 3vw, 32px)", marginBottom: "24px", position: "relative", overflow: "hidden" }}>
         <p style={{ fontFamily: "ui-monospace", color: COLOR_PALETTE.copper, fontSize: "10px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", margin: "0 0 8px" }}>
-          Tienda de Mezcal
+          {t('checkout_title')}
         </p>
         <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: COLOR_PALETTE.cream, fontSize: "clamp(24px, 4vw, 32px)", fontWeight: 400, margin: "0 0 6px", lineHeight: 1.2 }}>
-          Tu Pedido
+          {t('checkout_your_order')}
         </h1>
         <p style={{ fontFamily: "'Manrope', 'DM Sans', sans-serif", color: "rgba(244,240,227,0.70)", fontSize: "13px", lineHeight: 1.6, margin: 0 }}>
-          Completa los 4 pasos para finalizar tu compra
+          {t('checkout_complete_steps')}
         </p>
       </div>
 
@@ -250,7 +261,7 @@ export default function CheckoutPage() {
           {/* Indicador de progreso: Texto y barra */}
           <div className="flex items-center justify-between pt-2">
             <p style={{ fontFamily: "'Manrope', 'DM Sans', sans-serif", fontSize: "12px", color: COLOR_PALETTE.green, fontWeight: 600 }}>
-              Paso {pasoActualIndex + 1} de {PASOS.length}
+              {locale === 'en' ? `Step ${pasoActualIndex + 1} of ${PASOS.length}` : `Paso ${pasoActualIndex + 1} de ${PASOS.length}`}
             </p>
             <p style={{ fontFamily: "'Manrope', 'DM Sans', sans-serif", fontSize: "12px", color: COLOR_PALETTE.copper, fontWeight: 600 }}>
               {Math.round(((pasoActualIndex + 1) / PASOS.length) * 100)}%
@@ -312,7 +323,7 @@ export default function CheckoutPage() {
                   <div className="mb-8">
                     <div className="flex items-center gap-2.5 mb-6">
                       <div style={{ width: "4px", height: "24px", background: `linear-gradient(180deg, ${COLOR_PALETTE.green}, ${COLOR_PALETTE.copper})`, borderRadius: "2px" }} />
-                      <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "24px", fontWeight: 400, color: COLOR_PALETTE.green, margin: 0 }}>Forma de Pago</h3>
+                      <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "24px", fontWeight: 400, color: COLOR_PALETTE.green, margin: 0 }}>{t('checkout_payment_method_title')}</h3>
                     </div>
                     <div className={`grid gap-4 ${isStripeConfigured() && isPaypalConfigured() ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
                       {isStripeConfigured() && (
@@ -365,8 +376,8 @@ export default function CheckoutPage() {
                                 {metodoPago === 'stripe' && <CheckCircle size={12} color={COLOR_PALETTE.white} fill={COLOR_PALETTE.white} />}
                               </div>
                               <div>
-                                <h4 style={{ fontWeight: 600, color: COLOR_PALETTE.green, margin: 0 }}>Tarjeta de crédito</h4>
-                                <p style={{ fontSize: "12px", color: "#6B7280", margin: "2px 0 0", lineHeight: 1.4 }}>Visa, Mastercard, Amex</p>
+                                <h4 style={{ fontWeight: 600, color: COLOR_PALETTE.green, margin: 0 }}>{t('checkout_payment_credit_card')}</h4>
+                                <p style={{ fontSize: "12px", color: "#6B7280", margin: "2px 0 0", lineHeight: 1.4 }}>{t('checkout_payment_credit_card_types')}</p>
                               </div>
                             </div>
                             <Lock size={16} color={COLOR_PALETTE.green} style={{ flexShrink: 0 }} />
@@ -425,7 +436,7 @@ export default function CheckoutPage() {
                               </div>
                               <div>
                                 <h4 style={{ fontWeight: 600, color: COLOR_PALETTE.green, margin: 0 }}>PayPal</h4>
-                                <p style={{ fontSize: "12px", color: "#6B7280", margin: "2px 0 0", lineHeight: 1.4 }}>Rápido y seguro con tu cuenta</p>
+                                <p style={{ fontSize: "12px", color: "#6B7280", margin: "2px 0 0", lineHeight: 1.4 }}>{t('checkout_payment_paypal_secure')}</p>
                               </div>
                             </div>
                             <Lock size={16} color={COLOR_PALETTE.copper} style={{ flexShrink: 0 }} />
@@ -439,7 +450,7 @@ export default function CheckoutPage() {
                       <div style={{ marginTop: "12px", borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.green}33`, background: `${COLOR_PALETTE.green}08`, padding: "12px", fontSize: "12px", color: COLOR_PALETTE.green }}>
                         <div className="flex gap-2">
                           <CheckCircle size={14} className="flex-shrink-0 mt-0.5" style={{ color: COLOR_PALETTE.green }} />
-                          <span>Pago seguro con encriptación de extremo a extremo</span>
+                          <span>{t('security_stripe_message')}</span>
                         </div>
                       </div>
                     )}
@@ -448,7 +459,7 @@ export default function CheckoutPage() {
                       <div style={{ marginTop: "12px", borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.copper}33`, background: `${COLOR_PALETTE.copper}08`, padding: "12px", fontSize: "12px", color: COLOR_PALETTE.copper }}>
                         <div className="flex gap-2">
                           <CheckCircle size={14} className="flex-shrink-0 mt-0.5" style={{ color: COLOR_PALETTE.copper }} />
-                          <span>Tu información está protegida por PayPal</span>
+                          <span>{t('security_paypal_message')}</span>
                         </div>
                       </div>
                     )}
@@ -511,9 +522,13 @@ export default function CheckoutPage() {
                           pedidoId={pedidoIdCreado}
                           clientSecret={clientSecret!}
                           onError={setErrorMensaje}
-                          convertToDisplay={convertToDisplay}
+                          convertToDisplay={convertFromMXN}
                           displayCurrency={displayCurrency}
                           facturaData={facturaData}
+                          shippingDisplayAmount={getShippingDisplayAmount()}
+                          locale={locale}
+                          token={token}
+                          numeroOrden={numeroOrdenCreado}
                         />
                       </Elements>
                     )}
@@ -585,8 +600,10 @@ export default function CheckoutPage() {
                           direccionSeleccionada={direccionSeleccionada}
                           envioSeleccionado={envioSeleccionado}
                           pedidoId={pedidoIdCreado}
-                          convertToDisplay={convertToDisplay}
+                          convertToDisplay={convertFromMXN}
                           displayCurrency={displayCurrency}
+                          shippingDisplayAmount={getShippingDisplayAmount()}
+                          locale={locale}
                         />
                       </div>
                     )}
@@ -634,7 +651,7 @@ export default function CheckoutPage() {
                   }}
                 >
                   <ArrowLeft size={16} />
-                  Atrás
+                  {t('checkout_button_back')}
                 </button>
               ) : <div />}
 
@@ -692,7 +709,7 @@ export default function CheckoutPage() {
                     }
                   }}
                 >
-                  Continuar
+                  {t('checkout_button_continue')}
                   <ChevronRight size={18} />
                 </button>
               )}
@@ -706,37 +723,12 @@ export default function CheckoutPage() {
             <div style={{ borderRadius: "12px", background: `linear-gradient(135deg, ${COLOR_PALETTE.white} 0%, ${COLOR_PALETTE.amber}04 100%)`, padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: `1px solid ${COLOR_PALETTE.border}`, backdropFilter: "blur(4px)" }}>
               <div className="flex items-center gap-2.5 mb-6">
                 <div style={{ width: "4px", height: "24px", background: `linear-gradient(180deg, ${COLOR_PALETTE.copper}, ${COLOR_PALETTE.amber})`, borderRadius: "2px" }} />
-                <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "24px", fontWeight: 400, color: COLOR_PALETTE.green, margin: 0 }}>Resumen</h3>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "24px", fontWeight: 400, color: COLOR_PALETTE.green, margin: 0 }}>{t('checkout_summary_section')}</h3>
               </div>
-            {/* Selector de moneda */}
-            <div style={{ display: "flex", gap: "4px", marginBottom: "12px" }}>
-              {(['MXN', 'USD', 'EUR'] as const).map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setSelectedCurrency(c)}
-                  style={{
-                    flex: 1,
-                    padding: "6px 8px",
-                    borderRadius: "8px",
-                    border: `1px solid ${selectedCurrency === c ? COLOR_PALETTE.copper : COLOR_PALETTE.border}`,
-                    background: selectedCurrency === c ? `${COLOR_PALETTE.copper}15` : 'transparent',
-                    color: selectedCurrency === c ? COLOR_PALETTE.copper : COLOR_PALETTE.green,
-                    fontWeight: selectedCurrency === c ? 700 : 400,
-                    fontSize: "12px",
-                    cursor: "pointer",
-                    transition: "all 150ms ease",
-                  }}
-                  disabled={c !== 'MXN' && !tasas[c]}
-                  title={c !== 'MXN' && !tasas[c] ? 'Tasas aún cargando' : undefined}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
             <div style={{ display: "space-y-2", borderBottom: `1px solid ${COLOR_PALETTE.border}`, paddingBottom: "16px", fontSize: "14px" }}>
               {items.slice(0, 3).map((item) => {
                 const itemTotal = Number(item.precio_base) * item.cantidad;
-                const displayAmount = convertToDisplay(itemTotal);
+                const displayAmount = convertFromMXN(itemTotal);
                 return (
                   <div key={item.id_producto} style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px", fontSize: "13px" }}>
                     <span style={{ truncate: "true", maxWidth: "140px" }}>{item.nombre} x{item.cantidad}</span>
@@ -745,27 +737,59 @@ export default function CheckoutPage() {
                 );
               })}
               {items.length > 3 && (
-                <p style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "8px" }}>+{items.length - 3} producto(s) más</p>
+                <p style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "8px" }}>+{items.length - 3} {locale === 'en' ? 'more item(s)' : 'producto(s) más'}</p>
               )}
             </div>
             <div style={{ display: "space-y-2", paddingTop: "12px", paddingBottom: "12px", fontSize: "14px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
-                <span>Subtotal</span>
+                <span>{t('checkout_summary_subtotal')}</span>
                 <span style={{ fontWeight: 500 }}>
-                  ${formatPrice(convertToDisplay(Number(items.reduce((a, i) => a + Number(i.precio_base) * i.cantidad, 0))), { showCurrency: false })}
+                  ${formatPrice(convertFromMXN(Number(items.reduce((a, i) => a + Number(i.precio_base) * i.cantidad, 0))), { showCurrency: false })}
                 </span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
-                <span>Envío</span>
+                <span>{t('checkout_summary_shipping')}</span>
                 <span style={{ fontWeight: 500 }}>
-                  {envioSeleccionado ? `$${formatPrice(convertToDisplay(envioSeleccionado.precioTotal), { showCurrency: false })}` : "—"}
+                  {envioSeleccionado ? `$${formatPrice(getShippingDisplayAmount() ?? 0, { showCurrency: false })}` : "—"}
                 </span>
               </div>
+              {taxAmount > 0 && taxBreakdown.length > 0 ? (
+                taxBreakdown.map((line, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
+                    <span>{line.nombre} ({(line.tasa * 100).toFixed(0)}%)</span>
+                    <span style={{ fontWeight: 500 }}>
+                      ${formatPrice(convertFromMXN(line.monto), { showCurrency: false })}
+                    </span>
+                  </div>
+                ))
+              ) : taxAmount > 0 ? (
+                <div style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
+                  <span>{t('cart_summary_tax')}</span>
+                  <span style={{ fontWeight: 500 }}>
+                    ${formatPrice(convertFromMXN(taxAmount), { showCurrency: false })}
+                  </span>
+                </div>
+              ) : null}
+              {/* Nota IEPS para México */}
+              {(() => {
+                const pais = direccionSeleccionada?.pais_iso2 ?? (direccionSeleccionada?.ubicacion as any)?.pais ?? "MX";
+                return pais === "MX" ? (
+                  <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "4px 0 0 0" }}>
+                    {locale === 'en' ? 'IEPS (spirits excise) included in product price.' : 'IEPS incluido en el precio del productor.'}
+                  </p>
+                ) : pais === "US" ? (
+                  <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "4px 0 0 0" }}>
+                    {locale === 'en'
+                      ? 'Federal Excise Tax (TTB) is settled at customs by the importer — not included here.'
+                      : 'El Federal Excise Tax (TTB) se liquida en aduana por el importador.'}
+                  </p>
+                ) : null;
+              })()}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${COLOR_PALETTE.border}`, paddingTop: "12px" }}>
-              <span style={{ fontWeight: 600, color: COLOR_PALETTE.green }}>Total</span>
+              <span style={{ fontWeight: 600, color: COLOR_PALETTE.green }}>{t('checkout_summary_total')}</span>
               <span style={{ fontSize: "18px", fontWeight: 700, color: COLOR_PALETTE.copper }}>
-                ${formatPrice(convertToDisplay(totalConEnvio), { showCurrency: false })} {displayCurrency}
+                ${formatPrice(convertFromMXN(totalConEnvio + taxAmount), { showCurrency: false })} {displayCurrency}
               </span>
             </div>
             </div>
@@ -1392,9 +1416,24 @@ function EnvioStep({ cotizaciones, cotizandoLoading, cotizandoError, envioSelecc
           const isSelected = envioSeleccionado?.carrier === cot.carrier && envioSeleccionado?.productCode === cot.productCode;
           const carrierNames: Record<string, string> = {
             fedex: 'FedEx',
+            skydropx: 'SkydropX',
           };
-          const carrierLabel = carrierNames[cot.carrier] ?? (cot.carrier ?? '').toUpperCase();
-          const carrierColor = 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300';
+          const providerColors: Record<string, string> = {
+            fedex:        'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+            dhl:          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
+            ups:          'bg-amber-100  text-amber-700  dark:bg-amber-900/40  dark:text-amber-300',
+            estafeta:     'bg-red-100    text-red-700    dark:bg-red-900/40    dark:text-red-300',
+            paquetexpress:'bg-blue-100   text-blue-700   dark:bg-blue-900/40   dark:text-blue-300',
+            redpack:      'bg-rose-100   text-rose-700   dark:bg-rose-900/40   dark:text-rose-300',
+          };
+          // Para sub-carriers de SkydropX, mostrar el nombre real (DHL, Paquetexpress…)
+          const carrierLabel = cot.providerName
+            ?? carrierNames[cot.carrier]
+            ?? (cot.carrier ?? '').toUpperCase();
+          const colorKey = carrierLabel.toLowerCase().replace(/\s+/g, '');
+          const carrierColor = providerColors[colorKey]
+            ?? providerColors[cot.carrier]
+            ?? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300';
           return (
             <label
               key={`${cot.carrier}-${cot.productCode}`}
@@ -1437,6 +1476,10 @@ function PagoYResumen({
   convertToDisplay,
   displayCurrency,
   facturaData,
+  shippingDisplayAmount,
+  locale,
+  token,
+  numeroOrden,
 }: {
   paso: CheckoutStep;
   items: any[];
@@ -1448,6 +1491,10 @@ function PagoYResumen({
   convertToDisplay: (amount: number) => number;
   displayCurrency: string;
   facturaData?: { solicitarFactura: boolean; rfc: string; nombre_razon_social: string; uso_cfdi: string; regimen_fiscal: string; email_factura: string };
+  shippingDisplayAmount: number | null;
+  locale: string;
+  token: string | null;
+  numeroOrden: number | null;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -1486,9 +1533,10 @@ function PagoYResumen({
     onError(null);
 
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const returnUrl = `${origin}/tienda/checkout/pago-exitoso${pedidoId ? `?pedido=${pedidoId}` : ""}`;
+    const numParam = numeroOrden ? `&num=${numeroOrden}` : "";
+    const returnUrl = `${origin}/tienda/checkout/pago-exitoso${pedidoId ? `?pedido=${pedidoId}${numParam}` : ""}`;
 
-    // Guardar datos de factura en localStorage antes de que Stripe redirija
+    // Guardar en localStorage como respaldo para tarjetas con 3DS (Stripe redirige externamente)
     if (facturaData?.solicitarFactura && pedidoId) {
       localStorage.setItem('checkout_factura', JSON.stringify({ ...facturaData, pedidoId }));
     }
@@ -1502,8 +1550,24 @@ function PagoYResumen({
     if (error) {
       onError(error.message ?? "El pago no se pudo procesar.");
       setConfirming(false);
+    } else {
+      // Pago confirmado (sin 3DS). Enviar factura directamente antes de redirigir.
+      if (facturaData?.solicitarFactura && pedidoId && token) {
+        try {
+          const payload: Record<string, string> = { estado: "pendiente" };
+          if (facturaData.rfc)                 payload.rfc_receptor        = facturaData.rfc;
+          if (facturaData.uso_cfdi)            payload.uso_cfdi            = facturaData.uso_cfdi;
+          if (facturaData.regimen_fiscal)      payload.regimen_fiscal      = facturaData.regimen_fiscal;
+          if (facturaData.nombre_razon_social) payload.nombre_razon_social = facturaData.nombre_razon_social;
+          if (facturaData.email_factura)       payload.email_factura       = facturaData.email_factura;
+          await api.pedidos.addFactura(token, pedidoId, payload);
+          localStorage.removeItem('checkout_factura'); // limpiar respaldo
+        } catch {
+          // si falla, pago-exitoso lo reintenta desde localStorage
+        }
+      }
+      window.location.assign(returnUrl);
     }
-    // En éxito, Stripe redirige a return_url y la página se desmonta.
   };
 
   return (
@@ -1659,9 +1723,9 @@ function PagoYResumen({
         )}
         {envioSeleccionado && (
           <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
-            <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">Método de envío:</p>
-            <p className="text-gray-600 dark:text-gray-400">{envioSeleccionado.productName} — {envioSeleccionado.diasHabilesEstimados} días hábiles</p>
-            <p className="text-gray-600 dark:text-gray-400">${formatPrice(convertToDisplay(envioSeleccionado.precioTotal), { showCurrency: false })} {displayCurrency}</p>
+            <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">{locale === 'en' ? 'Shipping method:' : 'Método de envío:'}</p>
+            <p className="text-gray-600 dark:text-gray-400">{envioSeleccionado.productName} — {envioSeleccionado.diasHabilesEstimados} {locale === 'en' ? 'business days' : 'días hábiles'}</p>
+            <p className="text-gray-600 dark:text-gray-400">${formatPrice(shippingDisplayAmount ?? convertToDisplay(envioSeleccionado.precioTotal), { showCurrency: false })} {displayCurrency}</p>
           </div>
         )}
 
@@ -1690,7 +1754,18 @@ function PagoYResumenPaypal({
   pedidoId,
   convertToDisplay,
   displayCurrency,
-}: any) {
+  shippingDisplayAmount,
+  locale,
+}: {
+  items: any[];
+  direccionSeleccionada: any;
+  envioSeleccionado: any;
+  pedidoId: string | null;
+  convertToDisplay: (amount: number) => number;
+  displayCurrency: string;
+  shippingDisplayAmount: number | null;
+  locale: string;
+}) {
   const router = useRouter();
 
   const handleSuccess = () => {
@@ -1699,7 +1774,7 @@ function PagoYResumenPaypal({
 
   return (
     <div>
-      <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Resumen del pedido</h2>
+      <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{locale === 'en' ? 'Order summary' : 'Resumen del pedido'}</h2>
       <div className="mb-4 space-y-3 border-b border-gray-200 pb-4 dark:border-gray-700">
         {items.map((item: any) => (
           <div key={item.id_producto} className="flex items-center gap-3">
@@ -1762,19 +1837,19 @@ function PagoYResumenPaypal({
 
       {envioSeleccionado && (
         <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
-          <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">Método de envío:</p>
+          <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">{locale === 'en' ? 'Shipping method:' : 'Método de envío:'}</p>
           <p className="text-gray-600 dark:text-gray-400">
-            {envioSeleccionado.productName} — {envioSeleccionado.diasHabilesEstimados} días hábiles
+            {envioSeleccionado.productName} — {envioSeleccionado.diasHabilesEstimados} {locale === 'en' ? 'business days' : 'días hábiles'}
           </p>
           <p className="text-gray-600 dark:text-gray-400">
-            ${formatPrice(convertToDisplay(envioSeleccionado.precioTotal), { showCurrency: false })} {displayCurrency}
+            ${formatPrice(shippingDisplayAmount ?? convertToDisplay(envioSeleccionado.precioTotal), { showCurrency: false })} {displayCurrency}
           </p>
         </div>
       )}
 
       <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-        <p className="font-medium">✓ Pago confirmado con PayPal</p>
-        <p className="text-xs mt-1">Tu pedido ha sido procesado correctamente.</p>
+        <p className="font-medium">✓ {locale === 'en' ? 'Payment confirmed with PayPal' : 'Pago confirmado con PayPal'}</p>
+        <p className="text-xs mt-1">{locale === 'en' ? 'Your order has been processed successfully.' : 'Tu pedido ha sido procesado correctamente.'}</p>
       </div>
     </div>
   );

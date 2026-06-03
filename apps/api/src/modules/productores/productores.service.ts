@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  InternalServerErrorException,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { serializeBigInts } from "../shared/serialize";
@@ -18,33 +19,46 @@ import { ArchivosService } from "../archivos/archivos.service";
 import { EmailService } from "../email/email.service";
 import { createCipheriv, randomBytes, createDecipheriv } from "crypto";
 
-const ENCRYPTION_KEY =
-  process.env.ENCRYPTION_KEY || randomBytes(32).toString("hex");
 const IV_LENGTH = 16;
+
+function getEncryptionKey(): Buffer {
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+  if (!encryptionKey) {
+    throw new InternalServerErrorException(
+      'ENCRYPTION_KEY environment variable is required. Generate one with: node -e "require(\'crypto\').randomBytes(32).toString(\'hex\')"',
+    );
+  }
+  if (!/^[0-9a-fA-F]{64}$/.test(encryptionKey)) {
+    throw new InternalServerErrorException(
+      'ENCRYPTION_KEY must be a 32-byte hexadecimal string.',
+    );
+  }
+  return Buffer.from(encryptionKey, "hex");
+}
 
 function encrypt(text: string): string {
   const iv = randomBytes(IV_LENGTH);
-  const cipher = createCipheriv(
-    "aes-256-cbc",
-    Buffer.from(ENCRYPTION_KEY, "hex"),
-    iv,
-  );
+  const cipher = createCipheriv("aes-256-cbc", getEncryptionKey(), iv);
   let encrypted = cipher.update(text, "utf8", "hex");
   encrypted += cipher.final("hex");
   return iv.toString("hex") + ":" + encrypted;
 }
 
-function decrypt(text: string): string {
+function decrypt(text: string): string | null {
   const [ivHex, encrypted] = text.split(":");
+  if (!ivHex || !encrypted) return null;
+
   const iv = Buffer.from(ivHex, "hex");
-  const decipher = createDecipheriv(
-    "aes-256-cbc",
-    Buffer.from(ENCRYPTION_KEY, "hex"),
-    iv,
-  );
-  let decrypted = decipher.update(encrypted, "hex", "utf8");
-  decrypted += decipher.final("utf8");
-  return decrypted;
+  const decipher = createDecipheriv("aes-256-cbc", getEncryptionKey(), iv);
+
+  try {
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch {
+    // Key mismatch or invalid ciphertext — return null
+    return null;
+  }
 }
 
 @Injectable()

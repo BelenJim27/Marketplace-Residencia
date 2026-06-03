@@ -24,6 +24,8 @@ interface Producto {
   categorias?: string[];
   nombre_productor?: string | null;
   nombre_tienda?: string | null;
+  promedio_calificacion?: number | null;
+  total_resenas?: number | null;
   lotes?: {
     datos_api?: Record<string, string>;
     productores?: { biografia?: string };
@@ -74,13 +76,18 @@ const CARD_COLORS = [
 ];
 
 // StarRating Component
-function StarRating({ rating = 5, reviews = 47, cardColor }: { rating?: number; reviews?: number; cardColor?: typeof CARD_COLORS[0] }) {
-  const fullStars = Math.floor(rating);
+// Sin reseñas → 5 estrellas con solo contorno
+// Con reseñas  → estrellas rellenas según el promedio real
+function StarRating({ rating = 0, reviews = 0, cardColor }: { rating?: number; reviews?: number; cardColor?: typeof CARD_COLORS[0] }) {
+  const hasReviews = reviews > 0;
+  const fullStars = hasReviews ? Math.floor(rating) : 0;
   const isNeutralCard = cardColor?.bg === hexFallbacks.bgSecondary;
   const starColor = isNeutralCard ? catalogColors.rating.full : hexFallbacks.bgSecondary;
   const emptyStarColor = isNeutralCard ? catalogColors.rating.empty : catalogColors.rating.emptyDark;
   const textColor = isNeutralCard ? catalogColors.rating.full : "rgb(255 255 255 / 0.9)";
-  const ratingLabel = `${rating.toFixed(1)} de 5 estrellas (${reviews} ${reviews === 1 ? "reseña" : "reseñas"})`;
+  const ratingLabel = hasReviews
+    ? `${rating.toFixed(1)} de 5 estrellas (${reviews} ${reviews === 1 ? "reseña" : "reseñas"})`
+    : "Sin reseñas aún";
 
   return (
     <div className="flex items-center gap-1.5" role="img" aria-label={ratingLabel}>
@@ -90,15 +97,20 @@ function StarRating({ rating = 5, reviews = 47, cardColor }: { rating?: number; 
             key={i}
             className="w-3.5 h-3.5"
             viewBox="0 0 24 24"
-            fill={i <= fullStars ? starColor : "currentColor"}
-            style={{ color: i <= fullStars ? starColor : emptyStarColor }}
+            fill={i <= fullStars ? starColor : "none"}
+            stroke={i <= fullStars ? starColor : emptyStarColor}
+            strokeWidth={i <= fullStars ? 0 : 1.5}
           >
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
           </svg>
         ))}
       </div>
-      <span className="text-xs font-semibold" style={{ color: textColor }} aria-hidden="true">{rating.toFixed(1)}</span>
-      <span className="text-[11px]" style={{ color: isNeutralCard ? catalogColors.card.text.muted : "rgb(255 255 255 / 0.8)" }} aria-hidden="true">({reviews})</span>
+      {hasReviews && (
+        <>
+          <span className="text-xs font-semibold" style={{ color: textColor }} aria-hidden="true">{rating.toFixed(1)}</span>
+          <span className="text-[11px]" style={{ color: isNeutralCard ? catalogColors.card.text.muted : "rgb(255 255 255 / 0.8)" }} aria-hidden="true">({reviews})</span>
+        </>
+      )}
     </div>
   );
 }
@@ -153,7 +165,9 @@ const ProductCard = memo(function ProductCard({
   const maguey = producto.lotes?.datos_api?.maguey || "Espadin";
   const alcohol = producto.lotes?.datos_api?.grado_alcohol || producto.lotes?.datos_api?.alcohol || "46";
   const maestro = producto.nombre_productor || producto.tiendas?.nombre || "Productor artesanal";
-  const rating = 4.8;
+  const rating = Number(producto.promedio_calificacion ?? 0);
+  const totalResenas = Number(producto.total_resenas ?? 0);
+  const hasReviews = totalResenas > 0;
 
   const coloresCategoria: Record<string, string> = {
     artesanal: catalogColors.card.category.artesanal,
@@ -210,7 +224,8 @@ const ProductCard = memo(function ProductCard({
             backgroundColor: "rgba(255, 255, 255, 0.7)",
           }}
         >
-          <div className="space-y-3 sm:space-y-4">
+          <div className="flex flex-col gap-3">
+            {/* Nombre */}
             <h3
               className="text-base sm:text-lg font-semibold text-gray-900 leading-tight"
               style={{ fontFamily: 'var(--font-family-store)' }}
@@ -218,48 +233,51 @@ const ProductCard = memo(function ProductCard({
               {producto.nombre}
             </h3>
 
-            <div className="space-y-1.5 sm:space-y-2">
-              <div className="text-xs font-bold uppercase tracking-widest text-gray-500">
+            {/* Agave */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-gray-400 w-16 shrink-0">
                 {t("product_card_agave")}
-              </div>
-              <div className="text-sm font-medium text-gray-900">{maguey}</div>
+              </span>
+              <span className="text-sm font-medium text-gray-800">{maguey}</span>
             </div>
 
-            <div className="space-y-1.5 sm:space-y-2">
-              <div className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                {t("product_card_origin")}
-              </div>
-              <div className="text-sm font-medium text-gray-900">{maestro}</div>
-            </div>
-
+            {/* Alcohol + Rating en fila */}
             <div
-              className="flex gap-2 sm:gap-3 py-2 sm:py-3 border-t border-b text-xs"
-              style={{ borderColor: "rgba(0, 0, 0, 0.06)" }}
+              className="flex items-center gap-4 py-2.5 border-t border-b"
+              style={{ borderColor: "rgba(0,0,0,0.07)" }}
             >
-              <div className="flex flex-col gap-1 flex-1">
-                <span className="font-bold uppercase tracking-wider text-gray-400">
+              {/* Alcohol */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
                   {t("product_card_alcohol")}
                 </span>
-                <span className="font-semibold text-amber-700">{alcohol}%</span>
+                <span className="text-sm font-bold text-amber-700">{alcohol}%</span>
               </div>
-              <div style={{ width: "1px", background: "rgba(0, 0, 0, 0.1)" }}></div>
-              <div className="flex flex-col gap-1 flex-1">
-                <span className="font-bold uppercase tracking-wider text-gray-400">
-                  {t("product_card_rating")}
-                </span>
+
+              <div style={{ width: "1px", height: "20px", background: "rgba(0,0,0,0.1)" }} />
+
+              {/* Rating */}
+              <div className="flex items-center gap-1.5">
                 <div className="flex gap-0.5">
                   {[...Array(5)].map((_, i) => (
                     <span
                       key={i}
-                      className="text-sm"
+                      className="text-sm leading-none"
                       style={{
-                        color: i < Math.round(rating) ? catalogColors.rating.full : catalogColors.rating.empty,
+                        color: hasReviews && i < Math.round(rating)
+                          ? catalogColors.rating.full
+                          : catalogColors.rating.empty,
                       }}
                     >
                       ★
                     </span>
                   ))}
                 </div>
+                {hasReviews && (
+                  <span className="text-xs text-gray-400">
+                    {rating.toFixed(1)}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -273,6 +291,24 @@ const ProductCard = memo(function ProductCard({
                 {convertPrice(Number(producto.precio_base || 0))}
               </span>
             </div>
+
+            {/* Ver detalles */}
+            <button
+              className="w-full text-xs font-semibold py-1.5 rounded transition-all hover:opacity-80 active:scale-95"
+              style={{
+                border: "1px solid rgba(0,0,0,0.12)",
+                background: "transparent",
+                color: "#4B5563",
+                cursor: "pointer",
+                letterSpacing: "0.04em",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewDetails();
+              }}
+            >
+              Ver detalles
+            </button>
 
             <button
               className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded transition-all hover:opacity-90 active:scale-95 w-full"
@@ -455,7 +491,11 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
           >
             {producto.nombre}
           </h3>
-          <StarRating cardColor={cardColor} />
+          <StarRating
+            rating={Number(producto.promedio_calificacion ?? 0)}
+            reviews={Number(producto.total_resenas ?? 0)}
+            cardColor={cardColor}
+          />
           {producto.descripcion && (
             <p
               className="text-[9px] sm:text-xs leading-relaxed line-clamp-2 break-words min-w-0"
@@ -868,12 +908,22 @@ export default function ProductCatalogEnhanced() {
                   {t("sidebar_filters")}
                 </h2>
                 {cantidadFiltros > 0 && (
-                  <span
-                    className="ml-auto text-xs font-bold px-2 py-1 rounded-full text-white"
-                    style={{ backgroundColor: hexFallbacks.brand }}
-                  >
-                    {cantidadFiltros}
-                  </span>
+                  <div className="ml-auto flex items-center gap-2">
+                    <span
+                      className="text-xs font-bold px-2 py-1 rounded-full text-white"
+                      style={{ backgroundColor: hexFallbacks.brand }}
+                    >
+                      {cantidadFiltros}
+                    </span>
+                    <button
+                      onClick={limpiarTodo}
+                      className="text-xs font-semibold hover:opacity-70 transition-opacity focus:outline-none"
+                      style={{ color: hexFallbacks.brand }}
+                      aria-label={t("reset_filters")}
+                    >
+                      {t("reset_filters")}
+                    </button>
+                  </div>
                 )}
               </div>
               <SidebarFiltersComponent
@@ -1153,6 +1203,15 @@ export default function ProductCatalogEnhanced() {
                   <h2 id="filters-modal-title" className="text-lg font-bold" style={{ fontFamily: 'var(--font-family-store)', color: hexFallbacks.textPrimary }}>
                     {t("sidebar_filters")}
                   </h2>
+                  {cantidadFiltros > 0 && (
+                    <button
+                      onClick={() => { limpiarTodo(); }}
+                      className="mt-0.5 text-xs font-semibold hover:opacity-70 transition-opacity focus:outline-none"
+                      style={{ color: hexFallbacks.brand }}
+                    >
+                      {t("reset_filters")}
+                    </button>
+                  )}
                 </div>
                 <button
                   onClick={() => setShowMobileFilters(false)}

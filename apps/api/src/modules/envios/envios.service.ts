@@ -1,19 +1,23 @@
 import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { Moneda } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
 import { CreateEnvioDto, UpdateEnvioDto } from "./dto/envios.dto";
 import { ICarrierService } from "./interfaces/carrier.interface";
 import { FedexService } from "./fedex.service";
+import { SkydropxService } from "./skydropx.service";
 
 @Injectable()
 export class EnviosService {
-  private carrierService: ICarrierService;
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly fedexService: FedexService,
-  ) {
-    this.carrierService = fedexService;
+    private readonly skydropxService: SkydropxService,
+  ) {}
+
+  private selectCarrier(codigo?: string): ICarrierService {
+    if (codigo?.toUpperCase() === 'SKYDROPX') return this.skydropxService;
+    return this.fedexService;
   }
   async findAll() {
     return serializeBigInts(
@@ -79,14 +83,14 @@ export class EnviosService {
           id_servicio,      // Usamos la variable local resuelta
           numero_rastreo: dto.numero_rastreo ?? null,
           valor_declarado_aduana: dto.valor_declarado_aduana ?? null,
-          moneda_aduana: dto.moneda_aduana?.trim() ?? "MXN",
+          moneda_aduana: (dto.moneda_aduana?.trim() ?? "MXN") as Moneda,
           codigo_hs: dto.codigo_hs ?? null,
           peso_kg: dto.peso_kg ?? null,
           alto_cm: dto.alto_cm ?? null,
           ancho_cm: dto.ancho_cm ?? null,
           largo_cm: dto.largo_cm ?? null,
           costo_envio: dto.costo_envio ?? null,
-          moneda_costo: dto.moneda_costo?.trim() ?? "MXN",
+          moneda_costo: (dto.moneda_costo?.trim() ?? "MXN") as Moneda,
           estado: dto.estado?.trim() ?? "preparando",
           requires_adult_signature,
           fecha_envio: dto.fecha_envio ? new Date(dto.fecha_envio) : null,
@@ -126,14 +130,14 @@ export class EnviosService {
           id_servicio: dto.id_servicio,
           numero_rastreo: dto.numero_rastreo,
           valor_declarado_aduana: dto.valor_declarado_aduana,
-          moneda_aduana: dto.moneda_aduana?.trim(),
+          moneda_aduana: dto.moneda_aduana?.trim() as Moneda | undefined,
           codigo_hs: dto.codigo_hs,
           peso_kg: dto.peso_kg,
           alto_cm: dto.alto_cm,
           ancho_cm: dto.ancho_cm,
           largo_cm: dto.largo_cm,
           costo_envio: dto.costo_envio,
-          moneda_costo: dto.moneda_costo?.trim(),
+          moneda_costo: dto.moneda_costo?.trim() as Moneda | undefined,
           estado: dto.estado?.trim(),
           fecha_envio: dto.fecha_envio ? new Date(dto.fecha_envio) : undefined,
           fecha_entrega_estimada: dto.fecha_entrega_estimada
@@ -185,8 +189,11 @@ export class EnviosService {
     let eventos: any[] = [];
     if (envio.numero_rastreo) {
       try {
-        const carrierEventos = await this.carrierService.getTracking(
+        const carrier = this.selectCarrier(envio.transportistas?.codigo ?? undefined);
+        const payloadResp = (envio.envio_guias?.[0] as any)?.payload_response as Record<string, any> | null;
+        const carrierEventos = await carrier.getTracking(
           envio.numero_rastreo,
+          payloadResp ? { carrierName: payloadResp.carrierName } : undefined,
         );
         if (carrierEventos && carrierEventos.length > 0) {
           eventos = carrierEventos;
@@ -216,7 +223,8 @@ export class EnviosService {
       fecha_entrega_real: envio.fecha_entrega,
       eventos: eventos.map((e: any) => ({
         descripcion: e.descripcion,
-        estado: e.estado,
+        // Siempre normalizar para que el frontend reciba estados consistentes
+        estado: this.normalizarEstado(e.estado ?? '') ?? e.estado,
         fecha: e.fecha,
         ubicacion: e.ubicacion,
       })),
@@ -251,8 +259,6 @@ export class EnviosService {
           select: {
             nombre: true,
             requiere_edad_minima: true,
-          },
-          include: {
             categorias_productos: {
               select: { id_categoria: true },
             },
@@ -290,14 +296,42 @@ export class EnviosService {
       .slice(0, 3)
       .join(', ');
 
-    const result = await this.carrierService.createShipment({
+    // Obtener dirección del primer productor del pedido para usarla como shipper en FedEx
+    const primerDetalle = await this.prisma.detalle_pedido.findFirst({
+      where: { id_pedido: envio.id_pedido, id_productor: { not: null } },
+      select: {
+        productores: {
+          select: {
+            nombre_marca: true,
+            bodega_calle: true,
+            bodega_ciudad: true,
+            bodega_estado: true,
+            bodega_codigo_postal: true,
+            bodega_pais_iso2: true,
+            bodega_telefono: true,
+          },
+        },
+      },
+    });
+
+    const carrier = this.selectCarrier(envio.transportistas?.codigo ?? undefined);
+    const result = await carrier.createShipment({
       ...envio,
+      productor: primerDetalle?.productores ?? null,
       contenido_descripcion: productNames || 'Mezcal artesanal',
     });
 
     if (!result.labelBuffer) {
       throw new UnprocessableEntityException(
-        'FedEx generó la guía pero no devolvió el PDF de la etiqueta. Intenta de nuevo.',
+        'El carrier generó la guía pero no devolvió el PDF de la etiqueta. Intenta de nuevo.',
+      );
+    }
+
+    // Validar que el buffer es un PDF real (magic bytes %PDF) antes de persistir.
+    const pdfMagic = result.labelBuffer.slice(0, 4).toString('ascii');
+    if (pdfMagic !== '%PDF') {
+      throw new UnprocessableEntityException(
+        `El label recibido del carrier no es un PDF válido (magic bytes: ${pdfMagic}). Intenta de nuevo.`,
       );
     }
 
@@ -311,7 +345,11 @@ export class EnviosService {
             label_pdf: result.labelBuffer,
             formato_etiqueta: result.labelFormat,
             estado_paqueteria: 'creada',
-            payload_response: { trackingNumber: result.trackingNumber, labelFormat: result.labelFormat } as any,
+            payload_response: {
+              trackingNumber: result.trackingNumber,
+              labelFormat: result.labelFormat,
+              carrierName: result.carrierName,
+            } as any,
           },
         });
         await tx.envios.update({
@@ -364,7 +402,7 @@ export class EnviosService {
       throw new NotFoundException(`Guía con número ${numero_guia} no encontrada`);
     }
 
-    const estadoNormalizado = this.normalizarEstadoFedex(estado);
+    const estadoNormalizado = this.normalizarEstado(estado);
 
     await this.prisma.envio_eventos.create({
       data: {
@@ -388,8 +426,9 @@ export class EnviosService {
     return serializeBigInts({ id_envio: updated.id_envio, estado: updated.estado, numero_guia });
   }
 
-  private normalizarEstadoFedex(estado: string): string | null {
-    const FEDEX_STATE_MAP: Record<string, string> = {
+  private normalizarEstado(estado: string): string | null {
+    const STATE_MAP: Record<string, string> = {
+      // FedEx
       delivered: 'entregado',
       in_transit: 'en_transito',
       in_transit_en_ruta: 'en_transito',
@@ -403,6 +442,13 @@ export class EnviosService {
       failed: 'fallido',
       returned: 'devuelto',
       return_to_sender: 'devuelto',
+      // SkydropX
+      pending: 'preparando',
+      label_created: 'preparando',
+      collected: 'recogido',
+      transit: 'en_transito',
+      out_of_delivery: 'en_reparto',
+      incident: 'fallido',
     };
 
     const normalized = estado
@@ -410,7 +456,7 @@ export class EnviosService {
       .trim()
       .replace(/\s+/g, '_');
 
-    return FEDEX_STATE_MAP[normalized] ?? null;
+    return STATE_MAP[normalized] ?? null;
   }
 
   async registrarEvento(
@@ -428,7 +474,7 @@ export class EnviosService {
 
     if (!envio) throw new NotFoundException('Envío no encontrado');
 
-    const estadoNormalizado = this.normalizarEstadoFedex(estado);
+    const estadoNormalizado = this.normalizarEstado(estado);
 
     const guia = envio.envio_guias?.[0];
     if (guia) {

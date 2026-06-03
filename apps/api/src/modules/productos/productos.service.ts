@@ -182,19 +182,22 @@ export class ProductosService {
       }
     }
 
+    const matchesFilter = (filterValue: string | undefined, dataValue: string | undefined): boolean => {
+      if (!filterValue) return true;
+      const values = filterValue.split(',').map(v => v.trim()).filter(Boolean);
+      return values.length === 0 || values.includes(dataValue ?? '');
+    };
+
     const applyFiltersToProductos = (productos: any[]) => {
       if (!filtros) return productos;
 
       return productos.filter((p) => {
         const datosApi = p.lotes?.datos_api as Record<string, any> | undefined;
 
-        if (filtros.tipoMezcal && datosApi?.tipo_mezcal !== filtros.tipoMezcal)
-          return false;
-        if (filtros.maguey && datosApi?.maguey !== filtros.maguey) return false;
-        if (filtros.destilacion && datosApi?.destilacion !== filtros.destilacion)
-          return false;
-        if (filtros.molienda && datosApi?.molienda !== filtros.molienda)
-          return false;
+        if (!matchesFilter(filtros.tipoMezcal, datosApi?.tipo_mezcal)) return false;
+        if (!matchesFilter(filtros.maguey, datosApi?.maguey)) return false;
+        if (!matchesFilter(filtros.destilacion, datosApi?.destilacion)) return false;
+        if (!matchesFilter(filtros.molienda, datosApi?.molienda)) return false;
         if (filtros.maestroMezcalero) {
           const maestro =
             datosApi?.maestro_mezcalero || datosApi?.maestro || "";
@@ -237,11 +240,12 @@ export class ProductosService {
       );
     }
 
-    // Vista pública: todos los productos activos (con o sin lote de trazabilidad)
+    // Vista pública: solo productos activos con stock disponible
     const items = await this.prisma.productos.findMany({
       where: {
         ...where,
         status: 'activo',
+        inventario: { some: { stock: { gt: 0 } } },
       },
       include: productoInclude as any,
       orderBy: { creado_en: 'desc' },

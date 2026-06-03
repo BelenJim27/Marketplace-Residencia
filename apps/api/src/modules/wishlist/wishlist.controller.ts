@@ -20,8 +20,8 @@ export class WishlistController {
     try {
       return await this.service.listByUsuario(id_usuario);
     } catch (error: any) {
-      console.error(`Error en GET /wishlist/${id_usuario}:`, error);
-      throw new InternalServerErrorException(error.message);
+      console.error(`Error en GET /wishlist/${id_usuario}:`, error?.message ?? error);
+      return [];
     }
   }
 

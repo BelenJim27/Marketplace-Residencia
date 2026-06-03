@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { getCookie } from "@/lib/cookies";
 
@@ -47,7 +46,12 @@ export function useNotificationPoller() {
 
     async function poll() {
       try {
-        const res = await api.notificaciones.getByUser(user!.id_usuario!, token);
+        // Fetch directo y silencioso — el poller es best-effort y no debe generar ruido en consola
+        const response = await fetch(`/notificaciones/${user!.id_usuario}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!response.ok) return;
+        const res = await response.json().catch(() => []);
         const notifs: DbNotif[] = (Array.isArray(res) ? res : []).filter((n) => !n.leido);
 
         if (!initialized.current) {

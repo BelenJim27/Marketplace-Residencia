@@ -3,9 +3,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, Trash2, ShoppingBag, Info } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, Info, ArrowLeft } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
 import { useLocale } from "@/context/LocaleContext";
+
+const C = {
+  green: "#3D6B3F",
+  greenDark: "#2A4A2C",
+  copper: "#C97A3E",
+  cream: "#F4F0E3",
+  white: "#FFFFFF",
+  text: "#2A2622",
+  muted: "#9A9590",
+  border: "rgba(61,107,63,0.12)",
+};
 
 export default function CarritoPage() {
   const router = useRouter();
@@ -14,17 +25,43 @@ export default function CarritoPage() {
 
   if (items.length === 0) {
     return (
-      <main className="mx-auto max-w-screen-xl px-4 py-12 md:px-8">
-        <h1 className="mb-8 text-3xl font-bold text-dark dark:text-white" style={{ fontFamily: 'var(--font-family-store)' }}>
+      <main style={{ maxWidth: "860px", margin: "0 auto", padding: "48px 20px 80px" }}>
+        <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
+        <h1 style={{
+          fontFamily: "var(--font-family-store)",
+          fontSize: "clamp(28px, 5vw, 40px)", fontWeight: "700",
+          background: `linear-gradient(90deg, ${C.greenDark} 0%, ${C.copper} 100%)`,
+          backgroundClip: "text", WebkitBackgroundClip: "text", color: "transparent",
+          margin: "0 0 32px 0", lineHeight: 1.1,
+        }}>
           {t("cart_title")}
         </h1>
-
-        <div className="flex flex-col items-center justify-center gap-4 rounded-lg bg-white p-12 text-center shadow-md dark:bg-gray-dark">
-          <ShoppingBag className="h-16 w-16 text-gray-300" />
-          <p className="text-gray-600 dark:text-gray-400">{t("cart_empty_state")}</p>
+        <div style={{
+          borderRadius: "16px", background: C.white, padding: "64px 40px",
+          textAlign: "center", border: `1px solid ${C.border}`,
+          boxShadow: "0 2px 16px rgba(0,0,0,0.04)", animation: "fadeUp .4s ease both",
+        }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            height: "80px", width: "80px", borderRadius: "50%",
+            background: `linear-gradient(135deg, rgba(61,107,63,0.07), rgba(201,122,62,0.05))`,
+            border: `1px solid ${C.border}`, marginBottom: "24px",
+          }}>
+            <ShoppingBag size={34} style={{ color: C.border }} />
+          </div>
+          <p style={{ color: "#666", fontSize: "16px", fontWeight: "500", marginBottom: "24px" }}>
+            {t("cart_empty_state")}
+          </p>
           <Link
             href="/cliente/producto"
-            className="mt-4 rounded-lg bg-[#3D6B3F] px-6 py-2 text-white transition-colors hover:bg-[#1F3A2E]"
+            style={{
+              display: "inline-block", borderRadius: "10px",
+              background: C.green, color: C.white,
+              padding: "13px 32px", fontSize: "14px", fontWeight: "700",
+              textDecoration: "none",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = C.greenDark; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = C.green; }}
           >
             {t("cart_continue_shopping")}
           </Link>
@@ -36,180 +73,269 @@ export default function CarritoPage() {
   const subtotal = precioTotal;
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 md:px-8">
-      <h1 className="mb-8 text-4xl font-bold text-dark dark:text-white" style={{ fontFamily: 'var(--font-family-store)' }}>
-        {t("cart_title")}
-      </h1>
+    <main style={{ maxWidth: "980px", margin: "0 auto", padding: "36px 20px 80px" }}>
+      <style>{`
+        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .cart-item{transition:background 160ms ease}
+        .cart-item:hover{background:rgba(244,240,227,0.5)!important}
+        .qty-btn{transition:all 140ms ease}
+        .qty-btn:hover{background:${C.copper}!important;color:${C.white}!important;border-color:${C.copper}!important}
+        .del-btn{transition:all 140ms ease}
+        .del-btn:hover{background:rgba(220,38,38,0.08)!important;color:#DC2626!important}
+        .checkout-btn{transition:background 180ms ease}
+        .checkout-btn:hover{background:${C.greenDark}!important}
+        .back-btn{transition:all 160ms ease}
+        .back-btn:hover{background:rgba(61,107,63,0.06)!important}
+        @media(max-width:760px){.carrito-grid{grid-template-columns:1fr!important}}
+        @media(max-width:560px){
+          .col-headers{display:none!important}
+          .cart-item{grid-template-columns:1fr!important;gap:10px!important}
+          .item-qty,.item-total,.item-del{justify-content:flex-start!important;text-align:left!important}
+        }
+        @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+      `}</style>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Products Table */}
-        <div className="lg:col-span-2">
-          <div className="rounded-lg bg-white shadow-md dark:bg-gray-dark">
-            {/* Table Header */}
-            <div className="hidden border-b border-gray-200 px-6 py-4 dark:border-gray-700 lg:grid lg:grid-cols-5 lg:gap-4">
-              <div className="col-span-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
-                {t("cart_table_product")}
-              </div>
-              <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">
-                {t("cart_table_quantity")}
-              </div>
-              <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">
-                {t("cart_table_total")}
-              </div>
-              <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">
-                {t("cart_table_action")}
-              </div>
-            </div>
+      {/* Header */}
+      <div style={{ marginBottom: "32px", animation: "fadeUp .4s ease both" }}>
+        <h1 style={{
+          fontFamily: "var(--font-family-store)",
+          fontSize: "clamp(28px, 5vw, 40px)", fontWeight: "700",
+          background: `linear-gradient(90deg, ${C.greenDark} 0%, ${C.copper} 100%)`,
+          backgroundClip: "text", WebkitBackgroundClip: "text", color: "transparent",
+          margin: "0 0 4px 0", lineHeight: 1.1,
+        }}>
+          {t("cart_title")}
+        </h1>
+        <p style={{ fontSize: "14px", color: C.muted, margin: 0 }}>
+          {items.length} {items.length === 1 ? "producto" : "productos"} en tu carrito
+        </p>
+      </div>
 
-            {/* Products */}
-            {items.map((item) => (
-              <div
-                key={item.id_producto}
-                className="border-b border-gray-200 px-4 py-4 last:border-b-0 dark:border-gray-700 md:px-6 lg:grid lg:grid-cols-5 lg:gap-4 lg:items-center"
-              >
-                {/* Product Image and Info */}
-                <Link
-                  href={`/cliente/producto/${item.id_producto}`}
-                  className="col-span-2 mb-4 flex gap-3 lg:mb-0"
-                >
-                  <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
-                    {item.producto_imagenes?.[0] ? (
-                      <Image
-                        src={item.producto_imagenes[0].url}
-                        alt={item.nombre}
-                        fill
-                        sizes="80px"
-                        className="object-cover"
-                      />
-                    ) : item.imagen_principal_url ? (
-                      <Image
-                        src={item.imagen_principal_url}
-                        alt={item.nombre}
-                        fill
-                        sizes="80px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-gray-400">
-                        {t("cart_no_image")}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col justify-center">
-                    <h3 className="font-medium text-gray-900 dark:text-white hover:text-green-600">
-                      {item.nombre}
-                    </h3>
-                    <p className="text-xs text-gray-500">
-                      {convertPrice(Number(item.precio_base))} {t("cart_price_unit")}
-                    </p>
-                  </div>
-                </Link>
-
-                {/* Quantity */}
-                <div className="mb-4 flex items-center gap-2 lg:mb-0 lg:justify-center">
-                  <button
-                    onClick={() =>
-                      actualizarCantidad(item.id_producto, Math.max(item.cantidad - 1, 1))
-                    }
-                    className="flex h-7 w-7 items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
-                  >
-                    <Minus size={14} />
-                  </button>
-                  <span className="w-6 text-center text-sm font-medium">{item.cantidad}</span>
-                  <button
-                    onClick={() =>
-                      actualizarCantidad(item.id_producto, item.cantidad + 1)
-                    }
-                    className="flex h-7 w-7 items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
-                  >
-                    <Plus size={14} />
-                  </button>
-                </div>
-
-                {/* Total */}
-                <div className="mb-4 text-right lg:mb-0 lg:text-center">
-                  <p className="font-bold text-gray-900 dark:text-white">
-                    {convertPrice(Number(item.precio_base) * item.cantidad)}
-                  </p>
-                </div>
-
-                {/* Delete Button */}
-                <div className="flex justify-end lg:justify-center">
-                  <button
-                    onClick={() => eliminarProducto(item.id_producto)}
-                    className="flex h-7 w-7 items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
+      <div
+        className="carrito-grid"
+        style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "24px", alignItems: "start" }}
+      >
+        {/* ── Products ── */}
+        <div style={{
+          borderRadius: "16px", background: C.white, border: `1px solid ${C.border}`,
+          overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+          animation: "fadeUp .4s ease .06s both",
+        }}>
+          {/* Column headers */}
+          <div
+            className="col-headers"
+            style={{
+              padding: "13px 20px", borderBottom: `1px solid ${C.border}`,
+              display: "grid", gridTemplateColumns: "1fr 110px 90px 36px", gap: "12px", alignItems: "center",
+            }}
+          >
+            {[t("cart_table_product"), t("cart_table_quantity"), t("cart_table_total"), ""].map((h, i) => (
+              <span key={i} style={{
+                fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px",
+                textTransform: "uppercase", color: C.muted,
+                textAlign: i >= 2 ? "right" : "left",
+              }}>
+                {h}
+              </span>
             ))}
           </div>
 
-          <button
-            onClick={() => router.push("/cliente/producto")}
-            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#3D6B3F] px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1F3A2E]"
-          >
-            {t("cart_continue_button")}
-          </button>
+          {/* Items */}
+          {items.map((item, idx) => (
+            <div
+              key={item.id_producto}
+              className="cart-item"
+              style={{
+                padding: "16px 20px",
+                borderBottom: idx < items.length - 1 ? `1px solid ${C.border}` : "none",
+                display: "grid", gridTemplateColumns: "1fr 110px 90px 36px",
+                gap: "12px", alignItems: "center",
+              }}
+            >
+              {/* Product info */}
+              <Link
+                href={`/cliente/producto/${item.id_producto}`}
+                style={{ display: "flex", gap: "14px", alignItems: "center", textDecoration: "none", minWidth: 0 }}
+              >
+                <div style={{
+                  position: "relative", height: "64px", width: "64px",
+                  flexShrink: 0, borderRadius: "10px", overflow: "hidden",
+                  background: C.cream, border: `1px solid ${C.border}`,
+                }}>
+                  {item.producto_imagenes?.[0] ? (
+                    <Image src={item.producto_imagenes[0].url} alt={item.nombre} fill sizes="64px" className="object-cover" />
+                  ) : item.imagen_principal_url ? (
+                    <Image src={item.imagen_principal_url} alt={item.nombre} fill sizes="64px" className="object-cover" />
+                  ) : (
+                    <div style={{
+                      display: "flex", height: "100%",
+                      alignItems: "center", justifyContent: "center",
+                      fontSize: "10px", color: C.muted,
+                    }}>
+                      {t("cart_no_image")}
+                    </div>
+                  )}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{
+                    fontSize: "14px", fontWeight: "600", color: C.text,
+                    margin: "0 0 4px 0",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {item.nombre}
+                  </h3>
+                  <p style={{ fontSize: "12px", color: C.copper, fontFamily: "monospace", margin: 0 }}>
+                    {convertPrice(Number(item.precio_base))} / {t("cart_price_unit")}
+                  </p>
+                </div>
+              </Link>
+
+              {/* Quantity */}
+              <div className="item-qty" style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
+                <button
+                  className="qty-btn"
+                  onClick={() => actualizarCantidad(item.id_producto, Math.max(item.cantidad - 1, 1))}
+                  style={{
+                    height: "30px", width: "30px", display: "flex",
+                    alignItems: "center", justifyContent: "center",
+                    borderRadius: "8px", border: `1px solid ${C.border}`,
+                    background: C.white, color: C.muted, cursor: "pointer",
+                  }}
+                >
+                  <Minus size={12} />
+                </button>
+                <span style={{
+                  width: "22px", textAlign: "center",
+                  fontSize: "14px", fontWeight: "700",
+                  color: C.text, fontFamily: "monospace",
+                }}>
+                  {item.cantidad}
+                </span>
+                <button
+                  className="qty-btn"
+                  onClick={() => actualizarCantidad(item.id_producto, item.cantidad + 1)}
+                  style={{
+                    height: "30px", width: "30px", display: "flex",
+                    alignItems: "center", justifyContent: "center",
+                    borderRadius: "8px", border: `1px solid ${C.border}`,
+                    background: C.white, color: C.muted, cursor: "pointer",
+                  }}
+                >
+                  <Plus size={12} />
+                </button>
+              </div>
+
+              {/* Total */}
+              <div className="item-total" style={{ textAlign: "right" }}>
+                <p style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "700", color: C.copper, margin: 0 }}>
+                  {convertPrice(Number(item.precio_base) * item.cantidad)}
+                </p>
+              </div>
+
+              {/* Delete */}
+              <div className="item-del" style={{ display: "flex", justifyContent: "center" }}>
+                <button
+                  className="del-btn"
+                  onClick={() => eliminarProducto(item.id_producto)}
+                  style={{
+                    height: "32px", width: "32px", display: "flex",
+                    alignItems: "center", justifyContent: "center",
+                    borderRadius: "8px", background: "transparent",
+                    color: C.muted, border: "none", cursor: "pointer",
+                  }}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Footer */}
+          <div style={{ padding: "14px 20px", borderTop: `1px solid ${C.border}` }}>
+            <button
+              className="back-btn"
+              onClick={() => router.push("/cliente/producto")}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: "7px",
+                padding: "9px 16px", borderRadius: "8px",
+                background: "transparent", color: C.green,
+                border: `1px solid ${C.border}`,
+                fontSize: "13px", fontWeight: "600", cursor: "pointer",
+              }}
+            >
+              <ArrowLeft size={13} />
+              {t("cart_continue_button")}
+            </button>
+          </div>
         </div>
 
-        {/* Order Summary */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-4 rounded-lg bg-white p-6 shadow-md dark:bg-gray-dark">
-            <h2 className="mb-6 text-lg font-semibold text-gray-900 dark:text-white">
+        {/* ── Summary ── */}
+        <div style={{
+          borderRadius: "16px", background: C.white, border: `1px solid ${C.border}`,
+          overflow: "hidden", position: "sticky", top: "20px",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+          animation: "fadeUp .4s ease .12s both",
+        }}>
+          <div style={{ height: "3px", background: `linear-gradient(90deg, ${C.green} 0%, ${C.copper} 100%)` }} />
+          <div style={{ padding: "24px" }}>
+            <h2 style={{ fontSize: "16px", fontWeight: "700", color: C.text, margin: "0 0 20px 0" }}>
               {t("cart_summary_title")}
             </h2>
 
-            {/* Pricing Breakdown */}
-            <div className="space-y-3 border-b border-gray-200 pb-4 dark:border-gray-700">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-300">
-                  {t("cart_summary_subtotal")} ({items.length} {items.length === 1 ? "producto" : "productos"})
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "16px", paddingBottom: "16px", borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "14px", color: C.muted }}>
+                  {t("cart_summary_subtotal")}{" "}
+                  <span style={{ fontSize: "12px" }}>
+                    ({items.length} {items.length === 1 ? "producto" : "productos"})
+                  </span>
                 </span>
-                <span className="font-medium text-gray-900 dark:text-white">
+                <span style={{ fontSize: "14px", fontWeight: "600", color: C.text, fontFamily: "monospace" }}>
                   {convertPrice(subtotal)}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "14px", color: C.muted }}>
                   {t("cart_summary_shipping")}
-                  <Info size={14} className="text-gray-400" />
+                  <Info size={13} style={{ color: C.border }} />
                 </span>
-                <span className="text-gray-500 dark:text-gray-400">
+                <span style={{ fontSize: "13px", color: C.muted, fontStyle: "italic" }}>
                   {t("cart_summary_calculated_later")}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "14px", color: C.muted }}>
                   {t("cart_summary_tax")}
-                  <Info size={14} className="text-gray-400" />
+                  <Info size={13} style={{ color: C.border }} />
                 </span>
-                <span className="text-gray-500 dark:text-gray-400">
+                <span style={{ fontSize: "13px", color: C.muted, fontStyle: "italic" }}>
                   {t("cart_summary_calculated_later")}
                 </span>
               </div>
             </div>
 
-            {/* Total */}
-            <div className="flex justify-between border-b border-gray-200 py-4 dark:border-gray-700">
-              <span className="font-semibold text-gray-900 dark:text-white">{t("cart_summary_subtotal")}</span>
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: C.text }}>Total</span>
+              <span style={{ fontFamily: "monospace", fontSize: "24px", fontWeight: "700", color: C.copper }}>
                 {convertPrice(subtotal)}
               </span>
             </div>
 
-            {/* Info Note */}
-            <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+            <p style={{ fontSize: "12px", color: C.muted, marginBottom: "20px", lineHeight: "1.5" }}>
               {t("cart_price_note")}
             </p>
 
-            {/* Checkout Button */}
             <button
+              className="checkout-btn"
               onClick={() => router.push("/tienda/checkout")}
-              className="mt-6 w-full rounded-lg bg-[#3D6B3F] py-3 font-semibold text-white transition-colors hover:bg-[#1F3A2E]"
+              style={{
+                width: "100%", padding: "14px", borderRadius: "10px",
+                background: C.green, color: C.white,
+                fontSize: "15px", fontWeight: "700",
+                border: "none", cursor: "pointer",
+              }}
             >
               {t("cart_checkout_button")}
             </button>
