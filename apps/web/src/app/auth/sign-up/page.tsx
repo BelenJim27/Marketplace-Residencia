@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { SignUpForm } from "./_components/sign-up-form";
@@ -7,11 +8,22 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useTheme } from "next-themes";
 import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
+import {
+  UserCircle, Users, Tag, LayoutGrid, ShieldCheck,
+} from "lucide-react";
 
 const FEATURES = [
   "Productores artesanales verificados",
   "Envíos a todo México y el mundo",
   "Variedad única de agaves oaxaqueños",
+];
+
+const WIZARD_STEPS = [
+  { n: 0, label: "Cuenta",      eyebrow: "00", Icon: UserCircle,  hint: "Acceso" },
+  { n: 1, label: "Asociación",  eyebrow: "01", Icon: Users,       hint: "Tu membresía" },
+  { n: 2, label: "Tu Marca",    eyebrow: "02", Icon: Tag,         hint: "Identidad" },
+  { n: 3, label: "Categorías",  eyebrow: "03", Icon: LayoutGrid,  hint: "Productos" },
+  { n: 4, label: "Certificado", eyebrow: "04", Icon: ShieldCheck, hint: "Verificación" },
 ];
 
 /* ── Main content ─────────────────────────────────────────────────────────── */
@@ -21,71 +33,164 @@ function SignUpContent() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
-  /* ── Vender flow: wizard layout con TiendaHeader ── */
+  /* ── Vender flow: wizard de pasos (para usuarios sin cuenta) ── */
   if (isVenderFlow) {
     const C = {
-      page:    isDark ? "#0B1610" : "#FAF6EC",
-      card:    isDark ? "#142018" : "#FFFFFF",
-      border:  isDark ? "rgba(200,169,122,0.18)" : "rgba(46,74,51,0.12)",
-      heading: isDark ? "#F4F0E3" : "#1C1A14",
-      muted:   isDark ? "rgba(244,240,227,0.45)" : "#6B6354",
-      green:   "#2E4A33",
-      copper:  "#C97A3E",
+      bg:         isDark ? "#0B1610" : "#F4F0E3",
+      card:       isDark ? "#111D14" : "#FFFFFF",
+      section:    isDark ? "#162319" : "#F8F5EE",
+      border:     isDark ? "rgba(200,169,122,0.16)" : "rgba(46,74,51,0.12)",
+      heading:    isDark ? "#F4F0E3" : "#1F3A2E",
+      body:       isDark ? "rgba(244,240,227,0.65)" : "rgba(31,58,46,0.65)",
+      copper:     "#C97A3E",
+      green:      "#2E4A33",
+      cream:      "#F4F0E3",
+      amber:      "#C89B4A",
+      stepActive: "#C97A3E",
+      stepFuture: isDark ? "rgba(200,169,122,0.18)" : "rgba(46,74,51,0.10)",
+      stepLine:   isDark ? "rgba(200,169,122,0.14)" : "rgba(46,74,51,0.12)",
     };
-
     const SERIF = "'Cormorant Garamond', Georgia, serif";
     const SANS  = "'Manrope', 'DM Sans', sans-serif";
     const MONO  = "ui-monospace, 'SF Mono', Menlo, monospace";
 
     return (
-      <div style={{ minHeight: "100vh", background: C.page, fontFamily: SANS, color: C.heading }}>
+      <div style={{ fontFamily: SANS }}>
         <TiendaHeader />
-        <div
-          style={{
-            maxWidth: "560px",
-            margin: "0 auto",
-            padding: "88px 24px 64px",
-          }}
-        >
+        <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "24px 16px 48px" }}>
 
-          {/* ── Form card ────────────────────────────────────── */}
-          <section style={{
-            background: C.card,
-            border: `1px solid ${C.border}`,
-            borderRadius: "20px",
-            padding: "clamp(28px, 5%, 44px)",
-            boxShadow: isDark
-              ? "0 4px 40px rgba(0,0,0,0.35)"
-              : "0 2px 4px rgba(11,26,43,0.05), 0 20px 50px rgba(11,26,43,0.08)",
+          {/* ── Dark green header ─────────────────────────────── */}
+          <div style={{
+            background: C.green, borderRadius: "16px 16px 0 0",
+            padding: "clamp(16px,3vw,24px) clamp(20px,4vw,36px)",
+            position: "relative", overflow: "hidden",
           }}>
-            {/* Card header */}
-            <div style={{ marginBottom: "12px" }}>
-              <h3 style={{ fontFamily: SERIF, fontSize: "22px", fontWeight: 500, margin: 0, color: C.heading }}>
-                Datos de acceso
-              </h3>
+            <div style={{ position:"absolute", right:"-40px", top:"-40px", width:"200px", height:"200px", borderRadius:"50%", border:"1px solid rgba(244,240,227,0.05)", pointerEvents:"none" }} />
+            <div style={{ position:"absolute", right:"30px", top:"30px", width:"110px", height:"110px", borderRadius:"50%", border:"1px solid rgba(244,240,227,0.05)", pointerEvents:"none" }} />
+            <p style={{ fontFamily:MONO, color:C.copper, fontSize:"10px", fontWeight:700, letterSpacing:"0.22em", textTransform:"uppercase", margin:"0 0 8px" }}>
+              Guardianas del Mezcal · Programa de Productores
+            </p>
+            <h1 style={{ fontFamily:SERIF, color:C.cream, fontSize:"clamp(20px,3.5vw,30px)", fontWeight:400, lineHeight:1.12, margin:"0 0 6px" }}>
+              Únete como Productor
+            </h1>
+            <p style={{ fontFamily:SANS, color:"rgba(244,240,227,0.60)", fontSize:"13px", lineHeight:1.6, maxWidth:"500px", margin:0 }}>
+              Completa los 4 pasos para publicar y vender tus productos artesanales.
+            </p>
+          </div>
+
+          {/* ── Gold stripe ───────────────────────────────────── */}
+          <div style={{ height:"3px", background:`linear-gradient(90deg,${C.copper},${C.amber} 50%,${C.copper})` }} />
+
+          {/* ── Step indicator ────────────────────────────────── */}
+          <div style={{ background:C.card, borderLeft:`1px solid ${C.border}`, borderRight:`1px solid ${C.border}`, borderBottom:`1px solid ${C.border}`, padding:"12px clamp(16px,4vw,32px)" }}>
+            <style>{`
+              @media (max-width: 520px) {
+                .su-step-label { display: none !important; }
+                .su-step-hint  { display: none !important; }
+              }
+            `}</style>
+            <div style={{ display:"flex", alignItems:"center" }}>
+              {WIZARD_STEPS.map((s, i) => {
+                const active = s.n === 0;
+                const Icon = s.Icon;
+                return (
+                  <React.Fragment key={s.n}>
+                    <div style={{ display:"flex", alignItems:"center", gap:"10px", flexShrink:0 }}>
+                      <div style={{
+                        width:"36px", height:"36px", borderRadius:"50%", flexShrink:0,
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        background: active ? C.stepActive : C.stepFuture,
+                        border:`2px solid ${active ? C.stepActive : C.border}`,
+                        boxShadow: active ? `0 0 0 3px ${isDark ? "rgba(201,122,62,0.18)" : "rgba(201,122,62,0.12)"}` : "none",
+                      }}>
+                        <Icon style={{ width:"14px", height:"14px", color: active ? C.cream : C.body }} />
+                      </div>
+                      <div style={{ display:"flex", flexDirection:"column", lineHeight:1 }}>
+                        <span className="su-step-label" style={{ fontFamily:SANS, fontSize:"12px", fontWeight: active ? 700 : 400, color: active ? C.copper : C.body }}>
+                          {s.label}
+                        </span>
+                        <span className="su-step-hint" style={{ fontFamily:MONO, fontSize:"9px", color: active ? C.copper : C.body, letterSpacing:"0.12em", marginTop:"2px", opacity: active ? 1 : 0.5 }}>
+                          {s.eyebrow} · {s.hint}
+                        </span>
+                      </div>
+                    </div>
+                    {i < WIZARD_STEPS.length - 1 && (
+                      <div style={{ flex:1, height:"2px", margin:"0 10px", background:C.stepLine, borderRadius:"1px" }} />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+            <p style={{ fontFamily:MONO, fontSize:"10px", color:C.body, margin:"8px 0 0", letterSpacing:"0.12em" }}>
+              PASO 0 DE 4 — CUENTA
+            </p>
+          </div>
+
+          {/* ── Card body (form + imagen lado a lado) ─────────── */}
+          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderTop:"none", borderRadius:"0 0 16px 16px", overflow:"hidden", display:"flex", minHeight:"420px" }}>
+
+            {/* Columna izquierda: formulario */}
+            <div style={{ flex:1, padding:"clamp(20px,3vw,32px)", overflowY:"auto" }}>
+              <div style={{ marginBottom:"20px" }}>
+                <p style={{ fontFamily:MONO, color:C.copper, fontSize:"10px", fontWeight:700, letterSpacing:"0.22em", textTransform:"uppercase", margin:"0 0 6px" }}>
+                  00 · Acceso
+                </p>
+                <h2 style={{ fontFamily:SERIF, color:C.heading, fontSize:"clamp(18px,3vw,22px)", fontWeight:400, margin:"0 0 4px", lineHeight:1.15 }}>
+                  Tu Cuenta
+                </h2>
+                <p style={{ fontFamily:SANS, color:C.body, fontSize:"13px", lineHeight:1.6, margin:0 }}>
+                  Crea tu cuenta para continuar como productor.
+                </p>
+              </div>
+
+              <SignUpForm isVenderFlow={true} />
+
+              <div style={{ marginTop:"16px", textAlign:"center" }}>
+                <p style={{ fontFamily:SANS, fontSize:"13px", color:C.body, margin:0 }}>
+                  ¿Ya tienes una cuenta?{" "}
+                  <Link
+                    href="/auth/sign-in?vender=true"
+                    style={{ color:C.copper, textDecoration:"underline", textUnderlineOffset:"2px", fontWeight:600 }}
+                  >
+                    Inicia sesión
+                  </Link>
+                </p>
+              </div>
             </div>
 
-            {/* Progress bar */}
-            <div style={{ height: "5px", background: isDark ? "rgba(200,169,122,0.15)" : "#EDE8D8", borderRadius: "99px", overflow: "hidden", marginBottom: "28px" }}>
-              <div style={{ height: "100%", width: "33%", background: C.green, borderRadius: "99px", transition: "width 0.35s ease" }} />
+            {/* Columna derecha: imagen hero */}
+            <div className="hidden lg:block" style={{ width:"38%", flexShrink:0, position:"relative" }}>
+              <Image
+                src="/images/login/gemmi.png"
+                alt="Mezcal Oaxaca"
+                fill
+                priority
+                className="object-cover"
+              />
+              <div style={{ position:"absolute", inset:0, background:"linear-gradient(to right, rgba(0,0,0,0.55), rgba(0,0,0,0.18))" }} />
+              <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", justifyContent:"flex-end", padding:"clamp(16px,3vw,28px)", paddingBottom:"clamp(20px,3vw,32px)" }}>
+                <p style={{ color:"#86efac", fontSize:"10px", fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", margin:"0 0 8px" }}>
+                  Marketplace Artesanal
+                </p>
+                <h3 style={{ color:"white", fontFamily:SERIF, fontSize:"clamp(18px,2.5vw,26px)", fontWeight:400, lineHeight:1.2, margin:"0 0 8px" }}>
+                  Mezcal Oaxaqueño<br />
+                  <span style={{ color:"#4ade80" }}>del corazón</span><br />
+                  de México
+                </h3>
+                <p style={{ color:"rgba(255,255,255,0.6)", fontSize:"12px", lineHeight:1.6, margin:"0 0 14px", maxWidth:"200px" }}>
+                  Conectamos productores artesanales con amantes del buen mezcal.
+                </p>
+                {["Productores verificados", "Envíos a todo México", "Agaves oaxaqueños"].map((f) => (
+                  <div key={f} style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"6px" }}>
+                    <span style={{ width:"16px", height:"16px", borderRadius:"50%", background:"rgba(74,222,128,0.25)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:"9px", color:"#86efac", fontWeight:700 }}>✓</span>
+                    <span style={{ color:"rgba(255,255,255,0.75)", fontSize:"12px" }}>{f}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Form */}
-            <SignUpForm />
+          </div>
 
-            {/* Footer link */}
-            <div style={{ marginTop: "20px", textAlign: "center" }}>
-              <p style={{ fontSize: "13px", color: C.muted, margin: 0 }}>
-                ¿Ya tienes una cuenta?{" "}
-                <Link
-                  href="/auth/sign-in?vender=true"
-                  style={{ color: C.copper, textDecoration: "underline", textUnderlineOffset: "2px", fontWeight: 600 }}
-                >
-                  Iniciar sesión
-                </Link>
-              </p>
-            </div>
-          </section>
         </div>
       </div>
     );
@@ -94,77 +199,77 @@ function SignUpContent() {
   /* ── Regular sign-up ── */
   return (
     <div className="p-4 md:p-6 2xl:p-10">
-    <div className="overflow-hidden rounded-2xl bg-white shadow-lg dark:bg-gray-dark min-h-[calc(100vh-8rem)]">
-      <div className="flex min-h-[calc(100vh-8rem)]">
-        {/* Left: Form */}
-        <div className="flex w-full flex-col justify-center lg:w-[45%] p-8 sm:p-12 xl:p-16">
-          <div className="mb-8">
-            <div className="mb-4">
-              <Image
-                src="/images/logo/agavea.png"
-                alt="AGAVEA"
-                width={180}
-                height={72}
-                className="object-contain"
-              />
+      <div className="overflow-hidden rounded-2xl bg-white shadow-lg dark:bg-gray-dark min-h-[calc(100vh-8rem)]">
+        <div className="flex min-h-[calc(100vh-8rem)]">
+          {/* Left: Form */}
+          <div className="flex w-full flex-col justify-center lg:w-[45%] p-8 sm:p-12 xl:p-16">
+            <div className="mb-8">
+              <div className="mb-4">
+                <Image
+                  src="/fotos/mezcanea.png"
+                  alt="AGAVEA"
+                  width={180}
+                  height={72}
+                  className="object-contain"
+                />
+              </div>
+              <h1 className="text-2xl font-bold text-dark dark:text-white">
+                Crea tu cuenta
+              </h1>
+              <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+                Regístrate para comenzar a comprar.
+              </p>
             </div>
-            <h1 className="text-2xl font-bold text-dark dark:text-white">
-              Crea tu cuenta
-            </h1>
-            <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-              Regístrate para comenzar a comprar.
+
+            <SignUpForm />
+
+            <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+              ¿Ya tienes una cuenta?{" "}
+              <Link
+                href="/auth/sign-in"
+                className="font-semibold text-green-600 underline underline-offset-2 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
+              >
+                Inicia sesión
+              </Link>
             </p>
           </div>
 
-          <SignUpForm />
-
-          <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-            ¿Ya tienes una cuenta?{" "}
-            <Link
-              href="/auth/sign-in"
-              className="font-semibold text-green-600 underline underline-offset-2 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
-            >
-              Inicia sesión
-            </Link>
-          </p>
-        </div>
-
-        {/* Right: Hero — mismo que sign-in */}
-        <div className="hidden lg:block lg:w-[55%] relative">
-          <Image
-            src="/images/login/gemmi.png"
-            alt="Mezcal Oaxaca"
-            fill
-            priority
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
-          <div className="absolute inset-0 flex flex-col justify-end p-12 pb-16">
-            <p className="text-green-300 text-xs font-semibold tracking-widest uppercase mb-3">
-              Marketplace Artesanal
-            </p>
-            <h2 className="text-5xl font-bold text-white leading-tight mb-4">
-              Mezcal Oaxaqueño<br />
-              <span className="text-green-400">del corazón</span><br />
-              de México
-            </h2>
-            <p className="text-white/60 text-base max-w-xs leading-relaxed mb-8">
-              Conectamos productores artesanales con amantes del buen mezcal en todo el mundo.
-            </p>
-            <div className="flex flex-col gap-2.5">
-              {FEATURES.map((feat) => (
-                <div key={feat} className="flex items-center gap-3">
-                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-500/25 text-green-300 text-xs font-bold">
-                    ✓
-                  </span>
-                  <span className="text-white/75 text-sm">{feat}</span>
-                </div>
-              ))}
+          {/* Right: Hero */}
+          <div className="hidden lg:flex lg:w-[55%] relative">
+            <Image
+              src="/images/login/gemmi.png"
+              alt="Mezcal Oaxaca"
+              fill
+              priority
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
+            <div className="absolute inset-0 flex flex-col justify-end p-12 pb-16">
+              <p className="text-green-300 text-xs font-semibold tracking-widest uppercase mb-3">
+                Marketplace Artesanal
+              </p>
+              <h2 className="text-5xl font-bold text-white leading-tight mb-4">
+                Mezcal Oaxaqueño<br />
+                <span className="text-green-400">del corazón</span><br />
+                de México
+              </h2>
+              <p className="text-white/60 text-base max-w-xs leading-relaxed mb-8">
+                Conectamos productores artesanales con amantes del buen mezcal en todo el mundo.
+              </p>
+              <div className="flex flex-col gap-2.5">
+                {FEATURES.map((feat) => (
+                  <div key={feat} className="flex items-center gap-3">
+                    <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-500/25 text-green-300 text-xs font-bold">
+                      ✓
+                    </span>
+                    <span className="text-white/75 text-sm">{feat}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }

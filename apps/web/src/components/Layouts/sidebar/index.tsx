@@ -77,7 +77,7 @@ export function Sidebar() {
             {!isCollapsed && (
               <Link href="/" onClick={() => isMobile && toggleSidebar()}>
                 <Image
-                  src="/images/logo/agavea.png"
+                  src="/fotos/mezcanea.png"
                   width={150}
                   height={60}
                   alt="AGAVEA"
@@ -90,7 +90,7 @@ export function Sidebar() {
             {isCollapsed && (
               <Link href="/" className="mx-auto">
                 <Image
-                  src="/images/logo/agavea.png"
+                  src="/fotos/mezcanea.png"
                   width={42}
                   height={42}
                   alt="AGAVEA"

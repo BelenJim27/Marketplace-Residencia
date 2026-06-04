@@ -14,7 +14,7 @@ export default function Signin({ isVenderFlow = false }: { isVenderFlow?: boolea
       <div className="mb-8">
         <div className="mb-4">
           <Image
-            src="/images/logo/agavea.png"
+            src="/fotos/mezcanea.png"
             alt="AGAVEA"
             width={180}
             height={72}

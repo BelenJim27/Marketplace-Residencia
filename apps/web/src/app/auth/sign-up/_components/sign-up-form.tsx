@@ -138,7 +138,7 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp }: { isVenderFlow?: 
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <GoogleSigninButton text="Registrate" />
 
       <div className="my-6 flex items-center justify-center">
@@ -149,172 +149,159 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp }: { isVenderFlow?: 
         <span className="block h-px w-full bg-stroke dark:bg-dark-3"></span>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {error && (
           <div className="rounded-lg bg-red-50 p-3 text-sm text-red-500">
             {error}
           </div>
         )}
-        {/* NOMBRE DE USUARIO*/}
-        <div>
-          <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
-            Nombre de usuario
-          </label>
-          <input
-            type="text"
-            required
-            className="w-full rounded-lg border border-green-200 bg-white p-3 outline-none focus:border-green-400 dark:bg-gray-dark"
-            placeholder="Ingresa tu nombre de usuario"
-            value={formData.nombre_usuario}
-            onChange={(e) => setFormData({ ...formData, nombre_usuario: e.target.value })}
-          />
-        </div>
-        {/* NOMBRE */}
-        <div>
-          <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
-            Nombres
-          </label>
-          <input
-            type="text"
-            required
-            className={`w-full rounded-lg border bg-white p-3 outline-none dark:bg-gray-dark ${fieldErrors.nombre ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
-            placeholder="Ingresa tu nombre"
-            value={formData.nombre}
-            onChange={(e) => handleNombreChange("nombre", e.target.value)}
-          />
-          {fieldErrors.nombre && <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.nombre}</p>}
-        </div>
 
-        {/* APELLIDO PATERNO */}
-        <div>
-          <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
-            Apellido paterno
-          </label>
-          <input
-            type="text"
-            required
-            className={`w-full rounded-lg border bg-white p-3 outline-none dark:bg-gray-dark ${fieldErrors.apellido_paterno ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
-            placeholder="Ingresa tu apellido paterno"
-            value={formData.apellido_paterno}
-            onChange={(e) => handleNombreChange("apellido_paterno", e.target.value)}
-          />
-          {fieldErrors.apellido_paterno && <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.apellido_paterno}</p>}
-        </div>
-
-        {/* APELLIDO MATERNO */}
-        <div>
-          <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
-            Apellido materno
-          </label>
-          <input
-            type="text"
-            className={`w-full rounded-lg border bg-white p-3 outline-none dark:bg-gray-dark ${fieldErrors.apellido_materno ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
-            placeholder="Ingresa tu apellido materno"
-            value={formData.apellido_materno}
-            onChange={(e) => handleNombreChange("apellido_materno", e.target.value)}
-          />
-          {fieldErrors.apellido_materno && <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.apellido_materno}</p>}
-        </div>
-
-        {/* EMAIL */}
-        <div>
-          <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
-            Correo electrónico
-          </label>
-          <input
-            type="email"
-            required
-            className="w-full rounded-lg border border-green-200 bg-white p-3 outline-none focus:border-green-400 dark:bg-gray-dark"
-            placeholder="Ingresa tu correo"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          />
-        </div>
-
-        {/* CONTRASEÑA */}
-        <div>
-          <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
-            Contraseña
-          </label>
-          <div className="relative">
+        {/* USUARIO + EMAIL — fila 1 */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
+              Nombre de usuario
+            </label>
             <input
-              type={showPassword ? "text" : "password"}
+              type="text"
               required
-              autoComplete="new-password"
-              className="w-full rounded-lg border border-green-200 bg-white p-3 pr-12 outline-none focus:border-green-400 dark:bg-gray-dark"
-              placeholder="Ingresa tu contraseña"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="w-full rounded-lg border border-green-200 bg-white px-3 py-2 text-sm outline-none focus:border-green-400 dark:bg-gray-dark"
+              placeholder="Tu usuario"
+              value={formData.nombre_usuario}
+              onChange={(e) => setFormData({ ...formData, nombre_usuario: e.target.value })}
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
           </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
+              Correo electrónico
+            </label>
+            <input
+              type="email"
+              required
+              className="w-full rounded-lg border border-green-200 bg-white px-3 py-2 text-sm outline-none focus:border-green-400 dark:bg-gray-dark"
+              placeholder="tu@correo.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+          </div>
+        </div>
 
-          {/* Validaciones visuales */}
-          {formData.password.length > 0 && (
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {passwordValidations.map((v, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center text-[11px] font-medium ${
-                    v.fulfilled ? "text-green-600" : "text-gray-400"
-                  }`}
-                >
-                  <div
-                    className={`mr-2 h-1.5 w-1.5 rounded-full ${
-                      v.fulfilled ? "bg-green-600" : "bg-gray-300"
-                    }`}
-                  />
-                  {v.label}
-                </div>
-              ))}
+        {/* NOMBRE + APELLIDO PATERNO — fila 2 */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
+              Nombre(s)
+            </label>
+            <input
+              type="text"
+              required
+              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none dark:bg-gray-dark ${fieldErrors.nombre ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
+              placeholder="Tu nombre"
+              value={formData.nombre}
+              onChange={(e) => handleNombreChange("nombre", e.target.value)}
+            />
+            {fieldErrors.nombre && <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.nombre}</p>}
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
+              Apellido paterno
+            </label>
+            <input
+              type="text"
+              required
+              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none dark:bg-gray-dark ${fieldErrors.apellido_paterno ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
+              placeholder="Apellido paterno"
+              value={formData.apellido_paterno}
+              onChange={(e) => handleNombreChange("apellido_paterno", e.target.value)}
+            />
+            {fieldErrors.apellido_paterno && <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.apellido_paterno}</p>}
+          </div>
+        </div>
+
+        {/* APELLIDO MATERNO — fila 3 (mitad ancho) */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
+              Apellido materno
+            </label>
+            <input
+              type="text"
+              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none dark:bg-gray-dark ${fieldErrors.apellido_materno ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
+              placeholder="Apellido materno"
+              value={formData.apellido_materno}
+              onChange={(e) => handleNombreChange("apellido_materno", e.target.value)}
+            />
+            {fieldErrors.apellido_materno && <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.apellido_materno}</p>}
+          </div>
+        </div>
+
+        {/* CONTRASEÑA + CONFIRMAR — fila 4 */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
+              Contraseña
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                autoComplete="new-password"
+                className="w-full rounded-lg border border-green-200 bg-white px-3 py-2 pr-9 text-sm outline-none focus:border-green-400 dark:bg-gray-dark"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
+              <button type="button" onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
-          )}
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
+              Confirmar contraseña
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                required
+                autoComplete="new-password"
+                className={`w-full rounded-lg border px-3 py-2 pr-9 text-sm outline-none dark:bg-gray-dark ${
+                  formData.confirmarPassword.length > 0
+                    ? passwordsMatch ? "border-green-500" : "border-red-400"
+                    : "border-green-200"
+                }`}
+                placeholder="••••••••"
+                value={formData.confirmarPassword}
+                onChange={(e) => setFormData({ ...formData, confirmarPassword: e.target.value })}
+              />
+              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            {formData.confirmarPassword.length > 0 && !passwordsMatch && (
+              <p className="mt-1 text-[11px] text-red-500">Las contraseñas no coinciden</p>
+            )}
+          </div>
         </div>
 
-        {/* CONFIRMAR CONTRASEÑA */}
-        <div>
-          <label className="mb-2.5 block text-sm font-medium text-dark dark:text-white">
-            Confirmar contraseña
-          </label>
-          <div className="relative">
-            <input
-              type={showConfirmPassword ? "text" : "password"}
-              required
-              autoComplete="new-password"
-              className={`w-full rounded-lg border p-3 pr-12 outline-none dark:bg-gray-dark ${
-                formData.confirmarPassword.length > 0
-                  ? passwordsMatch
-                    ? "border-green-500"
-                    : "border-red-400"
-                  : "border-green-200"
-              }`}
-              placeholder="Confirma tu contraseña"
-              value={formData.confirmarPassword}
-              onChange={(e) => setFormData({ ...formData, confirmarPassword: e.target.value })}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
+        {/* Validaciones de contraseña */}
+        {formData.password.length > 0 && (
+          <div className="grid grid-cols-2 gap-1.5">
+            {passwordValidations.map((v, i) => (
+              <div key={i} className={`flex items-center text-[11px] font-medium ${v.fulfilled ? "text-green-600" : "text-gray-400"}`}>
+                <div className={`mr-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full ${v.fulfilled ? "bg-green-600" : "bg-gray-300"}`} />
+                {v.label}
+              </div>
+            ))}
           </div>
-          {formData.confirmarPassword.length > 0 && !passwordsMatch && (
-            <p className="mt-1 text-[11px] text-red-500">Las contraseñas no coinciden</p>
-          )}
-        </div>
+        )}
 
         <button
           type="submit"
           disabled={loading}
-          className="flex w-full justify-center rounded-lg bg-green-600 p-[13px] font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          className="flex w-full justify-center rounded-lg bg-green-600 py-2.5 font-medium text-white hover:bg-green-700 disabled:opacity-50"
         >
           {loading ? "Registrando..." : "Crear cuenta"}
         </button>

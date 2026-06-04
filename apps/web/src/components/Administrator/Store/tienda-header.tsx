@@ -181,9 +181,9 @@ export function TiendaHeader() {
         {/* Logo */}
         <Link href="/cliente/producto" className="flex items-center gap-3 shrink-0">
           <Image
-            src="/images/logo/agavea.png"
-            width={scrolled ? 110 : 140}
-            height={scrolled ? 40 : 52}
+            src="/fotos/mezcanea.png"
+            width={scrolled ? 80 : 100}
+            height={scrolled ? 30 : 38}
             alt="AGAVEA"
             className="object-contain transition-all duration-300"
             style={{ filter: "brightness(0) invert(1)" }}

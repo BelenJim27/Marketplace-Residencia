@@ -32,6 +32,7 @@ export function RootContent({ children }: PropsWithChildren) {
   const isAuthRoute = p.startsWith("/auth/");
   const isClientOnlyRoute = p.startsWith("/tienda/") || p.startsWith("/cliente/");
   const isClientHome = p === "/cliente/inicio";
+  const isSolicitarRoute = p === "/dashboard/productor/solicitar";
 
   if (loading) {
     if (user && (isAdmin || isProductor)) {
@@ -55,6 +56,15 @@ export function RootContent({ children }: PropsWithChildren) {
         <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>
+      </div>
+    );
+  }
+
+  // Ruta solicitar (sin autenticar) — el step 0 maneja su propio layout completo
+  if (isSolicitarRoute && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
+        {children}
       </div>
     );
   }

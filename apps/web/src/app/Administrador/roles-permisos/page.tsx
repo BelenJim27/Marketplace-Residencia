@@ -521,6 +521,206 @@ export default function RolesPermisosPage() {
           </div>
         </div>
       )}
+
+      {/* ══════════════════════ MODAL: NUEVO / EDITAR ROL ══════════════════════ */}
+      {showModalRol && (
+        <div className={modalWrapCls}>
+          <div className={modalBoxCls}>
+            <div className={modalHdrCls}>
+              <div className="flex items-center gap-3">
+                <Shield size={20} className="text-[#A8C26B]" />
+                <h2 className="text-lg font-bold text-white">{editingRol ? "Editar Rol" : "Nuevo Rol"}</h2>
+              </div>
+              <button onClick={() => setShowModalRol(false)} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"><X size={18} /></button>
+            </div>
+            <form onSubmit={editingRol ? handleUpdateRol : handleCreateRol} className="p-6 space-y-4">
+              <div>
+                <label className={labelCls}>Nombre del rol</label>
+                <input className={inputCls} placeholder="Ej: moderador" value={formDataRol.nombre} onChange={(e) => setFormDataRol({ nombre: e.target.value })} required autoFocus />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowModalRol(false)} className={btnCancel}>Cancelar</button>
+                <button type="submit" disabled={saving} className={btnSave}>
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                  {editingRol ? "Guardar cambios" : "Crear rol"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════ MODAL: NUEVO / EDITAR PERMISO ══════════════════ */}
+      {showModalPermiso && (
+        <div className={modalWrapCls}>
+          <div className={modalBoxCls}>
+            <div className={modalHdrCls}>
+              <div className="flex items-center gap-3">
+                <Key size={20} className="text-[#A8C26B]" />
+                <h2 className="text-lg font-bold text-white">{editingPermiso ? "Editar Permiso" : "Nuevo Permiso"}</h2>
+              </div>
+              <button onClick={() => setShowModalPermiso(false)} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"><X size={18} /></button>
+            </div>
+            <form onSubmit={editingPermiso ? handleUpdatePermiso : handleCreatePermiso} className="p-6 space-y-4">
+              <div>
+                <label className={labelCls}>Nombre del permiso</label>
+                <input className={inputCls} placeholder="Ej: ver_reportes" value={formDataPermiso.nombre} onChange={(e) => setFormDataPermiso({ nombre: e.target.value })} required autoFocus />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowModalPermiso(false)} className={btnCancel}>Cancelar</button>
+                <button type="submit" disabled={saving} className={btnSave}>
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                  {editingPermiso ? "Guardar cambios" : "Crear permiso"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════ MODAL: ASIGNAR PERMISOS A ROL ══════════════════ */}
+      {showModalPermisosRol && selectedRol && (
+        <div className={modalWrapCls}>
+          <div className="w-full max-w-lg rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] flex flex-col">
+            <div className={modalHdrCls}>
+              <div className="flex items-center gap-3">
+                <Key size={20} className="text-[#A8C26B]" />
+                <div>
+                  <h2 className="text-lg font-bold text-white">Permisos del rol</h2>
+                  <p className="text-xs text-white/60">{selectedRol.nombre}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowModalPermisosRol(false)} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"><X size={18} /></button>
+            </div>
+            <div className="p-6 space-y-2 overflow-y-auto flex-1">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-[#1F3A2E]/70">{selectedPermisos.length} de {permisos.length} seleccionados</span>
+                <button type="button" onClick={handleSelectAllPermisos} className="text-xs font-semibold text-[#3D6B3F] hover:underline">
+                  {selectAllPermisos ? "Deseleccionar todos" : "Seleccionar todos"}
+                </button>
+              </div>
+              {permisos.map((p) => {
+                const active = selectedPermisos.includes(p.id_permiso);
+                return (
+                  <label key={p.id_permiso} className={checkboxRowCls(active)}>
+                    <span className={checkboxBoxCls(active)}>{active && <Check size={12} />}</span>
+                    <span className="text-sm font-medium text-[#1F3A2E]">{p.nombre}</span>
+                    <input type="checkbox" className="sr-only" checked={active} onChange={() => togglePermiso(p.id_permiso)} />
+                  </label>
+                );
+              })}
+            </div>
+            <div className="flex gap-3 p-6 border-t border-[#C5CFB0]">
+              <button onClick={() => setShowModalPermisosRol(false)} className={btnCancel}>Cancelar</button>
+              <button onClick={handleSavePermisosRol} disabled={saving} className={btnSave}>
+                {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                Guardar permisos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════ MODAL: NUEVO / EDITAR USUARIO ══════════════════ */}
+      {showModalUsuario && (
+        <div className={modalWrapCls}>
+          <div className="w-full max-w-xl rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] flex flex-col">
+            <div className={modalHdrCls}>
+              <div className="flex items-center gap-3">
+                <User size={20} className="text-[#A8C26B]" />
+                <h2 className="text-lg font-bold text-white">{editingUsuario ? "Editar Usuario" : "Nuevo Usuario"}</h2>
+              </div>
+              <button onClick={() => { setShowModalUsuario(false); setEditingUsuario(null); }} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"><X size={18} /></button>
+            </div>
+            <form onSubmit={editingUsuario ? handleUpdateUsuario : handleCreateUsuario} className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelCls}>Nombre *</label>
+                  <input className={inputCls} placeholder="Nombre" value={userFormData.nombre} onChange={(e) => setUserFormData({ ...userFormData, nombre: e.target.value })} required />
+                </div>
+                <div>
+                  <label className={labelCls}>Nombre de usuario</label>
+                  <input className={inputCls} placeholder="nombre_usuario" value={userFormData.nombre_usuario} onChange={(e) => setUserFormData({ ...userFormData, nombre_usuario: e.target.value })} />
+                </div>
+                <div>
+                  <label className={labelCls}>Apellido paterno</label>
+                  <input className={inputCls} placeholder="Apellido paterno" value={userFormData.apellido_paterno} onChange={(e) => setUserFormData({ ...userFormData, apellido_paterno: e.target.value })} />
+                </div>
+                <div>
+                  <label className={labelCls}>Apellido materno</label>
+                  <input className={inputCls} placeholder="Apellido materno" value={userFormData.apellido_materno} onChange={(e) => setUserFormData({ ...userFormData, apellido_materno: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>Correo electrónico *</label>
+                <input type="email" className={inputCls} placeholder="email@ejemplo.com" value={userFormData.email} onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })} required />
+              </div>
+              <div>
+                <label className={labelCls}>{editingUsuario ? "Nueva contraseña (vacío para no cambiar)" : "Contraseña *"}</label>
+                <input type="password" className={inputCls} placeholder="••••••••" value={userFormData.password} onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })} required={!editingUsuario} />
+              </div>
+              <div>
+                <label className={labelCls}>Teléfono</label>
+                <input className={inputCls} placeholder="+52 000 000 0000" value={userFormData.telefono} onChange={(e) => setUserFormData({ ...userFormData, telefono: e.target.value })} />
+              </div>
+              {!editingUsuario && (
+                <div>
+                  <label className={labelCls}>Rol inicial</label>
+                  <select className={inputCls} value={userFormData.id_rol} onChange={(e) => setUserFormData({ ...userFormData, id_rol: Number(e.target.value) })}>
+                    <option value={0}>Sin rol</option>
+                    {roles.map((r) => <option key={r.id_rol} value={r.id_rol}>{r.nombre}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => { setShowModalUsuario(false); setEditingUsuario(null); }} className={btnCancel}>Cancelar</button>
+                <button type="submit" disabled={saving} className={btnSave}>
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                  {editingUsuario ? "Guardar cambios" : "Crear usuario"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════ MODAL: ASIGNAR ROLES A USUARIO ═════════════════ */}
+      {showModalAsignarRoles && selectedUser && (
+        <div className={modalWrapCls}>
+          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] flex flex-col">
+            <div className={modalHdrCls}>
+              <div className="flex items-center gap-3">
+                <Shield size={20} className="text-[#A8C26B]" />
+                <div>
+                  <h2 className="text-lg font-bold text-white">Asignar Roles</h2>
+                  <p className="text-xs text-white/60">{selectedUser.nombre}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowModalAsignarRoles(false)} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"><X size={18} /></button>
+            </div>
+            <div className="p-6 space-y-2 overflow-y-auto flex-1">
+              {roles.map((rol) => {
+                const active = selectedUserRoles.includes(rol.id_rol);
+                return (
+                  <label key={rol.id_rol} className={checkboxRowCls(active)}>
+                    <span className={checkboxBoxCls(active)}>{active && <Check size={12} />}</span>
+                    <span className="text-sm font-medium text-[#1F3A2E]">{rol.nombre}</span>
+                    <input type="checkbox" className="sr-only" checked={active} onChange={() => toggleUserRole(rol.id_rol)} />
+                  </label>
+                );
+              })}
+            </div>
+            <div className="flex gap-3 p-6 border-t border-[#C5CFB0]">
+              <button onClick={() => setShowModalAsignarRoles(false)} className={btnCancel}>Cancelar</button>
+              <button onClick={handleSaveUserRoles} disabled={saving} className={btnSave}>
+                {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                Guardar roles
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
