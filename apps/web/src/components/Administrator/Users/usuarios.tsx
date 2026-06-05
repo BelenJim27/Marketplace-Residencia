@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { Loader2, Plus, Pencil, Trash2, Mail, ShieldCheck, X, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { useDeleteAlert } from "@/hooks/useDeleteAlert";
+import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
+import { useSuccessToast } from "@/hooks/useSuccessToast";
+import { SuccessToast } from "@/components/ui/SuccessToast";
 
 interface Rol { id_rol: number; nombre: string }
 
@@ -47,6 +51,8 @@ export default function UsuariosUI() {
   const [saving, setSaving]               = useState(false);
   const [searchTerm, setSearchTerm]       = useState("");
   const [filterRole, setFilterRole]       = useState("todos");
+  const deleteAlert = useDeleteAlert("usuario");
+  const successToast = useSuccessToast("usuario");
 
   // --- Paginación ---
   const [currentPage, setCurrentPage]     = useState(1);
@@ -86,6 +92,7 @@ export default function UsuariosUI() {
       if (!token) throw new Error("No hay sesión activa");
       await api.usuarios.create(token, { ...userFormData });
       closeModal(); fetchUsuarios();
+      successToast.mostrarRegistrado();
     } catch (err) { setError(err instanceof Error ? err.message : "Error al crear usuario"); }
     finally { setSaving(false); }
   };
@@ -101,18 +108,21 @@ export default function UsuariosUI() {
       if (!payload.password) delete payload.password;
       await api.usuarios.update(token, editingUsuario.id_usuario, payload);
       closeModal(); fetchUsuarios();
+      successToast.mostrarActualizado();
     } catch (err) { setError(err instanceof Error ? err.message : "Error al actualizar usuario"); }
     finally { setSaving(false); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de eliminar este usuario?")) return;
-    try {
-      const token = getToken();
-      if (!token) throw new Error("No hay sesión activa");
-      await api.usuarios.delete(token, id);
-      fetchUsuarios();
-    } catch (err) { setError(err instanceof Error ? err.message : "Error al eliminar"); }
+  const handleDelete = (usuario: Usuario) => {
+    const nombre = [usuario.nombre, usuario.apellido_paterno].filter(Boolean).join(" ");
+    deleteAlert.abrir(nombre, async () => {
+      try {
+        const token = getToken();
+        if (!token) throw new Error("No hay sesión activa");
+        await api.usuarios.delete(token, usuario.id_usuario);
+        fetchUsuarios();
+      } catch (err) { setError(err instanceof Error ? err.message : "Error al eliminar"); }
+    });
   };
 
   const openEdit = (user: Usuario) => {
@@ -162,6 +172,8 @@ export default function UsuariosUI() {
 
   return (
     <div className="w-full">
+      <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
+      <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
@@ -269,7 +281,7 @@ export default function UsuariosUI() {
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-3">
                         <button onClick={() => openEdit(user)}         className="p-1.5 text-[#3D6B3F]/50 hover:text-[#3D6B3F] hover:bg-[#A8C26B]/20 rounded-lg transition-all duration-200"><Pencil size={16} /></button>
-                        <button onClick={() => handleDelete(user.id_usuario)} className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"><Trash2 size={16} /></button>
+                        <button onClick={() => handleDelete(user)} className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"><Trash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>

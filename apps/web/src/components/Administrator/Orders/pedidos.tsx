@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Eye, Pencil, Trash2, Loader2, Package, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { api } from "@/lib/api";
+import { useDeleteAlert } from "@/hooks/useDeleteAlert";
+import { useSuccessToast } from "@/hooks/useSuccessToast";
+import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
+import { SuccessToast } from "@/components/ui/SuccessToast";
 
 const PAGE_SIZE = 10;
 
@@ -80,6 +84,9 @@ export default function Pedidos() {
   const [searchTerm, setSearchTerm]       = useState("");
   const [productorFilter, setProductorFilter] = useState<string>("");
   const [page, setPage]                   = useState(1);
+
+  const deleteAlert  = useDeleteAlert("pedido");
+  const successToast = useSuccessToast("pedido");
 
   const fetchPedidos = async () => {
     try {
@@ -160,6 +167,15 @@ export default function Pedidos() {
     enviado:    pedidos.filter((p) => p.estado === "enviado").length,
     completado: pedidos.filter((p) => p.estado === "entregado").length,
     cancelado:  pedidos.filter((p) => p.estado === "cancelado").length,
+  };
+
+  const handleDelete = (pedido: Pedido) => {
+    const nombre = `#${pedido.id_pedido}${pedido.usuarios?.nombre ? ` — ${pedido.usuarios.nombre}` : ""}`;
+    deleteAlert.abrir(nombre, async () => {
+      await fetch(`/pedidos/${pedido.id_pedido}`, { method: "DELETE" });
+      await fetchPedidos();
+      successToast.mostrar("Pedido eliminado correctamente.");
+    });
   };
 
   const handleExportCSV = () => {
@@ -353,7 +369,7 @@ export default function Pedidos() {
                           <button className="p-1.5 text-[#3D6B3F]/50 hover:text-[#C97A3E] hover:bg-[#C97A3E]/10 rounded-lg transition-all duration-200">
                             <Pencil size={16} />
                           </button>
-                          <button className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200">
+                          <button onClick={() => handleDelete(pedido)} className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200">
                             <Trash2 size={16} />
                           </button>
                         </div>
@@ -396,6 +412,9 @@ export default function Pedidos() {
           </div>
         )}
       </div>
+
+      <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
+      <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
     </div>
   );
 }

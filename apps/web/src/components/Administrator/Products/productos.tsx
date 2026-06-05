@@ -7,6 +7,10 @@ import { Eye, Pencil, Trash2, Search, Plus, ChevronLeft, ChevronRight } from "lu
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { formatPrice } from "@/lib/format-number";
+import { useSuccessToast } from "@/hooks/useSuccessToast";
+import { useDeleteAlert } from "@/hooks/useDeleteAlert";
+import { SuccessToast } from "@/components/ui/SuccessToast";
+import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 
 interface Producto {
     id_producto: number;
@@ -29,8 +33,9 @@ export default function ProductosAdmin() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
+    const successToast = useSuccessToast("producto");
+    const deleteAlert  = useDeleteAlert("producto");
     const [modoModal, setModoModal] = useState<"ver" | "editar" | null>(null);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const [filtroTipo, setFiltroTipo] = useState("todos");
     const [filtroEstado, setFiltroEstado] = useState("todos");
@@ -75,22 +80,10 @@ export default function ProductosAdmin() {
     };
 
     const handleEliminarClick = (p: Producto) => {
-        setProductoSeleccionado(p);
-        setShowDeleteConfirm(true);
-    };
-
-    const confirmarEliminacion = async () => {
-        if (!productoSeleccionado) return;
-        try {
-            const res = await fetch(`/productos/${productoSeleccionado.id_producto}`, {
-                method: 'DELETE',
-            });
-            if (res.ok) {
-                setShowDeleteConfirm(false);
-                setProductoSeleccionado(null);
-                fetchProductos();
-            }
-        } catch (error) { console.error(error); }
+        deleteAlert.abrir(p.nombre, async () => {
+            const res = await fetch(`/productos/${p.id_producto}`, { method: "DELETE" });
+            if (res.ok) fetchProductos();
+        });
     };
 
     const filtered = productos.filter((p) => {
@@ -318,11 +311,14 @@ export default function ProductosAdmin() {
               </div>
             )}
 
+            <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
+
             {/* MODAL NUEVO */}
             <ModalNuevoProducto
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onRefresh={fetchProductos}
+                onSuccess={successToast.mostrarRegistrado}
             />
 
             {/* MODAL VER / EDITAR */}
@@ -333,37 +329,11 @@ export default function ProductosAdmin() {
                     isOpen={!!modoModal}
                     onClose={() => { setModoModal(null); setProductoSeleccionado(null); }}
                     onRefresh={fetchProductos}
+                    onSuccess={successToast.mostrarActualizado}
                 />
             )}
 
-            {/* MODAL ELIMINAR */}
-            {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70]">
-                    <div className="bg-[#F4F0E3] p-8 rounded-2xl shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-w-sm w-full text-center animate-in fade-in zoom-in duration-200 border border-[#C5CFB0]">
-                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Trash2 size={32} />
-                        </div>
-                        <h3 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">¿Estás seguro?</h3>
-                        <p className="text-[#3D6B3F]/70 mt-2">
-                            Vas a eliminar <b className="text-[#1F3A2E]">{productoSeleccionado?.nombre}</b>. Esta acción no se puede deshacer.
-                        </p>
-                        <div className="flex gap-3 mt-6">
-                            <button
-                                onClick={() => setShowDeleteConfirm(false)}
-                                className="flex-1 py-3 bg-[#F4F0E3] text-[#1F3A2E] text-sm font-medium rounded-xl border border-[#C5CFB0] hover:bg-[#C5CFB0]/30 transition-all duration-200"
-                            >
-                                No, cancelar
-                            </button>
-                            <button
-                                onClick={confirmarEliminacion}
-                                className="flex-1 py-3 bg-red-50 text-red-600 text-sm font-medium rounded-xl hover:bg-red-100 transition-all duration-200"
-                            >
-                                Sí, eliminar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
         </div>
     );
 }

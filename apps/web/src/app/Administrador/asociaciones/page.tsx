@@ -1,12 +1,16 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Edit2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { api } from "../../../lib/api";
 import { getCookie } from "../../../lib/cookies";
+import { useDeleteAlert } from "@/hooks/useDeleteAlert";
+import { useSuccessToast } from "@/hooks/useSuccessToast";
+import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
+import { SuccessToast } from "@/components/ui/SuccessToast";
 
-type Notice = { type: "success" | "error"; message: string };
+type Notice = { type: "error"; message: string };
 
 export default function AsociacionesPage() {
   const { user } = useAuth();
@@ -15,7 +19,12 @@ export default function AsociacionesPage() {
   const [saving, setSaving] = useState(false);
   const [newName, setNewName] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [deletingIdx, setDeletingIdx] = useState<number | null>(null);
+
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editValue, setEditValue]   = useState("");
+
+  const deleteAlert  = useDeleteAlert("asociacion");
+  const successToast = useSuccessToast("asociacion");
 
   useEffect(() => {
     api.configuracion
@@ -25,7 +34,7 @@ export default function AsociacionesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function save(lista: string[]) {
+  async function save(lista: string[]): Promise<boolean> {
     setSaving(true);
     setNotice(null);
     try {
@@ -33,15 +42,16 @@ export default function AsociacionesPage() {
       if (!token) throw new Error("No autorizado");
       await api.configuracion.setAsociaciones(token, lista);
       setAsociaciones(lista);
-      setNotice({ type: "success", message: "Asociaciones guardadas correctamente." });
+      return true;
     } catch (err) {
       setNotice({ type: "error", message: err instanceof Error ? err.message : "No fue posible guardar." });
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
-  function handleAdd() {
+  async function handleAdd() {
     const trimmed = newName.trim();
     if (!trimmed) return;
     if (asociaciones.includes(trimmed)) {
@@ -49,13 +59,38 @@ export default function AsociacionesPage() {
       return;
     }
     setNewName("");
-    save([...asociaciones, trimmed]);
+    const ok = await save([...asociaciones, trimmed]);
+    if (ok) successToast.mostrarRegistrado();
   }
 
   function handleDelete(idx: number) {
-    const next = asociaciones.filter((_, i) => i !== idx);
-    setDeletingIdx(null);
-    save(next);
+    const nombre = asociaciones[idx];
+    deleteAlert.abrir(nombre, async () => {
+      const next = asociaciones.filter((_, i) => i !== idx);
+      const ok = await save(next);
+      if (ok) successToast.mostrar("Asociación eliminada correctamente.");
+    });
+  }
+
+  function openEdit(idx: number) {
+    setEditingIdx(idx);
+    setEditValue(asociaciones[idx]);
+  }
+
+  async function handleEditSave() {
+    if (editingIdx === null) return;
+    const trimmed = editValue.trim();
+    if (!trimmed) return;
+    if (trimmed !== asociaciones[editingIdx] && asociaciones.includes(trimmed)) {
+      setNotice({ type: "error", message: "Esa asociación ya existe." });
+      return;
+    }
+    const next = asociaciones.map((a, i) => (i === editingIdx ? trimmed : a));
+    const ok = await save(next);
+    if (ok) {
+      setEditingIdx(null);
+      successToast.mostrarActualizado();
+    }
   }
 
   return (
@@ -68,13 +103,7 @@ export default function AsociacionesPage() {
       </div>
 
       {notice && (
-        <div
-          className={`rounded-2xl border px-4 py-3 text-sm ${
-            notice.type === "success"
-              ? "border-[#A8C26B]/40 bg-[#A8C26B]/10 text-[#3D6B3F]"
-              : "border-red-200 bg-red-50 text-red-700"
-          }`}
-        >
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {notice.message}
         </div>
       )}
@@ -113,49 +142,91 @@ export default function AsociacionesPage() {
             {asociaciones.map((a, idx) => (
               <li key={a} className="flex items-center justify-between px-6 py-4">
                 <span className="text-sm font-medium text-[#1F3A2E]">{a}</span>
-                <button
-                  type="button"
-                  onClick={() => setDeletingIdx(idx)}
-                  disabled={saving}
-                  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                  title="Eliminar"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(idx)}
+                    disabled={saving}
+                    className="rounded-lg p-2 text-[#3D6B3F]/40 transition-colors hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] disabled:opacity-50"
+                    title="Editar"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(idx)}
+                    disabled={saving}
+                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
         )}
       </div>
 
-      {/* Confirm delete */}
-      {deletingIdx !== null && (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] p-8 text-center shadow-[0_24px_48px_rgba(31,58,46,0.25)]">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
-              <Trash2 className="h-8 w-8" />
+      <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
+      <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
+
+      {/* Modal editar */}
+      {editingIdx !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+          onClick={() => setEditingIdx(null)}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] shadow-[0_24px_48px_rgba(31,58,46,0.25)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Franja superior */}
+            <div className="h-1 bg-gradient-to-r from-[#3D6B3F] to-[#A8C26B]" />
+
+            <div className="px-6 pt-6 pb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
+                Editar asociación
+              </h2>
+              <button
+                type="button"
+                onClick={() => setEditingIdx(null)}
+                className="rounded-lg p-1 text-[#3D6B3F]/50 hover:bg-[#C5CFB0]/30 transition-all"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <h3 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">¿Eliminar asociación?</h3>
-            <p className="mt-2 text-sm text-[#3D6B3F]/70">
-              Se eliminará <span className="font-semibold text-[#1F3A2E]">"{asociaciones[deletingIdx]}"</span> de la lista.
-              Los productores ya registrados conservarán su asociación.
-            </p>
-            <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                onClick={() => setDeletingIdx(null)}
-                className="flex-1 rounded-xl border border-[#C5CFB0] px-4 py-3 text-sm font-semibold text-[#1F3A2E] transition-all duration-200 hover:bg-[#C5CFB0]/30"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDelete(deletingIdx)}
-                disabled={saving}
-                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-70"
-              >
-                {saving ? "Eliminando..." : "Sí, eliminar"}
-              </button>
+
+            <div className="px-6 pb-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#1F3A2E] mb-1">Nombre de la asociación</label>
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleEditSave()}
+                  autoFocus
+                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-4 py-3 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/40 outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingIdx(null)}
+                  className="rounded-xl border border-[#C5CFB0] px-4 py-2 text-sm font-medium text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEditSave}
+                  disabled={saving || !editValue.trim()}
+                  className="rounded-xl bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white hover:bg-[#1F3A2E] disabled:opacity-60 transition-all duration-200"
+                >
+                  {saving ? "Guardando..." : "Guardar"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

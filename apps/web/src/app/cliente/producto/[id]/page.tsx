@@ -81,7 +81,7 @@ interface Producto extends ProductItem {
 export default function ProductoDetallePage() {
   const params = useParams();
   const router = useRouter();
-  const { agregarProducto } = useCarrito();
+  const { agregarProducto, items: carritoItems } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
   const { t, convertPrice } = useLocale();
@@ -107,7 +107,10 @@ export default function ProductoDetallePage() {
       const data = await api.productos.getOne(id as string);
       setProducto(data as Producto);
 
-      // Obtener stock del inventario (no bloquea la carga principal)
+      // Mostrar stock desde la respuesta del producto de inmediato
+      if ((data as any).stock !== undefined) setStock((data as any).stock);
+
+      // Actualizar stock desde inventario (más preciso, no bloquea la carga principal)
       api.inventario.getByProducto(id as string)
         .then((inv) => { if (inv?.stock !== undefined) setStock(inv.stock); })
         .catch(() => {});
@@ -133,8 +136,9 @@ export default function ProductoDetallePage() {
       edad_minima: producto.edad_minima ?? producto.requiere_edad_minima ?? null,
       cantidad,
     });
-    if (!res.ok && res.reason === "age_required") {
-      setForceAgeGate(true);
+    if (!res.ok) {
+      if (res.reason === "age_required") setForceAgeGate(true);
+      if (res.reason === "not_authenticated") router.push("/auth/sign-in?redirect=/tienda/checkout");
       return;
     }
     setAgregado(true);
@@ -295,6 +299,8 @@ export default function ProductoDetallePage() {
 
   const productoId = String(producto.id_producto);
   const edadMinimaProducto = getEdadMinima(producto);
+  const enCarritoActual = carritoItems.find(i => String(i.id_producto) === String(producto.id_producto))?.cantidad ?? 0;
+  const stockDisponible = stock !== null ? Math.max(0, stock - enCarritoActual) : null;
 
   return (
     <div
@@ -668,21 +674,21 @@ export default function ProductoDetallePage() {
           <div className="space-y-5 pt-6 border-t border-gray-200 dark:border-gray-700">
 
             {/* Badge de stock */}
-            {stock !== null && (
+            {stockDisponible !== null && (
               <div
                 className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold"
                 style={{
-                  backgroundColor: stock === 0 ? "#fef2f2" : stock <= 10 ? "#fffbeb" : "#f0fdf4",
-                  border: `1px solid ${stock === 0 ? "#fecaca" : stock <= 10 ? "#fde68a" : "#bbf7d0"}`,
-                  color: stock === 0 ? "#dc2626" : stock <= 10 ? "#d97706" : "#16a34a",
+                  backgroundColor: stockDisponible === 0 ? "#fef2f2" : stockDisponible <= 10 ? "#fffbeb" : "#f0fdf4",
+                  border: `1px solid ${stockDisponible === 0 ? "#fecaca" : stockDisponible <= 10 ? "#fde68a" : "#bbf7d0"}`,
+                  color: stockDisponible === 0 ? "#dc2626" : stockDisponible <= 10 ? "#d97706" : "#16a34a",
                 }}
               >
                 <Package size={15} />
-                {stock === 0
+                {stockDisponible === 0
                   ? "Agotado"
-                  : stock <= 10
-                  ? `Solo ${stock} unidad${stock === 1 ? "" : "es"} disponible${stock === 1 ? "" : "s"}`
-                  : `${stock} unidades en stock`}
+                  : stockDisponible <= 10
+                  ? `Solo ${stockDisponible} unidad${stockDisponible === 1 ? "" : "es"} disponible${stockDisponible === 1 ? "" : "s"}`
+                  : `${stockDisponible} unidades en stock`}
               </div>
             )}
 
@@ -762,9 +768,9 @@ export default function ProductoDetallePage() {
                 </button>
                 <button
                   onClick={handleAgregar}
-                  disabled={agregado || stock === 0}
+                  disabled={agregado || stockDisponible === 0}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-medium transition-all duration-200 text-white hover:shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-                  style={{ backgroundColor: stock === 0 ? "#9ca3af" : "#1F3A2E" }}
+                  style={{ backgroundColor: stockDisponible === 0 ? "#9ca3af" : "#1F3A2E" }}
                   aria-busy={agregado}
                 >
                   <ShoppingCart size={20} aria-hidden="true" />

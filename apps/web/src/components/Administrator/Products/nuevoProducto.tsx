@@ -6,6 +6,7 @@ interface ModalProps {
     isOpen: boolean;
     onClose: () => void;
     onRefresh: () => void;
+    onSuccess?: () => void;
 }
 
 type Categoria = {
@@ -26,7 +27,7 @@ type Tienda = {
     } | null;
 };
 
-export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: ModalProps) {
+export default function ModalNuevoProducto({ isOpen, onClose, onRefresh, onSuccess }: ModalProps) {
     const [loading, setLoading] = useState(false);
     const [categorias, setCategorias] = useState<Categoria[]>([]);
     const [tiendas, setTiendas] = useState<Tienda[]>([]);
@@ -108,14 +109,13 @@ export default function ModalNuevoProducto({ isOpen, onClose, onRefresh }: Modal
             if (res.ok) {
                 await onRefresh();
                 onClose();
-                alert("¡Producto registrado con éxito!");
+                onSuccess?.();
             } else {
                 const error = await res.json();
-                alert(`Error: ${error.message}`);
+                console.error("Error al registrar producto:", error.message);
             }
         } catch (error) {
-            console.error("Error:", error);
-            alert("Error al registrar el producto");
+            console.error("Error al registrar el producto:", error);
         } finally {
             setLoading(false);
         }

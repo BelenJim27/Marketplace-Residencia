@@ -128,7 +128,8 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp }: { isVenderFlow?: 
       if (isVenderFlow) {
         router.push("/dashboard/productor/solicitar");
       } else {
-        router.push("/cliente/producto");
+        const redirectUrl = searchParams.get("redirect");
+        router.push(redirectUrl || "/cliente/producto");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al registrar usuario");

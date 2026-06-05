@@ -28,11 +28,12 @@ interface ModalProps {
     producto: Producto | null;
     modo: 'ver' | 'editar' | null;
     onRefresh: () => Promise<void>;
+    onSuccess?: () => void;
 }
 
 const noSpinClass = "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
-export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefresh }: ModalProps) {
+export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefresh, onSuccess }: ModalProps) {
     const formRef = useRef<HTMLFormElement>(null);
     const esEdicion = modo === 'editar';
     const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -102,14 +103,13 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                 const respuestaServidor = await res.json();
                 if (res.ok) {
                     await onRefresh();
-                    alert("¡Producto actualizado!");
                     onClose();
+                    onSuccess?.();
                 } else {
-                    alert(`Error: ${respuestaServidor.message || JSON.stringify(respuestaServidor)}`);
+                    console.error("Error al actualizar producto:", respuestaServidor.message);
                 }
             } catch (error) {
                 console.error("Error de conexión:", error);
-                alert("Error al actualizar el producto");
             } finally {
                 setLoading(false);
             }
@@ -132,14 +132,13 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
             const respuestaServidor = await res.json();
             if (res.ok) {
                 await onRefresh();
-                alert("¡Producto actualizado!");
                 onClose();
+                onSuccess?.();
             } else {
-                alert(`Error: ${respuestaServidor.message || JSON.stringify(respuestaServidor)}`);
+                console.error("Error al actualizar producto:", respuestaServidor.message);
             }
         } catch (error) {
             console.error("Error de conexión:", error);
-            alert("Error al actualizar el producto");
         } finally {
             setLoading(false);
         }

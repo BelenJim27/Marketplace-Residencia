@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, Trash2, ShoppingBag, Info, ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { Minus, Plus, Trash2, ShoppingBag, Info, X, UserPlus, LogIn } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
+import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
 
 const C = {
@@ -18,14 +20,146 @@ const C = {
   border: "rgba(61,107,63,0.12)",
 };
 
+function ModalRegistro({ onClose, onRegistrar, onLogin }: {
+  onClose: () => void;
+  onRegistrar: () => void;
+  onLogin: () => void;
+}) {
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 50,
+        background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "20px",
+        animation: "fadeIn .18s ease",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: C.white, borderRadius: "20px",
+          maxWidth: "420px", width: "100%",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
+          overflow: "hidden",
+          animation: "slideUp .22s ease",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Franja superior */}
+        <div style={{ height: "4px", background: `linear-gradient(90deg, ${C.green} 0%, ${C.copper} 100%)` }} />
+
+        <div style={{ padding: "28px 28px 32px" }}>
+          {/* Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              width: "48px", height: "48px", borderRadius: "12px",
+              background: `rgba(61,107,63,0.08)`,
+            }}>
+              <UserPlus size={22} style={{ color: C.green }} />
+            </div>
+            <button
+              onClick={onClose}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                width: "32px", height: "32px", borderRadius: "8px",
+                background: "transparent", border: "none", cursor: "pointer",
+                color: C.muted,
+              }}
+              aria-label="Cerrar"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <h2 style={{
+            fontSize: "20px", fontWeight: "700", color: C.text,
+            margin: "0 0 8px 0",
+            fontFamily: "var(--font-family-store, Georgia, serif)",
+          }}>
+            Necesitas una cuenta
+          </h2>
+          <p style={{ fontSize: "14px", color: C.muted, margin: "0 0 28px 0", lineHeight: "1.6" }}>
+            Para continuar con tu compra necesitas registrarte o iniciar sesión.
+            Tu carrito se guardará y podrás completar el pago enseguida.
+          </p>
+
+          {/* Botones */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <button
+              onClick={onRegistrar}
+              style={{
+                width: "100%", padding: "13px 20px",
+                borderRadius: "10px", border: "none",
+                background: C.green, color: C.white,
+                fontSize: "15px", fontWeight: "700",
+                cursor: "pointer", display: "flex",
+                alignItems: "center", justifyContent: "center", gap: "8px",
+                transition: "background 160ms ease",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = C.greenDark; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = C.green; }}
+            >
+              <UserPlus size={17} />
+              Crear cuenta gratis
+            </button>
+
+            <button
+              onClick={onLogin}
+              style={{
+                width: "100%", padding: "13px 20px",
+                borderRadius: "10px",
+                border: `1px solid ${C.border}`,
+                background: "transparent", color: C.green,
+                fontSize: "14px", fontWeight: "600",
+                cursor: "pointer", display: "flex",
+                alignItems: "center", justifyContent: "center", gap: "8px",
+                transition: "background 160ms ease",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(61,107,63,0.05)`; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <LogIn size={16} />
+              Ya tengo cuenta — Iniciar sesión
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: translateY(0) } }
+      `}</style>
+    </div>
+  );
+}
+
 export default function CarritoPage() {
   const router = useRouter();
   const { items, precioTotal, actualizarCantidad, eliminarProducto } = useCarrito();
+  const { isAuthenticated } = useAuth();
   const { t, convertPrice } = useLocale();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const handleCheckout = () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    router.push("/tienda/checkout");
+  };
 
   if (items.length === 0) {
     return (
-      <main style={{ maxWidth: "860px", margin: "0 auto", padding: "48px 20px 80px" }}>
+      <div style={{ position: "relative" }}>
+        <div aria-hidden style={{ position: "absolute", bottom: 0, left: 0, width: 200, height: "130vh", zIndex: 2, pointerEvents: "none" }}>
+          <Image src="/fotos/quiote.png" alt="" fill style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain", objectPosition: "bottom center" }} />
+        </div>
+        <div aria-hidden style={{ position: "absolute", bottom: 0, right: 0, width: 200, height: "130vh", zIndex: 2, pointerEvents: "none", transform: "scaleX(-1)" }}>
+          <Image src="/fotos/quiote.png" alt="" fill style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain", objectPosition: "bottom center" }} />
+        </div>
+      <main style={{ position: "relative", zIndex: 1, maxWidth: "860px", margin: "0 auto", padding: "48px 20px 80px" }}>
         <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
         <h1 style={{
           fontFamily: "var(--font-family-store)",
@@ -67,13 +201,35 @@ export default function CarritoPage() {
           </Link>
         </div>
       </main>
+      </div>
     );
   }
 
   const subtotal = precioTotal;
 
   return (
-    <main style={{ maxWidth: "980px", margin: "0 auto", padding: "36px 20px 80px" }}>
+    <div style={{ position: "relative" }}>
+
+      {/* ── Quiote izquierdo ────────────────────────────────────── */}
+      <div aria-hidden style={{ position: "absolute", bottom: 0, left: 0, width: 200, height: "130vh", zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/quiote.png" alt="" fill
+          style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain", objectPosition: "bottom center" }} />
+      </div>
+
+      {/* ── Quiote derecho ──────────────────────────────────────── */}
+      <div aria-hidden style={{ position: "absolute", bottom: 0, right: 0, width: 200, height: "130vh", zIndex: 2, pointerEvents: "none", transform: "scaleX(-1)" }}>
+        <Image src="/fotos/quiote.png" alt="" fill
+          style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain", objectPosition: "bottom center" }} />
+      </div>
+
+    <main style={{ position: "relative", zIndex: 1, maxWidth: "980px", margin: "0 auto", padding: "36px 20px 80px" }}>
+      {showAuthModal && (
+        <ModalRegistro
+          onClose={() => setShowAuthModal(false)}
+          onRegistrar={() => router.push("/auth/sign-up?redirect=/tienda/checkout")}
+          onLogin={() => router.push("/auth/sign-in?redirect=/tienda/checkout")}
+        />
+      )}
       <style>{`
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
         .cart-item{transition:background 160ms ease}
@@ -263,7 +419,6 @@ export default function CarritoPage() {
                 fontSize: "13px", fontWeight: "600", cursor: "pointer",
               }}
             >
-              <ArrowLeft size={13} />
               {t("cart_continue_button")}
             </button>
           </div>
@@ -329,7 +484,7 @@ export default function CarritoPage() {
 
             <button
               className="checkout-btn"
-              onClick={() => router.push("/tienda/checkout")}
+              onClick={handleCheckout}
               style={{
                 width: "100%", padding: "14px", borderRadius: "10px",
                 background: C.green, color: C.white,
@@ -343,5 +498,6 @@ export default function CarritoPage() {
         </div>
       </div>
     </main>
+    </div>
   );
 }

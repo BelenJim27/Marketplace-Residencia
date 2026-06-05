@@ -66,13 +66,15 @@ async function refreshAccessToken(): Promise<string> {
 
 async function fetchJson<T>(
   url: string,
-  options?: RequestInit & { next?: { revalidate?: number } },
+  options?: RequestInit & { next?: { revalidate?: number }; silent?: boolean },
 ): Promise<T> {
   let response: Response;
   try {
     response = await fetch(url, options);
   } catch (networkError) {
-    console.error("Network error fetching", url, networkError);
+    if (!options?.silent) {
+      console.error("Network error fetching", url, networkError);
+    }
     throw new Error(
       `No se pudo conectar con el servidor. Verifica que la API esté disponible.`,
     );
@@ -535,7 +537,7 @@ export const api = {
     getTracking: (id: string, token?: string) =>
       fetchJson(
         endpoint(`/envios/${id}/tracking`),
-        token ? { headers: headers(token) } : undefined,
+        { ...(token ? { headers: headers(token) } : {}), silent: true },
       ),
     create: (token: string, data: any) =>
       fetchJson(endpoint("/envios"), {

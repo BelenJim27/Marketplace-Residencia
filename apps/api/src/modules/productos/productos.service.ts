@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { existsSync } from "fs";
+import { join } from "path";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { serializeBigInts } from "../shared/serialize";
@@ -251,8 +253,38 @@ export class ProductosService {
       orderBy: { creado_en: 'desc' },
     });
 
+    // Excluir productos sin precio o sin imagen de la vista del cliente
+    const itemsPublicos = items.filter((p) => {
+      // Precio: Prisma devuelve Decimal, convertir a número con parseFloat
+      const precio = parseFloat(String(p.precio_base ?? '0'));
+      if (isNaN(precio) || precio <= 0) return false;
+
+      // Imagen: verificar campos directos y tabla relacionada producto_imagenes
+      const urlsDirectas = [p.imagen_principal_url, p.imagen_url].filter(
+        (u): u is string => typeof u === 'string' && u.trim() !== '',
+      );
+      const urlsRelacionadas: string[] = (p.producto_imagenes ?? [])
+        .map((img: any) => img.url)
+        .filter((u: any): u is string => typeof u === 'string' && u.trim() !== '');
+
+      const todasUrls = [...urlsDirectas, ...urlsRelacionadas];
+      if (todasUrls.length === 0) return false;
+
+      // Para rutas locales /uploads/, verificar que el archivo exista en disco
+      const tieneImagenValida = todasUrls.some((url) => {
+        if (url.startsWith('/uploads/')) {
+          return existsSync(join(process.cwd(), url));
+        }
+        // URL externa: asumir válida
+        return true;
+      });
+      if (!tieneImagenValida) return false;
+
+      return true;
+    });
+
     return serializeBigInts(
-      mapProductoResponse(applyFiltersToProductos(items)),
+      mapProductoResponse(applyFiltersToProductos(itemsPublicos)),
     );
   }
 

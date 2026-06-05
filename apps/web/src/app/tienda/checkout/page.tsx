@@ -182,7 +182,23 @@ export default function CheckoutPage() {
   const enElements = paso === "pago" || paso === "resumen";
 
   const mainContent = (
-    <main style={{ maxWidth: "1000px", margin: "0 auto", padding: "48px 16px 40px", fontFamily: "'Manrope', 'DM Sans', sans-serif" }}>
+    <div style={{ position: "relative" }}>
+
+      {/* ── Agavenuevo lado izquierdo ────────────────────────────── */}
+      {["5%","18%","31%","44%","57%","70%","83%"].map((top, i) => (
+        <div key={`al-${i}`} aria-hidden style={{ position: "absolute", top, left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+          <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+        </div>
+      ))}
+
+      {/* ── Agavenuevo lado derecho ──────────────────────────────── */}
+      {["5%","18%","31%","44%","57%","70%","83%"].map((top, i) => (
+        <div key={`ar-${i}`} aria-hidden style={{ position: "absolute", top, right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+          <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+        </div>
+      ))}
+
+    <main style={{ position: "relative", zIndex: 1, maxWidth: "1000px", margin: "0 auto", padding: "48px 16px 40px", fontFamily: "'Manrope', 'DM Sans', sans-serif" }}>
       {/* Gold stripe top */}
       <div style={{ height: "3px", background: `linear-gradient(90deg, ${COLOR_PALETTE.copper}, ${COLOR_PALETTE.amber}, ${COLOR_PALETTE.copper})`, borderRadius: "2px 2px 0 0", marginBottom: "0" }} />
 
@@ -466,14 +482,6 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                {/* Sección de Factura */}
-                {paso === "pago" && (
-                  <FacturaSolicitudSection
-                    facturaData={facturaData}
-                    setFacturaData={setFacturaData}
-                  />
-                )}
-
                 {/* Flujo Stripe */}
                 {metodoPago === 'stripe' && (
                   <>
@@ -512,6 +520,11 @@ export default function CheckoutPage() {
                         options={{
                           clientSecret,
                           appearance: { theme: "stripe", variables: { colorPrimary: "#16a34a" } },
+                          fonts: [{
+                            family: "text-security-disc",
+                            src: "url(https://cdn.jsdelivr.net/npm/text-security@1.1.0/dist/text-security-disc.woff2)",
+                            weight: "400",
+                          }],
                         }}
                       >
                         <PagoYResumen
@@ -797,6 +810,7 @@ export default function CheckoutPage() {
         </div>
       </div>
     </main>
+    </div>
   );
 
   // Wrap with PayPal provider if configured
@@ -1541,7 +1555,6 @@ function PagoYResumen({
       localStorage.setItem('checkout_factura', JSON.stringify({ ...facturaData, pedidoId }));
     }
 
-    // confirmCardPayment — usa elementos individuales; CVC queda enmascarado
     const { error } = await stripe.confirmCardPayment(clientSecret, {
       payment_method: { card: cardElement },
       return_url: returnUrl,
@@ -1616,27 +1629,33 @@ function PagoYResumen({
               )}
             </div>
 
-            {/* Código de seguridad — CardCvcElement enmascara los dígitos con ••• al escribir */}
+            {/* Código de seguridad */}
             <div>
               <label className={labelCls}>
                 Código de seguridad
                 <span
                   className="ml-1 inline-flex cursor-default items-center align-middle"
-                  title="Los 3 o 4 dígitos al reverso de tu tarjeta. Por seguridad los dígitos no son visibles al escribirlos."
+                  title="Los 3 o 4 dígitos al reverso de tu tarjeta."
                 >
-                  <svg
-                    width="13" height="13" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" strokeWidth="2"
-                    aria-hidden="true" className="text-gray-400"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M12 16v-4M12 8h.01" />
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className="text-gray-400">
+                    <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
                   </svg>
                 </span>
               </label>
               <div className={fieldWrapper}>
                 <CardCvcElement
-                  options={elementStyle}
+                  options={{
+                    style: {
+                      base: {
+                        fontFamily: "'text-security-disc', sans-serif",
+                        fontSize: "18px",
+                        color: "#1f2937",
+                        letterSpacing: "0.25em",
+                        "::placeholder": { color: "#9CA3AF", fontFamily: "'Manrope', sans-serif", fontSize: "15px" },
+                      },
+                      invalid: { color: "#ef4444" },
+                    },
+                  }}
                   onChange={(e) =>
                     setFieldErrors((prev) => ({ ...prev, cvc: e.error?.message ?? "" }))
                   }

@@ -7,6 +7,10 @@ import {
   UserPlus, Filter, ChevronLeft, ChevronRight 
 } from "lucide-react";
 import { getCookie } from "@/lib/cookies";
+import { useDeleteAlert } from "@/hooks/useDeleteAlert";
+import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
+import { useSuccessToast } from "@/hooks/useSuccessToast";
+import { SuccessToast } from "@/components/ui/SuccessToast";
 
 interface Permiso { id_permiso: number; nombre: string }
 interface Rol {
@@ -61,6 +65,10 @@ export default function RolesPermisosPage() {
   const PERMISOS_CLIENTE   = ["ver_productos","crear_pedido","ver_pedidos","ver_tienda","ver_inventario","panel_cliente"];
   const PERMISOS_PRODUCTOR = ["ver_productos","crear_producto","editar_producto","eliminar_producto","ver_inventario","crear_inventario","editar_inventario","ver_pedidos","editar_pedido","ver_tienda","crear_tienda","editar_tienda","panel_productor"];
 
+  const deleteAlertRol     = useDeleteAlert("rol");
+  const deleteAlertPermiso = useDeleteAlert("permiso");
+  const successToast       = useSuccessToast("rol");
+
   const getToken = () => typeof window !== "undefined" ? getCookie("token") : null;
 
   useEffect(() => { fetchData(); }, []);
@@ -86,38 +94,40 @@ export default function RolesPermisosPage() {
 
   const handleCreateRol = async (e: React.FormEvent) => {
     e.preventDefault();
-    try { setSaving(true); const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.roles.create(token, { nombre: formDataRol.nombre }); setShowModalRol(false); setFormDataRol({ nombre: "" }); fetchData(); }
+    try { setSaving(true); const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.roles.create(token, { nombre: formDataRol.nombre }); setShowModalRol(false); setFormDataRol({ nombre: "" }); fetchData(); successToast.mostrarRegistrado(); }
     catch (err) { setError(err instanceof Error ? err.message : "Error al crear rol"); }
     finally { setSaving(false); }
   };
   const handleUpdateRol = async (e: React.FormEvent) => {
     e.preventDefault(); if (!editingRol) return;
-    try { setSaving(true); const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.roles.update(token, editingRol.id_rol, { nombre: formDataRol.nombre }); setShowModalRol(false); setEditingRol(null); setFormDataRol({ nombre: "" }); fetchData(); }
+    try { setSaving(true); const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.roles.update(token, editingRol.id_rol, { nombre: formDataRol.nombre }); setShowModalRol(false); setEditingRol(null); setFormDataRol({ nombre: "" }); fetchData(); successToast.mostrarActualizado(); }
     catch (err) { setError(err instanceof Error ? err.message : "Error al actualizar"); }
     finally { setSaving(false); }
   };
-  const handleDeleteRol = async (id: number) => {
-    if (!confirm("¿Eliminar este rol?")) return;
-    try { const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.roles.delete(token, id); fetchData(); }
-    catch (err) { setError(err instanceof Error ? err.message : "Error al eliminar"); }
+  const handleDeleteRol = (id: number, nombre: string) => {
+    deleteAlertRol.abrir(nombre, async () => {
+      try { const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.roles.delete(token, id); fetchData(); }
+      catch (err) { setError(err instanceof Error ? err.message : "Error al eliminar"); }
+    });
   };
 
   const handleCreatePermiso = async (e: React.FormEvent) => {
     e.preventDefault();
-    try { setSaving(true); const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.permisos.create(token, { nombre: formDataPermiso.nombre }); setShowModalPermiso(false); setFormDataPermiso({ nombre: "" }); fetchData(); }
+    try { setSaving(true); const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.permisos.create(token, { nombre: formDataPermiso.nombre }); setShowModalPermiso(false); setFormDataPermiso({ nombre: "" }); fetchData(); successToast.mostrar("Permiso creado correctamente."); }
     catch (err) { setError(err instanceof Error ? err.message : "Error al crear"); }
     finally { setSaving(false); }
   };
   const handleUpdatePermiso = async (e: React.FormEvent) => {
     e.preventDefault(); if (!editingPermiso) return;
-    try { setSaving(true); const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.permisos.update(token, editingPermiso.id_permiso, { nombre: formDataPermiso.nombre }); setShowModalPermiso(false); setEditingPermiso(null); setFormDataPermiso({ nombre: "" }); fetchData(); }
+    try { setSaving(true); const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.permisos.update(token, editingPermiso.id_permiso, { nombre: formDataPermiso.nombre }); setShowModalPermiso(false); setEditingPermiso(null); setFormDataPermiso({ nombre: "" }); fetchData(); successToast.mostrar("Permiso actualizado correctamente."); }
     catch (err) { setError(err instanceof Error ? err.message : "Error al actualizar"); }
     finally { setSaving(false); }
   };
-  const handleDeletePermiso = async (id: number) => {
-    if (!confirm("¿Eliminar este permiso?")) return;
-    try { const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.permisos.delete(token, id); fetchData(); }
-    catch (err) { setError(err instanceof Error ? err.message : "Error al eliminar"); }
+  const handleDeletePermiso = (id: number, nombre: string) => {
+    deleteAlertPermiso.abrir(nombre, async () => {
+      try { const token = getToken(); if (!token) throw new Error("No hay sesión activa"); await api.permisos.delete(token, id); fetchData(); }
+      catch (err) { setError(err instanceof Error ? err.message : "Error al eliminar"); }
+    });
   };
 
   const openAsignarPermisos = (rol: Rol) => {
@@ -132,7 +142,7 @@ export default function RolesPermisosPage() {
       const current = selectedRol.rol_permiso?.map((rp) => rp.permisos.id_permiso) || [];
       for (const id of selectedPermisos) { if (!current.includes(id)) await api.rolesPermisos.assign(token, { id_rol: selectedRol.id_rol, id_permiso: id }); }
       for (const id of current) { if (!selectedPermisos.includes(id)) await api.rolesPermisos.remove(token, selectedRol.id_rol, id); }
-      setShowModalPermisosRol(false); fetchData();
+      setShowModalPermisosRol(false); fetchData(); successToast.mostrar("Permisos del rol actualizados correctamente.");
     } catch (err) { setError(err instanceof Error ? err.message : "Error al guardar permisos"); }
     finally { setSaving(false); }
   };
@@ -148,7 +158,7 @@ export default function RolesPermisosPage() {
       const current = selectedUser.usuario_rol?.filter((ur) => ur.estado === "activo").map((ur) => ur.id_rol) || [];
       for (const id of selectedUserRoles) { if (!current.includes(id)) await api.usuariosRoles.assign(token, { id_usuario: selectedUser.id_usuario, id_rol: id }); }
       for (const id of current) { if (!selectedUserRoles.includes(id)) await api.usuariosRoles.remove(token, selectedUser.id_usuario, id); }
-      setShowModalAsignarRoles(false); fetchData();
+      setShowModalAsignarRoles(false); fetchData(); successToast.mostrar("Roles del usuario actualizados correctamente.");
     } catch (err) { setError(err instanceof Error ? err.message : "Error al guardar roles"); }
     finally { setSaving(false); }
   };
@@ -160,7 +170,7 @@ export default function RolesPermisosPage() {
       const response = await api.usuarios.create(token, { nombre: userFormData.nombre, email: userFormData.email, password: userFormData.password || undefined, apellido_paterno: userFormData.apellido_paterno || undefined, apellido_materno: userFormData.apellido_materno || undefined, telefono: userFormData.telefono || undefined, idioma_preferido: userFormData.idioma_preferido, moneda_preferida: userFormData.moneda_preferida }) as { id_usuario: string };
       if (selectedFotoFile) { const fd = new FormData(); fd.append("foto", selectedFotoFile); await api.usuarios.uploadPhoto(token, response.id_usuario, fd); }
       if (userFormData.id_rol) await api.usuariosRoles.assign(token, { id_usuario: response.id_usuario, id_rol: userFormData.id_rol });
-      setShowModalUsuario(false); setSelectedFotoFile(null); setUserFormData({ nombre_usuario: "", nombre: "", foto_url: "", apellido_paterno: "", apellido_materno: "", email: "", password: "", telefono: "", idioma_preferido: "es", moneda_preferida: "MXN", id_rol: 0 }); fetchData();
+      setShowModalUsuario(false); setSelectedFotoFile(null); setUserFormData({ nombre_usuario: "", nombre: "", foto_url: "", apellido_paterno: "", apellido_materno: "", email: "", password: "", telefono: "", idioma_preferido: "es", moneda_preferida: "MXN", id_rol: 0 }); fetchData(); successToast.mostrar("Usuario creado correctamente.");
     } catch (err) { setError(err instanceof Error ? err.message : "Error al crear usuario"); }
     finally { setSaving(false); }
   };
@@ -180,7 +190,7 @@ export default function RolesPermisosPage() {
       if (selectedFotoFile) { const fd = new FormData(); fd.append("foto", selectedFotoFile); await api.usuarios.uploadPhoto(token, editingUsuario.id_usuario, fd); }
       setShowModalUsuario(false); setEditingUsuario(null); setSelectedFotoFile(null);
       setUserFormData({ nombre_usuario: "", nombre: "", foto_url: "", apellido_paterno: "", apellido_materno: "", email: "", password: "", telefono: "", idioma_preferido: "es", moneda_preferida: "MXN", id_rol: 0 });
-      fetchData();
+      fetchData(); successToast.mostrar("Usuario actualizado correctamente.");
     } catch (err) { setError(err instanceof Error ? err.message : "Error al actualizar usuario"); }
     finally { setSaving(false); }
   };
@@ -226,6 +236,9 @@ export default function RolesPermisosPage() {
 
   return (
     <div className="w-full">
+      <DeleteAlertModal estado={deleteAlertRol.estado}     onClose={deleteAlertRol.cerrar} />
+      <DeleteAlertModal estado={deleteAlertPermiso.estado} onClose={deleteAlertPermiso.cerrar} />
+      <SuccessToast     toast={successToast.estado}        onClose={successToast.cerrar} />
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
@@ -297,7 +310,7 @@ export default function RolesPermisosPage() {
                       <div className="flex justify-end gap-2">
                         <button onClick={() => openAsignarPermisos(rol)} className="rounded-lg p-2 text-[#3D6B3F]/40 transition-colors hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F]"><Key size={16} /></button>
                         <button onClick={() => { setEditingRol(rol); setFormDataRol({ nombre: rol.nombre }); setShowModalRol(true); }} className="rounded-lg p-2 text-[#3D6B3F]/40 transition-colors hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F]"><Pencil size={16} /></button>
-                        <button onClick={() => handleDeleteRol(rol.id_rol)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 size={16} /></button>
+                        <button onClick={() => handleDeleteRol(rol.id_rol, rol.nombre)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>
@@ -330,7 +343,7 @@ export default function RolesPermisosPage() {
                 <div className="flex gap-2 border-t border-[#C5CFB0] pt-3">
                   <button onClick={() => openAsignarPermisos(rol)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#C5CFB0] py-2 text-xs font-medium text-[#1F3A2E] transition-colors hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F]"><Key size={14} /> Permisos</button>
                   <button onClick={() => { setEditingRol(rol); setFormDataRol({ nombre: rol.nombre }); setShowModalRol(true); }} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#C5CFB0] py-2 text-xs font-medium text-[#1F3A2E] transition-colors hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F]"><Pencil size={14} /> Editar</button>
-                  <button onClick={() => handleDeleteRol(rol.id_rol)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#C5CFB0] py-2 text-xs font-medium text-[#1F3A2E] transition-colors hover:bg-red-50 hover:text-red-600 hover:border-red-200"><Trash2 size={14} /> Eliminar</button>
+                  <button onClick={() => handleDeleteRol(rol.id_rol, rol.nombre)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#C5CFB0] py-2 text-xs font-medium text-[#1F3A2E] transition-colors hover:bg-red-50 hover:text-red-600 hover:border-red-200"><Trash2 size={14} /> Eliminar</button>
                 </div>
               </div>
             ))}
@@ -353,7 +366,7 @@ export default function RolesPermisosPage() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#3D6B3F]/10 text-[#3D6B3F]"><Key size={20} /></div>
                   <div className="flex gap-1">
                     <button onClick={() => { setEditingPermiso(permiso); setFormDataPermiso({ nombre: permiso.nombre }); setShowModalPermiso(true); }} className="rounded-lg p-2 text-[#C5CFB0] opacity-0 transition-colors hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] group-hover:opacity-100"><Pencil size={16} /></button>
-                    <button onClick={() => handleDeletePermiso(permiso.id_permiso)} className="rounded-lg p-2 text-[#C5CFB0] opacity-0 transition-colors hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"><Trash2 size={16} /></button>
+                    <button onClick={() => handleDeletePermiso(permiso.id_permiso, permiso.nombre)} className="rounded-lg p-2 text-[#C5CFB0] opacity-0 transition-colors hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"><Trash2 size={16} /></button>
                   </div>
                 </div>
                 <h3 className="mt-3 text-sm font-bold text-[#1F3A2E]">{permiso.nombre}</h3>

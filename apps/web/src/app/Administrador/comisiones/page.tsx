@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Edit2, X, Loader2, AlertCircle, CheckCircle2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Edit2, X, Loader2, AlertCircle, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { api, type Comision, type ComisionInput } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+import { useDeleteAlert } from "@/hooks/useDeleteAlert";
+import { useSuccessToast } from "@/hooks/useSuccessToast";
+import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
+import { SuccessToast } from "@/components/ui/SuccessToast";
 
-type Notice = { type: "success" | "error"; message: string };
+type Notice = { type: "error"; message: string };
 type Resultado = { id_comision: number; porcentaje: number; monto_fijo: number | null; alcance: string };
 
 const ALCANCES: ComisionInput["alcance"][] = ["global", "pais", "categoria", "productor"];
@@ -31,6 +35,9 @@ export default function ComisionesAdminPage() {
   const [resolverError, setResolverError] = useState<string | null>(null);
 
   const token = getCookie("token") ?? "";
+
+  const deleteAlert  = useDeleteAlert("comision");
+  const successToast = useSuccessToast("comision");
 
   async function load() {
     setLoading(true);
@@ -88,16 +95,17 @@ export default function ComisionesAdminPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
+    const isEditing = !!editing;
     try {
-      if (editing) {
-        await api.comisiones.update(token, editing.id_comision, form);
-        setNotice({ type: "success", message: "Regla actualizada" });
+      if (isEditing) {
+        await api.comisiones.update(token, editing!.id_comision, form);
       } else {
         await api.comisiones.create(token, form);
-        setNotice({ type: "success", message: "Regla creada" });
       }
       setShowForm(false);
       await load();
+      if (isEditing) successToast.mostrarActualizado();
+      else successToast.mostrarRegistrado();
     } catch (err) {
       setNotice({ type: "error", message: err instanceof Error ? err.message : "Error guardando" });
     } finally {
@@ -105,15 +113,17 @@ export default function ComisionesAdminPage() {
     }
   }
 
-  async function handleDelete(c: Comision) {
-    if (!confirm(`¿Desactivar esta regla de comisión (${c.alcance} ${c.porcentaje})?`)) return;
-    try {
-      await api.comisiones.remove(token, c.id_comision);
-      setNotice({ type: "success", message: "Regla desactivada" });
-      await load();
-    } catch (err) {
-      setNotice({ type: "error", message: err instanceof Error ? err.message : "Error desactivando" });
-    }
+  function handleDelete(c: Comision) {
+    const nombre = `${c.alcance} — ${(Number(c.porcentaje) * 100).toFixed(2)}%`;
+    deleteAlert.abrir(nombre, async () => {
+      try {
+        await api.comisiones.remove(token, c.id_comision);
+        await load();
+        successToast.mostrar("Regla de comisión desactivada correctamente.");
+      } catch (err) {
+        setNotice({ type: "error", message: err instanceof Error ? err.message : "Error desactivando" });
+      }
+    });
   }
 
   async function handleResolver() {
@@ -136,14 +146,8 @@ export default function ComisionesAdminPage() {
       <Breadcrumb pageName="Comisiones" />
 
       {notice && (
-        <div
-          className={`flex items-center gap-2 rounded-md border px-4 py-2 text-sm ${
-            notice.type === "success"
-              ? "border-[#A8C26B]/40 bg-[#A8C26B]/10 text-[#3D6B3F]"
-              : "border-red-300 bg-red-50 text-red-800"
-          }`}
-        >
-          {notice.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+        <div className="flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-800">
+          <AlertCircle size={16} />
           <span>{notice.message}</span>
           <button className="ml-auto" onClick={() => setNotice(null)}>
             <X size={16} />
@@ -341,6 +345,9 @@ export default function ComisionesAdminPage() {
           </nav>
         </div>
       )}
+
+      <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
+      <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

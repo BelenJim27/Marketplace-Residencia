@@ -26,6 +26,7 @@ interface Producto {
   nombre_tienda?: string | null;
   promedio_calificacion?: number | null;
   total_resenas?: number | null;
+  stock?: number | null;
   lotes?: {
     datos_api?: Record<string, string>;
     productores?: { biografia?: string };
@@ -151,6 +152,7 @@ const ProductCard = memo(function ProductCard({
   onAddCart,
   isAdded,
   onViewDetails,
+  stockDisponible,
 }: {
   producto: Producto;
   index: number;
@@ -159,6 +161,7 @@ const ProductCard = memo(function ProductCard({
   onAddCart: () => void;
   isAdded: boolean;
   onViewDetails: () => void;
+  stockDisponible?: number | null;
 }) {
   const { convertPrice, t } = useLocale();
   const imagenUrl = producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
@@ -193,6 +196,29 @@ const ProductCard = memo(function ProductCard({
           className="w-full h-48 sm:w-[140px] sm:h-auto md:w-[180px] flex-shrink-0 relative p-4 sm:p-6 flex flex-col justify-center items-center gap-4 transition-all hover:scale-105"
           style={{ backgroundColor: bgColor }}
         >
+          {/* Botón de favoritos */}
+          <button
+            className="absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center z-20 shadow-md transition-all hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-1"
+            style={{
+              backgroundColor: isWishlisted ? "#C97A3E" : "rgba(255,255,255,0.92)",
+              border: isWishlisted ? "none" : "1px solid rgba(0,0,0,0.08)",
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onWishlist();
+            }}
+            aria-label={isWishlisted ? "Remover de favoritos" : "Agregar a favoritos"}
+            aria-pressed={isWishlisted}
+            title={isWishlisted ? "Remover de favoritos" : "Agregar a favoritos"}
+          >
+            <Heart
+              size={16}
+              fill={isWishlisted ? "white" : "none"}
+              color={isWishlisted ? "white" : "#C97A3E"}
+              aria-hidden="true"
+            />
+          </button>
+
           <div className="relative w-full h-full flex items-center justify-center sm:h-60">
             {imagenUrl && (
               <Image
@@ -286,6 +312,28 @@ const ProductCard = memo(function ProductCard({
             className="flex flex-col gap-2 sm:gap-3 pt-3 sm:pt-4 border-t"
             style={{ borderColor: "rgba(0, 0, 0, 0.06)" }}
           >
+            {/* Badge de stock */}
+            {stockDisponible !== undefined && stockDisponible !== null && (
+              <div
+                className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold w-fit"
+                style={{
+                  backgroundColor: stockDisponible <= 0 ? "#fef2f2" : stockDisponible <= 10 ? "#fffbeb" : "#f0fdf4",
+                  border: `1px solid ${stockDisponible <= 0 ? "#fecaca" : stockDisponible <= 10 ? "#fde68a" : "#bbf7d0"}`,
+                  color: stockDisponible <= 0 ? "#dc2626" : stockDisponible <= 10 ? "#d97706" : "#16a34a",
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12" aria-hidden="true">
+                  <path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                </svg>
+                {stockDisponible <= 0
+                  ? "Agotado"
+                  : stockDisponible <= 10
+                  ? `Solo ${stockDisponible} disponible${stockDisponible === 1 ? "" : "s"}`
+                  : `${stockDisponible} en stock`}
+              </div>
+            )}
+
             <div className="flex items-baseline gap-1">
               <span className="text-xl sm:text-2xl font-bold text-amber-700" style={{ fontFamily: "Courier New, monospace" }}>
                 {convertPrice(Number(producto.precio_base || 0))}
@@ -313,11 +361,11 @@ const ProductCard = memo(function ProductCard({
             <button
               className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded transition-all hover:opacity-90 active:scale-95 w-full"
               style={{
-                backgroundColor: "var(--catalog-accent, #C97A3E)",
+                backgroundColor: stockDisponible !== null && stockDisponible !== undefined && stockDisponible <= 0 ? "#9CA3AF" : "var(--catalog-accent, #C97A3E)",
                 border: "none",
-                cursor: "pointer",
+                cursor: stockDisponible !== null && stockDisponible !== undefined && stockDisponible <= 0 ? "not-allowed" : "pointer",
               }}
-              disabled={isAdded}
+              disabled={isAdded || (stockDisponible !== null && stockDisponible !== undefined && stockDisponible <= 0)}
               onClick={(e) => {
                 e.stopPropagation();
                 onAddCart();
@@ -581,7 +629,7 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
 export default function ProductCatalogEnhanced() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { agregarProducto } = useCarrito();
+  const { agregarProducto, items: carritoItems } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
   const { convertPrice, t } = useLocale();
@@ -1086,7 +1134,7 @@ export default function ProductCatalogEnhanced() {
                       isWishlisted={isInWishlist(producto.id_producto)}
                       onWishlist={() => toggleWishlist(producto)}
                       onAddCart={() => {
-                        agregarProducto({
+                        const result = agregarProducto({
                           id_producto: producto.id_producto,
                           nombre: producto.nombre,
                           precio_base: producto.precio_base,
@@ -1094,12 +1142,23 @@ export default function ProductCatalogEnhanced() {
                           producto_imagenes: producto.producto_imagenes,
                           cantidad: 1,
                         });
+                        if (!result.ok) {
+                          if (result.reason === "not_authenticated") {
+                            router.push("/auth/sign-in?redirect=/cliente/producto");
+                          }
+                          return;
+                        }
                         setAgregadoId(producto.id_producto);
                         addToast(t("product_added_toast"));
                         setTimeout(() => setAgregadoId(null), 2500);
                       }}
                       isAdded={agregadoId === producto.id_producto}
                       onViewDetails={() => router.push(`/cliente/producto/${producto.id_producto}`)}
+                      stockDisponible={
+                        producto.stock !== null && producto.stock !== undefined
+                          ? Math.max(0, producto.stock - (carritoItems.find(i => String(i.id_producto) === String(producto.id_producto))?.cantidad ?? 0))
+                          : null
+                      }
                     />
                   ))}
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Search, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, Search, Trash2, Edit2, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -8,8 +8,10 @@ import { useAuth } from "../../../context/AuthContext";
 import { api } from "../../../lib/api";
 import { getCookie } from "../../../lib/cookies";
 import { ProductoresForm, type ProductorAdmin } from "./productores-form";
+import { useSuccessToast } from "@/hooks/useSuccessToast";
+import { SuccessToast } from "@/components/ui/SuccessToast";
 
-type Notice = { type: "success" | "error"; message: string };
+type Notice = { type: "error"; message: string };
 
 export function ProductoresTabla() {
   const { user } = useAuth();
@@ -23,7 +25,8 @@ export function ProductoresTabla() {
   const [marcaFilter, setMarcaFilter] = useState("");
   const [asociaciones, setAsociaciones] = useState<string[]>([]);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [activeMode, setActiveMode] = useState<"view" | null>(null);
+  const [activeMode, setActiveMode] = useState<"view" | "edit" | null>(null);
+  const successToast = useSuccessToast("productor");
   const [selectedProductor, setSelectedProductor] = useState<ProductorAdmin | null>(null);
   const [deleting, setDeleting] = useState<ProductorAdmin | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -145,6 +148,10 @@ export function ProductoresTabla() {
     setSelectedProductor(productor);
     setActiveMode("view");
   }
+  function openEditModal(productor: ProductorAdmin) {
+    setSelectedProductor(productor);
+    setActiveMode("edit");
+  }
   function closeModal() { setActiveMode(null); setSelectedProductor(null); }
 
   const inputCls = "w-full rounded-xl border border-[#C5CFB0] bg-white py-3 pl-12 pr-4 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/50 outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20";
@@ -158,7 +165,7 @@ export function ProductoresTabla() {
       </div>
 
       {notice && (
-        <div className={`rounded-2xl border px-4 py-3 text-sm ${notice.type === "success" ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {notice.message}
         </div>
       )}
@@ -263,6 +270,7 @@ export function ProductoresTabla() {
                           Ver productos
                         </Link>
                         <ActionButton label="Ver" onClick={() => openModal(p)}><Eye className="h-4 w-4" /></ActionButton>
+                        <ActionButton label="Editar" onClick={() => openEditModal(p)}><Edit2 className="h-4 w-4" /></ActionButton>
                         <ActionButton label="Eliminar" danger onClick={() => setDeleting(p)}><Trash2 className="h-4 w-4" /></ActionButton>
                       </div>
                     </td>
@@ -296,6 +304,8 @@ export function ProductoresTabla() {
         </div>
       )}
 
+      <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
+
       <ProductoresForm
         mode={activeMode ?? "view"}
         open={activeMode !== null}
@@ -304,7 +314,7 @@ export function ProductoresTabla() {
         onError={(message) => setNotice({ type: "error", message })}
         onSaved={(saved, message) => {
           setProductores((c) => c.map((p) => (p.id === saved.id ? saved : p)));
-          setNotice({ type: "success", message });
+          successToast.mostrar(message);
         }}
       />
 

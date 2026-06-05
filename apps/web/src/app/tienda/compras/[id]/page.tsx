@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { useAuth } from "@/context/AuthContext";
+
 import {
   ArrowLeft, Package, CheckCircle, Clock, Truck,
   MapPin, Copy, RefreshCw, AlertCircle, Star, ShieldCheck,
+  FileText, Loader2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatPrice } from "@/lib/format-number";
@@ -39,6 +42,7 @@ interface Pedido {
   estado?: string;
   total?: string;
   moneda?: string;
+  fecha_creacion?: string;
   creado_en?: string;
   direccion_envio_snapshot?: Record<string, string>;
   detalle_pedido?: DetallePedido[];
@@ -136,15 +140,79 @@ function Skeleton() {
 }
 
 /* ── Main ────────────────────────────────────────────────────────────────── */
-export default function DetallePedidoPage() {
+function DetallePedidoContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const numeroPedido = searchParams.get("n");
+  const { token: authToken } = useAuth();
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tracking, setTracking] = useState<any | null>(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Factura CFDI — modal
+  const [mostrarFactura, setMostrarFactura] = useState(false);
+  const [facturaRfc, setFacturaRfc] = useState("");
+  const [facturaPersona, setFacturaPersona] = useState<"fisica" | "moral">("fisica");
+  const [facturaRegimen, setFacturaRegimen] = useState("");
+  const [facturaUsoCfdi, setFacturaUsoCfdi] = useState("");
+  const [facturaNombre, setFacturaNombre] = useState("");
+  const [facturaApPaterno, setFacturaApPaterno] = useState("");
+  const [facturaApMaterno, setFacturaApMaterno] = useState("");
+  const [facturaCp, setFacturaCp] = useState("");
+  const [facturaEmail, setFacturaEmail] = useState("");
+  const [facturaEnviando, setFacturaEnviando] = useState(false);
+  const [facturaEstado, setFacturaEstado] = useState<"idle" | "ok" | "error">("idle");
+  const [facturaError, setFacturaError] = useState("");
+  const [toastFactura, setToastFactura] = useState(false);
+
+  const handleSolicitarFactura = async () => {
+    const token = authToken || getCookie("token");
+    const pedidoId = String(params.id);
+    if (!pedidoId || !token) {
+      setFacturaError("No se pudo identificar la sesión. Recarga la página.");
+      setFacturaEstado("error");
+      return;
+    }
+    if (!facturaRfc || !facturaEmail || !facturaRegimen || !facturaUsoCfdi) {
+      setFacturaError("Completa todos los campos obligatorios (*).");
+      setFacturaEstado("error");
+      return;
+    }
+    setFacturaEnviando(true);
+    setFacturaError("");
+    try {
+      const razonSocial = facturaPersona === "moral"
+        ? facturaNombre
+        : [facturaNombre, facturaApPaterno, facturaApMaterno].filter(Boolean).join(" ");
+      const payload: Record<string, string> = {
+        estado: "pendiente",
+        rfc_receptor: facturaRfc,
+        nombre_razon_social: razonSocial,
+        uso_cfdi: facturaUsoCfdi,
+        regimen_fiscal: facturaRegimen,
+        email_factura: facturaEmail,
+        tipo_persona: facturaPersona,
+        codigo_postal: facturaCp,
+      };
+      await api.pedidos.addFactura(token, pedidoId, payload);
+      setFacturaEstado("ok");
+      // Cerrar modal y mostrar toast de éxito
+      setTimeout(() => {
+        setMostrarFactura(false);
+        setToastFactura(true);
+        setTimeout(() => setToastFactura(false), 5000);
+      }, 800);
+    } catch (e: any) {
+      setFacturaEstado("error");
+      setFacturaError(e?.message ?? "No se pudo registrar. Inténtalo de nuevo.");
+    } finally {
+      setFacturaEnviando(false);
+    }
+  };
 
   useEffect(() => {
     const id = params.id as string;
@@ -161,6 +229,12 @@ export default function DetallePedidoPage() {
       .finally(() => setCargando(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
+
+  // Bloquear scroll del body cuando el modal está abierto
+  useEffect(() => {
+    document.body.style.overflow = mostrarFactura ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [mostrarFactura]);
 
   const fetchTracking = async (idEnvio: any) => {
     setTrackingLoading(true);
@@ -184,6 +258,234 @@ export default function DetallePedidoPage() {
   };
 
   if (cargando) return <Skeleton />;
+
+  // Estilos compartidos del modal de factura
+  const labelStyle: React.CSSProperties = { fontSize: "12px", fontWeight: "600", color: C.muted, display: "block", marginBottom: "5px", textTransform: "uppercase", letterSpacing: "0.4px" };
+  const inputStyle: React.CSSProperties = { width: "100%", borderRadius: "8px", border: `1px solid ${C.border}`, padding: "10px 13px", fontSize: "14px", boxSizing: "border-box", outline: "none", transition: "border-color 160ms ease" };
+  const selectStyle: React.CSSProperties = { ...inputStyle, background: C.white, cursor: "pointer" };
+
+  // ── Modal de factura ──────────────────────────────────────────────────────
+  const ModalFactura = mostrarFactura ? (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 100,
+        background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "24px 16px", overflow: "hidden",
+        animation: "fadeUp .2s ease",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) setMostrarFactura(false); }}
+    >
+      <div style={{
+        background: C.white, borderRadius: "16px", width: "100%", maxWidth: "520px",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
+        display: "flex", flexDirection: "column",
+        maxHeight: "calc(100vh - 48px)",
+      }}>
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "18px 22px", borderBottom: `1px solid ${C.border}`,
+          background: `linear-gradient(135deg, ${C.greenDark}, ${C.green})`,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <FileText size={20} style={{ color: C.white }} />
+            <h2 style={{ margin: 0, fontSize: "17px", fontWeight: "700", color: C.white, fontFamily: "var(--font-family-store)" }}>
+              Generar factura
+            </h2>
+          </div>
+          <button
+            onClick={() => setMostrarFactura(false)}
+            style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "8px", cursor: "pointer", padding: "6px 8px", color: C.white, display: "flex", alignItems: "center" }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: "24px", overflowY: "auto", flex: 1 }}>
+
+          {/* Sección 1 — Datos del ticket */}
+          <section>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+              <div style={{
+                width: "28px", height: "28px", borderRadius: "50%", background: C.greenDark,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "13px", fontWeight: "800", color: C.white, flexShrink: 0,
+              }}>1</div>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: C.greenDark }}>Datos del ticket</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div>
+                <label style={labelStyle}>Código de facturación</label>
+                <input readOnly value={String(params.id)}
+                  style={{ ...inputStyle, background: "#f9fafb", color: C.muted, fontFamily: "monospace", cursor: "default" }} />
+              </div>
+              <div>
+                <label style={labelStyle}>Monto por facturar</label>
+                <input readOnly value={pedido ? `$${Number(pedido.total || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"}
+                  style={{ ...inputStyle, background: "#f9fafb", color: C.muted, cursor: "default" }} />
+              </div>
+            </div>
+          </section>
+
+          {/* Sección 2 — Datos fiscales */}
+          <section>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+              <div style={{
+                width: "28px", height: "28px", borderRadius: "50%", background: C.greenDark,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "13px", fontWeight: "800", color: C.white, flexShrink: 0,
+              }}>2</div>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: C.greenDark }}>Datos fiscales</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div>
+                <label style={labelStyle}>RFC *</label>
+                <input
+                  type="text" value={facturaRfc} placeholder="XAXX010101000"
+                  onChange={(e) => setFacturaRfc(e.target.value.toUpperCase().slice(0, 13))}
+                  style={{ ...inputStyle, fontFamily: "monospace" }}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Persona *</label>
+                <div style={{ display: "flex", gap: "20px", marginTop: "4px" }}>
+                  {(["fisica", "moral"] as const).map((tipo) => (
+                    <label key={tipo} style={{ display: "flex", alignItems: "center", gap: "7px", cursor: "pointer", fontSize: "14px", color: C.text }}>
+                      <input
+                        type="radio" name="persona" value={tipo}
+                        checked={facturaPersona === tipo}
+                        onChange={() => setFacturaPersona(tipo)}
+                        style={{ accentColor: C.green, width: "16px", height: "16px" }}
+                      />
+                      {tipo === "fisica" ? "Física" : "Moral"}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>Régimen fiscal *</label>
+                <select value={facturaRegimen} onChange={(e) => setFacturaRegimen(e.target.value)} style={selectStyle}>
+                  <option value="">Selecciona régimen fiscal</option>
+                  <option value="601">601 - General de Ley Personas Morales</option>
+                  <option value="603">603 - Personas Morales con Fines no Lucrativos</option>
+                  <option value="605">605 - Sueldos y Salarios</option>
+                  <option value="606">606 - Arrendamiento</option>
+                  <option value="608">608 - Demás ingresos</option>
+                  <option value="612">612 - Personas Físicas con Actividades Empresariales</option>
+                  <option value="616">616 - Sin obligaciones fiscales</option>
+                  <option value="621">621 - Incorporación Fiscal</option>
+                  <option value="622">622 - Actividades Agrícolas, Ganaderas, Silvícolas</option>
+                  <option value="625">625 - Régimen de Plataformas Tecnológicas</option>
+                  <option value="626">626 - Régimen Simplificado de Confianza</option>
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Uso de CFDI *</label>
+                <select value={facturaUsoCfdi} onChange={(e) => setFacturaUsoCfdi(e.target.value)} style={selectStyle}>
+                  <option value="">Selecciona uso de CFDI</option>
+                  <option value="G01">G01 - Adquisición de mercancias</option>
+                  <option value="G02">G02 - Devoluciones, descuentos o bonificaciones</option>
+                  <option value="G03">G03 - Gastos en general</option>
+                  <option value="D01">D01 - Honorarios médicos y gastos hospitalarios</option>
+                  <option value="D03">D03 - Gastos funerales</option>
+                  <option value="D04">D04 - Donativos</option>
+                  <option value="D10">D10 - Pagos por servicios educativos</option>
+                  <option value="I01">I01 - Construcciones</option>
+                  <option value="I03">I03 - Equipo de transporte</option>
+                  <option value="I04">I04 - Equipo de cómputo y accesorios</option>
+                  <option value="S01">S01 - Sin efectos fiscales</option>
+                  <option value="CP01">CP01 - Pagos</option>
+                  <option value="P01">P01 - Por definir</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Sección 3 — Datos personales */}
+          <section>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+              <div style={{
+                width: "28px", height: "28px", borderRadius: "50%", background: C.greenDark,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "13px", fontWeight: "800", color: C.white, flexShrink: 0,
+              }}>3</div>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: C.greenDark }}>Datos personales</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {facturaPersona === "fisica" ? (
+                <>
+                  <div>
+                    <label style={labelStyle}>Nombre(s) *</label>
+                    <input type="text" value={facturaNombre} placeholder="Nombre(s)" onChange={(e) => setFacturaNombre(e.target.value)} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Apellido paterno *</label>
+                    <input type="text" value={facturaApPaterno} placeholder="Apellido paterno" onChange={(e) => setFacturaApPaterno(e.target.value)} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Apellido materno</label>
+                    <input type="text" value={facturaApMaterno} placeholder="Apellido materno" onChange={(e) => setFacturaApMaterno(e.target.value)} style={inputStyle} />
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label style={labelStyle}>Razón social *</label>
+                  <input type="text" value={facturaNombre} placeholder="Razón social" onChange={(e) => setFacturaNombre(e.target.value)} style={inputStyle} />
+                </div>
+              )}
+              <div>
+                <label style={labelStyle}>C.P. *</label>
+                <input type="text" value={facturaCp} placeholder="Código postal" maxLength={5}
+                  onChange={(e) => setFacturaCp(e.target.value.replace(/\D/g, "").slice(0, 5))} style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Correo electrónico *</label>
+                <input type="email" value={facturaEmail} placeholder="tu@correo.com" onChange={(e) => setFacturaEmail(e.target.value)} style={inputStyle} />
+              </div>
+            </div>
+          </section>
+
+          {facturaEstado === "error" && (
+            <p style={{ fontSize: "13px", color: "#DC2626", margin: 0, padding: "10px 14px", borderRadius: "8px", background: "#fef2f2", border: "1px solid #fecaca" }}>
+              {facturaError}
+            </p>
+          )}
+
+          {/* Botones */}
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button
+              onClick={() => setMostrarFactura(false)}
+              style={{
+                flex: "0 0 auto", borderRadius: "8px", background: "transparent",
+                border: `1px solid ${C.border}`, color: C.muted,
+                padding: "12px 18px", fontSize: "14px", fontWeight: "600", cursor: "pointer",
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSolicitarFactura}
+              disabled={facturaEnviando}
+              style={{
+                flex: 1, borderRadius: "8px",
+                background: facturaEnviando ? C.muted : C.green,
+                color: C.white, padding: "12px", fontSize: "14px", fontWeight: "700",
+                border: "none", cursor: facturaEnviando ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "7px",
+                transition: "background 160ms ease",
+              }}
+            >
+              {facturaEnviando
+                ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Enviando…</>
+                : <><FileText size={15} /> Generar factura</>}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
 
   if (error || !pedido) {
     return (
@@ -215,8 +517,8 @@ export default function DetallePedidoPage() {
   const estado = pedido.estado || "pendiente";
   const estadoIndex = ESTADO_INDEX[estado] ?? 0;
   const badge = ESTADO_BADGE[estado] ?? ESTADO_BADGE.pendiente;
-  const fecha = pedido.creado_en
-    ? new Date(pedido.creado_en).toLocaleDateString("es-MX", {
+  const fecha = (pedido.fecha_creacion || pedido.creado_en)
+    ? new Date(pedido.fecha_creacion || pedido.creado_en!).toLocaleDateString("es-MX", {
         day: "2-digit", month: "long", year: "numeric",
       })
     : "—";
@@ -225,7 +527,85 @@ export default function DetallePedidoPage() {
   const timelineTotal = TIMELINE.length - 1;
 
   return (
-    <main style={{ maxWidth: "860px", margin: "0 auto", padding: "36px 20px 80px" }}>
+    <>
+    <div style={{ position: "relative" }}>
+
+      {/* ── 5 Agaves lado izquierdo ─────────────────────────────── */}
+      <div aria-hidden style={{ position: "absolute", top: "20%", left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      <div aria-hidden style={{ position: "absolute", top: "32%", left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      <div aria-hidden style={{ position: "absolute", top: "44%", left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      <div aria-hidden style={{ position: "absolute", top: "56%", left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      {/* ── 4 Agaves lado derecho ───────────────────────────────── */}
+      <div aria-hidden style={{ position: "absolute", top: "20%", right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      <div aria-hidden style={{ position: "absolute", top: "32%", right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      <div aria-hidden style={{ position: "absolute", top: "44%", right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      <div aria-hidden style={{ position: "absolute", top: "56%", right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+
+      {/* ── 3 Murciélagos al nivel del título ───────────────────── */}
+      <div aria-hidden style={{ position: "absolute", top: "-65px", left: "2%", width: 150, height: 150, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/murcielago.png" alt="" width={150} height={150}
+          style={{ opacity: 0.60, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      <div aria-hidden style={{ position: "absolute", top: "-90px", left: "50%", transform: "translateX(-50%)", width: 170, height: 170, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/murcielago.png" alt="" width={170} height={170}
+          style={{ opacity: 0.60, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      <div aria-hidden style={{ position: "absolute", top: "-62px", right: "2%", width: 145, height: 145, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/murcielago.png" alt="" width={145} height={145}
+          style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+
+      {/* ── Quiote izquierdo ────────────────────────────────────── */}
+      <div aria-hidden style={{ position: "absolute", bottom: 0, left: 0, width: 240, height: "130vh", zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/quiote.png" alt="" fill
+          style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain", objectPosition: "bottom center" }} />
+      </div>
+
+      {/* ── Quiote derecho ──────────────────────────────────────── */}
+      <div aria-hidden style={{ position: "absolute", bottom: 0, right: 0, width: 240, height: "130vh", zIndex: 2, pointerEvents: "none", transform: "scaleX(-1)" }}>
+        <Image src="/fotos/quiote.png" alt="" fill
+          style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain", objectPosition: "bottom center" }} />
+      </div>
+
+      {/* ── 5 Mezcalll en la parte inferior ─────────────────────── */}
+      <div aria-hidden style={{ position: "absolute", bottom: 0, left: "21%", width: 115, height: 115, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/mezcalll.png" alt="" width={115} height={115}
+          style={{ opacity: 0.50, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      <div aria-hidden style={{ position: "absolute", bottom: 0, left: "33%", width: 135, height: 135, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/mezcalll.png" alt="" width={135} height={135}
+          style={{ opacity: 0.50, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      <div aria-hidden style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 125, height: 125, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/mezcalll.png" alt="" width={125} height={125}
+          style={{ opacity: 0.50, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      <div aria-hidden style={{ position: "absolute", bottom: 0, right: "33%", width: 120, height: 120, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/mezcalll.png" alt="" width={120} height={120}
+          style={{ opacity: 0.50, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+      <div aria-hidden style={{ position: "absolute", bottom: 0, right: "21%", width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+        <Image src="/fotos/mezcalll.png" alt="" width={110} height={110}
+          style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+      </div>
+
+    <main style={{ position: "relative", zIndex: 1, maxWidth: "860px", margin: "0 auto", padding: "36px 20px 180px" }}>
       <style>{`
         @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
         @keyframes dotPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(.65);opacity:.5} }
@@ -266,7 +646,7 @@ export default function DetallePedidoPage() {
               fontWeight: "700", color: C.greenDark, margin: 0,
             }}>
               Pedido{" "}
-              <span style={{ fontFamily: "monospace", color: C.copper }}>#{id}</span>
+              <span style={{ fontFamily: "monospace", color: C.copper }}>#{numeroPedido ?? id}</span>
             </h1>
             <span style={{
               display: "inline-flex", alignItems: "center", gap: "6px",
@@ -358,9 +738,189 @@ export default function DetallePedidoPage() {
         </Card>
       </div>
 
-      {/* ── Body grid ── */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Products + Summary */}
+      {/* ── Sección unificada ── */}
+      <div className="fade" style={{
+        animationDelay: "120ms",
+        background: C.white, borderRadius: "14px",
+        border: `1px solid ${C.border}`,
+        boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
+        overflow: "hidden",
+      }}>
+        {/* Products */}
+        <div style={{ padding: "22px", borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.6px", textTransform: "uppercase", color: C.copper, margin: 0 }}>
+              Productos
+            </p>
+            {pedido.detalle_pedido && pedido.detalle_pedido.length > 0 && (
+              <span style={{
+                fontSize: "12px", fontWeight: "700", color: C.copper,
+                background: "rgba(201,122,62,0.08)", border: "1px solid rgba(201,122,62,0.2)",
+                borderRadius: "999px", padding: "2px 10px",
+              }}>
+                {pedido.detalle_pedido.length}
+              </span>
+            )}
+          </div>
+          {pedido.detalle_pedido && pedido.detalle_pedido.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {pedido.detalle_pedido.map((item, idx) => {
+                const imgUrl = item.productos?.producto_imagenes?.[0]?.url
+                  || item.productos?.imagen_principal_url
+                  || null;
+                const nombre = item.productos?.nombre || `Producto #${item.id_producto}`;
+                const lineTotal = Number(item.precio_compra) * item.cantidad;
+                return (
+                  <div key={idx} style={{
+                    display: "flex", alignItems: "center", gap: "14px",
+                    padding: "14px 0",
+                    borderBottom: idx < pedido.detalle_pedido!.length - 1 ? `1px solid ${C.border}` : "none",
+                  }}>
+                    <div style={{
+                      position: "relative", height: "58px", width: "58px",
+                      flexShrink: 0, borderRadius: "10px", overflow: "hidden",
+                      background: C.cream, border: `1px solid ${C.border}`,
+                    }}>
+                      {imgUrl ? (
+                        <Image src={imgUrl} alt={nombre} fill sizes="58px" className="object-cover" />
+                      ) : (
+                        <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center" }}>
+                          <Package size={20} style={{ color: C.border }} />
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "14px", fontWeight: "600", color: C.greenDark, margin: "0 0 3px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {nombre}
+                      </p>
+                      <p style={{ fontSize: "12px", color: C.muted, margin: 0 }}>
+                        {item.cantidad} × ${formatPrice(Number(item.precio_compra), { showCurrency: false })}
+                      </p>
+                    </div>
+                    <p style={{ flexShrink: 0, fontFamily: "monospace", fontSize: "15px", fontWeight: "700", color: C.copper, margin: 0 }}>
+                      ${formatPrice(lineTotal, { showCurrency: false })}
+                      <span style={{ marginLeft: "4px", fontSize: "11px", fontWeight: "400", color: C.muted }}>{item.moneda_compra || "MXN"}</span>
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p style={{ padding: "16px 0", textAlign: "center", fontSize: "14px", color: C.muted, margin: 0 }}>
+              Sin información de productos.
+            </p>
+          )}
+        </div>
+
+        {/* Resumen de costos */}
+        {(() => {
+          const items = pedido.detalle_pedido ?? [];
+          const subtotal = items.reduce((acc, item) => acc + Number(item.precio_compra) * item.cantidad, 0);
+          const costoEnvio = Number(envio?.costo_envio ?? 0);
+          const total = Number(pedido.total ?? subtotal + costoEnvio);
+          const moneda = pedido.moneda || "MXN";
+          return (
+            <div style={{ padding: "22px", borderBottom: `1px solid ${C.border}` }}>
+              <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.6px", textTransform: "uppercase", color: C.copper, margin: "0 0 16px 0" }}>
+                Resumen de costos
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "14px", color: C.muted }}>Subtotal</span>
+                  <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: C.text }}>${formatPrice(subtotal, { showCurrency: false })}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "14px", color: C.muted }}>Envío</span>
+                  <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: costoEnvio === 0 ? C.green : C.text }}>
+                    {costoEnvio === 0 ? "Gratis" : `$${formatPrice(costoEnvio, { showCurrency: false })}`}
+                  </span>
+                </div>
+                <div style={{ height: "1px", background: C.border, margin: "4px 0" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <span style={{ fontSize: "15px", fontWeight: "700", color: C.text }}>Total</span>
+                  <span style={{ fontFamily: "monospace", fontSize: "20px", fontWeight: "700", color: C.copper }}>
+                    ${formatPrice(total, { showCurrency: false })}
+                    <span style={{ marginLeft: "4px", fontSize: "12px", fontWeight: "400", color: C.muted }}>{moneda}</span>
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                  <ShieldCheck size={13} style={{ color: C.border, flexShrink: 0 }} />
+                  <span style={{ fontSize: "12px", color: C.muted }}>Pago protegido · IVA incluido</span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Dirección de envío */}
+        {direccion && (
+          <div style={{ padding: "22px", borderBottom: `1px solid ${C.border}` }}>
+            <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.6px", textTransform: "uppercase", color: C.copper, margin: "0 0 16px 0" }}>
+              Dirección de envío
+            </p>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                height: "38px", width: "38px", flexShrink: 0, borderRadius: "10px",
+                background: `linear-gradient(135deg, rgba(168,194,107,0.10), rgba(201,122,62,0.04))`,
+                border: `1px solid ${C.border}`,
+              }}>
+                <MapPin size={16} style={{ color: C.amber }} />
+              </div>
+              <div>
+                <p style={{ fontSize: "14px", color: C.greenDark, margin: 0, lineHeight: "1.6" }}>
+                  {direccion.es_internacional ? (
+                    <>{direccion.linea_1}{direccion.linea_2 && <span>, {direccion.linea_2}</span>}</>
+                  ) : (
+                    <>{direccion.calle} {direccion.numero}{direccion.colonia && <span>, {direccion.colonia}</span>}</>
+                  )}
+                </p>
+                {direccion.referencia && (
+                  <p style={{ marginTop: "4px", fontSize: "12px", color: C.muted, margin: 0 }}>{direccion.referencia}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Facturación */}
+        <div style={{ padding: "22px" }}>
+          <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.6px", textTransform: "uppercase", color: C.copper, margin: "0 0 16px 0" }}>
+            Facturación
+          </p>
+          {facturaEstado === "ok" ? (
+            <div style={{
+              display: "flex", alignItems: "center", gap: "8px",
+              fontSize: "13px", color: C.green, fontWeight: "500",
+              borderRadius: "8px", background: "rgba(61,107,63,0.06)",
+              border: "1px solid rgba(61,107,63,0.2)", padding: "12px 14px",
+            }}>
+              <CheckCircle size={15} />
+              Solicitud enviada. Revisa tu correo{facturaEmail && <strong> {facturaEmail}</strong>} (también en spam).
+            </div>
+          ) : (
+            <button
+              onClick={() => setMostrarFactura(true)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                gap: "8px", borderRadius: "8px", background: "transparent",
+                border: `1px solid ${C.border}`, color: C.green,
+                padding: "11px 16px", fontSize: "13px", fontWeight: "600", cursor: "pointer",
+                transition: "background 160ms ease",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(61,107,63,0.05)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <FileText size={15} />
+              Solicitar factura (CFDI)
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ELIMINAR RESTO DEL GRID VIEJO - marcador */}
+      <div style={{ display: "none" }}>
+        {/* Left column: Productos + Dirección + Facturación */}
         <div className="fade" style={{ animationDelay: "120ms", display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Products */}
           <Card accentColor={C.green}>
@@ -456,54 +1016,7 @@ export default function DetallePedidoPage() {
             )}
           </Card>
 
-          {/* Cost summary */}
-          {(() => {
-            const items = pedido.detalle_pedido ?? [];
-            const subtotal = items.reduce(
-              (acc, item) => acc + Number(item.precio_compra) * item.cantidad,
-              0,
-            );
-            const costoEnvio = Number(envio?.costo_envio ?? 0);
-            const total = Number(pedido.total ?? subtotal + costoEnvio);
-            const moneda = pedido.moneda || "MXN";
-
-            return (
-              <Card accentColor={C.copper}>
-                <SectionTitle>Resumen de costos</SectionTitle>
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: "14px", color: C.muted }}>Subtotal</span>
-                    <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: C.text }}>
-                      ${formatPrice(subtotal, { showCurrency: false })}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: "14px", color: C.muted }}>Envío</span>
-                    <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: costoEnvio === 0 ? C.green : C.text }}>
-                      {costoEnvio === 0 ? "Gratis" : `$${formatPrice(costoEnvio, { showCurrency: false })}`}
-                    </span>
-                  </div>
-                  <div style={{ height: "1px", background: C.border }} />
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                    <span style={{ fontSize: "15px", fontWeight: "700", color: C.text }}>Total</span>
-                    <span style={{ fontFamily: "monospace", fontSize: "20px", fontWeight: "700", color: C.copper }}>
-                      ${formatPrice(total, { showCurrency: false })}
-                      <span style={{ marginLeft: "4px", fontSize: "12px", fontWeight: "400", color: C.muted }}>{moneda}</span>
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "5px", marginTop: "2px" }}>
-                    <ShieldCheck size={13} style={{ color: C.border, flexShrink: 0 }} />
-                    <span style={{ fontSize: "12px", color: C.muted }}>Pago protegido · IVA incluido</span>
-                  </div>
-                </div>
-              </Card>
-            );
-          })()}
-        </div>
-
-        {/* Right column */}
-        <div className="fade" style={{ animationDelay: "180ms", display: "flex", flexDirection: "column", gap: "16px" }}>
-          {/* Address */}
+          {/* Dirección de envío */}
           {direccion && (
             <Card accentColor={C.amber}>
               <SectionTitle>Dirección de envío</SectionTitle>
@@ -540,178 +1053,119 @@ export default function DetallePedidoPage() {
             </Card>
           )}
 
-          {/* Envío details */}
-          {envio && (
-            <Card accentColor={C.copper}>
-              <SectionTitle>Información de envío</SectionTitle>
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {envio.numero_rastreo && (
-                  <div>
-                    <p style={{ marginBottom: "6px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.copper }}>
-                      Número de rastreo
-                    </p>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "700", color: C.greenDark }}>
-                        {envio.numero_rastreo}
-                      </span>
-                      <button
-                        onClick={copiarTracking}
-                        aria-label={copied ? "Número copiado" : "Copiar número de rastreo"}
-                        style={{
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          height: "30px", width: "30px", borderRadius: "7px",
-                          background: C.cream, color: C.copper,
-                          border: `1px solid ${C.border}`, cursor: "pointer",
-                          transition: "all 160ms ease",
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = C.copper; e.currentTarget.style.color = C.white; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = C.cream; e.currentTarget.style.color = C.copper; }}
-                      >
-                        <Copy size={13} />
-                      </button>
-                      {copied && (
-                        <span style={{ fontSize: "11px", fontWeight: "600", color: C.green }} role="status">
-                          ¡Copiado!
-                        </span>
-                      )}
-                    </div>
+        </div>
+
+        {/* Right column: Resumen de costos + Facturación */}
+        <div className="fade" style={{ animationDelay: "180ms", display: "flex", flexDirection: "column", gap: "16px" }}>
+          {(() => {
+            const items = pedido.detalle_pedido ?? [];
+            const subtotal = items.reduce(
+              (acc, item) => acc + Number(item.precio_compra) * item.cantidad,
+              0,
+            );
+            const costoEnvio = Number(envio?.costo_envio ?? 0);
+            const total = Number(pedido.total ?? subtotal + costoEnvio);
+            const moneda = pedido.moneda || "MXN";
+            return (
+              <Card accentColor={C.copper}>
+                <SectionTitle>Resumen de costos</SectionTitle>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "14px", color: C.muted }}>Subtotal</span>
+                    <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: C.text }}>
+                      ${formatPrice(subtotal, { showCurrency: false })}
+                    </span>
                   </div>
-                )}
-
-                {envio.costo_envio && (
-                  <div>
-                    <p style={{ marginBottom: "4px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.copper }}>
-                      Costo de envío
-                    </p>
-                    <p style={{ fontFamily: "monospace", fontSize: "15px", fontWeight: "700", color: C.greenDark, margin: 0 }}>
-                      ${formatPrice(Number(envio.costo_envio), { showCurrency: false })}{" "}
-                      <span style={{ fontSize: "11px", fontWeight: "400", color: C.muted }}>MXN</span>
-                    </p>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "14px", color: C.muted }}>Envío</span>
+                    <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: costoEnvio === 0 ? C.green : C.text }}>
+                      {costoEnvio === 0 ? "Gratis" : `$${formatPrice(costoEnvio, { showCurrency: false })}`}
+                    </span>
                   </div>
-                )}
-
-                {envio.fecha_entrega_estimada && (
-                  <div>
-                    <p style={{ marginBottom: "4px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.copper }}>
-                      Entrega estimada
-                    </p>
-                    <p style={{ fontSize: "15px", fontWeight: "600", color: C.greenDark, margin: 0 }}>
-                      {new Date(envio.fecha_entrega_estimada).toLocaleDateString("es-MX", {
-                        day: "2-digit", month: "long",
-                      })}
-                    </p>
+                  <div style={{ height: "1px", background: C.border }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span style={{ fontSize: "15px", fontWeight: "700", color: C.text }}>Total</span>
+                    <span style={{ fontFamily: "monospace", fontSize: "20px", fontWeight: "700", color: C.copper }}>
+                      ${formatPrice(total, { showCurrency: false })}
+                      <span style={{ marginLeft: "4px", fontSize: "12px", fontWeight: "400", color: C.muted }}>{moneda}</span>
+                    </span>
                   </div>
-                )}
-              </div>
-            </Card>
-          )}
-
-          {/* Tracking events */}
-          <Card accentColor={C.green}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-              <SectionTitle>Seguimiento</SectionTitle>
-              {envio?.id_envio && (
-                <button
-                  onClick={() => fetchTracking(envio.id_envio)}
-                  disabled={trackingLoading}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "5px",
-                    borderRadius: "6px", background: C.cream, color: C.copper,
-                    padding: "7px 12px", fontSize: "11px", fontWeight: "700",
-                    border: `1px solid ${C.border}`, cursor: trackingLoading ? "not-allowed" : "pointer",
-                    opacity: trackingLoading ? 0.5 : 1, transition: "all 160ms ease",
-                  }}
-                  onMouseEnter={(e) => { if (!trackingLoading) { e.currentTarget.style.background = C.copper; e.currentTarget.style.color = C.white; } }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = C.cream; e.currentTarget.style.color = C.copper; }}
-                >
-                  <RefreshCw size={12} style={{ animation: trackingLoading ? "spin 1s linear infinite" : "none" }} />
-                  {trackingLoading ? "Actualizando…" : "Actualizar"}
-                </button>
-              )}
-            </div>
-
-            {tracking?.estado_actual && (
-              <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.4px", textTransform: "uppercase", color: C.muted }}>Estado:</span>
-                <span style={{
-                  display: "inline-block", borderRadius: "999px", padding: "3px 10px",
-                  fontSize: "11px", fontWeight: "700",
-                  background: ESTADO_BADGE[tracking.estado_actual]?.bg ?? "rgba(100,100,100,0.08)",
-                  color: ESTADO_BADGE[tracking.estado_actual]?.text ?? "#666",
-                  border: "1px solid rgba(201,122,62,0.15)",
-                }}>
-                  {ESTADO_BADGE[tracking.estado_actual]?.label ?? tracking.estado_actual}
-                </span>
-                {tracking.fecha_entrega_estimada && (
-                  <span style={{ fontSize: "12px", color: C.muted }}>
-                    · Entrega est.{" "}
-                    {new Date(tracking.fecha_entrega_estimada).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {trackingLoading ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {[1, 2, 3].map((i) => (
-                  <div key={i} style={{ height: "44px", borderRadius: "8px", background: C.cream, animation: "skPulse 1.6s ease infinite" }} />
-                ))}
-              </div>
-            ) : !envio ? (
-              <p style={{ fontSize: "14px", color: C.muted, margin: 0 }}>
-                Aún no hay información de envío para este pedido.
-              </p>
-            ) : !envio.numero_rastreo ? (
-              <p style={{ fontSize: "14px", color: C.muted, margin: 0 }}>
-                La guía de envío aún no ha sido generada. Recibirás una notificación cuando esté lista.
-              </p>
-            ) : tracking?.eventos && tracking.eventos.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                {tracking.eventos.map((evento: any, idx: number) => (
-                  <div key={idx} style={{ display: "flex", gap: "12px" }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                      <div style={{
-                        marginTop: "3px", height: "10px", width: "10px", flexShrink: 0,
-                        borderRadius: "50%", border: `2px solid ${C.white}`,
-                        background: idx === 0 ? C.copper : C.border,
-                        boxShadow: idx === 0 ? `0 0 0 2px ${C.copper}50` : "none",
-                      }} />
-                      {idx < tracking.eventos.length - 1 && (
-                        <div style={{ width: "2px", flex: 1, background: C.border, minHeight: "28px", marginTop: "4px" }} />
-                      )}
-                    </div>
-                    <div style={{ paddingBottom: idx === tracking.eventos.length - 1 ? 0 : "16px" }}>
-                      <p style={{
-                        fontSize: "14px", fontWeight: "600",
-                        color: idx === 0 ? C.greenDark : C.muted, margin: 0,
-                      }}>
-                        {evento.descripcion}
-                      </p>
-                      <div style={{ marginTop: "3px", display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: C.muted, flexWrap: "wrap" }}>
-                        <span>
-                          {new Date(evento.fecha).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
-                          {" · "}
-                          {new Date(evento.fecha).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                        {evento.ubicacion && (
-                          <span style={{ display: "flex", alignItems: "center", gap: "2px" }}>
-                            <MapPin size={11} />
-                            {evento.ubicacion}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "5px", marginTop: "2px" }}>
+                    <ShieldCheck size={13} style={{ color: C.border, flexShrink: 0 }} />
+                    <span style={{ fontSize: "12px", color: C.muted }}>Pago protegido · IVA incluido</span>
                   </div>
-                ))}
+                </div>
+              </Card>
+            );
+          })()}
+
+          {/* Factura CFDI */}
+          <Card accentColor={C.copper}>
+            <SectionTitle>Facturación</SectionTitle>
+            {facturaEstado === "ok" ? (
+              <div style={{
+                display: "flex", alignItems: "center", gap: "8px",
+                fontSize: "13px", color: C.green, fontWeight: "500",
+                borderRadius: "8px", background: "rgba(61,107,63,0.06)",
+                border: "1px solid rgba(61,107,63,0.2)", padding: "12px 14px",
+              }}>
+                <CheckCircle size={15} />
+                Solicitud enviada. Revisa tu correo{facturaEmail && <strong> {facturaEmail}</strong>} (también en spam).
               </div>
             ) : (
-              <p style={{ fontSize: "14px", color: C.muted, margin: 0 }}>
-                Guía generada. Los eventos de rastreo aparecerán aquí en cuanto el paquete sea recolectado.
-              </p>
+              <button
+                onClick={() => setMostrarFactura(true)}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                  gap: "8px", borderRadius: "8px", background: "transparent",
+                  border: `1px solid ${C.border}`, color: C.green,
+                  padding: "11px 16px", fontSize: "13px", fontWeight: "600", cursor: "pointer",
+                  transition: "background 160ms ease",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(61,107,63,0.05)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+              >
+                <FileText size={15} />
+                Solicitar factura (CFDI)
+              </button>
             )}
           </Card>
         </div>
       </div>
     </main>
+    </div>
+    {ModalFactura}
+
+    {/* Toast de factura enviada */}
+    {toastFactura && (
+      <div style={{
+        position: "fixed", bottom: "24px", left: "50%", transform: "translateX(-50%)",
+        zIndex: 200, background: C.green, color: C.white,
+        borderRadius: "12px", padding: "14px 22px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+        display: "flex", alignItems: "center", gap: "10px",
+        fontSize: "14px", fontWeight: "600",
+        animation: "fadeUp .3s ease",
+        whiteSpace: "nowrap",
+      }}>
+        <CheckCircle size={18} />
+        ¡Factura enviada! Revisa tu correo{facturaEmail ? ` (${facturaEmail})` : ""}.
+        <button
+          onClick={() => setToastFactura(false)}
+          style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "6px", cursor: "pointer", padding: "2px 8px", color: C.white, marginLeft: "6px", fontSize: "13px" }}
+        >
+          ✕
+        </button>
+      </div>
+    )}
+    </>
+  );
+}
+
+export default function DetallePedidoPage() {
+  return (
+    <Suspense>
+      <DetallePedidoContent />
+    </Suspense>
   );
 }

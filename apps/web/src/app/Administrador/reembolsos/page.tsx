@@ -8,8 +8,10 @@ import {
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+import { useSuccessToast } from "@/hooks/useSuccessToast";
+import { SuccessToast } from "@/components/ui/SuccessToast";
 
-type Notice = { type: "success" | "error"; message: string };
+type Notice = { type: "error"; message: string };
 
 type PagoReembolso = {
   id_pago: number;
@@ -59,6 +61,7 @@ export default function ReembolsosAdminPage() {
   const [notasModal, setNotasModal] = useState("");
 
   const token = getCookie("token") ?? "";
+  const successToast = useSuccessToast("reembolso");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -100,10 +103,10 @@ export default function ReembolsosAdminPage() {
     setResolviendo(modalPago.id_pago);
     try {
       await api.pagos.resolverManual(token, modalPago.id_pago, notasModal || undefined);
-      setNotice({ type: "success", message: `Pago #${modalPago.id_pago} marcado como reembolsado correctamente.` });
       setModalPago(null);
       setNotasModal("");
       await load();
+      successToast.mostrar(`Pago #${modalPago?.id_pago ?? ""} marcado como reembolsado correctamente.`);
     } catch (e) {
       setNotice({ type: "error", message: e instanceof Error ? e.message : "Error al resolver" });
     } finally {
@@ -120,16 +123,12 @@ export default function ReembolsosAdminPage() {
     <div className="space-y-6 p-6">
       <Breadcrumb pageName="Reembolsos" />
 
-      {/* Aviso flash */}
+      <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
+
+      {/* Aviso flash (solo errores) */}
       {notice && (
-        <div
-          className={`flex items-center gap-2 rounded-md border px-4 py-2 text-sm ${
-            notice.type === "success"
-              ? "border-[#A8C26B]/40 bg-[#A8C26B]/10 text-[#3D6B3F]"
-              : "border-red-300 bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300"
-          }`}
-        >
-          {notice.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+        <div className="flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-800">
+          <AlertCircle size={16} />
           <span>{notice.message}</span>
           <button className="ml-auto" onClick={() => setNotice(null)}>
             <X size={16} />

@@ -28,6 +28,7 @@ interface Pedido {
   estado?: string;
   total?: string;
   moneda?: string;
+  fecha_creacion?: string;
   creado_en?: string;
   detalle_pedido?: DetallePedido[];
 }
@@ -153,6 +154,8 @@ export default function MisComprasPage() {
   const [cargando, setCargando]       = useState(true);
   const [filtroEstado, setFiltro]     = useState("todos");
   const [busqueda, setBusqueda]       = useState("");
+  const [pagina, setPagina]           = useState(1);
+  const POR_PAGINA = 5;
 
   useEffect(() => {
     if (authLoading) return;
@@ -166,8 +169,9 @@ export default function MisComprasPage() {
       .getMisCompras(token)
       .then((data) => {
         const lista = Array.isArray(data) ? data : [];
+        // Ordenar de más antiguo a más reciente → primer pedido = #1
         lista.sort((a: Pedido, b: Pedido) =>
-          new Date(b.creado_en || 0).getTime() - new Date(a.creado_en || 0).getTime()
+          new Date(a.fecha_creacion || a.creado_en || 0).getTime() - new Date(b.fecha_creacion || b.creado_en || 0).getTime()
         );
         setPedidos(lista);
       })
@@ -194,10 +198,45 @@ export default function MisComprasPage() {
     });
   }, [pedidos, filtroEstado, busqueda]);
 
+  const totalPaginas = Math.ceil(pedidosFiltrados.length / POR_PAGINA);
+  const pedidosPagina = pedidosFiltrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+
   const isLoading = authLoading || cargando;
 
+  const cambiarFiltro = (key: string) => { setFiltro(key); setPagina(1); };
+  const cambiarBusqueda = (val: string) => { setBusqueda(val); setPagina(1); };
+
+  // Patrón alternado: agavenuevo / murciélago / agavenuevo / murciélago...
+  const sideRows = [
+    { top: "5%",  img: "agavenuevo", w: 110 },
+    { top: "6%", img: "murcielago", w: 120 },
+    { top: "30%", img: "agavenuevo", w: 110 },
+    { top: "32%", img: "murcielago", w: 120 },
+    { top: "57%", img: "agavenuevo", w: 110 },
+    { top: "59%", img: "murcielago", w: 120 },
+    { top: "83%", img: "agavenuevo", w: 110 },
+  ];
+
   return (
-    <main style={{ maxWidth: "900px", margin: "0 auto", padding: "36px 20px 80px" }}>
+    <div style={{ position: "relative" }}>
+
+      {/* ── Columna izquierda ────────────────────────────────────── */}
+      {sideRows.map((r, i) => (
+        <div key={`l-${i}`} aria-hidden style={{ position: "absolute", top: r.top, left: 0, width: r.w, height: r.w, zIndex: 2, pointerEvents: "none" }}>
+          <Image src={`/fotos/${r.img}.png`} alt="" width={r.w} height={r.w}
+            style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+        </div>
+      ))}
+
+      {/* ── Columna derecha ──────────────────────────────────────── */}
+      {sideRows.map((r, i) => (
+        <div key={`r-${i}`} aria-hidden style={{ position: "absolute", top: r.top, right: 0, width: r.w, height: r.w, zIndex: 2, pointerEvents: "none", transform: r.img === "murcielago" ? "scaleX(-1)" : "none" }}>
+          <Image src={`/fotos/${r.img}.png`} alt="" width={r.w} height={r.w}
+            style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
+        </div>
+      ))}
+
+    <main style={{ position: "relative", zIndex: 1, maxWidth: "900px", margin: "0 auto", padding: "36px 20px 80px" }}>
       <style>{`
         @keyframes skPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
         @keyframes fadeUp  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -270,7 +309,7 @@ export default function MisComprasPage() {
               return (
                 <button
                   key={f.key}
-                  onClick={() => setFiltro(f.key)}
+                  onClick={() => cambiarFiltro(f.key)}
                   style={{
                     padding: "7px 16px", borderRadius: "999px",
                     fontSize: "13px", fontWeight: "600",
@@ -297,7 +336,7 @@ export default function MisComprasPage() {
               type="text"
               placeholder="Buscar #pedido"
               value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              onChange={(e) => cambiarBusqueda(e.target.value)}
               style={{
                 paddingLeft: "34px", paddingRight: "14px",
                 paddingTop: "8px", paddingBottom: "8px",
@@ -360,7 +399,7 @@ export default function MisComprasPage() {
           </p>
           {filtroEstado !== "todos" || busqueda ? (
             <button
-              onClick={() => { setFiltro("todos"); setBusqueda(""); }}
+              onClick={() => { cambiarFiltro("todos"); cambiarBusqueda(""); }}
               style={{
                 marginTop: "16px", display: "inline-block", borderRadius: "8px",
                 background: "transparent", color: C.copper,
@@ -383,13 +422,15 @@ export default function MisComprasPage() {
 
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {pedidosFiltrados.map((pedido, idx) => {
+          {pedidosPagina.map((pedido, idx) => {
             const id       = pedido.id || pedido.id_pedido;
+            // Número secuencial del cliente: posición en lista completa (no filtrada)
+            const posicion = pedidos.findIndex((p) => (p.id || p.id_pedido) === id) + 1;
             const estado   = pedido.estado || "pendiente";
             const cfg      = ESTADO_CFG[estado] || ESTADO_CFG.pendiente;
             const items    = pedido.detalle_pedido ?? [];
-            const fecha    = pedido.creado_en
-              ? new Date(pedido.creado_en).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })
+            const fecha    = (pedido.fecha_creacion || pedido.creado_en)
+              ? new Date(pedido.fecha_creacion || pedido.creado_en!).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })
               : "—";
             const total    = pedido.total
               ? `$${formatPrice(Number(pedido.total), { showCurrency: false })}`
@@ -401,7 +442,7 @@ export default function MisComprasPage() {
             return (
               <Link
                 key={id}
-                href={`/tienda/compras/${id}`}
+                href={`/tienda/compras/${id}?n=${posicion}`}
                 className="order-card"
                 style={{
                   display: "flex", alignItems: "center",
@@ -419,7 +460,7 @@ export default function MisComprasPage() {
                   <div style={{ minWidth: 0 }}>
                     <p style={{ fontSize: "15px", fontWeight: "700", color: C.greenDark, margin: "0 0 3px 0" }}>
                       Pedido{" "}
-                      <span style={{ color: C.copper, fontFamily: "monospace" }}>#{id}</span>
+                      <span style={{ color: C.copper, fontFamily: "monospace" }}>#{posicion}</span>
                     </p>
                     <p style={{
                       fontSize: "12px", color: C.muted, margin: 0,
@@ -462,6 +503,55 @@ export default function MisComprasPage() {
           })}
         </div>
       )}
+
+      {/* ── Paginación ─────────────────────────────────────────── */}
+      {!isLoading && totalPaginas > 1 && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          gap: "8px", marginTop: "28px", animation: "fadeUp .4s ease both",
+        }}>
+          <button
+            onClick={() => setPagina((p) => Math.max(1, p - 1))}
+            disabled={pagina === 1}
+            style={{
+              width: "36px", height: "36px", borderRadius: "8px",
+              border: `1px solid ${C.border}`, background: C.white,
+              color: pagina === 1 ? C.muted : C.greenDark,
+              cursor: pagina === 1 ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "16px", fontWeight: "700",
+            }}
+          >‹</button>
+
+          {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
+            <button
+              key={n}
+              onClick={() => setPagina(n)}
+              style={{
+                width: "36px", height: "36px", borderRadius: "8px",
+                border: `1px solid ${n === pagina ? C.copper : C.border}`,
+                background: n === pagina ? C.copper : C.white,
+                color: n === pagina ? C.white : C.text,
+                cursor: "pointer", fontWeight: "700", fontSize: "13px",
+              }}
+            >{n}</button>
+          ))}
+
+          <button
+            onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+            disabled={pagina === totalPaginas}
+            style={{
+              width: "36px", height: "36px", borderRadius: "8px",
+              border: `1px solid ${C.border}`, background: C.white,
+              color: pagina === totalPaginas ? C.muted : C.greenDark,
+              cursor: pagina === totalPaginas ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "16px", fontWeight: "700",
+            }}
+          >›</button>
+        </div>
+      )}
     </main>
+    </div>
   );
 }

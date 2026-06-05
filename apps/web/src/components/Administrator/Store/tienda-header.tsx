@@ -79,7 +79,7 @@ export function TiendaHeader() {
 
   const isClient = isAuthenticated && !isAdmin && !isProductor;
 
-  const handleCartClick = () => router.push(isAuthenticated ? "/tienda/carrito" : "/auth/sign-in?redirect=/tienda/carrito");
+  const handleCartClick = () => router.push("/tienda/carrito");
   const handleMyPurchasesClick = () => router.push(isAuthenticated ? "/tienda/compras" : "/auth/sign-in?redirect=/tienda/compras");
   const handleSellClick = () => {
     if (!isAuthenticated) router.push("/dashboard/productor/unirse?vender=true");
@@ -136,13 +136,26 @@ export function TiendaHeader() {
     { label: t("Inicio"),          icon: <Home size={22} />,        onClick: () => router.push("/cliente/inicio"), href: "/cliente/inicio" },
     { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/cliente/producto"),       href: "/cliente/producto" },
     { label: t("Vender mezcal"),   icon: <Store size={22} />,       onClick: handleSellClick },
+    {
+      label: t("Carrito"),
+      icon: <ShoppingCart size={22} />,
+      onClick: handleCartClick,
+      href: "/tienda/carrito",
+      badge: cantidadTotal > 0 ? cantidadTotal : undefined,
+    },
   ];
 
   // Nav items móvil (bottom nav) para guest — CON "Ingresar"
   const guestNavItems: NavItem[] = [
     { label: t("Inicio"),          icon: <Home size={22} />,        onClick: () => router.push("/cliente/inicio"), href: "/cliente/inicio" },
     { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/cliente/producto"),       href: "/cliente/producto" },
-    { label: t("Vender mezcal"),   icon: <Store size={22} />,       onClick: handleSellClick },
+    {
+      label: t("Carrito"),
+      icon: <ShoppingCart size={22} />,
+      onClick: handleCartClick,
+      href: "/tienda/carrito",
+      badge: cantidadTotal > 0 ? cantidadTotal : undefined,
+    },
     { label: t("Ingresar"),        icon: <User size={22} />,        onClick: () => router.push("/auth/sign-in"),  href: "/auth/sign-in" },
   ];
 

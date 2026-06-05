@@ -3,6 +3,10 @@
 import React from "react";
 import { Search, Edit2, Trash2, X, ChevronRight, ChevronLeft } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useDeleteAlert } from "@/hooks/useDeleteAlert";
+import { useSuccessToast } from "@/hooks/useSuccessToast";
+import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
+import { SuccessToast } from "@/components/ui/SuccessToast";
 
 type Categoria = {
   id_categoria: number;
@@ -16,7 +20,7 @@ type Categoria = {
   other_categorias?: Categoria[];
 };
 
-type Notice = { type: "error" | "success"; message: string };
+type Notice = { type: "error"; message: string };
 
 const API_URL = "";
 
@@ -30,6 +34,9 @@ export default function CategoriasAdminPage() {
   const [formData, setFormData] = useState({ nombre: "", slug: "", descripcion: "", tipo: "general", activo: true, id_padre: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const deleteAlert  = useDeleteAlert("categoria");
+  const successToast = useSuccessToast("categoria");
 
   useEffect(() => { loadCategorias(); }, []);
   useEffect(() => { setCurrentPage(1); }, [query]);
@@ -80,32 +87,35 @@ export default function CategoriasAdminPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setNotice(null);
-    const method = editingCategoria ? "PATCH" : "POST";
-    const url    = editingCategoria ? `${API_URL}/categorias/${editingCategoria.id_categoria}` : `${API_URL}/categorias`;
-    const payload = { nombre: formData.nombre, slug: formData.slug, descripcion: formData.descripcion || null, tipo: formData.tipo, activo: formData.activo, id_padre: formData.id_padre ? parseInt(formData.id_padre) : null };
+    const isEditing = !!editingCategoria;
+    const method    = isEditing ? "PATCH" : "POST";
+    const url       = isEditing ? `${API_URL}/categorias/${editingCategoria!.id_categoria}` : `${API_URL}/categorias`;
+    const payload   = { nombre: formData.nombre, slug: formData.slug, descripcion: formData.descripcion || null, tipo: formData.tipo, activo: formData.activo, id_padre: formData.id_padre ? parseInt(formData.id_padre) : null };
     try {
       const res  = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Error al guardar");
-      setNotice({ type: "success", message: "Categoría guardada correctamente" });
       setShowModal(false);
       loadCategorias();
+      if (isEditing) successToast.mostrarActualizado();
+      else successToast.mostrarRegistrado();
     } catch (error) {
       setNotice({ type: "error", message: error instanceof Error ? error.message : "Error al guardar" });
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("¿Estás seguro de eliminar esta categoría?")) return;
-    try {
-      const res  = await fetch(`${API_URL}/categorias/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Error al eliminar");
-      setNotice({ type: "success", message: "Categoría eliminada" });
-      loadCategorias();
-    } catch (error) {
-      setNotice({ type: "error", message: error instanceof Error ? error.message : "Error al eliminar" });
-    }
+  const handleDelete = (id: number, nombre: string) => {
+    deleteAlert.abrir(nombre, async () => {
+      try {
+        const res  = await fetch(`${API_URL}/categorias/${id}`, { method: "DELETE" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Error al eliminar");
+        loadCategorias();
+        successToast.mostrar("Categoría eliminada correctamente.");
+      } catch (error) {
+        setNotice({ type: "error", message: error instanceof Error ? error.message : "Error al eliminar" });
+      }
+    });
   };
 
   const fieldCls  = "mt-1 w-full rounded-lg border border-[#C5CFB0] bg-white text-[#1F3A2E] px-3 py-2 text-sm outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20";
@@ -114,7 +124,7 @@ export default function CategoriasAdminPage() {
   const renderAcciones = (cat: Categoria) => (
     <div className="flex justify-end gap-2">
       <button type="button" onClick={() => openEditModal(cat)} className="rounded-lg p-2 text-[#3D6B3F]/40 hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] transition-all duration-200"><Edit2 className="h-4 w-4" /></button>
-      <button type="button" onClick={() => handleDelete(cat.id_categoria)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all duration-200"><Trash2 className="h-4 w-4" /></button>
+      <button type="button" onClick={() => handleDelete(cat.id_categoria, cat.nombre)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all duration-200"><Trash2 className="h-4 w-4" /></button>
     </div>
   );
 
@@ -135,9 +145,9 @@ export default function CategoriasAdminPage() {
         </button>
       </div>
 
-      {/* Notice */}
+      {/* Notice (solo errores) */}
       {notice && (
-        <div className={`rounded-2xl border px-4 py-3 text-sm ${notice.type === "success" ? "border-[#A8C26B]/40 bg-[#A8C26B]/10 text-[#3D6B3F]" : "border-red-200 bg-red-50 text-red-700"}`}>
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {notice.message}
         </div>
       )}
@@ -281,6 +291,10 @@ export default function CategoriasAdminPage() {
           </nav>
         </div>
       )}
+
+      <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
+
+      <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
 
       {/* Modal */}
       {showModal && (

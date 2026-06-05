@@ -51,13 +51,18 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
   // Ref to track previous user ID synchronously (avoids React state batching race)
   const prevUserIdRef = useRef<string | null>(null);
 
-  // Load cart on mount — skip for staff roles
+  // Load cart on mount — skip for staff and guest users
   useEffect(() => {
     setMounted(true);
     if (isStaff) return;
     const usuarioId = getUserId();
-    prevUserIdRef.current = usuarioId; // initialize ref before any merge effect runs
+    prevUserIdRef.current = usuarioId;
     setCurrentUserId(usuarioId);
+    if (usuarioId === "guest") {
+      // Clear any stale guest cart and don't load items for unauthenticated users
+      localStorage.removeItem(getStorageKey("guest"));
+      return;
+    }
     const storageKey = getStorageKey(usuarioId);
     const stored = localStorage.getItem(storageKey);
     if (stored) {
@@ -178,6 +183,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
 
   const agregarProducto = useCallback((producto: { [key: string]: any }): AgregarProductoResult => {
     if (isStaff) return { ok: false, reason: "not_allowed" as any };
+    if (!currentUserId || currentUserId === "guest") return { ok: false, reason: "not_authenticated" };
     // Trigger 2 — block age-restricted products unless cookie is set.
     // Trigger 3 (server) is the authoritative check, but blocking here avoids polluting
     // the carrito with items the buyer cannot legally check out with.

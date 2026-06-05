@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 
 import { getCookie } from "@/lib/cookies";
+import { useSuccessToast } from "@/hooks/useSuccessToast";
+import { SuccessToast } from "@/components/ui/SuccessToast";
 
 interface SolicitudProductor {
   id_productor: number;
@@ -93,6 +95,7 @@ export default function SolicitudesProductoresPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [currentPageProcesadas, setCurrentPageProcesadas] = useState(1);
   const itemsPerPage = 10;
+  const successToast = useSuccessToast("solicitud_productor");
 
   useEffect(() => {
     loadSolicitudes();
@@ -133,6 +136,7 @@ export default function SolicitudesProductoresPage() {
       setSelectedSolicitud(null);
       setApproveModalOpen(false);
       setApproveReason("");
+      successToast.mostrar("Solicitud aprobada correctamente. El productor ya puede vender.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al aprobar");
     } finally {
@@ -155,6 +159,7 @@ export default function SolicitudesProductoresPage() {
       setSelectedSolicitud(null);
       setRejectModalOpen(false);
       setRejectReason("");
+      successToast.mostrar("Solicitud rechazada correctamente.", "error");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al rechazar");
     } finally {
@@ -181,6 +186,7 @@ export default function SolicitudesProductoresPage() {
 
   return (
     <>
+      <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
       <div className="space-y-6">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-2">

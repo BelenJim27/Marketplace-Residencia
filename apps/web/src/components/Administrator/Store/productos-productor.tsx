@@ -2,6 +2,10 @@
 
 import { ChevronLeft, ChevronRight, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useDeleteAlert } from "@/hooks/useDeleteAlert";
+import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
+import { useSuccessToast } from "@/hooks/useSuccessToast";
+import { SuccessToast } from "@/components/ui/SuccessToast";
 
 const PAGE_SIZE = 10;
 import { useAuth } from "@/context/AuthContext";
@@ -92,6 +96,8 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
   const [mode, setMode] = useState<"view" | "edit" | "create" | null>(null);
   const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
   const [page, setPage] = useState(1);
+  const deleteAlert = useDeleteAlert("producto_productor");
+  const successToast = useSuccessToast("producto_productor");
 
   const token = getCookie("token") ?? "";
 
@@ -159,16 +165,17 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
     setForm(EMPTY_FORM);
   };
 
-  const handleDelete = async (product: ProductItem) => {
+  const handleDelete = (product: ProductItem) => {
     if (!token) { setError("No autorizado para eliminar productos."); return; }
-    if (!confirm(`¿Eliminar ${product.nombre}?`)) return;
-    try {
-      await api.productos.delete(token, String(product.id_producto));
-      setSuccess("Producto eliminado correctamente.");
-      await loadProducts();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible eliminar el producto.");
-    }
+    deleteAlert.abrir(product.nombre, async () => {
+      try {
+        await api.productos.delete(token, String(product.id_producto));
+        setSuccess("Producto eliminado correctamente.");
+        await loadProducts();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No fue posible eliminar el producto.");
+      }
+    });
   };
 
   const handleSave = async () => {
@@ -186,9 +193,9 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
       payload.append("status", form.status);
       if (user?.id_usuario) payload.append("actualizado_por", user.id_usuario);
       await api.productos.update(token, String(selected.id_producto), payload);
-      setSuccess("Producto actualizado correctamente.");
       closeModal();
       await loadProducts();
+      successToast.mostrarActualizado();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No fue posible actualizar el producto.");
     } finally {
@@ -211,9 +218,9 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
       payload.append("status", form.status);
       if (user?.id_usuario) payload.append("creado_por", user.id_usuario);
       await api.productos.create(token, payload);
-      setSuccess("Producto creado correctamente.");
       closeModal();
       await loadProducts();
+      successToast.mostrarRegistrado();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No fue posible crear el producto.");
     } finally {
@@ -223,6 +230,8 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
 
   return (
     <div className="space-y-6">
+      <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
+      <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
 
       {/* ── Botón Nuevo Producto ── */}
       <div className="flex justify-end mb-6">
