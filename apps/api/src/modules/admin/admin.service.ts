@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
 import { RevisarSolicitudDto } from '../productores/dto/productores.dto';
@@ -6,6 +6,8 @@ import { NotificacionesService } from '../notificaciones/notificaciones.service'
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(
     private prisma: PrismaService,
     private notificaciones: NotificacionesService,
@@ -24,7 +26,7 @@ export class AdminService {
       this.prisma.productores.count({ where: { eliminado_en: null } }),
       this.prisma.pedidos.count({ where: { eliminado_en: null } }),
       this.prisma.pedidos.aggregate({
-        where: { eliminado_en: null, estado: { in: ['completado', 'enviado'] } },
+        where: { eliminado_en: null, estado: { in: ['entregado', 'enviado'] } },
         _sum: { total: true },
       }),
       this.prisma.pedidos.count({
@@ -60,7 +62,7 @@ export class AdminService {
 
   async getTopProductores(limit = 5) {
     const pedidos = await this.prisma.pedidos.findMany({
-      where: { estado: { in: ['completado', 'enviado'] }, eliminado_en: null },
+      where: { estado: { in: ['entregado', 'enviado'] }, eliminado_en: null },
       include: {
         detalle_pedido: {
           include: {
@@ -228,7 +230,7 @@ export class AdminService {
         };
       }));
     } catch (err) {
-      console.error('[AdminService.getAllProductos] Error:', err);
+      this.logger.error(`[AdminService.getAllProductos] Error: ${(err as Error)?.message}`);
       throw err;
     }
   }

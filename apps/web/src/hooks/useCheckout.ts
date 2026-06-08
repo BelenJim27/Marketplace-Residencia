@@ -54,6 +54,7 @@ export function useCheckout() {
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
 
   const [dobRequired, setDobRequired] = useState<DobRequiredState | null>(null);
+  const [solicitarProteccion, setSolicitarProteccion] = useState(false);
 
   // Mutex para prevenir doble creación de pedido por doble click o llamadas concurrentes.
   const isCreatingPedidoRef = useRef(false);
@@ -256,9 +257,14 @@ export function useCheckout() {
             items: items.map((i) => ({ id_producto: Number(i.id_producto), cantidad: i.cantidad })),
           });
           if (!resultado.valido) {
-            const nombres = resultado.items_bloqueados.map((b) => b.nombre).join(", ");
+            const estadoNombre = estado_codigo ?? "este estado";
+            const lista = resultado.items_bloqueados
+              .map((b: { nombre: string; razon?: string }) =>
+                b.razon ? `• ${b.nombre} (${b.razon})` : `• ${b.nombre}`,
+              )
+              .join("\n");
             setErrorMensaje(
-              `No es posible enviar los siguientes productos a este estado de EE. UU.: ${nombres}. Retíralos del carrito o elige otra dirección.`,
+              `Los siguientes productos no pueden enviarse a ${estadoNombre}, EE. UU.:\n${lista}\n\nRetíralos del carrito o elige otra dirección de envío.`,
             );
             return;
           }
@@ -382,6 +388,7 @@ export function useCheckout() {
           estado: "preparando",
           transportista_codigo: (primeraSeleccion as any)?.carrier,
           codigo_servicio: primeraSeleccion?.productCode,
+          solicitar_proteccion: solicitarProteccion,
         });
 
         // Save one cotización per producer group so the backend can validate shipping amount
@@ -477,7 +484,14 @@ export function useCheckout() {
         try { await api.pedidos.update(token, pedidoId, { estado: "cancelado" }); } catch {}
         setPedidoIdCreado(null);
       }
-      setErrorMensaje(err instanceof Error ? err.message : "Error desconocido");
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      // Si las cotizaciones expiraron, redirigir al paso de envío para recotizar
+      if (msg.includes("COTIZACIONES_EXPIRADAS")) {
+        setErrorMensaje("Las cotizaciones de envío han expirado. Selecciona una tarifa actualizada.");
+        setPaso("envio");
+        return null;
+      }
+      setErrorMensaje(msg);
       return null;
     } finally {
       setCargando(false);
@@ -499,6 +513,7 @@ export function useCheckout() {
     paypalOrderId,
     pedidoIdCreado,
     metodoPago,
+    solicitarProteccion,
   ]);
 
   const capturePaypalOrder = useCallback(async (orderId: string) => {
@@ -598,5 +613,7 @@ export function useCheckout() {
     capturePaypalOrder,
     dobRequired,
     submitDob,
+    solicitarProteccion,
+    setSolicitarProteccion,
   };
 }

@@ -38,12 +38,14 @@ export class ProductosController {
     @Query('destilacion') destilacion?: string,
     @Query('molienda') molienda?: string,
     @Query('maestro_mezcalero') maestroMezcalero?: string,
+    @Query('limit') limit?: string,
   ) {
     const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined;
     return this.service.findAll(
       token,
       idProductor ? Number(idProductor) : undefined,
       { busqueda, tipoMezcal, maguey, precioMin, precioMax, destilacion, molienda, maestroMezcalero },
+      limit ? Number(limit) : 200,
     );
   }
 

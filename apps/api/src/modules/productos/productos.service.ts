@@ -152,6 +152,7 @@ export class ProductosService {
       molienda?: string;
       maestroMezcalero?: string;
     },
+    limit = 200,
   ) {
     const where: Prisma.productosWhereInput = { eliminado_en: null };
 
@@ -251,6 +252,7 @@ export class ProductosService {
       },
       include: productoInclude as any,
       orderBy: { creado_en: 'desc' },
+      take: Math.min(limit, 200),
     });
 
     // Excluir productos sin precio o sin imagen de la vista del cliente
@@ -577,41 +579,58 @@ export class ProductosService {
   async assignLotesMatching() {
     const productosSinLote = await this.prisma.productos.findMany({
       where: { id_lote: null },
-      include: { tiendas: { include: { productores: true } } },
+      include: { tiendas: { select: { id_productor: true } } },
     });
 
+    // Collect unique producer IDs to batch-load their latest lote
+    const productorIds = [
+      ...new Set(
+        productosSinLote
+          .map((p) => p.tiendas?.id_productor)
+          .filter((id): id is number => id != null),
+      ),
+    ];
+
+    // Batch load: one query per producer via a raw approach using groupBy workaround
+    const lotes = await Promise.all(
+      productorIds.map((id_productor) =>
+        this.prisma.lotes.findFirst({
+          where: { id_productor },
+          orderBy: { creado_en: 'desc' },
+          select: { id_lote: true, id_productor: true },
+        }),
+      ),
+    );
+
+    // Build lookup map id_productor → id_lote
+    const lotePorProductor = new Map<number, number>();
+    for (const lote of lotes) {
+      if (lote) lotePorProductor.set(lote.id_productor, lote.id_lote);
+    }
+
+    // Assign lotes in batch using individual updates inside a transaction
     let asignados = 0;
     let skipped = 0;
+    const updates: { id_producto: bigint; id_lote: number }[] = [];
 
     for (const producto of productosSinLote) {
-      const tienda = producto.tiendas;
-      if (!tienda) {
-        skipped++;
-        continue;
-      }
-
-      const productor = tienda.productores;
-      if (!productor) {
-        skipped++;
-        continue;
-      }
-
-      const lote = await this.prisma.lotes.findFirst({
-        where: { id_productor: productor.id_productor },
-        orderBy: { creado_en: 'desc' },
-      });
-
-      if (!lote) {
-        skipped++;
-        continue;
-      }
-
-      await this.prisma.productos.update({
-        where: { id_producto: producto.id_producto },
-        data: { id_lote: lote.id_lote },
-      });
-
+      const idProductor = producto.tiendas?.id_productor;
+      if (!idProductor) { skipped++; continue; }
+      const idLote = lotePorProductor.get(idProductor);
+      if (!idLote) { skipped++; continue; }
+      updates.push({ id_producto: producto.id_producto, id_lote: idLote });
       asignados++;
+    }
+
+    if (updates.length > 0) {
+      await this.prisma.$transaction(
+        updates.map(({ id_producto, id_lote }) =>
+          this.prisma.productos.update({
+            where: { id_producto },
+            data: { id_lote },
+          }),
+        ),
+      );
     }
 
     return {

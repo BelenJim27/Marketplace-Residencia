@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
@@ -21,6 +22,8 @@ interface OAuthProfile {
 
 @Injectable()
 export class OAuthService {
+  private readonly logger = new Logger(OAuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
@@ -123,7 +126,7 @@ export class OAuthService {
       try {
         await this.emailService.sendWelcomeEmail(profile.email, user.nombre);
       } catch (emailError) {
-        console.error('Error sending welcome email:', emailError);
+        this.logger.warn(`Error sending welcome email: ${(emailError as Error)?.message}`);
       }
     }
 

@@ -1,12 +1,24 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 import { CreateNotificacionDto, UpdateNotificacionDto } from './dto/notificaciones.dto';
 
 @Injectable()
 export class NotificacionesService {
+  private readonly logger = new Logger(NotificacionesService.name);
+
   constructor(private readonly prisma: PrismaService) {}
-  async findAll() { return serializeBigInts(await this.prisma.notificaciones.findMany({ include: { usuarios: true } })); }
+  async findAll(query: PaginacionQueryDto = {}) {
+    const pagina = query.pagina ?? 1;
+    const limite = query.limite ?? 20;
+    const skip = (pagina - 1) * limite;
+    const [items, total] = await Promise.all([
+      this.prisma.notificaciones.findMany({ include: { usuarios: true }, orderBy: { creado_en: 'desc' }, take: limite, skip }),
+      this.prisma.notificaciones.count(),
+    ]);
+    return serializeBigInts({ items, paginacion: { pagina, limite, total, paginas: Math.ceil(total / limite) } });
+  }
   async findByUser(id_usuario: string) { return serializeBigInts(await this.prisma.notificaciones.findMany({ where: { id_usuario }, include: { usuarios: true } })); }
   async create(dto: CreateNotificacionDto) { return serializeBigInts(await this.prisma.notificaciones.create({ data: { id_usuario: dto.id_usuario, tipo: dto.tipo.trim(), titulo: dto.titulo.trim(), cuerpo: dto.cuerpo ?? null, url_accion: dto.url_accion ?? null, leido: dto.leido ?? false } })); }
   async update(id: string, dto: UpdateNotificacionDto) {
@@ -47,7 +59,7 @@ export class NotificacionesService {
         )
       );
     } catch (e) {
-      console.error('[Notificaciones] notifyAdmins error:', e);
+      this.logger.error(`[Notificaciones] notifyAdmins error: ${(e as Error)?.message}`);
     }
   }
 }

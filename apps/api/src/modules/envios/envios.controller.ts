@@ -1,5 +1,6 @@
-import { Headers, Logger, UnauthorizedException, HttpException, HttpStatus } from '@nestjs/common';
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';
+import { Headers, Logger, UnauthorizedException, ForbiddenException, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
@@ -23,13 +24,34 @@ export class EnviosController {
     private readonly prisma: PrismaService,
   ) {}
 
-  // ─── Rutas públicas (solo lectura) ───────────────────────────────────────
-  @Get(':id/tracking') getTracking(@Param('id') id: string) { return this.service.getTracking(id); }
+  // ─── Tracking (requiere auth — solo el comprador/productor puede ver su envío) ─
+  @Get(':id/tracking')
+  @UseGuards(AuthGuard)
+  async getTracking(@Param('id') id: string, @Req() req: any) {
+    const user = req.user;
+    const isAdmin = user.roles?.some((r: string) => r.toLowerCase() === 'administrador');
+
+    if (!isAdmin) {
+      const envio = await this.prisma.envios.findUnique({
+        where: { id_envio: BigInt(id) },
+        include: { pedidos: { select: { id_usuario: true } } },
+      });
+      if (!envio) throw new NotFoundException('Envío no encontrado');
+
+      const isBuyer = (envio as any).pedidos?.id_usuario === user.id_usuario;
+      const isProductor = user.id_productor !== null;
+      if (!isBuyer && !isProductor) {
+        throw new ForbiddenException('No tienes acceso a este tracking');
+      }
+    }
+
+    return this.service.getTracking(id);
+  }
 
   // ─── Rutas autenticadas (require login) ──────────────────────────────────
   @Get()
   @UseGuards(AuthGuard)
-  findAll() { return this.service.findAll(); }
+  findAll(@Query() query: PaginacionQueryDto) { return this.service.findAll(query); }
 
   @Get(':id')
   @UseGuards(AuthGuard)

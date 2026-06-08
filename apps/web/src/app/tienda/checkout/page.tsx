@@ -146,6 +146,8 @@ export default function CheckoutPage() {
     dobRequired,
     submitDob,
     cargando,
+    solicitarProteccion,
+    setSolicitarProteccion,
   } = useCheckout();
 
   const { t, locale, rates } = useLocale();
@@ -409,6 +411,10 @@ export default function CheckoutPage() {
                 cotizandoLoading={cotizandoLoading}
                 cotizandoError={cotizandoError}
                 tieneAlcohol={tieneAlcohol}
+                convertQuotePrice={convertQuoteToDisplay}
+                displayCurrency={displayCurrency}
+                solicitarProteccion={solicitarProteccion}
+                setSolicitarProteccion={setSolicitarProteccion}
               />
             )}
 
@@ -712,9 +718,15 @@ export default function CheckoutPage() {
 
             {/* Error */}
             {errorMensaje && (
-              <p aria-live="polite" role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
-                {errorMensaje}
-              </p>
+              <div aria-live="polite" role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+                <span style={{ whiteSpace: "pre-line" }}>{errorMensaje}</span>
+                <button
+                  onClick={() => setErrorMensaje(null)}
+                  style={{ flexShrink: 0, fontSize: "11px", fontWeight: "700", textDecoration: "underline", background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0 }}
+                >
+                  Intentar de nuevo
+                </button>
+              </div>
             )}
 
             {/* Botones de navegación mejorados */}
@@ -1527,7 +1539,7 @@ function carrierColor(cot: any): string {
   return PROVIDER_COLORS[label] ?? PROVIDER_COLORS[cot.carrier] ?? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300';
 }
 
-function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cotizandoError, tieneAlcohol }: {
+function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cotizandoError, tieneAlcohol, convertQuotePrice, displayCurrency, solicitarProteccion, setSolicitarProteccion }: {
   grupos: any[];
   opciones: OpcionAgregada[];
   nivelKey: string | null;
@@ -1535,6 +1547,10 @@ function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cot
   cotizandoLoading: boolean;
   cotizandoError: string | null;
   tieneAlcohol?: boolean;
+  convertQuotePrice?: (price: number, currency: string) => number;
+  displayCurrency?: string;
+  solicitarProteccion: boolean;
+  setSolicitarProteccion: (v: boolean) => void;
 }) {
   const hayOpciones = opciones && opciones.length > 0;
   const numProductores = grupos?.length ?? 0;
@@ -1614,13 +1630,38 @@ function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cot
                     </p>
                   </div>
                   <p className="font-bold text-green-600 text-sm flex-shrink-0">
-                    ${formatPrice(op.precioTotal, { showCurrency: false })} {op.moneda}
+                    ${formatPrice(convertQuotePrice ? convertQuotePrice(op.precioTotal, op.moneda) : op.precioTotal, { showCurrency: false })} {displayCurrency ?? op.moneda}
                   </p>
                 </label>
               );
             })}
           </div>
         </div>
+      )}
+
+      {hayOpciones && nivelKey && (
+        <label
+          className={`mt-3 flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors
+            ${solicitarProteccion
+              ? "border-green-300 bg-green-50 dark:border-green-700/50 dark:bg-green-900/20"
+              : "border-gray-200 bg-gray-50 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/40 dark:hover:bg-gray-800/60"}`}
+        >
+          <input
+            type="checkbox"
+            className="mt-0.5 accent-green-600 flex-shrink-0"
+            checked={solicitarProteccion}
+            onChange={(e) => setSolicitarProteccion(e.target.checked)}
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              Protección del envío · SkydropX
+            </p>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              Cubre pérdida o daño hasta el valor declarado del pedido.
+              El costo exacto se confirma al generar la guía.
+            </p>
+          </div>
+        </label>
       )}
     </div>
   );

@@ -1,7 +1,8 @@
-import { ConflictException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Moneda, Prisma } from '@prisma/client';
-import { createHash, createHmac, randomBytes, timingSafeEqual, scrypt } from 'crypto';
+import { createHash, randomBytes, timingSafeEqual, scrypt } from 'crypto';
 import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
@@ -45,9 +46,15 @@ interface PasswordResetPayload extends JwtPayload {
   jti: string;
 }
 
-const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET ?? 'change-me-access-secret';
-const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET ?? 'change-me-refresh-secret';
-const PASSWORD_RESET_SECRET = process.env.PASSWORD_RESET_SECRET ?? 'change-me-password-reset-secret';
+function requireSecret(name: string): string {
+  const val = process.env[name];
+  if (!val) throw new Error(`[auth] Variable de entorno ${name} no configurada. El servidor no puede iniciar sin secretos JWT seguros.`);
+  return val;
+}
+
+const ACCESS_TOKEN_SECRET = requireSecret('JWT_ACCESS_SECRET');
+const REFRESH_TOKEN_SECRET = requireSecret('JWT_REFRESH_SECRET');
+const PASSWORD_RESET_SECRET = requireSecret('PASSWORD_RESET_SECRET');
 
 const ACCESS_TOKEN_EXPIRES_IN = parseDurationToSeconds(process.env.JWT_ACCESS_EXPIRES_IN, 15 * 60);
 const REFRESH_TOKEN_EXPIRES_IN = parseDurationToSeconds(process.env.JWT_REFRESH_EXPIRES_IN, 30 * 24 * 60 * 60);
@@ -55,6 +62,8 @@ const PASSWORD_RESET_EXPIRES_IN = parseDurationToSeconds(process.env.PASSWORD_RE
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
@@ -104,7 +113,7 @@ export class AuthService {
       try {
         await this.emailService.sendWelcomeEmail(user.email, user.nombre);
       } catch (emailError) {
-        console.error('Error sending welcome email:', emailError);
+        this.logger.warn(`Error sending welcome email: ${(emailError as Error)?.message}`);
       }
 
       this.notificaciones.notifyAdmins(
@@ -118,9 +127,8 @@ export class AuthService {
 
       return this.issueTokens(user);
     } catch (error) {
-      console.error('[AuthService] register error:', error);
-      // ✅ Usar Prisma.PrismaClientKnownRequestError en lugar de la clase directa
-     if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+      this.logger.error(`[AuthService] register error: ${(error as Error)?.message}`);
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('No fue posible registrar el usuario');
       }
 
@@ -410,7 +418,7 @@ export class AuthService {
         },
       });
     } catch (error) {
-      console.error('Error logging auth event:', error);
+      this.logger.warn(`Error logging auth event: ${(error as Error)?.message}`);
     }
   }
 }
@@ -510,63 +518,22 @@ function verifyPassword(password: string, storedHash: string): Promise<boolean> 
 }
 
 function createSignedJwt<T extends JwtPayload>(payload: T, secret: string, expiresInSeconds: number): string {
-  const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const now = Math.floor(Date.now() / 1000);
-  const body = base64UrlEncode(JSON.stringify({ ...payload, iat: now, exp: now + expiresInSeconds }));
-  const data = `${header}.${body}`;
-  const signature = createHmac('sha256', secret).update(data).digest('base64url');
-  return `${data}.${signature}`;
+  return jwt.sign(payload as object, secret, { expiresIn: expiresInSeconds, algorithm: 'HS256' });
 }
 
 export function verifyJwt<T extends JwtPayload>(token: string, secret: string): T {
-  const parts = token.split('.');
-  if (parts.length !== 3) {
-    throw new UnauthorizedException('Token inválido');
-  }
-
-  const [header, body, signature] = parts;
-  const expectedSignature = createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
-
-  if (!safeEquals(signature, expectedSignature)) {
-    throw new UnauthorizedException('Token inválido');
-  }
-
-  let payload: T & { exp?: number };
-
   try {
-    payload = JSON.parse(base64UrlDecode(body)) as T & { exp?: number };
-  } catch {
+    return jwt.verify(token, secret, { algorithms: ['HS256'] }) as T;
+  } catch (err) {
+    if (err instanceof jwt.TokenExpiredError) {
+      throw new UnauthorizedException('Token expirado');
+    }
     throw new UnauthorizedException('Token inválido');
   }
-
-  if (typeof payload.exp !== 'number' || payload.exp <= Math.floor(Date.now() / 1000)) {
-    throw new UnauthorizedException('Token expirado');
-  }
-
-  return payload;
 }
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
-}
-
-function safeEquals(a: string, b: string): boolean {
-  const left = Buffer.from(a);
-  const right = Buffer.from(b);
-
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  return timingSafeEqual(left, right);
-}
-
-function base64UrlEncode(value: string): string {
-  return Buffer.from(value).toString('base64url');
-}
-
-function base64UrlDecode(value: string): string {
-  return Buffer.from(value, 'base64url').toString('utf8');
 }
 
 function parseDurationToSeconds(value: string | undefined, fallback: number): number {

@@ -1,6 +1,7 @@
-import { ConflictException, Injectable, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { ConflictException, Injectable, InternalServerErrorException, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { Moneda } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
 import { CreateEnvioDto, CotizarEnvioDto, DireccionDestinoDto, UpdateEnvioDto } from "./dto/envios.dto";
 import { ICarrierService } from "./interfaces/carrier.interface";
@@ -15,20 +16,39 @@ export class EnviosService {
     private readonly skydropxService: SkydropxService,
   ) {}
 
+  private async toUsd(precio: any, moneda: string): Promise<number> {
+    const p = Number(precio ?? 0);
+    if (moneda === 'USD') return p;
+    const tasa = await this.prisma.tasas_cambio.findFirst({
+      where: {
+        moneda_origen: 'MXN' as Moneda,
+        moneda_destino: 'USD' as Moneda,
+        vigente_desde: { lte: new Date() },
+        OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: new Date() } }],
+      },
+      orderBy: { vigente_desde: 'desc' },
+    });
+    if (!tasa) {
+      throw new InternalServerErrorException(
+        'No hay tasa de cambio MXN→USD vigente. Configurar en la tabla tasas_cambio.',
+      );
+    }
+    return p / Number(tasa.tasa);
+  }
+
   private selectCarrier(_codigo?: string): ICarrierService {
     return this.skydropxService;
   }
-  async findAll() {
-    return serializeBigInts(
-      await this.prisma.envios.findMany({
-        include: {
-          pedidos: true,
-          transportistas: true,
-          servicios_envio: true,
-          envio_guias: true,
-        },
-      }),
-    );
+  async findAll(query: PaginacionQueryDto = {}) {
+    const pagina = query.pagina ?? 1;
+    const limite = query.limite ?? 20;
+    const skip = (pagina - 1) * limite;
+    const include = { pedidos: true, transportistas: true, servicios_envio: true, envio_guias: true };
+    const [items, total] = await Promise.all([
+      this.prisma.envios.findMany({ include, orderBy: { id_envio: 'desc' }, take: limite, skip }),
+      this.prisma.envios.count(),
+    ]);
+    return serializeBigInts({ items, paginacion: { pagina, limite, total, paginas: Math.ceil(total / limite) } });
   }
   async findOne(id: string) {
     const item = await this.prisma.envios.findUnique({
@@ -237,7 +257,7 @@ export class EnviosService {
       where: { id_envio: toBigIntId(id_envio) },
       include: {
         pedidos: {
-          select: { direccion_envio_snapshot: true },
+          select: { direccion_envio_snapshot: true, total: true, moneda: true },
         },
         servicios_envio: true,
         transportistas: true,
@@ -319,12 +339,17 @@ export class EnviosService {
     // Fall back to the first producer in the order for backwards compatibility.
     const producerFields = {
       nombre_marca: true,
-      bodega_calle: true,
-      bodega_ciudad: true,
-      bodega_estado: true,
-      bodega_codigo_postal: true,
-      bodega_pais_iso2: true,
-      bodega_telefono: true,
+      rfc: true,
+      direccion_bodega: {
+        select: {
+          linea_1: true,
+          ciudad: true,
+          estado: true,
+          codigo_postal: true,
+          pais_iso2: true,
+          telefono: true,
+        },
+      },
     } as const;
 
     const pedidoProd = await this.prisma.pedido_productor.findFirst({
@@ -341,6 +366,12 @@ export class EnviosService {
 
     const productorData = pedidoProd?.productores ?? primerDetalle?.productores ?? null;
 
+    if (!productorData?.direccion_bodega?.linea_1 || !productorData?.direccion_bodega?.codigo_postal) {
+      throw new NotFoundException(
+        'El productor no tiene configurada la dirección de bodega (campo id_direccion_bodega en su perfil). Configure la dirección antes de crear guías.',
+      );
+    }
+
     const carrier = this.selectCarrier(envio.transportistas?.codigo ?? undefined);
 
     const cotizacion = await this.prisma.envio_cotizaciones.findFirst({
@@ -355,12 +386,43 @@ export class EnviosService {
       `[crearGuia] cotizacion payload_response=${JSON.stringify(cotPayload)} → preferred_provider=${preferred_provider} preferred_service=${preferred_service}`,
     );
 
+    const tasaRow = await this.prisma.tasas_cambio.findFirst({
+      where: {
+        moneda_origen: 'MXN' as Moneda,
+        moneda_destino: 'USD' as Moneda,
+        vigente_desde: { lte: new Date() },
+        OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: new Date() } }],
+      },
+      orderBy: { vigente_desde: 'desc' },
+    });
+    if (!tasaRow) {
+      throw new InternalServerErrorException(
+        'No hay tasa de cambio MXN→USD vigente. Configurar en la tabla tasas_cambio antes de crear guías internacionales.',
+      );
+    }
+    const tipoCambio = Number(tasaRow.tasa);
+    const valorAduana = envio.valor_declarado_aduana ? Number(envio.valor_declarado_aduana) : null;
+    let valor_declarado_usd: number;
+    if (valorAduana) {
+      const raw = (envio.moneda_aduana as string) === 'USD' ? valorAduana : valorAduana / tipoCambio;
+      valor_declarado_usd = Math.round(raw * 100) / 100;
+    } else if (envio.pedidos?.total) {
+      // Usar el total del pedido como valor declarado cuando no se especificó uno explícito
+      const totalPedido = Number(envio.pedidos.total);
+      const monedaPedido = (envio.pedidos as any).moneda ?? 'MXN';
+      const raw = monedaPedido === 'USD' ? totalPedido : totalPedido / tipoCambio;
+      valor_declarado_usd = Math.round(raw * 100) / 100;
+    } else {
+      valor_declarado_usd = 50;
+    }
+
     const result = await carrier.createShipment({
       ...envio,
       productor: productorData,
       contenido_descripcion: productNames || 'Mezcal artesanal',
       preferred_provider,
       preferred_service,
+      valor_declarado_usd,
     });
 
     if (!result.labelBuffer) {
@@ -375,6 +437,22 @@ export class EnviosService {
       throw new UnprocessableEntityException(
         `El label recibido del carrier no es un PDF válido (magic bytes: ${pdfMagic}). Intenta de nuevo.`,
       );
+    }
+
+    // Protección SkydropX — se llama fuera de la transacción (HTTP externo)
+    let proteccionData: { costo_proteccion?: string; moneda_proteccion?: any; proteccion_id?: string } = {};
+    if (envio.solicitar_proteccion && result.providerShipmentId && carrier.protegerEnvio) {
+      try {
+        const prot = await carrier.protegerEnvio(result.providerShipmentId, valor_declarado_usd, 'USD');
+        proteccionData = {
+          costo_proteccion: prot.costo.toFixed(2),
+          moneda_proteccion: 'MXN' as any,
+          proteccion_id: prot.proteccionId,
+        };
+        this.logger.log(`[crearGuia] Protección: id=${prot.proteccionId} total=${prot.costo} (${prot.porcentaje}% + fijo ${prot.costoFijo})`);
+      } catch (err: any) {
+        this.logger.warn(`[crearGuia] Protección falló — guía creada sin protección: ${err?.message}`);
+      }
     }
 
     return serializeBigInts(
@@ -394,12 +472,13 @@ export class EnviosService {
             } as any,
           },
         });
-        // Persist actual carrier cost + tracking number
+        // Persist actual carrier cost + tracking number + protection data
         await tx.envios.update({
           where: { id_envio: toBigIntId(id_envio) },
           data: {
             numero_rastreo: result.trackingNumber,
             estado: 'label_purchased',
+            ...proteccionData,
             ...(result.cost && result.cost > 0
               ? { costo_envio: result.cost.toFixed(2), moneda_costo: (result.currency ?? 'MXN') as any }
               : {}),
@@ -407,7 +486,14 @@ export class EnviosService {
         });
         // No serializar label_pdf (Buffer) — devolver solo metadata
         const { label_pdf: _, ...guiaMeta } = guia as any;
-        return { ...guiaMeta, tiene_pdf: true };
+        return {
+          ...guiaMeta,
+          tiene_pdf: true,
+          ...(result.tarifa_fallback ? {
+            tarifa_fallback: true,
+            tarifa_original_solicitada: result.tarifa_original_solicitada,
+          } : {}),
+        };
       }),
     );
   }
@@ -485,7 +571,7 @@ export class EnviosService {
     items: Array<{ id_producto: number; cantidad: number }>,
     destino: DireccionDestinoDto,
   ) {
-    if (!items.length) return [];
+    if (!Array.isArray(items) || !items.length) return [];
 
     const productos = await this.prisma.productos.findMany({
       where: { id_producto: { in: items.map(i => BigInt(i.id_producto)) } },
@@ -497,12 +583,15 @@ export class EnviosService {
               select: {
                 id_productor: true,
                 nombre_marca: true,
-                bodega_codigo_postal: true,
-                bodega_estado: true,
-                bodega_ciudad: true,
+                direccion_bodega: {
+                  select: { codigo_postal: true, estado: true, ciudad: true },
+                },
               },
             },
           },
+        },
+        categorias_productos: {
+          select: { id_categoria: true, categorias: { select: { codigo_hs_default: true } } },
         },
       },
     });
@@ -522,6 +611,31 @@ export class EnviosService {
       grupos.get(id_productor)!.items.push({ producto: prod, cantidad: item.cantidad });
     }
 
+    // Validate alcohol shipping restrictions BEFORE quoting (so user learns before payment)
+    const destPais = destino.pais.toUpperCase();
+    const destEstado = destino.estado.toUpperCase();
+    for (const grupo of grupos.values()) {
+      for (const { producto } of grupo.items) {
+        if (!producto.requiere_edad_minima || producto.requiere_edad_minima < 18) continue;
+        for (const catProd of (producto.categorias_productos as any[]) ?? []) {
+          const restriction = await this.prisma.restricciones_envio_categoria.findUnique({
+            where: {
+              pais_iso2_estado_codigo_id_categoria: {
+                id_categoria: catProd.id_categoria,
+                pais_iso2: destPais,
+                estado_codigo: destEstado,
+              },
+            },
+          });
+          if (restriction && !restriction.permitido) {
+            throw new UnprocessableEntityException(
+              `"${producto.nombre}" no puede enviarse a ${destino.estado}, ${destino.pais} por restricciones legales de alcohol.`,
+            );
+          }
+        }
+      }
+    }
+
     if (grupos.size === 0) return [];
 
     const resultados = await Promise.allSettled(
@@ -530,45 +644,58 @@ export class EnviosService {
         const pesoReal = gItems.reduce(
           (s, i) => s + Number(i.producto.peso_kg ?? 1) * i.cantidad, 0,
         );
-        const maxLargo = Math.max(10, ...gItems.map(i => Number(i.producto.largo_cm ?? 10)));
-        const maxAncho = Math.max(10, ...gItems.map(i => Number(i.producto.ancho_cm ?? 10)));
+        const sinDims = gItems.filter(i => !i.producto.largo_cm || !i.producto.ancho_cm || !i.producto.alto_cm);
+        if (sinDims.length > 0) {
+          this.logger.warn(
+            `[cotizarCarrito] Productor ${id_productor}: ${sinDims.length} producto(s) sin dimensiones registradas. ` +
+            `Usando fallback conservador 30×12×12 cm. Configura las dimensiones en el catálogo para evitar subcotización. ` +
+            `Productos: ${sinDims.map(i => i.producto.nombre).join(', ')}`,
+          );
+        }
+        const maxLargo = Math.max(30, ...gItems.map(i => Number(i.producto.largo_cm ?? 30)));
+        const maxAncho = Math.max(12, ...gItems.map(i => Number(i.producto.ancho_cm ?? 12)));
         const alturaTotal = gItems.reduce(
-          (s, i) => s + Number(i.producto.alto_cm ?? 5) * i.cantidad, 0,
+          (s, i) => s + Number(i.producto.alto_cm ?? 12) * i.cantidad, 0,
         );
         const pesoVolumetrico = (maxLargo * maxAncho * alturaTotal) / 5000;
         const pesoFacturable = Math.max(pesoReal, pesoVolumetrico);
 
-        // Log per-product dim data to diagnose missing fields
-        this.logger.log(`[cotizarCarrito] Productor ${id_productor}:`);
-        for (const it of gItems) {
-          this.logger.log(
-            `  producto=${it.producto.nombre} qty=${it.cantidad} | ` +
-            `peso_kg=${it.producto.peso_kg ?? 'NULL(→1)'} ` +
-            `largo=${it.producto.largo_cm ?? 'NULL(→10)'} ` +
-            `ancho=${it.producto.ancho_cm ?? 'NULL(→10)'} ` +
-            `alto=${it.producto.alto_cm ?? 'NULL(→5)'}`,
-          );
-        }
-        this.logger.log(
-          `  → pesoReal=${pesoReal.toFixed(3)} kg | pesoVol=${pesoVolumetrico.toFixed(3)} kg | pesoFacturable=${pesoFacturable.toFixed(3)} kg | dims=${maxLargo}×${maxAncho}×${alturaTotal} cm`,
-        );
+        this.logger.log(`[cotizarCarrito] Productor ${id_productor}: pesoReal=${pesoReal.toFixed(3)} kg | pesoVol=${pesoVolumetrico.toFixed(3)} kg | pesoFacturable=${pesoFacturable.toFixed(3)} kg | dims=${maxLargo}×${maxAncho}×${alturaTotal} cm`);
 
         const prod = grupo.productor;
-        const shipper = prod?.bodega_codigo_postal
-          ? { codigo_postal: prod.bodega_codigo_postal, estado: prod.bodega_estado ?? '', ciudad: prod.bodega_ciudad ?? '' }
+        const bodega = prod?.direccion_bodega;
+        const shipper = bodega?.codigo_postal
+          ? { codigo_postal: bodega.codigo_postal, estado: bodega.estado ?? '', ciudad: bodega.ciudad ?? '' }
           : undefined;
 
         this.logger.log(`  → shipper CP=${shipper?.codigo_postal ?? 'ENV_FALLBACK'} destino CP=${destino.codigo_postal} país=${destino.pais}`);
 
         const isAlcohol = gItems.some(i => (i.producto.requiere_edad_minima ?? 0) >= 18);
+        const valorTotalMxn = gItems.reduce(
+          (s, i) => s + Number(i.producto.precio_base ?? 0) * i.cantidad, 0,
+        );
+        const valorTotalUsd = await this.toUsd(valorTotalMxn, 'MXN');
+        const descripcionContenido = gItems
+          .map(i => i.producto.nombre).filter(Boolean).slice(0, 3).join(', ');
+        const hsCode = gItems
+          .flatMap(i => (i.producto as any).categorias_productos ?? [])
+          .map((cp: any) => cp.categorias?.codigo_hs_default)
+          .find(Boolean) ?? undefined;
+        const descripcionEn = gItems
+          .map(i => ((i.producto as any).traducciones as any)?.en?.nombre as string | undefined)
+          .find((s): s is string => Boolean(s)) ?? undefined;
         const cotDto: CotizarEnvioDto = {
           destino, peso_kg: pesoFacturable, largo_cm: maxLargo, ancho_cm: maxAncho, alto_cm: alturaTotal, shipper,
           adult_signature: isAlcohol || undefined,
+          descripcion_contenido: descripcionContenido || undefined,
+          descripcion_contenido_en: descripcionEn,
+          valor_declarado_usd: valorTotalUsd || undefined,
+          hs_code: hsCode,
         };
         const quotes = await this.skydropxService.cotizarEnvio(cotDto);
 
         return {
-          id_productor,
+          id_productor: Number(id_productor),
           nombre_productor: prod?.nombre_marca ?? `Productor ${id_productor}`,
           peso_real_kg: Number(pesoReal.toFixed(3)),
           peso_volumetrico_kg: Number(pesoVolumetrico.toFixed(3)),
@@ -580,11 +707,15 @@ export class EnviosService {
       }),
     );
 
-    return resultados.map((r, i) => {
+    const result = resultados.map((r, i) => {
       if (r.status === 'fulfilled') return r.value;
       const pid = Array.from(grupos.keys())[i];
-      return { id_productor: pid, nombre_productor: grupos.get(pid)?.productor?.nombre_marca ?? `Productor ${pid}`, error: (r.reason as any)?.message ?? 'Error al cotizar', quotes: [] };
+      const errMsg = (r.reason as any)?.message ?? (r.reason as any)?.response?.message ?? 'Error al cotizar';
+      this.logger.error(`[cotizarCarrito] Productor ${pid} falló: ${errMsg}`, (r.reason as any)?.stack);
+      return { id_productor: Number(pid), nombre_productor: grupos.get(pid)?.productor?.nombre_marca ?? `Productor ${pid}`, error: errMsg, quotes: [] };
     });
+    this.logger.log(`[cotizarCarrito] Completado — ${result.length} grupos, ${result.filter(g => !('error' in g)).length} exitosos`);
+    return result;
   }
 
   /**
@@ -597,15 +728,22 @@ export class EnviosService {
       where: { id_pedido: BigInt(id_pedido) },
       include: {
         productos: {
-          select: { nombre: true, peso_kg: true, alto_cm: true, ancho_cm: true, largo_cm: true, requiere_edad_minima: true },
+          select: {
+            nombre: true, peso_kg: true, alto_cm: true, ancho_cm: true, largo_cm: true,
+            requiere_edad_minima: true, precio_base: true, moneda_base: true,
+            traducciones: true,
+            categorias_productos: {
+              select: { categorias: { select: { codigo_hs_default: true } } },
+            },
+          },
         },
         productores: {
           select: {
             id_productor: true,
             nombre_marca: true,
-            bodega_codigo_postal: true,
-            bodega_estado: true,
-            bodega_ciudad: true,
+            direccion_bodega: {
+              select: { codigo_postal: true, estado: true, ciudad: true },
+            },
           },
         },
       },
@@ -626,20 +764,42 @@ export class EnviosService {
         const pesoReal = items.reduce(
           (s, d) => s + Number(d.productos?.peso_kg ?? 1) * Number(d.cantidad), 0,
         );
-        const maxLargo = Math.max(10, ...items.map(d => Number(d.productos?.largo_cm ?? 10)));
-        const maxAncho = Math.max(10, ...items.map(d => Number(d.productos?.ancho_cm ?? 10)));
+        const sinDimsPedido = items.filter(d => !d.productos?.largo_cm || !d.productos?.ancho_cm || !d.productos?.alto_cm);
+        if (sinDimsPedido.length > 0) {
+          this.logger.warn(
+            `[cotizarEnvio] Productor ${id_productor}: ${sinDimsPedido.length} producto(s) sin dimensiones. ` +
+            `Usando fallback conservador 30×12×12 cm. Actualiza el catálogo. ` +
+            `Productos: ${sinDimsPedido.map(d => d.productos?.nombre).join(', ')}`,
+          );
+        }
+        const maxLargo = Math.max(30, ...items.map(d => Number(d.productos?.largo_cm ?? 30)));
+        const maxAncho = Math.max(12, ...items.map(d => Number(d.productos?.ancho_cm ?? 12)));
         const alturaTotal = items.reduce(
-          (s, d) => s + Number(d.productos?.alto_cm ?? 5) * Number(d.cantidad), 0,
+          (s, d) => s + Number(d.productos?.alto_cm ?? 12) * Number(d.cantidad), 0,
         );
         const pesoVolumetrico = (maxLargo * maxAncho * alturaTotal) / 5000;
         const pesoFacturable = Math.max(pesoReal, pesoVolumetrico);
 
         const prod = grupo.productor;
-        const shipper = prod?.bodega_codigo_postal
-          ? { codigo_postal: prod.bodega_codigo_postal, estado: prod.bodega_estado ?? '', ciudad: prod.bodega_ciudad ?? '' }
+        const bodega = prod?.direccion_bodega;
+        const shipper = bodega?.codigo_postal
+          ? { codigo_postal: bodega.codigo_postal, estado: bodega.estado ?? '', ciudad: bodega.ciudad ?? '' }
           : undefined;
 
         const isAlcohol = items.some(d => (d.productos?.requiere_edad_minima ?? 0) >= 18);
+        const valorTotalMxn = items.reduce(
+          (s, d) => s + Number(d.productos?.precio_base ?? 0) * Number(d.cantidad), 0,
+        );
+        const valorTotalUsd = await this.toUsd(valorTotalMxn, 'MXN');
+        const descripcionContenido = items
+          .map(d => d.productos?.nombre).filter(Boolean).slice(0, 3).join(', ');
+        const hsCode = items
+          .flatMap(d => (d.productos as any)?.categorias_productos ?? [])
+          .map((cp: any) => cp.categorias?.codigo_hs_default)
+          .find(Boolean) ?? undefined;
+        const descripcionEn = items
+          .map(d => ((d.productos as any)?.traducciones as any)?.en?.nombre as string | undefined)
+          .find((s): s is string => Boolean(s)) ?? undefined;
         const cotDto: CotizarEnvioDto = {
           destino,
           peso_kg: pesoFacturable,
@@ -648,6 +808,10 @@ export class EnviosService {
           alto_cm: alturaTotal,
           shipper,
           adult_signature: isAlcohol || undefined,
+          descripcion_contenido: descripcionContenido || undefined,
+          descripcion_contenido_en: descripcionEn,
+          valor_declarado_usd: valorTotalUsd || undefined,
+          hs_code: hsCode,
         };
 
         const quotes = await this.skydropxService.cotizarEnvio(cotDto);
@@ -691,12 +855,17 @@ export class EnviosService {
           select: {
             id_productor: true,
             nombre_marca: true,
-            bodega_calle: true,
-            bodega_ciudad: true,
-            bodega_estado: true,
-            bodega_codigo_postal: true,
-            bodega_pais_iso2: true,
-            bodega_telefono: true,
+            rfc: true,
+            direccion_bodega: {
+              select: {
+                linea_1: true,
+                ciudad: true,
+                estado: true,
+                codigo_postal: true,
+                pais_iso2: true,
+                telefono: true,
+              },
+            },
           },
         },
       },
@@ -724,10 +893,18 @@ export class EnviosService {
         const pesoReal = items.reduce(
           (s, d) => s + Number(d.productos?.peso_kg ?? 1) * Number(d.cantidad), 0,
         );
-        const maxLargo = Math.max(10, ...items.map(d => Number(d.productos?.largo_cm ?? 10)));
-        const maxAncho = Math.max(10, ...items.map(d => Number(d.productos?.ancho_cm ?? 10)));
+        const sinDimsGuia = items.filter(d => !d.productos?.largo_cm || !d.productos?.ancho_cm || !d.productos?.alto_cm);
+        if (sinDimsGuia.length > 0) {
+          this.logger.warn(
+            `[comprarGuias] Pedido ${id_pedido}: ${sinDimsGuia.length} producto(s) sin dimensiones. ` +
+            `Usando fallback conservador 30×12×12 cm. ` +
+            `Productos: ${sinDimsGuia.map(d => d.productos?.nombre).join(', ')}`,
+          );
+        }
+        const maxLargo = Math.max(30, ...items.map(d => Number(d.productos?.largo_cm ?? 30)));
+        const maxAncho = Math.max(12, ...items.map(d => Number(d.productos?.ancho_cm ?? 12)));
         const alturaTotal = items.reduce(
-          (s, d) => s + Number(d.productos?.alto_cm ?? 5) * Number(d.cantidad), 0,
+          (s, d) => s + Number(d.productos?.alto_cm ?? 12) * Number(d.cantidad), 0,
         );
         const pesoVolumetrico = (maxLargo * maxAncho * alturaTotal) / 5000;
         const pesoFacturable = Math.max(pesoReal, pesoVolumetrico);

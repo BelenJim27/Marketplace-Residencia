@@ -1,4 +1,5 @@
 import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Headers, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { CreateDetallePedidoDto, CreateFacturaDto, CreatePedidoDto, UpdateDetallePedidoDto, UpdateFacturaDto, UpdatePedidoDto, ValidarEnvioDto } from './dto/pedidos.dto';
 import { PedidosService } from './pedidos.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
@@ -7,7 +8,7 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 export class PedidosController {
   constructor(private readonly service: PedidosService) {}
   @UseGuards(AuthGuard)
-  @Get() findAll() { return this.service.findAll(); }
+  @Get() findAll(@Query() query: PaginacionQueryDto) { return this.service.findAll(query); }
   @Get('mis-ventas') getMisVentas(@Headers('authorization') authorization?: string) {
     const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
     if (!token) {
@@ -106,7 +107,18 @@ export class PedidosController {
   testEmail(@Query('to') to: string) { return this.service.testEmail(to); }
 
   @UseGuards(AuthGuard)
-  @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
+  @Get(':id')
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    const pedido = await this.service.findOne(id) as any;
+    const user = req.user;
+    const isAdmin = user.roles?.some((r: string) => r.toLowerCase() === 'administrador');
+    const isOwner = pedido.id_usuario === user.id_usuario;
+    const isProductor = user.id_productor !== null;
+    if (!isAdmin && !isOwner && !isProductor) {
+      throw new ForbiddenException('No tienes acceso a este pedido');
+    }
+    return pedido;
+  }
   @UseGuards(AuthGuard)
   @Post() create(@Body() dto: CreatePedidoDto) { return this.service.create(dto); }
   @UseGuards(AuthGuard)
@@ -116,7 +128,7 @@ export class PedidosController {
   @UseGuards(AuthGuard)
   @Post(':id/detalles') addDetalle(@Param('id') id: string, @Body() dto: CreateDetallePedidoDto) { return this.service.addDetalle(id, dto); }
   @UseGuards(AuthGuard)
-  @Patch('detalles/:id_detalle') updateDetalle(@Param('id_detalle') id_detalle: string, @Body() dto: UpdateDetallePedidoDto) { return this.service.updateDetalle(id_detalle, dto); }
+  @Patch('detalles/:id_detalle') updateDetalle(@Param('id_detalle') id_detalle: string, @Body() dto: UpdateDetallePedidoDto, @Req() req: any) { return this.service.updateDetalle(id_detalle, req.user.id_usuario, dto); }
   @UseGuards(AuthGuard)
   @Delete('detalles/:id_detalle') removeDetalle(@Param('id_detalle') id_detalle: string) { return this.service.removeDetalle(id_detalle); }
 

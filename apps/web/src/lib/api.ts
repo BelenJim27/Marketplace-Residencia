@@ -436,6 +436,13 @@ export const api = {
         headers: headers(token),
         body: JSON.stringify(data),
       }),
+    actualizarMiPerfil: (token: string, data: any) =>
+      fetchJson(endpoint("/productores/mi-perfil"), {
+        method: "PATCH",
+        headers: headers(token),
+        body: JSON.stringify(data),
+      }),
+
     // ─────────────────────────────────────────────────────────────────────────
 
     getSolicitudesPendientes: (token: string) =>

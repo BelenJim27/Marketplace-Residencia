@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Logger, NotFoundException, Optional, UnprocessableEntityException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Moneda } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -83,7 +83,7 @@ export class PagosService {
   async remove(id_pago: string) { await this.prisma.pagos.delete({ where: { id_pago: toBigIntId(id_pago) } }); return { message: 'Pago eliminado' }; }
   async getIngresosResumen(id_productor: number) {
     const pedidoProductores = await this.prisma.pedido_productor.findMany({
-      where: { id_productor },
+      where: { id_productor, estado: { not: 'cancelado' } },
       select: {
         monto_neto_productor: true,
         subtotal_bruto: true,
@@ -322,7 +322,7 @@ export class PagosService {
     const result = await this.prisma.pagos.updateMany({
       where: {
         id_pago: pago.id_pago,
-        estado: { notIn: ['completado', 'reembolsado'] },
+        estado: { notIn: ['completado', 'reembolsado', 'cancelado'] },
       },
       data: { estado },
     });
@@ -407,7 +407,7 @@ export class PagosService {
             },
           );
         } catch (err: any) {
-          console.error('[pagos] sendOrderConfirmationEmail failed:', err?.message);
+          this.logger.warn(`[pagos] sendOrderConfirmationEmail failed: ${err?.message}`);
         }
       }
 
@@ -614,7 +614,20 @@ export class PagosService {
       select: { precio_total: true },
       orderBy: { fecha_solicitud: 'desc' },
     });
-    if (cotizaciones.length === 0) return; // Sin cotizaciones guardadas, omitir validación
+    if (cotizaciones.length === 0) {
+      // Verificar si existen cotizaciones pero expiradas para dar mensaje más específico
+      const expiradas = await this.prisma.envio_cotizaciones.count({
+        where: { id_pedido, valida_hasta: { lt: new Date() } },
+      });
+      if (expiradas > 0) {
+        throw new BadRequestException(
+          'COTIZACIONES_EXPIRADAS: Las cotizaciones de envío han expirado. Regresa al paso de envío para seleccionar una tarifa actualizada.',
+        );
+      }
+      throw new BadRequestException(
+        'Se requieren cotizaciones de envío guardadas para procesar el pago. Regresa al paso de envío y selecciona una tarifa.',
+      );
+    }
     const precioTotal = cotizaciones.reduce((s, c) => s + Number(c.precio_total ?? 0), 0);
     if (precioTotal <= 0) return;
     const shippingRounded = Math.round(shippingCliente * 100) / 100;
@@ -792,7 +805,7 @@ export class PagosService {
           });
         }
       } catch (error: any) {
-        console.warn('[pagos] retrieveAccount failed for', prod.stripe_account_id, ':', error?.message);
+        this.logger.warn(`[pagos] retrieveAccount failed for ${prod.stripe_account_id}: ${error?.message}`);
       }
     }
     if (!onboardingOk) return null;
@@ -1021,10 +1034,42 @@ export class PagosService {
                   where: { id_payout: r.payout.id_payout },
                   data: { estado: 'reversal_pendiente_manual', ultimo_error: err?.message ?? 'reversal failed' },
                 }).catch(() => undefined);
+                this.emailService.sendAdminAlert(
+                  `Reversal manual requerido — Payout #${r.payout.id_payout}`,
+                  `No se pudo revertir automáticamente el transfer Stripe ${r.payout.referencia_externa}.\n\nError: ${err?.message}\n\nAcción requerida: Revertir manualmente en el dashboard de Stripe y actualizar el estado del payout #${r.payout.id_payout}.`,
+                ).catch(() => undefined);
               }
             }
           }
         }
+      }
+    }
+
+    // Restore stock for each order item before marking as cancelled
+    const detalles = await this.prisma.detalle_pedido.findMany({
+      where: { id_pedido: pago.id_pedido },
+      select: { id_producto: true, cantidad: true, id_pedido: true },
+    });
+    for (const d of detalles) {
+      const inv = await this.prisma.inventario.findFirst({
+        where: { id_producto: d.id_producto },
+        orderBy: { stock: 'asc' },
+      });
+      if (inv) {
+        await this.prisma.inventario.update({
+          where: { id_inventario: inv.id_inventario },
+          data: { stock: { increment: d.cantidad } },
+        });
+        await this.prisma.movimientos_inventario.create({
+          data: {
+            id_inventario: inv.id_inventario,
+            id_pedido: d.id_pedido,
+            tipo: 'cancelacion',
+            cantidad: d.cantidad,
+            stock_resultante: inv.stock + d.cantidad,
+            motivo: `Reversa por reembolso pago ${pago.id_pago}`,
+          },
+        });
       }
     }
 
@@ -1091,6 +1136,10 @@ export class PagosService {
         });
         if (nuevosIntentos >= MAX_INTENTOS) {
           this.logger.error(`[pagos] Payout AGOTADO productor ${pp?.id_productor} pedido ${pp?.id_pedido}: revisión manual requerida. Error: ${errorMsg}`);
+          this.emailService.sendAdminAlert(
+            `Payout agotado — Pedido #${pp?.id_pedido} Productor #${pp?.id_productor}`,
+            `El payout para el productor ${pp?.id_productor} del pedido ${pp?.id_pedido} ha fallado ${MAX_INTENTOS} veces y requiere revisión manual.\n\nÚltimo error: ${errorMsg}\n\nAcción requerida: Revisar en el panel admin y procesar manualmente.`,
+          ).catch(() => undefined);
         } else {
           this.logger.warn(`[pagos] Retry intento ${nuevosIntentos}/${MAX_INTENTOS} productor ${pp?.id_productor}: ${errorMsg}`);
         }
@@ -1114,7 +1163,12 @@ export class PagosService {
               },
               orderBy: { vigente_desde: 'desc' },
             });
-            amountUSD = amountUSD / (tasa ? Number(tasa.tasa) : 20);
+            if (!tasa) {
+              throw new InternalServerErrorException(
+                `No hay tasa de cambio ${payout.moneda}→USD vigente. Configurar en la tabla tasas_cambio antes de procesar payouts.`,
+              );
+            }
+            amountUSD = amountUSD / Number(tasa.tasa);
           }
           amountUSD = parseFloat(amountUSD.toFixed(2));
 
@@ -1213,6 +1267,53 @@ export class PagosService {
       } catch (err: any) {
         this.logger.error(`[pagos] retryGuiasFallidas pedido ${pedido.id_pedido}: ${err?.message}`);
       }
+    }
+  }
+
+  /**
+   * Llamado cuando Stripe cierra una disputa (charge.dispute.closed).
+   * Si el merchant ganó ('won') → re-encola los payouts fallidos para ese pedido.
+   * Si el merchant perdió ('lost') → marca los payouts como agotados con motivo 'disputa_perdida'.
+   */
+  async handleDisputeClosed(paymentIntentId: string, disputeStatus: 'won' | 'lost' | string): Promise<void> {
+    const pago = await this.prisma.pagos.findFirst({
+      where: { payment_intent_id: paymentIntentId },
+      select: { id_pago: true, id_pedido: true },
+    });
+
+    if (!pago) {
+      this.logger.warn(`[disputa] No se encontró pago para payment_intent=${paymentIntentId}`);
+      return;
+    }
+
+    this.logger.log(`[disputa] charge.dispute.closed status=${disputeStatus} pedido=${pago.id_pedido}`);
+
+    const payouts = await this.prisma.payouts.findMany({
+      where: {
+        pedido_productor: { some: { id_pedido: pago.id_pedido } },
+        estado: { in: ['fallido', 'pendiente'] },
+      },
+      select: { id_payout: true, id_productor: true },
+    });
+
+    if (payouts.length === 0) {
+      this.logger.log(`[disputa] Sin payouts pendientes para pedido=${pago.id_pedido}`);
+      return;
+    }
+
+    if (disputeStatus === 'won') {
+      // El merchant ganó — resetear intentos para que el cron de retry los procese
+      await this.prisma.payouts.updateMany({
+        where: { id_payout: { in: payouts.map((p) => p.id_payout) } },
+        data: { intentos: 0, proximo_reintento: null, ultimo_error: 'Disputa ganada — reintento automático' },
+      });
+      this.logger.log(`[disputa] ${payouts.length} payout(s) re-encolados para pedido=${pago.id_pedido}`);
+    } else if (disputeStatus === 'lost') {
+      await this.prisma.payouts.updateMany({
+        where: { id_payout: { in: payouts.map((p) => p.id_payout) } },
+        data: { estado: 'agotado', ultimo_error: 'Disputa perdida — pago retenido por plataforma' },
+      });
+      this.logger.warn(`[disputa] ${payouts.length} payout(s) marcados como agotados (disputa perdida) para pedido=${pago.id_pedido}`);
     }
   }
 }

@@ -1,11 +1,12 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { CreateNotificacionDto, UpdateNotificacionDto } from './dto/notificaciones.dto';
 import { NotificacionesService } from './notificaciones.service';
 
 @Controller('notificaciones')
 export class NotificacionesController {
   constructor(private readonly service: NotificacionesService) {}
-  @Get() findAll() { return this.service.findAll(); }
+  @Get() findAll(@Query() query: PaginacionQueryDto) { return this.service.findAll(query); }
   @Get(':id_usuario') findByUser(@Param('id_usuario', ParseUUIDPipe) id_usuario: string) { return this.service.findByUser(id_usuario); }
   @Post() create(@Body() dto: CreateNotificacionDto) { return this.service.create(dto); }
   @Patch(':id') update(@Param('id') id: string, @Body() dto: UpdateNotificacionDto) { return this.service.update(id, dto); }

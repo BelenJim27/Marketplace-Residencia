@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Logger, Post, Req, Res } from '@nestjs/common';
 import { OAuthService } from './oauth.service';
 import { AuthService } from './auth.service';
 
@@ -13,6 +13,8 @@ interface OAuthGoogleDto {
 
 @Controller('auth/oauth')
 export class OAuthController {
+  private readonly logger = new Logger(OAuthController.name);
+
   constructor(
     private readonly oauthService: OAuthService,
     private readonly authService: AuthService,
@@ -21,11 +23,7 @@ export class OAuthController {
   @Post('google')
   @HttpCode(200)
   async googleOAuth(@Body() dto: OAuthGoogleDto) {
-    console.log('🔵 [OAuth] Google login request:', {
-      provider_uid: dto.provider_uid,
-      email: dto.email,
-      nombre: dto.nombre,
-    });
+    this.logger.debug(`[OAuth] Google login request uid=${dto.provider_uid}`);
 
     try {
       const idUsuario = await this.oauthService.upsertOAuthAccount({
@@ -39,22 +37,14 @@ export class OAuthController {
         expiraEn: undefined,
       });
 
-      console.log('✅ [OAuth] Usuario creado/actualizado:', idUsuario);
-
       const authResult = await this.authService.loginWithOAuth(idUsuario);
-
-      console.log('✅ [OAuth] Auth result:', {
-        userId: authResult.user.id_usuario,
-        email: authResult.user.email,
-        roles: authResult.user.roles,
-      });
 
       return {
         tokens: authResult.tokens,
         user: authResult.user,
       };
     } catch (error) {
-      console.error('❌ [OAuth] Error:', error);
+      this.logger.error(`[OAuth] Error: ${(error as Error)?.message}`);
       throw error;
     }
   }

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaypalService } from '../pagos/paypal.service';
@@ -10,6 +10,8 @@ const ESTADOS_LIBERADOS_DEFAULT = ['entregado', 'liberado'];
 
 @Injectable()
 export class PayoutsService {
+  private readonly logger = new Logger(PayoutsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripeService: StripeService,
@@ -190,7 +192,7 @@ export class PayoutsService {
         },
       });
 
-      console.error(`[payouts] Stripe transfer failed for payout ${payout.id_payout}: ${errorMsg}`);
+      this.logger.error(`[payouts] Stripe transfer failed for payout ${payout.id_payout}: ${errorMsg}`);
     }
   }
 
@@ -259,7 +261,7 @@ export class PayoutsService {
         },
       });
 
-      console.error(`[payouts] PayPal payout failed for payout ${payout.id_payout}: ${errorMsg}`);
+      this.logger.error(`[payouts] PayPal payout failed for payout ${payout.id_payout}: ${errorMsg}`);
     }
   }
 

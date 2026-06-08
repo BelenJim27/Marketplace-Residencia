@@ -21,7 +21,8 @@ export class CreateEnvioDto {
   @IsOptional() @IsDateString() fecha_entrega_estimada?: string;
   @IsOptional() @IsDateString() fecha_entrega?: string;
   @IsOptional() @IsString() transportista_codigo?: string;
-  @IsOptional() @IsString() codigo_servicio?: string;       // ej. 'SKYDROPX_STANDARD', 'SKYDROPX_EXPRESS'
+  @IsOptional() @IsString() codigo_servicio?: string;
+  @IsOptional() @IsBoolean() @Type(() => Boolean) solicitar_proteccion?: boolean;
 
 }
 export class UpdateEnvioDto extends PartialType(CreateEnvioDto) {}
@@ -57,4 +58,5 @@ export class CotizarEnvioDto {
   @IsOptional() @IsString() @MaxLength(200) descripcion_contenido_en?: string;
   @IsOptional() @IsNumber() @Type(() => Number) valor_declarado_usd?: number;
   @IsOptional() @ValidateNested() @Type(() => ShipperDto) shipper?: ShipperDto;
+  @IsOptional() @IsString() hs_code?: string;
 }

@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { Cron } from '@nestjs/schedule';
 import { Moneda, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
@@ -8,6 +9,7 @@ import { SkydropxService } from "../envios/skydropx.service";
 import { PaypalService } from "../pagos/paypal.service";
 import { StripeService } from "../pagos/stripe.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import {
   CreateDetallePedidoDto,
   CreateFacturaDto,
@@ -22,6 +24,8 @@ type Periodo = "week" | "month" | "year";
 
 @Injectable()
 export class PedidosService {
+  private readonly logger = new Logger(PedidosService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
@@ -31,28 +35,31 @@ export class PedidosService {
     private readonly stripeService: StripeService,
     private readonly paypalService: PaypalService,
   ) {}
-  async findAll() {
-    return serializeBigInts(
-      await this.prisma.pedidos.findMany({
+  async findAll(query: PaginacionQueryDto = {}) {
+    const pagina = query.pagina ?? 1;
+    const limite = query.limite ?? 20;
+    const skip = (pagina - 1) * limite;
+    const include = {
+      detalle_pedido: {
         include: {
-          detalle_pedido: {
-            include: {
-              productos: { select: { nombre: true, imagen_principal_url: true } },
-              productores: {
-                select: {
-                  id_productor: true,
-                  nombre_marca: true,
-                  usuarios: { select: { nombre: true, apellido_paterno: true } },
-                },
-              },
+          productos: { select: { nombre: true, imagen_principal_url: true } },
+          productores: {
+            select: {
+              id_productor: true,
+              nombre_marca: true,
+              usuarios: { select: { nombre: true, apellido_paterno: true } },
             },
           },
-          facturas: true,
-          usuarios: true,
         },
-        orderBy: { fecha_creacion: 'desc' },
-      }),
-    );
+      },
+      facturas: true,
+      usuarios: true,
+    };
+    const [items, total] = await Promise.all([
+      this.prisma.pedidos.findMany({ include, orderBy: { fecha_creacion: 'desc' }, take: limite, skip }),
+      this.prisma.pedidos.count(),
+    ]);
+    return serializeBigInts({ items, paginacion: { pagina, limite, total, paginas: Math.ceil(total / limite) } });
   }
   async findOne(id: string) {
     const item = await this.prisma.pedidos.findUnique({
@@ -500,7 +507,7 @@ export class PedidosService {
           });
         }
       } catch (err: any) {
-        console.error('[pedidos] Failed to create stock_bajo notification:', err?.message);
+        this.logger.warn(`[pedidos] Failed to create stock_bajo notification: ${err?.message}`);
       }
     }
 
@@ -581,11 +588,13 @@ export class PedidosService {
         comision,
       );
     } catch (err: any) {
-      // No silenciar: una comisión de 0% implica pérdida de ingresos sin alerta.
-      // El admin debe garantizar que siempre exista una regla global activa en la tabla comisiones.
-      throw new Error(
-        `[pedidos] Sin regla de comisión para productor ${args.id_productor} / país ${args.pais_operacion}. Asegúrate de que exista una regla con alcance='global' y activo=true. Error original: ${err?.message}`,
+      // Sin regla de comisión: aplicar 0% como fallback seguro para no bloquear pedidos.
+      // Se recomienda crear una regla global activa en /configuracion/comisiones.
+      this.logger.warn(
+        `[pedidos] Sin regla de comisión para productor ${args.id_productor} / país ${args.pais_operacion}. Aplicando 0% como fallback. Error: ${err?.message}`,
       );
+      comision_marketplace = 0;
+      id_comision_aplicada = null;
     }
 
     const monto_neto_productor = Number(
@@ -620,33 +629,118 @@ export class PedidosService {
       },
     });
   }
-  async updateDetalle(id_detalle: string, dto: UpdateDetallePedidoDto) {
+  async updateDetalle(id_detalle: string, id_usuario: string, dto: UpdateDetallePedidoDto) {
+    const id_detalle_big = toBigIntId(id_detalle);
+
     return serializeBigInts(
-      await this.prisma.detalle_pedido.update({
-        where: { id_detalle: toBigIntId(id_detalle) },
-        data: {
-          id_producto: dto.id_producto,
-          cantidad: dto.cantidad,
-          precio_compra: dto.precio_compra,
-          moneda_compra: dto.moneda_compra?.trim() as Moneda | undefined,
-          impuesto: dto.impuesto,
+      await this.prisma.$transaction(
+        async (tx) => {
+          const detalleExistente = await tx.detalle_pedido.findUnique({
+            where: { id_detalle: id_detalle_big },
+            include: { pedidos: { select: { id_usuario: true } } },
+          });
+
+          if (!detalleExistente)
+            throw new NotFoundException('Detalle de pedido no encontrado');
+
+          if (detalleExistente.pedidos.id_usuario !== id_usuario)
+            throw new ForbiddenException('No tienes permiso para modificar este detalle de pedido');
+
+          if (dto.cantidad !== undefined && dto.cantidad !== Number(detalleExistente.cantidad)) {
+            const delta = dto.cantidad - Number(detalleExistente.cantidad);
+
+            const inv = await tx.inventario.findFirst({
+              where: { id_producto: detalleExistente.id_producto },
+            });
+
+            if (!inv)
+              throw new NotFoundException(`No hay inventario registrado para el producto ${detalleExistente.id_producto}`);
+
+            if (delta > 0) {
+              const updateResult = await tx.inventario.updateMany({
+                where: { id_inventario: inv.id_inventario, stock: { gte: delta } },
+                data: { stock: { decrement: delta } },
+              });
+              if (updateResult.count === 0)
+                throw new BadRequestException(
+                  `Stock insuficiente. Disponible: ${inv.stock}, incremento solicitado: ${delta}.`,
+                );
+            } else {
+              await tx.inventario.update({
+                where: { id_inventario: inv.id_inventario },
+                data: { stock: { increment: Math.abs(delta) } },
+              });
+            }
+
+            await tx.movimientos_inventario.create({
+              data: {
+                id_inventario: inv.id_inventario,
+                id_pedido: detalleExistente.id_pedido,
+                tipo: 'ajuste_pedido',
+                cantidad: Math.abs(delta),
+                stock_resultante: inv.stock - delta,
+                motivo: `Ajuste de cantidad en detalle ${id_detalle_big} (delta: ${delta})`,
+              },
+            });
+          }
+
+          return tx.detalle_pedido.update({
+            where: { id_detalle: id_detalle_big },
+            data: {
+              id_producto: dto.id_producto ? BigInt(dto.id_producto) : undefined,
+              cantidad: dto.cantidad,
+              precio_compra: dto.precio_compra,
+              moneda_compra: dto.moneda_compra?.trim() as Moneda | undefined,
+              impuesto: dto.impuesto,
+            },
+          });
         },
-      }),
+        { timeout: 15000 },
+      ),
     );
   }
   async removeDetalle(id_detalle: string) {
     const id_detalle_big = toBigIntId(id_detalle);
 
-    await this.prisma.detalle_pedido.delete({
-      where: { id_detalle: id_detalle_big },
-    });
+    await this.prisma.$transaction(async (tx) => {
+      const detalle = await tx.detalle_pedido.findUnique({
+        where: { id_detalle: id_detalle_big },
+        select: { id_producto: true, cantidad: true, id_pedido: true },
+      });
 
-    await this.prisma.auditoria.create({
-      data: {
-        accion: 'eliminar_detalle_pedido',
-        tabla_afectada: 'detalle_pedido',
-        registro_id: String(id_detalle_big),
-      },
+      if (!detalle) throw new NotFoundException('Detalle de pedido no encontrado');
+
+      const inv = await tx.inventario.findFirst({
+        where: { id_producto: detalle.id_producto },
+        orderBy: { stock: 'asc' },
+      });
+
+      if (inv) {
+        await tx.inventario.update({
+          where: { id_inventario: inv.id_inventario },
+          data: { stock: { increment: detalle.cantidad } },
+        });
+        await tx.movimientos_inventario.create({
+          data: {
+            id_inventario: inv.id_inventario,
+            id_pedido: detalle.id_pedido,
+            tipo: 'devolucion',
+            cantidad: detalle.cantidad,
+            stock_resultante: inv.stock + detalle.cantidad,
+            motivo: `Reversa por eliminación de detalle ${id_detalle_big}`,
+          },
+        });
+      }
+
+      await tx.detalle_pedido.delete({ where: { id_detalle: id_detalle_big } });
+
+      await tx.auditoria.create({
+        data: {
+          accion: 'eliminar_detalle_pedido',
+          tabla_afectada: 'detalle_pedido',
+          registro_id: String(id_detalle_big),
+        },
+      });
     });
 
     return { message: "Detalle eliminado" };
@@ -736,7 +830,7 @@ export class PedidosService {
         });
       }
     } catch (err: any) {
-      console.error('[pedidos] Error enviando factura:', err?.message ?? err);
+      this.logger.error(`[pedidos] Error enviando factura: ${err?.message ?? err}`);
     }
 
     return serializeBigInts(factura);
@@ -894,6 +988,16 @@ export class PedidosService {
         },
       },
       include: {
+        envios: {
+          include: {
+            envio_guias: {
+              where: { eliminado_en: null },
+              take: 1,
+              orderBy: { fecha_creacion: 'desc' as const },
+              select: { id_guia: true, payload_response: true },
+            },
+          },
+        },
         pedidos: {
           include: {
             detalle_pedido: {
@@ -908,7 +1012,7 @@ export class PedidosService {
                   where: { eliminado_en: null },
                   take: 1,
                   orderBy: { fecha_creacion: 'desc' as const },
-                  select: { payload_response: true },
+                  select: { id_guia: true, payload_response: true },
                 },
               },
             },
@@ -926,9 +1030,10 @@ export class PedidosService {
 
     const detallesFiltrados = pedidoProductor.pedidos.detalle_pedido.filter(belongsToProductor);
 
-    // Carrier name: prefer guide (post-creation) over quotation (pre-creation)
-    const envioData = pedidoProductor.pedidos.envios?.[0] ?? null;
-    const guiaPayload = (envioData as any)?.envio_guias?.[0]?.payload_response as any;
+    // Prefer the envio linked directly via pedido_productor.id_envio (set by crearEnviosPorProductor).
+    // Fall back to pedidos.envios[0] for orders created before that FK was populated.
+    const envioData = (pedidoProductor as any).envios ?? pedidoProductor.pedidos.envios?.[0] ?? null;
+    const guiaPayload = envioData?.envio_guias?.[0]?.payload_response as any;
     const cotizacion = await this.prisma.envio_cotizaciones.findFirst({
       where: { id_pedido: toBigIntId(id_pedido) },
       orderBy: { fecha_solicitud: 'desc' },
@@ -941,12 +1046,14 @@ export class PedidosService {
       (d: any) => (d.productos?.requiere_edad_minima ?? 0) >= 18,
     );
 
+    const tiene_guia = (envioData?.envio_guias?.length ?? 0) > 0 || !!(envioData?.numero_rastreo);
+
     return serializeBigInts({
       id_pedido: pedidoProductor.id_pedido,
       estado_productor: pedidoProductor.estado,
       pedido: pedidoProductor.pedidos,
       detalles: detallesFiltrados,
-      envio: envioData ? { ...envioData, carrier_name, is_alcohol } : null,
+      envio: envioData ? { ...envioData, carrier_name, is_alcohol, tiene_guia } : null,
       desglose: {
         subtotal_bruto: pedidoProductor.subtotal_bruto,
         comision_marketplace: pedidoProductor.comision_marketplace,
@@ -1039,7 +1146,7 @@ export class PedidosService {
       } catch (err: any) {
         // No bloquear el cambio de estado — el payout se rastrea en la tabla payouts
         // y el cron retryFailedTransfers intentará de nuevo cada 15 min
-        console.error(
+        this.logger.error(
           `[pedidos] triggerPayoutForProductor falló para pedido ${id_pedido_big} productor ${id_productor}: ${err?.message}`,
         );
       }
@@ -1063,13 +1170,13 @@ export class PedidosService {
 
     // Si ya hay un payout (transfer completado), no hacer nada
     if (pp.id_payout) {
-      console.log(`[pedidos] Payout ya existe para productor ${id_productor} pedido ${id_pedido}: ${pp.id_payout}`);
+      this.logger.debug(`[pedidos] Payout ya existe para productor ${id_productor} pedido ${id_pedido}: ${pp.id_payout}`);
       return;
     }
 
     const monto_neto = pp.monto_neto_productor ? Number(pp.monto_neto_productor) : 0;
     if (monto_neto <= 0) {
-      console.warn(`[pedidos] Monto neto no positivo para productor ${id_productor}. Skipping payout.`);
+      this.logger.warn(`[pedidos] Monto neto no positivo para productor ${id_productor}. Skipping payout.`);
       return;
     }
 
@@ -1080,7 +1187,7 @@ export class PedidosService {
     if (paymentProvider === 'paypal') {
       // PayPal Payouts flow
       if (!pp.productores?.paypal_email) {
-        console.warn(`[pedidos] Productor ${id_productor} sin PayPal email. Dinero retenido en plataforma hasta completar configuración.`);
+        this.logger.warn(`[pedidos] Productor ${id_productor} sin PayPal email. Dinero retenido en plataforma hasta completar configuración.`);
         try {
           await this.prisma.notificaciones.create({
             data: {
@@ -1092,7 +1199,7 @@ export class PedidosService {
             },
           });
         } catch (err: any) {
-          console.error('[pedidos] Failed to create notification', err?.message);
+          this.logger.warn(`[pedidos] Failed to create notification: ${err?.message}`);
         }
         return;
       }
@@ -1110,8 +1217,12 @@ export class PedidosService {
             },
             orderBy: { vigente_desde: 'desc' },
           });
-          const tipoCambio = tasa ? Number(tasa.tasa) : 20;
-          amountUSD = monto_neto / tipoCambio;
+          if (!tasa) {
+            throw new InternalServerErrorException(
+              `No hay tasa de cambio ${moneda}→USD vigente. Configurar en la tabla tasas_cambio antes de procesar payouts.`,
+            );
+          }
+          amountUSD = monto_neto / Number(tasa.tasa);
         }
         amountUSD = parseFloat(amountUSD.toFixed(2));
 
@@ -1142,9 +1253,9 @@ export class PedidosService {
           data: { id_payout: payout.id_payout },
         });
 
-        console.log(`[pedidos] PayPal Payout creado al confirmar entrega. Productor ${id_productor}, Batch: ${payoutResult.batchId}`);
+        this.logger.log(`[pedidos] PayPal Payout creado al confirmar entrega. Productor ${id_productor}, Batch: ${payoutResult.batchId}`);
       } catch (error: any) {
-        console.error(`[pedidos] Error al crear PayPal payout post-entrega para productor ${id_productor}:`, error?.message);
+        this.logger.error(`[pedidos] Error al crear PayPal payout post-entrega para productor ${id_productor}: ${error?.message}`);
         const today = new Date();
         const payoutFallido = await this.prisma.payouts.create({
           data: {
@@ -1173,7 +1284,7 @@ export class PedidosService {
     } else {
       // Stripe Connect flow (unchanged)
       if (!pp.productores?.stripe_account_id || !pp.productores.stripe_onboarding_completed) {
-        console.warn(`[pedidos] Productor ${id_productor} sin onboarding Stripe. Dinero retenido en plataforma hasta completar configuración.`);
+        this.logger.warn(`[pedidos] Productor ${id_productor} sin onboarding Stripe. Dinero retenido en plataforma hasta completar configuración.`);
         try {
           await this.prisma.notificaciones.create({
             data: {
@@ -1185,7 +1296,7 @@ export class PedidosService {
             },
           });
         } catch (err: any) {
-          console.error('[pedidos] Failed to create notification', err?.message);
+          this.logger.warn(`[pedidos] Failed to create notification: ${err?.message}`);
         }
         return;
       }
@@ -1196,18 +1307,18 @@ export class PedidosService {
         try {
           const openDisputes = await this.stripeService.countOpenDisputesForPaymentIntent(paymentIntent);
           if (openDisputes > 0) {
-            console.warn(`[pedidos] Disputa(s) abierta(s) detectada(s) (${openDisputes}) para pedido ${id_pedido}. Reteniendo pago hasta resolución.`);
+            this.logger.warn(`[pedidos] Disputa(s) abierta(s) detectada(s) (${openDisputes}) para pedido ${id_pedido}. Reteniendo pago hasta resolución.`);
             return;
           }
         } catch (err: any) {
-          console.error('[pedidos] Error checking disputes, skipping transfer:', err?.message);
+          this.logger.error(`[pedidos] Error checking disputes, skipping transfer: ${err?.message}`);
           return;
         }
       }
 
       const montoNetoCents = monto_neto ? Math.round(monto_neto * 100) : 0;
       if (montoNetoCents <= 0) {
-        console.warn(`[pedidos] Monto neto no positivo para productor ${id_productor}. Skipping transfer.`);
+        this.logger.warn(`[pedidos] Monto neto no positivo para productor ${id_productor}. Skipping transfer.`);
         return;
       }
 
@@ -1245,9 +1356,9 @@ export class PedidosService {
           data: { id_payout: payout.id_payout },
         });
 
-        console.log(`[pedidos] Payout creado al confirmar entrega. Productor ${id_productor}, Transfer: ${transfer.id}`);
+        this.logger.log(`[pedidos] Payout creado al confirmar entrega. Productor ${id_productor}, Transfer: ${transfer.id}`);
       } catch (error: any) {
-        console.error(`[pedidos] Error al crear transfer post-entrega para productor ${id_productor}:`, error?.message);
+        this.logger.error(`[pedidos] Error al crear transfer post-entrega para productor ${id_productor}: ${error?.message}`);
         const today = new Date();
         const payoutFallido = await this.prisma.payouts.create({
           data: {
@@ -1288,18 +1399,17 @@ export class PedidosService {
           id_productor,
         },
       },
-      include: { pedidos: { include: { envios: true } } },
+      include: { envios: true },
     });
 
     if (!pedidoProductor)
       throw new NotFoundException("Pedido no encontrado para este productor");
 
-    const envio = pedidoProductor.pedidos.envios?.[0];
-    if (!envio)
-      throw new NotFoundException("No hay envío registrado para este pedido");
+    if (!pedidoProductor.id_envio || !pedidoProductor.envios)
+      throw new NotFoundException("No hay envío registrado para este productor en este pedido");
 
     const updated = await this.prisma.envios.update({
-      where: { id_envio: envio.id_envio },
+      where: { id_envio: pedidoProductor.id_envio },
       data: {
         numero_rastreo,
         fecha_envio: new Date(),
@@ -1494,6 +1604,71 @@ export class PedidosService {
     }
 
     return quotes;
+  }
+
+  @Cron('0 */30 * * * *')
+  async expirarPedidosPendientes() {
+    const hace2Horas = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const zombies = await this.prisma.pedidos.findMany({
+      where: {
+        estado: 'pendiente',
+        fecha_creacion: { lt: hace2Horas },
+        eliminado_en: null,
+      },
+      include: {
+        detalle_pedido: {
+          select: { id_producto: true, cantidad: true, id_detalle: true },
+        },
+      },
+    });
+
+    if (zombies.length === 0) return;
+
+    this.logger.log(`[pedidos] Expirando ${zombies.length} pedido(s) pendiente(s) sin pago confirmado`);
+
+    for (const pedido of zombies) {
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          for (const detalle of pedido.detalle_pedido) {
+            const inv = await tx.inventario.findFirst({
+              where: { id_producto: detalle.id_producto },
+              select: { id_inventario: true, stock: true },
+            });
+            if (inv) {
+              const restaurar = Number(detalle.cantidad);
+              await tx.inventario.update({
+                where: { id_inventario: inv.id_inventario },
+                data: { stock: { increment: restaurar } },
+              });
+              await tx.movimientos_inventario.create({
+                data: {
+                  id_inventario: inv.id_inventario,
+                  id_pedido: pedido.id_pedido,
+                  tipo: 'cancelacion',
+                  cantidad: restaurar,
+                  stock_resultante: Number(inv.stock) + restaurar,
+                  motivo: `Pedido ${pedido.id_pedido} expiró sin pago`,
+                },
+              });
+            }
+          }
+          await tx.pedidos.update({
+            where: { id_pedido: pedido.id_pedido },
+            data: { estado: 'cancelado' },
+          });
+          await tx.auditoria.create({
+            data: {
+              accion: 'expirar_pedido_sin_pago',
+              tabla_afectada: 'pedidos',
+              registro_id: String(pedido.id_pedido),
+              valor_nuevo: { estado: 'cancelado', motivo: 'Sin pago confirmado en 2 horas' } as any,
+            },
+          });
+        });
+      } catch (err: any) {
+        this.logger.error(`[pedidos] Error al expirar pedido ${pedido.id_pedido}: ${err?.message}`);
+      }
+    }
   }
 }
 

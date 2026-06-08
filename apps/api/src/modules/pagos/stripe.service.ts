@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 const Stripe = require('stripe');
 
@@ -42,12 +42,17 @@ export interface CreatePaymentIntentResult {
 
 @Injectable()
 export class StripeService {
+  private readonly logger = new Logger(StripeService.name);
   private stripe: any;
 
   constructor(private readonly configService: ConfigService) {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (!secretKey) {
       throw new Error('STRIPE_SECRET_KEY is not defined');
+    }
+    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+    if (!webhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET is not defined');
     }
     this.stripe = new Stripe(secretKey);
   }
@@ -208,7 +213,7 @@ export class StripeService {
       });
       return disputes.data.length > 0;
     } catch (error: any) {
-      console.error('[stripe] Error checking disputes for charge', chargeId, ':', error?.message);
+      this.logger.error(`[stripe] Error checking disputes for charge ${chargeId}: ${error?.message}`);
       // En caso de error, asumir que hay disputa (ser conservador)
       return true;
     }
@@ -234,7 +239,7 @@ export class StripeService {
       }
       return openDisputeCount;
     } catch (error: any) {
-      console.error('[stripe] Error checking disputes for payment intent', paymentIntentId, ':', error?.message);
+      this.logger.error(`[stripe] Error checking disputes for payment intent ${paymentIntentId}: ${error?.message}`);
       return 0;
     }
   }

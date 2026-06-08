@@ -39,6 +39,12 @@ const TRANSPORTISTAS = [
   },
 ];
 
+const COMISIONES_DEFAULT = [
+  { alcance: 'global', porcentaje: 0.1500, prioridad: 1000 },
+  { alcance: 'pais', pais_iso2: 'US', porcentaje: 0.1800, prioridad: 500 },
+  { alcance: 'pais', pais_iso2: 'MX', porcentaje: 0.1500, prioridad: 500 },
+];
+
 const CONFIGURACION = [
   { clave: 'IMPUESTO_IVA', valor: '16', tipo: 'numero', descripcion: 'Porcentaje de IVA' },
   { clave: 'IMPUESTO_IEPS', valor: '26.5', tipo: 'numero', descripcion: 'Porcentaje de IEPS para bebidas alcohólicas' },
@@ -51,6 +57,27 @@ const CONFIGURACION = [
   { clave: 'COMISION_PLATAFORMA', valor: '10', tipo: 'numero', descripcion: 'Porcentaje de comisión de la plataforma' },
   { clave: 'IVA_INCLUIDO', valor: 'true', tipo: 'boolean', descripcion: 'IVA incluido en precios' },
 ];
+
+async function seedComisiones() {
+  console.log('\n=== Comisiones ===');
+  for (const c of COMISIONES_DEFAULT) {
+    const existing = await prisma.comisiones.findFirst({
+      where: {
+        alcance: c.alcance,
+        pais_iso2: c.pais_iso2 ?? null,
+        id_categoria: null,
+        id_productor: null,
+        activo: true,
+      },
+    });
+    if (existing) {
+      console.log(`  ✓ Already exists: ${c.alcance}${c.pais_iso2 ? `/${c.pais_iso2}` : ''} → ${(Number(existing.porcentaje) * 100).toFixed(2)}%`);
+    } else {
+      await prisma.comisiones.create({ data: c });
+      console.log(`  ✓ Created: ${c.alcance}${c.pais_iso2 ? `/${c.pais_iso2}` : ''} → ${(c.porcentaje * 100).toFixed(2)}% (prioridad ${c.prioridad})`);
+    }
+  }
+}
 
 async function main() {
   console.log('🌱 Starting base seed...\n');
@@ -139,6 +166,8 @@ async function main() {
         console.log(`  ✓ Created: ${config.clave} = ${config.valor}`);
       }
     }
+
+    await seedComisiones();
 
     console.log('\n✅ Base seed completed successfully!');
   } catch (error) {

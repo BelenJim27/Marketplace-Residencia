@@ -14,6 +14,9 @@ export class PaypalService {
     this.clientSecret = this.configService.get<string>('PAYPAL_CLIENT_SECRET') ?? '';
     this.mode = (this.configService.get<string>('PAYPAL_MODE') || 'sandbox') as 'sandbox' | 'live';
     this.webhookId = this.configService.get<string>('PAYPAL_WEBHOOK_ID') || '';
+    if (!this.webhookId) {
+      this.logger.warn('PAYPAL_WEBHOOK_ID no configurado — todos los webhooks de PayPal serán rechazados. Configurar en variables de entorno.');
+    }
   }
 
   private getBaseUrl(): string {

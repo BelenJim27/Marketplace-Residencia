@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Headers, HttpCode, Ip, Post, UnauthorizedException } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   LoginAuthDto,
   LogoutAuthDto,
@@ -13,12 +14,14 @@ import { AuthService } from './auth.service';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('register')
   @HttpCode(201)
   register(@Body() dto: RegisterAuthDto) {
     return this.authService.register(dto);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('login')
   @HttpCode(200)
   login(@Body() dto: LoginAuthDto) {
@@ -47,12 +50,14 @@ export class AuthController {
     return this.authService.logout(dto);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 300_000 } })
   @Post('password-reset/request')
   @HttpCode(200)
   requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
     return this.authService.requestPasswordReset(dto);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 300_000 } })
   @Post('password-reset/confirm')
   @HttpCode(200)
   resetPassword(@Body() dto: ResetPasswordDto) {

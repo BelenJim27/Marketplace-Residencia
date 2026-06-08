@@ -7,7 +7,7 @@ import Image from "next/image";
 import { ShoppingCart, X, Heart, ChevronRight, Sparkles, Filter } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
-import { useAuth } from "@/context/AuthContext";
+
 import { useLocale } from "@/context/LocaleContext";
 import { semanticColors, hexFallbacks } from "@/lib/colors";
 import { catalogColors } from "@/lib/colors-catalog";
@@ -631,7 +631,7 @@ export default function ProductCatalogEnhanced() {
   const searchParams = useSearchParams();
   const { agregarProducto, items: carritoItems } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
-  const { isAuthenticated } = useAuth();
+
   const { convertPrice, t } = useLocale();
 
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -910,10 +910,6 @@ export default function ProductCatalogEnhanced() {
     (filtros.busqueda ? 1 : 0);
 
   const toggleWishlist = (producto: Producto) => {
-    if (!isAuthenticated) {
-      router.push("/auth/sign-in?redirect=/cliente/producto");
-      return;
-    }
     if (isInWishlist(producto.id_producto)) {
       eliminarWishlist(producto.id_producto);
     } else {

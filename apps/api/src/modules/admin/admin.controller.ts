@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Logger, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/rbac.guard';
@@ -9,6 +9,8 @@ import { RevisarSolicitudDto } from '../productores/dto/productores.dto';
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN', 'administrador')
 export class AdminController {
+  private readonly logger = new Logger(AdminController.name);
+
   constructor(private readonly adminService: AdminService) {}
 
   @Get('stats')
@@ -60,11 +62,7 @@ export class AdminController {
     try {
       return await this.adminService.revisarSolicitud(id, dto, req.user.id_usuario);
     } catch (error) {
-      console.error('ERROR EN API ADMIN:', {
-        route: '/admin/productores/:id/revisar',
-        id,
-        error,
-      });
+      this.logger.error(`ERROR EN API ADMIN /admin/productores/${id}/revisar: ${(error as Error)?.message}`);
       throw new HttpException({ error: String(error) }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }

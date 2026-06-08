@@ -106,7 +106,7 @@ export default function SolicitarPage() {
   const [uploading, setUploading]         = useState(false);
   const [noElegible, setNoElegible]       = useState(false);
   const [expandidas, setExpandidas]       = useState<number[]>([]);
-  const [touched, setTouched]             = useState({ nombre_marca: false });
+  const [touched, setTouched]             = useState({ nombre_marca: false, rfc: false });
   const [attempted, setAttempted]         = useState(false);
   const [focusedField, setFocusedField]   = useState<string | null>(null);
   const [dragActive, setDragActive]       = useState(false);
@@ -122,15 +122,19 @@ export default function SolicitarPage() {
   });
 
   /* ── derived ──────────────────────────────────────────────────────────── */
+  const RFC_REGEX = /^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/i;
+  const rfcValido = RFC_REGEX.test(form.rfc.trim());
+
   const stepValid = [
     !!form.asociacion,
-    !!form.nombre_marca.trim(),
+    !!form.nombre_marca.trim() && !!form.rfc.trim() && rfcValido,
     form.categorias_ids.length > 0,
     !!certificadoUrl,
   ];
   const showErr = {
     asociacion:   step === 1 && attempted && !form.asociacion,
     nombre_marca: step === 2 && (touched.nombre_marca || attempted) && !form.nombre_marca.trim(),
+    rfc:          step === 2 && (touched.rfc || attempted) && (!form.rfc.trim() || !rfcValido),
     categorias:   step === 3 && attempted && form.categorias_ids.length === 0,
   };
 
@@ -655,6 +659,23 @@ export default function SolicitarPage() {
                 {showErr.nombre_marca
                   ? <ErrMsg msg={t("Escribe el nombre de tu marca")} C={C} SANS={SANS} />
                   : <FieldHint text={`${form.nombre_marca.length}/150 ${t("caracteres")}`} C={C} SANS={SANS} />
+                }
+              </div>
+
+              {/* RFC */}
+              <div>
+                <Label text={t("RFC")} required C={C} SANS={SANS} />
+                <input
+                  type="text" value={form.rfc} maxLength={13}
+                  placeholder="XAXX010101000"
+                  style={{ ...inp("rfc", showErr.rfc), fontFamily: MONO, letterSpacing: "0.08em" }}
+                  onFocus={() => setFocusedField("rfc")}
+                  onBlur={() => { setFocusedField(null); setTouched(t => ({ ...t, rfc: true })); }}
+                  onChange={e => setField("rfc", e.target.value.toUpperCase().replace(/[^A-ZÑ&0-9]/g, ""))}
+                />
+                {showErr.rfc
+                  ? <ErrMsg msg={!form.rfc.trim() ? t("El RFC es obligatorio para envíos y facturación") : t("RFC inválido. Formato: XXXX000000XX0 (ej: XAXX010101000)")} C={C} SANS={SANS} />
+                  : <FieldHint text={`${form.rfc.length}/13 · ${t("Personas físicas: 13 chars · Personas morales: 12 chars")}`} C={C} SANS={SANS} />
                 }
               </div>
 

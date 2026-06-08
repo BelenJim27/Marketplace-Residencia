@@ -1,7 +1,13 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as nodemailer from 'nodemailer';
 import { FacturaPdfService } from './factura-pdf.service';
+
+function redactEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  return `${local.slice(0, 2)}***@${domain}`;
+}
 
 interface SendEmailOptions {
   to: string;
@@ -12,6 +18,7 @@ interface SendEmailOptions {
 
 @Injectable()
 export class EmailService {
+  private readonly logger = new Logger(EmailService.name);
   private apiKey: string;
   private fromEmail: string;
   private isProduction: boolean;
@@ -33,9 +40,9 @@ export class EmailService {
         service: 'gmail',
         auth: { user: gmailUser, pass: gmailPass },
       });
-      console.log(`✅ Gmail SMTP configurado (${gmailUser})`);
+      this.logger.log(`Gmail SMTP configurado (${gmailUser})`);
     } else if (!this.apiKey) {
-      console.warn('⚠️  Sin GMAIL_APP_PASSWORD ni SENDGRID_API_KEY. Los emails serán simulados.');
+      this.logger.warn('Sin GMAIL_APP_PASSWORD ni SENDGRID_API_KEY. Los emails serán simulados.');
     }
   }
 
@@ -451,7 +458,7 @@ export class EmailService {
           contentType: a.type,
         })),
       });
-      console.log(`✅ [Gmail] Email enviado a ${options.to} — "${options.subject}"`);
+      this.logger.log(`[Gmail] Email enviado a ${redactEmail(options.to)} — "${options.subject}"`);
       return;
     }
 
@@ -487,22 +494,20 @@ export class EmailService {
             const parsed = JSON.parse(rawError);
             message = parsed.errors?.[0]?.message || rawError;
           } catch { /* response was not JSON */ }
-          console.error(`❌ SendGrid HTTP ${response.status}: ${message}`);
+          this.logger.error(`SendGrid HTTP ${response.status}: ${message}`);
           throw new BadRequestException(`SendGrid Error (${response.status}): ${message}`);
         }
 
-        console.log(`✅ [SendGrid] Email enviado a ${options.to} — "${options.subject}"`);
+        this.logger.log(`[SendGrid] Email enviado a ${redactEmail(options.to)} — "${options.subject}"`);
         return;
       } catch (error: any) {
-        console.error('❌ Error sending email via SendGrid:', error?.message ?? error);
+        this.logger.error(`Error sending email via SendGrid: ${error?.message ?? error}`);
         throw error;
       }
     }
 
     // Sin configuración: modo simulado
-    console.log('📧 [Email] Modo simulado:');
-    console.log(`   Para: ${options.to}`);
-    console.log(`   Asunto: ${options.subject}`);
+    this.logger.debug(`[Email] Modo simulado — Para: ${redactEmail(options.to)} — Asunto: "${options.subject}"`);
   }
 
   async sendSolicitudRecibidaEmail(email: string, nombre: string): Promise<void> {
@@ -952,7 +957,7 @@ export class EmailService {
         metodoPago: datos.metodoPago ?? 'Pago en una sola exhibición',
       });
     } catch (e: any) {
-      console.error('[factura-pdf] Error generando PDF:', e?.message);
+      this.logger.error(`[factura-pdf] Error generando PDF: ${e?.message}`);
     }
 
     await this.sendEmail({
@@ -962,6 +967,15 @@ export class EmailService {
       attachments: pdfBuffer
         ? [{ filename: `factura-${datos.folio}.pdf`, content: pdfBuffer, type: 'application/pdf' }]
         : [],
+    });
+  }
+
+  async sendAdminAlert(subject: string, body: string): Promise<void> {
+    const adminEmail = process.env.ADMIN_EMAIL || this.fromEmail;
+    await this.sendEmail({
+      to: adminEmail,
+      subject: `[Alerta Marketplace] ${subject}`,
+      html: `<p style="font-family:monospace;white-space:pre-wrap;">${body.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`,
     });
   }
 }

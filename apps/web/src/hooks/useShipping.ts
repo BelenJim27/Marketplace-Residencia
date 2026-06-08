@@ -103,6 +103,8 @@ function buildOpcionesAgregadas(grupos: GrupoEnvio[]): OpcionAgregada[] {
       synthetic.quotesByProductor[grupo.id_productor] = cheapest;
     }
   }
+  // If no producer had any quotes, don't show a $0 phantom option
+  if (Object.keys(synthetic.quotesByProductor).length === 0) return [];
   return [synthetic];
 }
 

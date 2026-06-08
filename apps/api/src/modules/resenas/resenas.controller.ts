@@ -8,6 +8,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import {
   CreateResenaDto,
   ModerarResenaDto,
@@ -23,8 +24,8 @@ export class ResenasController {
   // ─── Rutas específicas primero (deben ir ANTES que :id genérico) ───────────
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Query() query: PaginacionQueryDto) {
+    return this.service.findAll(query);
   }
 
   @Get('producto/:id')

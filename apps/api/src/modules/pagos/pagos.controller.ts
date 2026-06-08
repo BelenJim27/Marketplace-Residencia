@@ -7,6 +7,8 @@ import { StripeService } from './stripe.service';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { AuthGuard } from '../auth/guards/auth.guard';
+import { RolesGuard } from '../auth/guards/rbac.guard';
+import { Roles } from '../auth/guards/roles.decorator';
 
 @Controller('pagos')
 export class PagosController {
@@ -55,6 +57,12 @@ export class PagosController {
     } else if (event.type === 'account.updated') {
       // Connect onboarding progress — flip stripe_onboarding_completed when KYC clears.
       await this.connectService.syncFromAccountUpdated(event.data.object);
+    } else if (event.type === 'charge.dispute.closed') {
+      const dispute = event.data.object as any;
+      const paymentIntentId: string = dispute.payment_intent ?? '';
+      if (paymentIntentId) {
+        await this.service.handleDisputeClosed(paymentIntentId, dispute.status);
+      }
     }
 
     return { received: true };
@@ -108,23 +116,33 @@ export class PagosController {
     return { received: true };
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
   @Post(':id/reembolso')
   reembolsarPago(@Param('id') id: string) {
     return this.service.reembolsarPago(id);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
   @Get() findAll(@Query('estado') estado?: string, @Query('proveedor') proveedor?: string) {
     return this.service.findAll({ estado, proveedor });
   }
-  @UseGuards(AuthGuard)
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
-  @UseGuards(AuthGuard)
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
   @Post() create(@Body() dto: CreatePagoDto) { return this.service.create(dto); }
-  @UseGuards(AuthGuard)
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
   @Patch(':id') update(@Param('id') id: string, @Body() dto: UpdatePagoDto) { return this.service.update(id, dto); }
-  @UseGuards(AuthGuard)
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
   @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }
 
   @UseGuards(AuthGuard)

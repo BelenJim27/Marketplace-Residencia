@@ -109,15 +109,42 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Detectar cambio de usuario y recargar wishlist
+  // Detectar cambio de usuario y recargar wishlist (con merge al hacer login)
   useEffect(() => {
     try {
       const usuario = getCookie("usuario");
       const usuarioId = usuario ? JSON.parse(usuario).id_usuario || "guest" : "guest";
-      
-      if (usuarioId !== currentUserId) {
-        console.log(`🔄 Wishlist: cambio de usuario ${currentUserId} → ${usuarioId}`);
-        setCurrentUserId(usuarioId);
+
+      if (usuarioId === currentUserId) return;
+
+      console.log(`🔄 Wishlist: cambio de usuario ${currentUserId} → ${usuarioId}`);
+      const wasGuest = currentUserId === "guest" || currentUserId === null;
+      setCurrentUserId(usuarioId);
+
+      if (wasGuest && usuarioId !== "guest") {
+        // Login detectado: subir items del invitado al backend antes de recargar
+        (async () => {
+          try {
+            const guestKey = `${STORAGE_KEY_PREFIX}_guest`;
+            const guestStored = localStorage.getItem(guestKey);
+            const guestItems: WishlistItem[] = guestStored ? JSON.parse(guestStored) : [];
+
+            if (guestItems.length > 0) {
+              const token = getCookie("token") || "";
+              for (const item of guestItems) {
+                try {
+                  await api.wishlist.add(token, {
+                    id_usuario: usuarioId,
+                    id_producto: item.id_producto.toString(),
+                  });
+                } catch { /* duplicado o error: ignorar */ }
+              }
+              localStorage.removeItem(guestKey);
+            }
+          } catch { /* ignore merge errors */ }
+          await cargarWishlist();
+        })();
+      } else {
         cargarWishlist();
       }
     } catch { /* ignore */ }
