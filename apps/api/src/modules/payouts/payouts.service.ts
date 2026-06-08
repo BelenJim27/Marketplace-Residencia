@@ -208,9 +208,29 @@ export class PayoutsService {
 
     try {
       const referenceId = `payout-${payout.id_payout}`;
+
+      // PayPal solo acepta USD. Convertir si el payout está en otra moneda.
+      let amountUSD = Number(payout.monto_neto);
+      if ((payout.moneda ?? 'USD') !== 'USD') {
+        const ahora = new Date();
+        const tasa = await this.prisma.tasas_cambio.findFirst({
+          where: {
+            moneda_origen: payout.moneda,
+            moneda_destino: 'USD',
+            vigente_desde: { lte: ahora },
+            OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: ahora } }],
+          },
+          orderBy: { vigente_desde: 'desc' },
+        });
+        if (!tasa) {
+          throw new Error(`Sin tasa de cambio activa ${payout.moneda}→USD para el payout ${payout.id_payout}`);
+        }
+        amountUSD = amountUSD * Number(tasa.tasa);
+      }
+
       const payout_result = await this.paypalService.createPayout({
         paypalEmail: productor.paypal_email,
-        amountUSD: Number(payout.monto_neto),
+        amountUSD: Math.round(amountUSD * 100) / 100,
         referenceId,
       });
 

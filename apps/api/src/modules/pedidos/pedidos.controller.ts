@@ -72,7 +72,7 @@ export class PedidosController {
     if (!isAdmin && userProductorId !== id_productor) {
       throw new ForbiddenException('Solo puedes actualizar el estado de tus propios pedidos');
     }
-    return this.service.updateOrderStatusForProductor(id_pedido, id_productor, estado);
+    return this.service.updateOrderStatusForProductor(id_pedido, id_productor, estado, isAdmin);
   }
 
   @UseGuards(AuthGuard)

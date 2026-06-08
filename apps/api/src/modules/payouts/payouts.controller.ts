@@ -22,6 +22,12 @@ export class PayoutsController {
     return this.service.findByProductor(id_productor);
   }
 
+  @Get('resumen-pendientes')
+  @Roles('administrador')
+  resumenPendientes() {
+    return this.service.resumenPendientes();
+  }
+
   @Get(':id')
   @Roles('administrador')
   findOne(@Param('id') id: string) {
@@ -38,11 +44,5 @@ export class PayoutsController {
   @Roles('administrador')
   actualizarEstado(@Param('id') id: string, @Body() dto: UpdatePayoutEstadoDto) {
     return this.service.actualizarEstado(id, dto);
-  }
-
-  @Get('resumen-pendientes')
-  @Roles('administrador')
-  resumenPendientes() {
-    return this.service.resumenPendientes();
   }
 }

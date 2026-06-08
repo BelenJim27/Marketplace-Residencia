@@ -4,7 +4,6 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
 import { ComisionesService } from "../comisiones/comisiones.service";
 import { EmailService } from "../email/email.service";
-import { FedexService } from "../envios/fedex.service";
 import { SkydropxService } from "../envios/skydropx.service";
 import { PaypalService } from "../pagos/paypal.service";
 import { StripeService } from "../pagos/stripe.service";
@@ -28,7 +27,6 @@ export class PedidosService {
     private readonly authService: AuthService,
     private readonly comisionesService: ComisionesService,
     private readonly emailService: EmailService,
-    private readonly fedexService: FedexService,
     private readonly skydropxService: SkydropxService,
     private readonly stripeService: StripeService,
     private readonly paypalService: PaypalService,
@@ -93,24 +91,33 @@ export class PedidosService {
 
     const pedidos = await this.findPedidosByProductor(id_productor);
     const ventas = pedidos.flatMap((pedido) =>
-      pedido.detalle_pedido.map((detalle) => ({
-        id_pedido: pedido.id_pedido,
-        id_detalle: detalle.id_detalle,
-        producto: detalle.productos.nombre,
-        tienda: detalle.productos.tiendas?.nombre ?? "Sin tienda",
-        precio_unitario: Number(detalle.precio_compra),
-        cantidad: Number(detalle.cantidad),
-        total: Number(
-          (Number(detalle.precio_compra) * Number(detalle.cantidad)).toFixed(2),
-        ),
-        status: pedido.estado,
-        fecha: pedido.fecha_creacion,
-        moneda: pedido.moneda,
-        moneda_referencia: pedido.moneda_referencia,
-        pais_destino_iso2: pedido.pais_destino_iso2,
-        tipo_cambio: pedido.tipo_cambio,
-        pedido_total: Number(pedido.total),
-      })),
+      pedido.detalle_pedido
+        .filter((d) => {
+          // Only expose line items that belong to this producer
+          const prod = d.productos;
+          return (
+            prod?.tiendas?.id_productor === id_productor ||
+            prod?.lotes?.id_productor === id_productor
+          );
+        })
+        .map((detalle) => ({
+          id_pedido: pedido.id_pedido,
+          id_detalle: detalle.id_detalle,
+          producto: detalle.productos.nombre,
+          tienda: detalle.productos.tiendas?.nombre ?? "Sin tienda",
+          precio_unitario: Number(detalle.precio_compra),
+          cantidad: Number(detalle.cantidad),
+          total: Number(
+            (Number(detalle.precio_compra) * Number(detalle.cantidad)).toFixed(2),
+          ),
+          status: pedido.estado,
+          fecha: pedido.fecha_creacion,
+          moneda: pedido.moneda,
+          moneda_referencia: pedido.moneda_referencia,
+          pais_destino_iso2: pedido.pais_destino_iso2,
+          tipo_cambio: pedido.tipo_cambio,
+          pedido_total: Number(pedido.total),
+        })),
     );
 
     return serializeBigInts({
@@ -225,11 +232,28 @@ export class PedidosService {
     };
   }
   async create(dto: CreatePedidoDto) {
+    // Validar que el país destino esté habilitado para ventas en la plataforma.
+    // Esto evita crear pedidos a destinos que aún no están operativos (e.g., USA en MVP).
+    if (dto.pais_destino_iso2) {
+      const pais = await this.prisma.paises.findUnique({
+        where: { iso2: dto.pais_destino_iso2.toUpperCase() },
+        select: { activo_venta: true, nombre: true },
+      });
+      if (pais && !pais.activo_venta) {
+        throw new BadRequestException(
+          `Las ventas con destino ${pais.nombre ?? dto.pais_destino_iso2} no están habilitadas en este momento.`,
+        );
+      }
+    }
+
+    // El total real lo calcula el backend en createStripePaymentIntent/createPaypalOrder
+    // (validando subtotal contra BD, recalculando envío e impuestos).
+    // El valor que envía el frontend se ignora; se almacena 0 como placeholder.
     const pedido = await this.prisma.pedidos.create({
       data: {
         id_usuario: dto.id_usuario,
         estado: dto.estado?.trim() ?? "pendiente",
-        total: dto.total,
+        total: "0",
         moneda: dto.moneda,
         tipo_cambio: dto.tipo_cambio ?? undefined,
         moneda_referencia: (dto.moneda_referencia?.trim() ?? "USD") as Moneda,
@@ -348,6 +372,17 @@ export class PedidosService {
       );
     }
 
+    // Precio autoritativo: siempre viene de BD, nunca del cliente.
+    // Si el frontend envía un precio diferente (posible manipulación via DevTools),
+    // se rechaza la solicitud.
+    const precioReal = Number(producto.precio_base);
+    const precioCliente = Number(dto.precio_compra);
+    if (Math.abs(precioReal - precioCliente) > 0.01) {
+      throw new BadRequestException(
+        `El precio del producto ${dto.id_producto} no es válido. Recarga la página e intenta de nuevo.`,
+      );
+    }
+
     const detalle = await this.prisma.$transaction(
       async (tx) => {
         const createdDetalle = await tx.detalle_pedido.create({
@@ -357,7 +392,7 @@ export class PedidosService {
           id_productor,
           id_tienda,
           cantidad: dto.cantidad,
-          precio_compra: dto.precio_compra,
+          precio_compra: producto.precio_base,
           moneda_compra: (dto.moneda_compra?.trim() ?? "MXN") as Moneda,
           impuesto: dto.impuesto ?? "0",
         },
@@ -374,18 +409,25 @@ export class PedidosService {
       }
 
       const cantidadADecretar = Number(dto.cantidad);
-      const stockResultante = inventario.stock - cantidadADecretar;
 
-      if (stockResultante < 0) {
+      // Decremento atómico condicional: el WHERE stock >= N y el SET stock = stock - N
+      // ocurren en una sola sentencia SQL, eliminando la race condition de overselling
+      // cuando dos transacciones concurrentes leen el mismo stock antes de actualizarlo.
+      const updateResult = await tx.inventario.updateMany({
+        where: {
+          id_inventario: inventario.id_inventario,
+          stock: { gte: cantidadADecretar },
+        },
+        data: { stock: { decrement: cantidadADecretar } },
+      });
+
+      if (updateResult.count === 0) {
         throw new BadRequestException(
           `Stock insuficiente para el producto ${dto.id_producto}. Disponible: ${inventario.stock}, solicitado: ${cantidadADecretar}.`,
         );
       }
 
-      await tx.inventario.update({
-        where: { id_inventario: inventario.id_inventario },
-        data: { stock: stockResultante },
-      });
+      const stockResultante = inventario.stock - cantidadADecretar;
 
       await tx.movimientos_inventario.create({
         data: {
@@ -808,7 +850,9 @@ export class PedidosService {
         pedidos: {
           include: {
             detalle_pedido: {
-              include: { productos: { include: { lotes: true } } },
+              include: {
+                productos: { include: { lotes: true, tiendas: true } },
+              },
             },
             usuarios: true,
           },
@@ -817,19 +861,21 @@ export class PedidosService {
       orderBy: { creado_en: "desc" },
     });
 
+    const belongsToProductor = (d: any) =>
+      d.productos?.lotes?.id_productor === id_productor ||
+      d.productos?.tiendas?.id_productor === id_productor;
+
     return serializeBigInts(
       pedidosProductor.map((pp) => ({
         id_pedido: pp.id_pedido,
         estado_productor: pp.estado,
         estado_pedido: pp.pedidos.estado,
         cliente: pp.pedidos.usuarios,
-        detalles: pp.pedidos.detalle_pedido.filter(
-          (d) => d.productos?.lotes?.id_productor === id_productor,
-        ),
+        detalles: pp.pedidos.detalle_pedido.filter(belongsToProductor),
         fecha_creacion: pp.creado_en,
         id_envio: pp.id_envio,
         total_parcial: pp.pedidos.detalle_pedido
-          .filter((d) => d.productos?.lotes?.id_productor === id_productor)
+          .filter(belongsToProductor)
           .reduce(
             (sum, d) => sum + Number(d.precio_compra) * Number(d.cantidad),
             0,
@@ -851,10 +897,21 @@ export class PedidosService {
         pedidos: {
           include: {
             detalle_pedido: {
-              include: { productos: { include: { lotes: true } } },
+              include: {
+                productos: { include: { lotes: true, tiendas: true } },
+              },
             },
             usuarios: true,
-            envios: true,
+            envios: {
+              include: {
+                envio_guias: {
+                  where: { eliminado_en: null },
+                  take: 1,
+                  orderBy: { fecha_creacion: 'desc' as const },
+                  select: { payload_response: true },
+                },
+              },
+            },
           },
         },
       },
@@ -863,14 +920,33 @@ export class PedidosService {
     if (!pedidoProductor)
       throw new NotFoundException("Pedido no encontrado para este productor");
 
+    const belongsToProductor = (d: any) =>
+      d.productos?.lotes?.id_productor === id_productor ||
+      d.productos?.tiendas?.id_productor === id_productor;
+
+    const detallesFiltrados = pedidoProductor.pedidos.detalle_pedido.filter(belongsToProductor);
+
+    // Carrier name: prefer guide (post-creation) over quotation (pre-creation)
+    const envioData = pedidoProductor.pedidos.envios?.[0] ?? null;
+    const guiaPayload = (envioData as any)?.envio_guias?.[0]?.payload_response as any;
+    const cotizacion = await this.prisma.envio_cotizaciones.findFirst({
+      where: { id_pedido: toBigIntId(id_pedido) },
+      orderBy: { fecha_solicitud: 'desc' },
+      select: { payload_response: true },
+    });
+    const cotPayload = cotizacion?.payload_response as any;
+    const carrier_name: string | null = guiaPayload?.carrierName ?? cotPayload?.providerName ?? null;
+
+    const is_alcohol = detallesFiltrados.some(
+      (d: any) => (d.productos?.requiere_edad_minima ?? 0) >= 18,
+    );
+
     return serializeBigInts({
       id_pedido: pedidoProductor.id_pedido,
       estado_productor: pedidoProductor.estado,
       pedido: pedidoProductor.pedidos,
-      detalles: pedidoProductor.pedidos.detalle_pedido.filter(
-        (d) => d.productos?.lotes?.id_productor === id_productor,
-      ),
-      envio: pedidoProductor.pedidos.envios?.[0] ?? null,
+      detalles: detallesFiltrados,
+      envio: envioData ? { ...envioData, carrier_name, is_alcohol } : null,
       desglose: {
         subtotal_bruto: pedidoProductor.subtotal_bruto,
         comision_marketplace: pedidoProductor.comision_marketplace,
@@ -886,13 +962,18 @@ export class PedidosService {
     id_pedido: string,
     id_productor: number,
     nuevoEstado: string,
+    isAdmin = false,
   ) {
-    const validStates = ["confirmado", "preparando", "enviado", "entregado"];
-    if (!validStates.includes(nuevoEstado)) {
-      throw new Error(
-        `Estado inválido. Valores permitidos: ${validStates.join(", ")}`,
-      );
-    }
+    // Máquina de estados: solo se permiten transiciones secuenciales hacia adelante.
+    // Admins pueden forzar cualquier transición para corregir errores operativos.
+    const VALID_TRANSITIONS: Record<string, string[]> = {
+      pendiente:  ['confirmado'],
+      confirmado: ['preparando'],
+      preparando: ['enviado'],
+      enviado:    ['entregado'],
+      entregado:  [],
+      cancelado:  [],
+    };
 
     const id_pedido_big = toBigIntId(id_pedido);
 
@@ -904,6 +985,31 @@ export class PedidosService {
         },
       },
     });
+
+    if (!anterior) {
+      throw new NotFoundException(
+        `No se encontró el pedido ${id_pedido} para el productor ${id_productor}`,
+      );
+    }
+
+    const estadoActual = anterior.estado ?? 'pendiente';
+    const transicionesPermitidas = VALID_TRANSITIONS[estadoActual] ?? [];
+
+    if (!isAdmin && !transicionesPermitidas.includes(nuevoEstado)) {
+      const destinos = transicionesPermitidas.length
+        ? transicionesPermitidas.join(', ')
+        : 'ninguna (estado terminal)';
+      throw new BadRequestException(
+        `Transición inválida: ${estadoActual} → ${nuevoEstado}. Permitidas desde "${estadoActual}": ${destinos}.`,
+      );
+    }
+
+    // Admins también deben apuntar a un estado conocido
+    if (!(nuevoEstado in VALID_TRANSITIONS)) {
+      throw new BadRequestException(
+        `Estado desconocido: "${nuevoEstado}". Estados válidos: ${Object.keys(VALID_TRANSITIONS).join(', ')}.`,
+      );
+    }
 
     const updated = await this.prisma.pedido_productor.update({
       where: {
@@ -925,6 +1031,19 @@ export class PedidosService {
         valor_nuevo: { estado: nuevoEstado } as any,
       },
     });
+
+    if (nuevoEstado === 'entregado') {
+      const moneda = (updated.pedidos as any).moneda as Moneda;
+      try {
+        await this.triggerPayoutForProductor(id_pedido_big, id_productor, moneda);
+      } catch (err: any) {
+        // No bloquear el cambio de estado — el payout se rastrea en la tabla payouts
+        // y el cron retryFailedTransfers intentará de nuevo cada 15 min
+        console.error(
+          `[pedidos] triggerPayoutForProductor falló para pedido ${id_pedido_big} productor ${id_productor}: ${err?.message}`,
+        );
+      }
+    }
 
     return serializeBigInts(updated);
   }
@@ -1333,9 +1452,17 @@ export class PedidosService {
       throw new UnprocessableEntityException('El pedido no tiene dirección de envío completa');
     }
 
-    const pesoTotal = pedido.detalle_pedido.reduce((sum, d) => {
-      return sum + (Number(d.productos?.peso_kg ?? 1) * Number(d.cantidad));
-    }, 0);
+    const items = pedido.detalle_pedido;
+    const pesoReal = items.reduce(
+      (s, d) => s + Number(d.productos?.peso_kg ?? 1) * Number(d.cantidad), 0,
+    );
+    const maxLargo = Math.max(10, ...items.map(d => Number(d.productos?.largo_cm ?? 10)));
+    const maxAncho = Math.max(10, ...items.map(d => Number(d.productos?.ancho_cm ?? 10)));
+    const alturaTotal = items.reduce(
+      (s, d) => s + Number(d.productos?.alto_cm ?? 5) * Number(d.cantidad), 0,
+    );
+    const pesoVolumetrico = (maxLargo * maxAncho * alturaTotal) / 5000;
+    const pesoFacturable = Math.max(pesoReal, pesoVolumetrico);
 
     const dto: any = {
       destino: {
@@ -1344,22 +1471,13 @@ export class PedidosService {
         codigo_postal: snapshot.codigo_postal,
         pais: snapshot.pais,
       },
-      peso_kg: pesoTotal,
-      ancho_cm: 30,
-      alto_cm: 20,
-      largo_cm: 40,
+      peso_kg: pesoFacturable,
+      ancho_cm: maxAncho,
+      alto_cm: alturaTotal,
+      largo_cm: maxLargo,
     };
 
-    const esInternacional = snapshot.pais && snapshot.pais !== 'MX';
-    const [fedexResult, skydropxResult] = await Promise.allSettled([
-      this.fedexService.cotizarEnvio(dto),
-      esInternacional ? Promise.resolve([]) : this.skydropxService.cotizarEnvio(dto),
-    ]);
-
-    const quotes = [
-      ...(fedexResult.status === 'fulfilled' ? fedexResult.value : []),
-      ...(skydropxResult.status === 'fulfilled' ? skydropxResult.value : []),
-    ];
+    const quotes = await this.skydropxService.cotizarEnvio(dto);
 
     for (const q of quotes) {
       await this.prisma.envio_cotizaciones.create({

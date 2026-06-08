@@ -9,11 +9,12 @@ import { getCookie } from "@/lib/cookies";
 import { useLocale } from "@/context/LocaleContext";
 
 // Importación limpia del hook genérico
-import { useShipping, ShippingQuote, DireccionDestino } from "./useShipping"; 
+import { useShipping, ShippingQuote, GrupoEnvio, OpcionAgregada, DireccionDestino } from "./useShipping";
 
 import type { CheckoutStep, Direccion, TarjetaMock } from "@/types/checkout";
 
 export type { CheckoutStep, Direccion, TarjetaMock } from "@/types/checkout";
+export type { GrupoEnvio, ShippingQuote, OpcionAgregada } from "./useShipping";
 
 export interface DobRequiredState {
   edadRequerida: number;
@@ -25,23 +26,20 @@ export function useCheckout() {
   const { items, precioTotal, limpiarCarrito } = useCarrito();
   const { user } = useAuth();
   const { currency } = useLocale();
-  const { opciones, loading: cotizandoLoading, error: cotizandoError, seleccionado, cotizarTodos, setSeleccionado } = useShipping();
+  const { grupos, opcionesAgregadas, nivelKey, setNivel, seleccionados, loading: cotizandoLoading, error: cotizandoError, cotizarPorCarrito, todosSeleccionados, tieneAlcohol } = useShipping();
 
   const [paso, setPaso] = useState<CheckoutStep>("direccion");
   const [direcciones, setDirecciones] = useState<Direccion[]>([]);
   const [direccionSeleccionada, setDireccionSeleccionada] = useState<Direccion | null>(null);
   const [mostrarFormDireccion, setMostrarFormDireccion] = useState(false);
-  const [nuevaDireccion, setNuevaDireccion] = useState<Direccion>({ 
-    tipo: "hogar", 
-    pais_iso2: "MX", 
+  const [nuevaDireccion, setNuevaDireccion] = useState<Direccion>({
+    tipo: "hogar",
+    pais_iso2: "MX",
     es_internacional: false,
     calle: "",
     numero: "",
     colonia: "",
   });
-
-  // CAMBIO 3: Actualizado a ShippingQuote | null
-  const [envioSeleccionado, setEnvioSeleccionado] = useState<ShippingQuote | null>(null);
   
   const [tarjeta, setTarjeta] = useState<TarjetaMock>({ numero: "", expiracion: "", cvv: "", nombre: "" });
   const [cargando, setCargando] = useState(false);
@@ -65,22 +63,11 @@ export function useCheckout() {
     0,
   );
 
-  // Calcula el bounding box de todas las dimensiones del carrito
-  const dimsEnvio = useMemo(() => {
-    const max = items.reduce(
-      (acc, item) => ({
-        alto_cm: Math.max(acc.alto_cm, (item as any).alto_cm ?? 0),
-        ancho_cm: Math.max(acc.ancho_cm, (item as any).ancho_cm ?? 0),
-        largo_cm: Math.max(acc.largo_cm, (item as any).largo_cm ?? 0),
-      }),
-      { alto_cm: 0, ancho_cm: 0, largo_cm: 0 },
-    );
-    return {
-      alto_cm: max.alto_cm || 15,
-      ancho_cm: max.ancho_cm || 15,
-      largo_cm: max.largo_cm || 20,
-    };
-  }, [items]);
+  // Items as plain {id_producto, cantidad} for cotizarCarrito
+  const carritoItems = useMemo(
+    () => items.map(i => ({ id_producto: Number(i.id_producto), cantidad: i.cantidad })),
+    [items],
+  );
 
   const hasLoadedRatesRef = useRef(false);
   const hasLoadedDireccionesRef = useRef(false);
@@ -147,23 +134,17 @@ export function useCheckout() {
   useEffect(() => {
     if (!direccionSeleccionada) {
       setDireccionIncompleta(false);
-      setEnvioSeleccionado(null);
       return;
     }
     const destino = extraerDireccionDestino(direccionSeleccionada);
     if (!destino) {
       setDireccionIncompleta(true);
-      setEnvioSeleccionado(null);
-      cotizarTodos(pesoTotal, null, dimsEnvio);
+      cotizarPorCarrito(carritoItems, null);
     } else {
       setDireccionIncompleta(false);
-      cotizarTodos(pesoTotal, destino, dimsEnvio);
+      cotizarPorCarrito(carritoItems, destino);
     }
-  }, [direccionSeleccionada, pesoTotal, dimsEnvio, cotizarTodos, extraerDireccionDestino]);
-
-  useEffect(() => {
-    setEnvioSeleccionado(seleccionado || null);
-  }, [seleccionado]);
+  }, [direccionSeleccionada, carritoItems, cotizarPorCarrito, extraerDireccionDestino]);
 
   const cargarDirecciones = useCallback(async () => {
     if (!user?.id_usuario) return;
@@ -288,15 +269,15 @@ export function useCheckout() {
 
       setPaso("envio");
     } else if (paso === "envio") {
-      if (!envioSeleccionado) {
-        setErrorMensaje("Selecciona un método de envío.");
+      if (!todosSeleccionados) {
+        setErrorMensaje("Selecciona una opción de envío para continuar.");
         return;
       }
       setPaso("pago");
     } else if (paso === "pago") {
       setPaso("resumen");
     }
-  }, [paso, direccionSeleccionada, direccionIncompleta, envioSeleccionado, items]);
+  }, [paso, direccionSeleccionada, direccionIncompleta, todosSeleccionados, items]);
 
   const retrocederPaso = useCallback(() => {
     setErrorMensaje(null);
@@ -325,7 +306,7 @@ export function useCheckout() {
   }, []);
 
   const prepararPago = useCallback(async () => {
-    if (!user?.id_usuario || !direccionSeleccionada || !envioSeleccionado) return null;
+    if (!user?.id_usuario || !direccionSeleccionada || !todosSeleccionados) return null;
     if (metodoPago === 'stripe' && clientSecret && pedidoIdCreado) {
       return { pedidoId: pedidoIdCreado, clientSecret };
     }
@@ -341,13 +322,16 @@ export function useCheckout() {
     let pedidoRecienCreado = false;
 
     try {
-      const costoEnvioOriginal = envioSeleccionado.precioTotal;
-      const envioMoneda = (envioSeleccionado.moneda ?? 'MXN').toUpperCase();
-      // Todos los items del carrito están en MXN (moneda_base = 'MXN').
-      // Convertir el costo de envío a MXN antes de sumar para evitar mezcla de monedas.
-      const costoEnvioMXN = envioMoneda !== 'MXN' && ratesMXN[envioMoneda as keyof typeof ratesMXN]
-        ? parseFloat((costoEnvioOriginal / ratesMXN[envioMoneda as keyof typeof ratesMXN]!).toFixed(2))
-        : costoEnvioOriginal;
+      // Sum all per-producer shipping quotes, converting each to MXN
+      const costoEnvioMXN = parseFloat(
+        Object.values(seleccionados).reduce((sum, q) => {
+          const moneda = (q.moneda ?? 'MXN').toUpperCase();
+          const enMXN = moneda !== 'MXN' && ratesMXN[moneda as keyof typeof ratesMXN]
+            ? q.precioTotal / ratesMXN[moneda as keyof typeof ratesMXN]!
+            : q.precioTotal;
+          return sum + enMXN;
+        }, 0).toFixed(2),
+      );
       const subtotal = parseFloat(precioTotal.toFixed(2));
       const totalConEnvio = parseFloat((precioTotal + costoEnvioMXN).toFixed(2));
       if (pedidoIdCreado) {
@@ -387,31 +371,46 @@ export function useCheckout() {
           });
         }
 
+        // Save a preliminary envio record with the total shipping cost.
+        // Per-producer envios + guides are created automatically after payment confirmation.
+        const primeraSeleccion = Object.values(seleccionados)[0];
         await api.envios.create(token, {
           id_pedido: Number(pedidoId),
           costo_envio: String(costoEnvioMXN),
           moneda_costo: 'MXN',
           peso_kg: String(pesoTotal),
           estado: "preparando",
-          transportista_codigo: (envioSeleccionado as any).carrier,
-          codigo_servicio: envioSeleccionado.productCode,
+          transportista_codigo: (primeraSeleccion as any)?.carrier,
+          codigo_servicio: primeraSeleccion?.productCode,
         });
 
-        await api.envios.guardarCotizacion(token, {
-          id_pedido: Number(pedidoId),
-          precioTotal: envioSeleccionado.precioTotal,
-          fechaEntregaEstimada: envioSeleccionado.fechaEntregaEstimada,
-          request: {
-            destino: extraerDireccionDestino(direccionSeleccionada),
-            peso_kg: pesoTotal,
-          },
-          response: {
-            productCode: envioSeleccionado.productCode,
-            productName: envioSeleccionado.productName,
-            tipo: envioSeleccionado.tipo,
-            moneda: envioSeleccionado.moneda,
-          },
-        });
+        // Save one cotización per producer group so the backend can validate shipping amount
+        const destino = extraerDireccionDestino(direccionSeleccionada);
+        console.log('[useCheckout] Guardando cotizaciones al backend:', Object.entries(seleccionados).map(([idProd, q]) => ({
+          id_productor: idProd,
+          productCode: q.productCode,
+          productName: q.productName,
+          carrier: q.carrier,
+          providerName: q.providerName,
+          precio: q.precioTotal,
+          moneda: q.moneda,
+        })));
+        for (const [idProductor, quote] of Object.entries(seleccionados)) {
+          await api.envios.guardarCotizacion(token, {
+            id_pedido: Number(pedidoId),
+            precioTotal: quote.precioTotal,
+            fechaEntregaEstimada: quote.fechaEntregaEstimada,
+            request: { destino, id_productor: Number(idProductor) },
+            response: {
+              productCode: quote.productCode,
+              productName: quote.productName,
+              providerName: quote.providerName,
+              carrier: quote.carrier,
+              tipo: quote.tipo,
+              moneda: quote.moneda,
+            },
+          });
+        }
 
         // Solo persistir el ID después de que TODO el setup fue exitoso
         setPedidoIdCreado(pedidoId);
@@ -487,7 +486,8 @@ export function useCheckout() {
   }, [
     user,
     direccionSeleccionada,
-    envioSeleccionado,
+    seleccionados,
+    todosSeleccionados,
     precioTotal,
     items,
     pesoTotal,
@@ -539,14 +539,15 @@ export function useCheckout() {
     }
   }, [user?.id_usuario, prepararPago]);
 
-  const totalConEnvio = (() => {
-    if (!envioSeleccionado) return precioTotal;
-    const moneda = (envioSeleccionado.moneda ?? 'MXN').toUpperCase();
-    const envioEnMXN = moneda !== 'MXN' && ratesMXN[moneda as keyof typeof ratesMXN]
-      ? envioSeleccionado.precioTotal / ratesMXN[moneda as keyof typeof ratesMXN]!
-      : envioSeleccionado.precioTotal;
-    return precioTotal + envioEnMXN;
-  })();
+  const totalEnvioMXN = Object.values(seleccionados).reduce((sum, q) => {
+    const moneda = (q.moneda ?? 'MXN').toUpperCase();
+    const enMXN = moneda !== 'MXN' && ratesMXN[moneda as keyof typeof ratesMXN]
+      ? q.precioTotal / ratesMXN[moneda as keyof typeof ratesMXN]!
+      : q.precioTotal;
+    return sum + enMXN;
+  }, 0);
+
+  const totalConEnvio = precioTotal + totalEnvioMXN;
 
   return {
     paso,
@@ -559,11 +560,19 @@ export function useCheckout() {
     nuevaDireccion,
     setNuevaDireccion,
     guardarNuevaDireccion,
-    cotizaciones: opciones,
+    // Multi-producer shipping — unified selection
+    gruposEnvio: grupos,
+    opcionesAgregadas,
+    nivelKey,
+    setNivel,
+    seleccionados,
     cotizandoLoading,
     cotizandoError,
-    envioSeleccionado,
-    setEnvioSeleccionado,
+    todosSeleccionados,
+    tieneAlcohol,
+    totalEnvioMXN,
+    // Keep backward-compat alias
+    cotizaciones: grupos.flatMap(g => g.quotes),
     direccionIncompleta,
     tarjeta,
     setTarjeta,

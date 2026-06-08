@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Moneda {
@@ -68,6 +69,7 @@ model categorias {
   imagen_url                    String?                         @db.VarChar(500)
   activo                        Boolean                         @default(true)
   requiere_edad_minima          Int?
+  codigo_hs_default             String?                         @db.VarChar(20)
   creado_en                     DateTime                        @default(now()) @db.Timestamptz(6)
   categorias                    categorias?                     @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
   other_categorias              categorias[]                    @relation("categoriasTocategorias")

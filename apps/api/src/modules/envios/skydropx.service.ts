@@ -9,6 +9,10 @@ const SKYDROPX_SUPPORTED_COUNTRIES = ['MX', 'US', 'CA', 'CO', 'ES', 'FR', 'GB', 
 const POLL_MAX_ATTEMPTS = 10;
 const POLL_DELAY_MS = 2000;
 
+// Carriers that accept alcoholic beverages via SkydropX (DHL, FedEx, Estafeta, Paquetexpress, Redpack).
+// J&T Express, Sendex, and 99minutos prohibit alcohol by policy.
+const CARRIERS_ALCOHOL_COMPATIBLE = ['dhl', 'fedex', 'estafeta', 'paquetexpress', 'redpack'];
+
 @Injectable()
 export class SkydropxService implements ICarrierService {
   readonly carrierCode = 'skydropx';
@@ -42,14 +46,14 @@ export class SkydropxService implements ICarrierService {
     this.clientId = this.config.get('SKYDROPX_CLIENT_ID', '');
     this.clientSecret = this.config.get('SKYDROPX_CLIENT_SECRET', '');
 
-    this.shipperName = this.config.get('FEDEX_SHIPPER_NAME', 'Productor Mezcal');
-    this.shipperPhone = this.config.get('FEDEX_SHIPPER_PHONE', '9511234567');
+    this.shipperName = this.config.get('SKYDROPX_SHIPPER_NAME', 'Productor Mezcal');
+    this.shipperPhone = this.config.get('SKYDROPX_SHIPPER_PHONE', '9511234567');
     this.shipperEmail = this.config.get('SKYDROPX_SHIPPER_EMAIL', 'envios@marketplace.mx');
-    this.shipperStreet = this.config.get('FEDEX_SHIPPER_STREET', 'Calle Principal 1');
-    this.shipperZip = this.config.get('FEDEX_SHIPPER_POSTAL_CODE', '68000');
+    this.shipperStreet = this.config.get('SKYDROPX_SHIPPER_STREET', 'Calle Principal 1');
+    this.shipperZip = this.config.get('SKYDROPX_SHIPPER_POSTAL_CODE', '68000');
     this.shipperAreaLevel1 = this.config.get('SKYDROPX_SHIPPER_STATE', 'Oaxaca');
-    this.shipperAreaLevel2 = this.config.get('FEDEX_SHIPPER_CITY', 'Oaxaca de Juárez');
-    this.shipperAreaLevel3 = this.config.get('SKYDROPX_SHIPPER_COLONIA', '') || 'Centro';
+    this.shipperAreaLevel2 = this.config.get('SKYDROPX_SHIPPER_CITY', 'Oaxaca de Juárez');
+    this.shipperAreaLevel3 = this.config.get('SKYDROPX_SHIPPER_COLONIA', 'Centro');
   }
 
   // ─── OAuth2 client_credentials ───────────────────────────────────────────
@@ -101,7 +105,8 @@ export class SkydropxService implements ICarrierService {
       const status = err?.response?.status;
       const data = err?.response?.data;
       this.logger.error(`POST ${path} [${status}]: ${JSON.stringify(data ?? err?.message)}`);
-      const msg = (data as any)?.message ?? (data as any)?.error ?? err?.message ?? 'Error SkydropX';
+      const errBody = data as any;
+      const msg = errBody?.errors ?? errBody?.message ?? errBody?.error ?? err?.message ?? 'Error SkydropX';
       throw new HttpException(`SkydropX: ${msg}`, status ?? HttpStatus.BAD_GATEWAY);
     }
   }
@@ -124,10 +129,76 @@ export class SkydropxService implements ICarrierService {
     }
   }
 
-  // ─── Polling helpers ──────────────────────────────────────────────────────
+  // ─── Shared helpers ───────────────────────────────────────────────────────
 
   private delay(ms: number) {
     return new Promise((r) => setTimeout(r, ms));
+  }
+
+  /** Builds the address_from object for quotations and shipments.
+   *  Uses per-producer fields when provided; falls back to global ENV vars. */
+  private buildFromAddress(shipper?: {
+    codigo_postal?: string | null;
+    estado?: string | null;
+    ciudad?: string | null;
+    colonia?: string | null;
+  }) {
+    return {
+      country_code: 'MX',
+      postal_code: shipper?.codigo_postal ?? this.shipperZip,
+      area_level1: shipper?.estado ?? this.shipperAreaLevel1,
+      area_level2: shipper?.ciudad ?? this.shipperAreaLevel2,
+      area_level3: shipper?.colonia ?? this.shipperAreaLevel3,
+    };
+  }
+
+  /** Builds the shipper identity block for shipment creation. */
+  private buildShipperIdentity(productor?: {
+    nombre_marca?: string | null;
+    bodega_calle?: string | null;
+    bodega_telefono?: string | null;
+  } | null) {
+    return {
+      name: productor?.nombre_marca ?? this.shipperName,
+      company: '',
+      reference: productor?.nombre_marca ?? this.shipperName,
+      street1: productor?.bodega_calle ?? this.shipperStreet,
+      phone: productor?.bodega_telefono ?? this.shipperPhone,
+      email: this.shipperEmail,
+    };
+  }
+
+  /** Builds the parcel object for quotation (Rails body key: parcel). */
+  private buildQuotationParcel(dims: {
+    peso_kg?: number | null;
+    largo_cm?: number | null;
+    ancho_cm?: number | null;
+    alto_cm?: number | null;
+  }, contenido?: string) {
+    return {
+      weight: Number(dims.peso_kg ?? 1),
+      length: Number(dims.largo_cm ?? 40),
+      width: Number(dims.ancho_cm ?? 30),
+      height: Number(dims.alto_cm ?? 20),
+      consignment_note: contenido ?? 'Destilado de agave',
+      package_type: 'box',
+    };
+  }
+
+  /** Builds the packages array for shipment creation. */
+  private buildShipmentPackages(
+    dims: { peso_kg?: any; largo_cm?: any; ancho_cm?: any; alto_cm?: any },
+    consignmentCode: string,
+  ) {
+    return [{
+      package_number: 1,
+      weight: Number(dims.peso_kg ?? 1),
+      length: Number(dims.largo_cm ?? 40),
+      width: Number(dims.ancho_cm ?? 30),
+      height: Number(dims.alto_cm ?? 20),
+      consignment_note: consignmentCode,
+      package_type: '4G',
+    }];
   }
 
   private async pollQuotation(id: string): Promise<any> {
@@ -150,17 +221,18 @@ export class SkydropxService implements ICarrierService {
 
     const tipo: 'nacional' | 'internacional' = destPais === 'MX' ? 'nacional' : 'internacional';
 
+    const parcel = this.buildQuotationParcel(dto);
+    const fromAddress = this.buildFromAddress(dto.shipper);
+    this.logger.log(
+      `[cotizarEnvio] payload → from CP=${fromAddress.postal_code} | to CP=${dto.destino.codigo_postal} país=${destPais} | ` +
+      `parcel: weight=${parcel.weight} kg largo=${parcel.length} ancho=${parcel.width} alto=${parcel.height} cm`,
+    );
+
     // Rails API: body envuelto en { quotation: {...} }
     // parcel es singular; area_level1=estado, area_level2=ciudad
     const quotation = await this.post<any>('/quotations', {
       quotation: {
-        address_from: {
-          country_code: 'MX',
-          postal_code: this.shipperZip,
-          area_level1: this.shipperAreaLevel1,
-          area_level2: this.shipperAreaLevel2,
-          area_level3: this.shipperAreaLevel3,
-        },
+        address_from: fromAddress,
         address_to: {
           country_code: destPais,
           postal_code: dto.destino.codigo_postal,
@@ -168,14 +240,7 @@ export class SkydropxService implements ICarrierService {
           area_level2: dto.destino.ciudad ?? '',
           area_level3: dto.destino.colonia || dto.destino.ciudad || 'Centro',
         },
-        parcel: {
-          weight: dto.peso_kg ?? 1,
-          length: dto.largo_cm ?? 40,
-          width: dto.ancho_cm ?? 30,
-          height: dto.alto_cm ?? 20,
-          consignment_note: 'Mezcal artesanal',
-          package_type: 'box',
-        },
+        parcel,
       },
     });
 
@@ -185,15 +250,32 @@ export class SkydropxService implements ICarrierService {
 
     const rates: any[] = completed.rates ?? [];
 
-    if (rates.length > 0) {
-      this.logger.debug(`SkydropX rate sample: ${JSON.stringify(rates[0])}`);
+    this.logger.log(`[cotizarEnvio] SkydropX devolvió ${rates.length} tarifas:`);
+
+    // Dump raw keys of first rate without price so we can find the right field
+    const sinPrecio = rates.filter(r => r.total == null && r.price == null && r.amount == null);
+    if (sinPrecio.length > 0) {
+      this.logger.warn(`[cotizarEnvio] ${sinPrecio.length} tarifas sin precio. Keys de la primera: ${Object.keys(sinPrecio[0]).join(', ')}`);
+      this.logger.warn(`[cotizarEnvio] raw[0] = ${JSON.stringify(sinPrecio[0])}`);
+    }
+
+    for (const r of rates) {
+      const precio = r.total ?? r.price ?? r.amount ?? r.total_price ?? r.final_price ?? r.rate ?? null;
+      const dias = r.days ?? r.delivery_days ?? r.estimated_days ?? null;
+      this.logger.log(
+        `  ${r.provider_display_name ?? r.provider ?? '?'} | ${r.provider_service_name ?? r.service ?? '?'} | ` +
+        `$${precio ?? '?'} ${r.currency ?? 'MXN'} | ${dias ?? '?'} días | success=${r.success}`,
+      );
     }
 
     return rates
       .filter((r) => r.success !== false)
       .map((rate) => {
-        const precio = parseFloat(rate.total ?? rate.price ?? rate.amount ?? '0');
-        const dias = parseInt(String(rate.days ?? rate.delivery_days ?? 3), 10);
+        // Extended price field lookup covering multiple SkydropX API versions
+        const precioRaw = rate.total ?? rate.price ?? rate.amount ?? rate.total_price ?? rate.final_price ?? rate.rate ?? '0';
+        const precio = parseFloat(String(precioRaw));
+        const diasRaw = rate.days ?? rate.delivery_days ?? rate.estimated_days ?? 3;
+        const dias = parseInt(String(diasRaw), 10);
         const fechaEstimada = new Date(Date.now() + dias * 86_400_000).toISOString();
         const providerName: string =
           rate.provider_display_name ?? rate.provider_name ?? rate.carrier_name ?? rate.provider ?? 'SkydropX';
@@ -206,11 +288,23 @@ export class SkydropxService implements ICarrierService {
           providerName,
           tipo,
           precioTotal: precio,
-          moneda: (rate.currency ?? rate.currency_local ?? 'MXN') as string,
+          moneda: (rate.currency_code ?? rate.currency ?? rate.currency_local ?? 'MXN') as string,
           fechaEntregaEstimada: fechaEstimada,
           diasHabilesEstimados: dias,
         } satisfies ShippingQuote;
-      });
+      })
+      .filter((q) => q.precioTotal > 0)  // descartar tarifas sin precio confirmado
+      .filter((q) => {
+        if (!dto.adult_signature) return true;
+        const compatible = CARRIERS_ALCOHOL_COMPATIBLE.some(c =>
+          (q.providerName ?? '').toLowerCase().includes(c),
+        );
+        if (!compatible) {
+          this.logger.warn(`[cotizarEnvio] Carrier "${q.providerName}" excluido — no acepta bebidas alcohólicas`);
+        }
+        return compatible;
+      })
+      .sort((a, b) => a.precioTotal - b.precioTotal);
   }
 
   // Fetches valid consignment_note class codes from SkydropX catalog. Cached after first call.
@@ -242,16 +336,27 @@ export class SkydropxService implements ICarrierService {
     const snap = (envio.pedidos?.direccion_envio_snapshot ?? {}) as Record<string, any>;
     const destPais = (snap.pais_iso2 ?? snap.pais ?? 'MX').toUpperCase();
 
+    // Use per-producer address when available, fall back to global ENV config
+    const productor = (envio as any).productor as {
+      nombre_marca?: string | null;
+      bodega_calle?: string | null;
+      bodega_ciudad?: string | null;
+      bodega_estado?: string | null;
+      bodega_codigo_postal?: string | null;
+      bodega_pais_iso2?: string | null;
+      bodega_telefono?: string | null;
+    } | null;
+
+    const fromAddress = this.buildFromAddress({
+      codigo_postal: productor?.bodega_codigo_postal,
+      estado: productor?.bodega_estado,
+      ciudad: productor?.bodega_ciudad,
+    });
+
     // 1. Cotizar para obtener quotation_id + rate_id frescos
     const quotationRaw = await this.post<any>('/quotations', {
       quotation: {
-        address_from: {
-          country_code: 'MX',
-          postal_code: this.shipperZip,
-          area_level1: this.shipperAreaLevel1,
-          area_level2: this.shipperAreaLevel2,
-          area_level3: this.shipperAreaLevel3,
-        },
+        address_from: fromAddress,
         address_to: {
           country_code: destPais,
           postal_code: snap.codigo_postal ?? '06600',
@@ -291,25 +396,48 @@ export class SkydropxService implements ICarrierService {
     const preferred_provider = ((envio as any).preferred_provider ?? '').toLowerCase();
     const preferred_service = ((envio as any).preferred_service ?? '').toLowerCase();
 
-    const selectedRate = (
-      rates.find((r) => {
-        const rProvider = (
-          r.provider_display_name ?? r.provider_name ?? r.carrier_name ?? r.provider ?? ''
-        ).toLowerCase();
-        const rService = (
-          r.provider_service_name ?? r.service ?? r.service_level_name ?? ''
-        ).toLowerCase();
-        return (
-          (preferred_provider &&
-            (rProvider.includes(preferred_provider) || preferred_provider.includes(rProvider))) ||
-          (preferred_service &&
-            (rService.includes(preferred_service) || preferred_service.includes(rService)))
-        );
-      }) ??
-      [...rates].sort((a, b) =>
-        parseFloat(a.total ?? a.price ?? '0') - parseFloat(b.total ?? b.price ?? '0'),
-      )[0]
+    this.logger.debug(
+      `[createShipment] buscando tarifa: preferred_provider="${preferred_provider}" preferred_service="${preferred_service}" tarifas_disponibles=${JSON.stringify(
+        rates.map(r => ({
+          id: r.id,
+          provider: r.provider_display_name ?? r.provider_name ?? r.carrier_name ?? r.provider,
+          service: r.provider_service_name ?? r.service ?? r.service_level_name,
+          precio: r.total ?? r.price,
+          moneda: r.currency ?? r.currency_local,
+        })),
+      )}`,
     );
+
+    const matchedRate = rates.find((r) => {
+      const rProvider = (
+        r.provider_display_name ?? r.provider_name ?? r.carrier_name ?? r.provider ?? ''
+      ).toLowerCase();
+      const rService = (
+        r.provider_service_name ?? r.service ?? r.service_level_name ?? ''
+      ).toLowerCase();
+      return (
+        (preferred_provider &&
+          (rProvider.includes(preferred_provider) || preferred_provider.includes(rProvider))) ||
+        (preferred_service &&
+          (rService.includes(preferred_service) || preferred_service.includes(rService)))
+      );
+    });
+
+    const cheapestRate = [...rates].sort((a, b) =>
+      parseFloat(a.total ?? a.price ?? '0') - parseFloat(b.total ?? b.price ?? '0'),
+    )[0];
+
+    const selectedRate = matchedRate ?? cheapestRate;
+
+    if (matchedRate) {
+      this.logger.debug(
+        `[createShipment] tarifa ENCONTRADA por nombre: provider="${matchedRate.provider_display_name ?? matchedRate.provider}" service="${matchedRate.provider_service_name ?? matchedRate.service}" precio=${matchedRate.total ?? matchedRate.price}`,
+      );
+    } else {
+      this.logger.warn(
+        `[createShipment] tarifa preferida NO encontrada → usando más barata: provider="${cheapestRate.provider_display_name ?? cheapestRate.provider}" service="${cheapestRate.provider_service_name ?? cheapestRate.service}" precio=${cheapestRate.total ?? cheapestRate.price}`,
+      );
+    }
 
     const pedidoRef = String(envio.id_pedido ?? envio.id ?? 'ORD');
     this.logger.debug(`[createShipment] selectedRate.id=${selectedRate.id} packaging_type=${selectedRate.packaging_type} shipment_creation_type=${selectedRate.shipment_creation_type}`);
@@ -318,18 +446,12 @@ export class SkydropxService implements ICarrierService {
     // consignment_note: SAT c_TipoEmbalaje code for inner product packaging, fetched from catalog
     const consignmentNoteCode = await this.getConsignmentNoteCode();
 
+    const requiresAdultSignature = (envio as any).requires_adult_signature === true;
     const shipmentBody = {
       shipment: {
         quotation_id: quotation.id,
         rate_id: selectedRate.id ?? selectedRate.rate_id,
-        address_from: {
-          name: this.shipperName,
-          company: '',
-          reference: this.shipperName,
-          street1: this.shipperStreet,
-          phone: this.shipperPhone,
-          email: this.shipperEmail,
-        },
+        address_from: this.buildShipperIdentity(productor),
         address_to: {
           name: snap.nombre_destinatario ?? snap.nombre ?? 'Destinatario',
           company: '',
@@ -338,17 +460,11 @@ export class SkydropxService implements ICarrierService {
           phone: snap.telefono ?? snap.phone ?? '0000000000',
           email: snap.email || this.shipperEmail,
         },
-        packages: [
-          {
-            package_number: 1,
-            weight: Number(envio.peso_kg ?? 1),
-            length: Number(envio.largo_cm ?? 40),
-            width: Number(envio.ancho_cm ?? 30),
-            height: Number(envio.alto_cm ?? 20),
-            consignment_note: consignmentNoteCode,
-            package_type: '4G',
-          },
-        ],
+        packages: this.buildShipmentPackages(envio, consignmentNoteCode),
+        ...(requiresAdultSignature ? {
+          adult_signature: true,
+          content_description: (envio as any).contenido_descripcion ?? 'Destilado de agave artesanal',
+        } : {}),
       },
     };
     this.logger.debug(`[createShipment] body=${JSON.stringify(shipmentBody)}`);

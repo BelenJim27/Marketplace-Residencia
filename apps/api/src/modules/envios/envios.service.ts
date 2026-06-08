@@ -1,23 +1,22 @@
-import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { ConflictException, Injectable, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { Moneda } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
-import { CreateEnvioDto, UpdateEnvioDto } from "./dto/envios.dto";
+import { CreateEnvioDto, CotizarEnvioDto, DireccionDestinoDto, UpdateEnvioDto } from "./dto/envios.dto";
 import { ICarrierService } from "./interfaces/carrier.interface";
-import { FedexService } from "./fedex.service";
 import { SkydropxService } from "./skydropx.service";
 
 @Injectable()
 export class EnviosService {
+  private readonly logger = new Logger(EnviosService.name);
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly fedexService: FedexService,
     private readonly skydropxService: SkydropxService,
   ) {}
 
-  private selectCarrier(codigo?: string): ICarrierService {
-    if (codigo?.toUpperCase() === 'SKYDROPX') return this.skydropxService;
-    return this.fedexService;
+  private selectCarrier(_codigo?: string): ICarrierService {
+    return this.skydropxService;
   }
   async findAll() {
     return serializeBigInts(
@@ -74,7 +73,9 @@ export class EnviosService {
       id_servicio = s?.id_servicio ?? null;
     }
 
-    // 4. Creamos el registro usando las variables resueltas arriba
+    // 4. Creamos el registro usando las variables resueltas arriba.
+    // costo_envio se almacena como null en este registro preliminar: el valor
+    // real lo establece crearGuia() con el costo devuelto por el carrier.
     return serializeBigInts(
       await this.prisma.envios.create({
         data: {
@@ -89,7 +90,7 @@ export class EnviosService {
           alto_cm: dto.alto_cm ?? null,
           ancho_cm: dto.ancho_cm ?? null,
           largo_cm: dto.largo_cm ?? null,
-          costo_envio: dto.costo_envio ?? null,
+          costo_envio: null,
           moneda_costo: (dto.moneda_costo?.trim() ?? "MXN") as Moneda,
           estado: dto.estado?.trim() ?? "preparando",
           requires_adult_signature,
@@ -260,7 +261,10 @@ export class EnviosService {
             nombre: true,
             requiere_edad_minima: true,
             categorias_productos: {
-              select: { id_categoria: true },
+              select: {
+                id_categoria: true,
+                categorias: { select: { codigo_hs_default: true } },
+              },
             },
           },
         },
@@ -296,23 +300,46 @@ export class EnviosService {
       .slice(0, 3)
       .join(', ');
 
-    // Obtener dirección del primer productor del pedido para usarla como shipper en FedEx
-    const primerDetalle = await this.prisma.detalle_pedido.findFirst({
-      where: { id_pedido: envio.id_pedido, id_productor: { not: null } },
-      select: {
-        productores: {
-          select: {
-            nombre_marca: true,
-            bodega_calle: true,
-            bodega_ciudad: true,
-            bodega_estado: true,
-            bodega_codigo_postal: true,
-            bodega_pais_iso2: true,
-            bodega_telefono: true,
-          },
-        },
-      },
+    // Derivar HS code de la primera categoría que lo tenga definido, solo si el envío no tiene uno.
+    if (!envio.codigo_hs) {
+      const hsCode = detalles
+        .flatMap((d) => d.productos?.categorias_productos ?? [])
+        .map((cp) => (cp as any).categorias?.codigo_hs_default)
+        .find(Boolean) ?? null;
+      if (hsCode) {
+        await this.prisma.envios.update({
+          where: { id_envio: envio.id_envio },
+          data: { codigo_hs: hsCode },
+        });
+        (envio as any).codigo_hs = hsCode;
+      }
+    }
+
+    // Prefer producer linked directly to this envio (multi-producer flow).
+    // Fall back to the first producer in the order for backwards compatibility.
+    const producerFields = {
+      nombre_marca: true,
+      bodega_calle: true,
+      bodega_ciudad: true,
+      bodega_estado: true,
+      bodega_codigo_postal: true,
+      bodega_pais_iso2: true,
+      bodega_telefono: true,
+    } as const;
+
+    const pedidoProd = await this.prisma.pedido_productor.findFirst({
+      where: { id_envio: envio.id_envio },
+      select: { productores: { select: producerFields } },
     });
+
+    const primerDetalle = pedidoProd
+      ? null
+      : await this.prisma.detalle_pedido.findFirst({
+          where: { id_pedido: envio.id_pedido, id_productor: { not: null } },
+          select: { productores: { select: producerFields } },
+        });
+
+    const productorData = pedidoProd?.productores ?? primerDetalle?.productores ?? null;
 
     const carrier = this.selectCarrier(envio.transportistas?.codigo ?? undefined);
 
@@ -322,12 +349,18 @@ export class EnviosService {
     });
     const cotPayload = cotizacion?.payload_response as any;
 
+    const preferred_provider = cotPayload?.providerName ?? cotPayload?.carrier ?? null;
+    const preferred_service = cotPayload?.productName ?? cotPayload?.productCode ?? null;
+    this.logger.debug(
+      `[crearGuia] cotizacion payload_response=${JSON.stringify(cotPayload)} → preferred_provider=${preferred_provider} preferred_service=${preferred_service}`,
+    );
+
     const result = await carrier.createShipment({
       ...envio,
-      productor: primerDetalle?.productores ?? null,
+      productor: productorData,
       contenido_descripcion: productNames || 'Mezcal artesanal',
-      preferred_provider: cotPayload?.providerName ?? cotPayload?.carrier ?? null,
-      preferred_service: cotPayload?.productName ?? cotPayload?.productCode ?? null,
+      preferred_provider,
+      preferred_service,
     });
 
     if (!result.labelBuffer) {
@@ -361,9 +394,16 @@ export class EnviosService {
             } as any,
           },
         });
+        // Persist actual carrier cost + tracking number
         await tx.envios.update({
           where: { id_envio: toBigIntId(id_envio) },
-          data: { numero_rastreo: result.trackingNumber },
+          data: {
+            numero_rastreo: result.trackingNumber,
+            estado: 'label_purchased',
+            ...(result.cost && result.cost > 0
+              ? { costo_envio: result.cost.toFixed(2), moneda_costo: (result.currency ?? 'MXN') as any }
+              : {}),
+          },
         });
         // No serializar label_pdf (Buffer) — devolver solo metadata
         const { label_pdf: _, ...guiaMeta } = guia as any;
@@ -393,8 +433,8 @@ export class EnviosService {
   }
 
   /**
-   * Registra un evento de tracking buscando por numero_guia (tracking number de FedEx).
-   * Usado por el webhook real de FedEx que envía su propio tracking number.
+   * Registra un evento de tracking buscando por numero_guia.
+   * Usado por el webhook de SkydropX que envía el tracking number.
    */
   async registrarEventoPorGuia(
     numero_guia: string,
@@ -433,6 +473,303 @@ export class EnviosService {
     });
 
     return serializeBigInts({ id_envio: updated.id_envio, estado: updated.estado, numero_guia });
+  }
+
+  /**
+   * Quotes shipping from raw cart items (no pedido required).
+   * Looks up product dimensions and producer address from DB,
+   * groups by producer and quotes SkydropX for each group.
+   * Used during checkout BEFORE a pedido is created.
+   */
+  async cotizarCarrito(
+    items: Array<{ id_producto: number; cantidad: number }>,
+    destino: DireccionDestinoDto,
+  ) {
+    if (!items.length) return [];
+
+    const productos = await this.prisma.productos.findMany({
+      where: { id_producto: { in: items.map(i => BigInt(i.id_producto)) } },
+      include: {
+        tiendas: {
+          select: {
+            id_productor: true,
+            productores: {
+              select: {
+                id_productor: true,
+                nombre_marca: true,
+                bodega_codigo_postal: true,
+                bodega_estado: true,
+                bodega_ciudad: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const productosMap = new Map(productos.map(p => [Number(p.id_producto), p]));
+
+    // Group by producer
+    const grupos = new Map<number, { productor: any; items: Array<{ producto: any; cantidad: number }> }>();
+    for (const item of items) {
+      const prod = productosMap.get(item.id_producto);
+      if (!prod) continue;
+      const id_productor = prod.tiendas?.id_productor;
+      if (id_productor == null) continue;
+      if (!grupos.has(id_productor)) {
+        grupos.set(id_productor, { productor: prod.tiendas?.productores, items: [] });
+      }
+      grupos.get(id_productor)!.items.push({ producto: prod, cantidad: item.cantidad });
+    }
+
+    if (grupos.size === 0) return [];
+
+    const resultados = await Promise.allSettled(
+      Array.from(grupos.entries()).map(async ([id_productor, grupo]) => {
+        const gItems = grupo.items;
+        const pesoReal = gItems.reduce(
+          (s, i) => s + Number(i.producto.peso_kg ?? 1) * i.cantidad, 0,
+        );
+        const maxLargo = Math.max(10, ...gItems.map(i => Number(i.producto.largo_cm ?? 10)));
+        const maxAncho = Math.max(10, ...gItems.map(i => Number(i.producto.ancho_cm ?? 10)));
+        const alturaTotal = gItems.reduce(
+          (s, i) => s + Number(i.producto.alto_cm ?? 5) * i.cantidad, 0,
+        );
+        const pesoVolumetrico = (maxLargo * maxAncho * alturaTotal) / 5000;
+        const pesoFacturable = Math.max(pesoReal, pesoVolumetrico);
+
+        // Log per-product dim data to diagnose missing fields
+        this.logger.log(`[cotizarCarrito] Productor ${id_productor}:`);
+        for (const it of gItems) {
+          this.logger.log(
+            `  producto=${it.producto.nombre} qty=${it.cantidad} | ` +
+            `peso_kg=${it.producto.peso_kg ?? 'NULL(→1)'} ` +
+            `largo=${it.producto.largo_cm ?? 'NULL(→10)'} ` +
+            `ancho=${it.producto.ancho_cm ?? 'NULL(→10)'} ` +
+            `alto=${it.producto.alto_cm ?? 'NULL(→5)'}`,
+          );
+        }
+        this.logger.log(
+          `  → pesoReal=${pesoReal.toFixed(3)} kg | pesoVol=${pesoVolumetrico.toFixed(3)} kg | pesoFacturable=${pesoFacturable.toFixed(3)} kg | dims=${maxLargo}×${maxAncho}×${alturaTotal} cm`,
+        );
+
+        const prod = grupo.productor;
+        const shipper = prod?.bodega_codigo_postal
+          ? { codigo_postal: prod.bodega_codigo_postal, estado: prod.bodega_estado ?? '', ciudad: prod.bodega_ciudad ?? '' }
+          : undefined;
+
+        this.logger.log(`  → shipper CP=${shipper?.codigo_postal ?? 'ENV_FALLBACK'} destino CP=${destino.codigo_postal} país=${destino.pais}`);
+
+        const isAlcohol = gItems.some(i => (i.producto.requiere_edad_minima ?? 0) >= 18);
+        const cotDto: CotizarEnvioDto = {
+          destino, peso_kg: pesoFacturable, largo_cm: maxLargo, ancho_cm: maxAncho, alto_cm: alturaTotal, shipper,
+          adult_signature: isAlcohol || undefined,
+        };
+        const quotes = await this.skydropxService.cotizarEnvio(cotDto);
+
+        return {
+          id_productor,
+          nombre_productor: prod?.nombre_marca ?? `Productor ${id_productor}`,
+          peso_real_kg: Number(pesoReal.toFixed(3)),
+          peso_volumetrico_kg: Number(pesoVolumetrico.toFixed(3)),
+          peso_facturable_kg: Number(pesoFacturable.toFixed(3)),
+          dimensiones: { largo_cm: maxLargo, ancho_cm: maxAncho, alto_cm: alturaTotal },
+          contiene_alcohol: isAlcohol,
+          quotes,
+        };
+      }),
+    );
+
+    return resultados.map((r, i) => {
+      if (r.status === 'fulfilled') return r.value;
+      const pid = Array.from(grupos.keys())[i];
+      return { id_productor: pid, nombre_productor: grupos.get(pid)?.productor?.nombre_marca ?? `Productor ${pid}`, error: (r.reason as any)?.message ?? 'Error al cotizar', quotes: [] };
+    });
+  }
+
+  /**
+   * Groups cart items by producer, computes chargeable weight per group,
+   * and quotes SkydropX independently for each group.
+   * Returns one entry per producer with their available shipping options.
+   */
+  async cotizarPorProductor(id_pedido: number, destino: DireccionDestinoDto) {
+    const detalles = await this.prisma.detalle_pedido.findMany({
+      where: { id_pedido: BigInt(id_pedido) },
+      include: {
+        productos: {
+          select: { nombre: true, peso_kg: true, alto_cm: true, ancho_cm: true, largo_cm: true, requiere_edad_minima: true },
+        },
+        productores: {
+          select: {
+            id_productor: true,
+            nombre_marca: true,
+            bodega_codigo_postal: true,
+            bodega_estado: true,
+            bodega_ciudad: true,
+          },
+        },
+      },
+    });
+
+    // Group items by producer
+    const grupos = new Map<number, { productor: any; items: typeof detalles }>();
+    for (const d of detalles) {
+      const pid = d.id_productor;
+      if (pid == null) continue;
+      if (!grupos.has(pid)) grupos.set(pid, { productor: d.productores, items: [] });
+      grupos.get(pid)!.items.push(d);
+    }
+
+    const resultados = await Promise.allSettled(
+      Array.from(grupos.entries()).map(async ([id_productor, grupo]) => {
+        const items = grupo.items;
+        const pesoReal = items.reduce(
+          (s, d) => s + Number(d.productos?.peso_kg ?? 1) * Number(d.cantidad), 0,
+        );
+        const maxLargo = Math.max(10, ...items.map(d => Number(d.productos?.largo_cm ?? 10)));
+        const maxAncho = Math.max(10, ...items.map(d => Number(d.productos?.ancho_cm ?? 10)));
+        const alturaTotal = items.reduce(
+          (s, d) => s + Number(d.productos?.alto_cm ?? 5) * Number(d.cantidad), 0,
+        );
+        const pesoVolumetrico = (maxLargo * maxAncho * alturaTotal) / 5000;
+        const pesoFacturable = Math.max(pesoReal, pesoVolumetrico);
+
+        const prod = grupo.productor;
+        const shipper = prod?.bodega_codigo_postal
+          ? { codigo_postal: prod.bodega_codigo_postal, estado: prod.bodega_estado ?? '', ciudad: prod.bodega_ciudad ?? '' }
+          : undefined;
+
+        const isAlcohol = items.some(d => (d.productos?.requiere_edad_minima ?? 0) >= 18);
+        const cotDto: CotizarEnvioDto = {
+          destino,
+          peso_kg: pesoFacturable,
+          largo_cm: maxLargo,
+          ancho_cm: maxAncho,
+          alto_cm: alturaTotal,
+          shipper,
+          adult_signature: isAlcohol || undefined,
+        };
+
+        const quotes = await this.skydropxService.cotizarEnvio(cotDto);
+
+        return {
+          id_productor,
+          nombre_productor: prod?.nombre_marca ?? `Productor ${id_productor}`,
+          peso_real_kg: Number(pesoReal.toFixed(3)),
+          peso_volumetrico_kg: Number(pesoVolumetrico.toFixed(3)),
+          peso_facturable_kg: Number(pesoFacturable.toFixed(3)),
+          dimensiones: { largo_cm: maxLargo, ancho_cm: maxAncho, alto_cm: alturaTotal },
+          contiene_alcohol: isAlcohol,
+          quotes,
+        };
+      }),
+    );
+
+    return resultados.map((r, i) => {
+      if (r.status === 'fulfilled') return r.value;
+      const pid = Array.from(grupos.keys())[i];
+      const prod = grupos.get(pid)?.productor;
+      return {
+        id_productor: pid,
+        nombre_productor: prod?.nombre_marca ?? `Productor ${pid}`,
+        error: (r.reason as any)?.message ?? 'Error al cotizar',
+        quotes: [],
+      };
+    });
+  }
+
+  /**
+   * Creates one envio record + shipping label per producer group in the order.
+   * Called automatically after payment confirmation.
+   * Errors per producer are caught individually so partial success is possible.
+   */
+  async crearEnviosPorProductor(id_pedido: number): Promise<any[]> {
+    const pedidoProds = await this.prisma.pedido_productor.findMany({
+      where: { id_pedido: BigInt(id_pedido) },
+      include: {
+        productores: {
+          select: {
+            id_productor: true,
+            nombre_marca: true,
+            bodega_calle: true,
+            bodega_ciudad: true,
+            bodega_estado: true,
+            bodega_codigo_postal: true,
+            bodega_pais_iso2: true,
+            bodega_telefono: true,
+          },
+        },
+      },
+    });
+
+    if (pedidoProds.length === 0) return [];
+
+    const results: any[] = [];
+
+    for (const pp of pedidoProds) {
+      if (pp.id_envio) {
+        this.logger.log(`[envios] Productor ${pp.id_productor} en pedido ${id_pedido} ya tiene envío #${pp.id_envio}, omitiendo`);
+        results.push({ id_productor: pp.id_productor, skipped: true, id_envio: Number(pp.id_envio) });
+        continue;
+      }
+
+      try {
+        const items = await this.prisma.detalle_pedido.findMany({
+          where: { id_pedido: BigInt(id_pedido), id_productor: pp.id_productor },
+          include: {
+            productos: { select: { nombre: true, peso_kg: true, alto_cm: true, ancho_cm: true, largo_cm: true } },
+          },
+        });
+
+        const pesoReal = items.reduce(
+          (s, d) => s + Number(d.productos?.peso_kg ?? 1) * Number(d.cantidad), 0,
+        );
+        const maxLargo = Math.max(10, ...items.map(d => Number(d.productos?.largo_cm ?? 10)));
+        const maxAncho = Math.max(10, ...items.map(d => Number(d.productos?.ancho_cm ?? 10)));
+        const alturaTotal = items.reduce(
+          (s, d) => s + Number(d.productos?.alto_cm ?? 5) * Number(d.cantidad), 0,
+        );
+        const pesoVolumetrico = (maxLargo * maxAncho * alturaTotal) / 5000;
+        const pesoFacturable = Math.max(pesoReal, pesoVolumetrico);
+
+        const esAlcohol = await this.detectarFirmaAdulto(id_pedido);
+
+        const envio = await this.prisma.envios.create({
+          data: {
+            id_pedido: BigInt(id_pedido),
+            peso_kg: pesoFacturable.toFixed(3),
+            largo_cm: maxLargo.toFixed(2),
+            ancho_cm: maxAncho.toFixed(2),
+            alto_cm: alturaTotal.toFixed(2),
+            estado: 'preparando',
+            requires_adult_signature: esAlcohol,
+          },
+        });
+
+        // Link envio to this producer's order slice
+        await this.prisma.pedido_productor.updateMany({
+          where: { id_pedido: BigInt(id_pedido), id_productor: pp.id_productor },
+          data: { id_envio: envio.id_envio, estado: 'preparando' },
+        });
+
+        // Purchase guide (crearGuia will now find the producer via pedido_productor.id_envio)
+        const guiaResult = await this.crearGuia(String(envio.id_envio));
+
+        this.logger.log(`[envios] Guía creada: productor=${pp.id_productor} pedido=${id_pedido} envio=${envio.id_envio}`);
+        results.push({
+          id_productor: pp.id_productor,
+          id_envio: Number(envio.id_envio),
+          guia: guiaResult,
+        });
+      } catch (err: any) {
+        this.logger.error(
+          `[envios] Error creando guía: productor=${pp.id_productor} pedido=${id_pedido}: ${err?.message}`,
+        );
+        results.push({ id_productor: pp.id_productor, error: err?.message });
+      }
+    }
+
+    return results;
   }
 
   private normalizarEstado(estado: string): string | null {

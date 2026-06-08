@@ -1,8 +1,10 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional, UnprocessableEntityException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Moneda } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ComisionesService } from '../comisiones/comisiones.service';
 import { EmailService } from '../email/email.service';
+import { EnviosService } from '../envios/envios.service';
 import { calcularEdadEnAnios } from '../productos/edad.helper';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 import { CreatePagoDto, CreateStripeIntentDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
@@ -18,6 +20,8 @@ export class PagosService {
     private readonly stripeService: StripeService,
     private readonly paypalService: PaypalService,
     private readonly emailService: EmailService,
+    private readonly comisionesService: ComisionesService,
+    @Optional() private readonly enviosService: EnviosService | null,
   ) {}
   async findAll(filtros?: { estado?: string; proveedor?: string }) {
     const where: any = {};
@@ -40,6 +44,24 @@ export class PagosService {
         },
       }),
     );
+  }
+
+  /**
+   * Inserta el event_id en webhook_events_log antes de procesar.
+   * Si el insert falla por unique constraint (P2002) el evento ya fue procesado → retorna false.
+   * El caller debe retornar inmediatamente cuando recibe false.
+   */
+  async deduplicateWebhookEvent(provider: string, event_id: string, event_type: string): Promise<boolean> {
+    try {
+      await this.prisma.webhook_events_log.create({ data: { provider, event_id, event_type } });
+      return true;
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        this.logger.warn(`[webhook] Evento duplicado ignorado: provider=${provider} event_id=${event_id}`);
+        return false;
+      }
+      throw err;
+    }
   }
 
   async resolverManual(id_pago: string, notas?: string) {
@@ -132,9 +154,11 @@ export class PagosService {
 
     await this.validarEdadDelComprador(id_pedido_bi, pedido.id_usuario);
     await this.validarSubtotalContraDB(id_pedido_bi, dto.subtotal);
+    await this.validarShippingContraDB(id_pedido_bi, dto.shipping_amount ?? 0);
 
+    const categoriaIds = await this.obtenerCategoriasDelPedido(id_pedido_bi);
     const paisDestino = dto.shipping_address.country;
-    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino);
+    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds);
 
     const directCharge = await this.resolveDirectCharge(id_pedido_bi, dto.subtotal, dto.shipping_amount ?? 0);
 
@@ -164,6 +188,9 @@ export class PagosService {
         moneda,
       },
     });
+
+    // Recalcular distribución por productor ahora que tax y shipping son conocidos.
+    await this.recalcularDistribucionPedido(id_pedido_bi, moneda);
 
     const pago = await this.prisma.pagos.create({
       data: {
@@ -197,9 +224,11 @@ export class PagosService {
 
     await this.validarEdadDelComprador(id_pedido_bi, pedido.id_usuario);
     await this.validarSubtotalContraDB(id_pedido_bi, dto.subtotal);
+    await this.validarShippingContraDB(id_pedido_bi, dto.shipping_amount ?? 0);
 
+    const categoriaIds = await this.obtenerCategoriasDelPedido(id_pedido_bi);
     const paisDestino = dto.shipping_address?.country ?? 'MX';
-    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino);
+    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds);
 
     const totalAmount = dto.subtotal + (dto.shipping_amount ?? 0) + taxAmount;
 
@@ -219,6 +248,9 @@ export class PagosService {
         moneda,
       },
     });
+
+    // Recalcular distribución por productor ahora que tax y shipping son conocidos.
+    await this.recalcularDistribucionPedido(id_pedido_bi, moneda);
 
     const pago = await this.prisma.pagos.create({
       data: {
@@ -274,6 +306,7 @@ export class PagosService {
   }
 
   async updatePaymentStatus(payment_intent_id: string, estado: string, isDirectCharge = false, taxCalculationId?: string) {
+    // Lookup para obtener id_pago y datos de usuario (necesarios después)
     const pago = await this.prisma.pagos.findFirst({
       where: { payment_intent_id },
       include: { pedidos: { include: { usuarios: true } } },
@@ -283,19 +316,26 @@ export class PagosService {
       throw new NotFoundException('Pago no encontrado');
     }
 
-    // Idempotencia: si el pago ya alcanzó un estado final (completado/reembolsado),
-    // ignorar cualquier evento posterior. Esto protege contra webhooks retrasados de
-    // Stripe/PayPal donde payment_intent.payment_failed llega después de succeeded.
-    if (pago.estado === 'completado' || pago.estado === 'reembolsado') {
+    // Update atómico: solo actualiza si el estado actual NO es final.
+    // Esto elimina la race condition entre check y update — si dos webhooks
+    // concurrentes pasan el findFirst, solo uno logrará hacer el updateMany (count=1).
+    const result = await this.prisma.pagos.updateMany({
+      where: {
+        id_pago: pago.id_pago,
+        estado: { notIn: ['completado', 'reembolsado'] },
+      },
+      data: { estado },
+    });
+
+    if (result.count === 0) {
       this.logger.warn(
         `[pagos] Webhook ignorado para payment_intent_id=${payment_intent_id}: estado actual=${pago.estado}, evento=${estado}`,
       );
       return serializeBigInts(pago);
     }
 
-    const updated = await this.prisma.pagos.update({
+    const updated = await this.prisma.pagos.findUnique({
       where: { id_pago: pago.id_pago },
-      data: { estado },
       include: { pedidos: true },
     });
 
@@ -396,6 +436,14 @@ export class PagosService {
       } catch (err: any) {
         this.logger.error('[pagos] Failed to create pedido_pagado notifications:', err?.message);
       }
+
+      // Fire-and-forget: auto-purchase shipping labels for each producer.
+      // Failure here does NOT fail the webhook — order stays in 'pagado' for admin retry.
+      if (this.enviosService) {
+        this.crearGuiasPostPago(pago.id_pedido).catch((err) =>
+          this.logger.error(`[pagos] crearGuiasPostPago failed for pedido=${pago.id_pedido}: ${err?.message}`),
+        );
+      }
     } else if (estado === 'fallido') {
       await this.prisma.pedidos.update({
         where: { id_pedido: pago.id_pedido },
@@ -403,7 +451,22 @@ export class PagosService {
       });
     }
 
-    return serializeBigInts(updated);
+    return serializeBigInts(updated ?? pago);
+  }
+
+  private async crearGuiasPostPago(id_pedido: bigint): Promise<void> {
+    if (!this.enviosService) return;
+    const resultados = await this.enviosService.crearEnviosPorProductor(Number(id_pedido));
+    const exitosos = resultados.filter((r) => !r.error && !r.skipped);
+    if (exitosos.length > 0) {
+      await this.prisma.pedidos.update({
+        where: { id_pedido },
+        data: { estado: 'label_purchased' },
+      });
+    }
+    this.logger.log(
+      `[pagos] Guías post-pago: pedido=${id_pedido} exitosas=${exitosos.length} errores=${resultados.filter((r) => r.error).length}`,
+    );
   }
 
   /**
@@ -533,10 +596,124 @@ export class PagosService {
     }
   }
 
+  /**
+   * Validates shipping amount against the sum of the most-recent valid quotations stored in DB
+   * (one per productor, saved by the frontend after carrier selection).
+   * Allows ±2% tolerance for float-to-currency-conversion rounding only.
+   * Rejects any amount meaningfully below what was quoted to prevent price manipulation.
+   */
+  private async validarShippingContraDB(id_pedido: bigint, shippingCliente: number): Promise<void> {
+    if (shippingCliente < 0) {
+      throw new BadRequestException('El costo de envío no puede ser negativo.');
+    }
+    const cotizaciones = await this.prisma.envio_cotizaciones.findMany({
+      where: {
+        id_pedido,
+        valida_hasta: { gte: new Date() },
+      },
+      select: { precio_total: true },
+      orderBy: { fecha_solicitud: 'desc' },
+    });
+    if (cotizaciones.length === 0) return; // Sin cotizaciones guardadas, omitir validación
+    const precioTotal = cotizaciones.reduce((s, c) => s + Number(c.precio_total ?? 0), 0);
+    if (precioTotal <= 0) return;
+    const shippingRounded = Math.round(shippingCliente * 100) / 100;
+    // Tolerancia del 2%: cubre redondeos de conversión MXN↔USD, no manipulación real
+    if (shippingRounded < precioTotal * 0.98) {
+      this.logger.error(
+        `[pagos] Shipping manipulado detectado: cliente=${shippingRounded}, cotizado=${precioTotal.toFixed(2)}, pedido=${id_pedido}`,
+      );
+      throw new BadRequestException(
+        `El costo de envío enviado (${shippingRounded}) no coincide con las tarifas cotizadas (${precioTotal.toFixed(2)}). Recarga la página e intenta de nuevo.`,
+      );
+    }
+  }
+
+  /**
+   * Recalcula pedido_productor (subtotal_bruto, comision, monto_neto) para todos los
+   * productores del pedido usando los valores reales de tax_amount y shipping_amount
+   * que acaban de ser guardados en pedidos. Llamar DESPUÉS de actualizar pedidos.
+   */
+  private async recalcularDistribucionPedido(id_pedido: bigint, moneda: Moneda): Promise<void> {
+    const pedido = await this.prisma.pedidos.findUnique({
+      where: { id_pedido },
+      select: { tax_amount: true, shipping_amount: true },
+    });
+    if (!pedido) return;
+
+    const todosDetalles = await this.prisma.detalle_pedido.findMany({
+      where: { id_pedido },
+      select: { id_productor: true, precio_compra: true, cantidad: true },
+    });
+    if (todosDetalles.length === 0) return;
+
+    const subtotalTotal = todosDetalles.reduce(
+      (s, d) => s + Number(d.precio_compra) * Number(d.cantidad),
+      0,
+    );
+    if (subtotalTotal <= 0) return;
+
+    const productorIds = [...new Set(todosDetalles.map((d) => d.id_productor).filter(Boolean))] as number[];
+
+    for (const id_productor of productorIds) {
+      const detallesProd = todosDetalles.filter((d) => d.id_productor === id_productor);
+      const subtotalProd = detallesProd.reduce(
+        (s, d) => s + Number(d.precio_compra) * Number(d.cantidad),
+        0,
+      );
+      const pct = subtotalProd / subtotalTotal;
+      const taxProrrateado = Number(pedido.tax_amount ?? 0) * pct;
+      const envioProrrateado = Number(pedido.shipping_amount ?? 0) * pct;
+      const subtotalBruto = Number((subtotalProd + taxProrrateado + envioProrrateado).toFixed(2));
+
+      const comision = await this.comisionesService.resolver({ id_productor });
+      const comisionMonto = this.comisionesService.calcularMonto(subtotalBruto, comision);
+      const montoNeto = Number((subtotalBruto - comisionMonto).toFixed(2));
+
+      await this.prisma.pedido_productor.updateMany({
+        where: { id_pedido, id_productor },
+        data: {
+          subtotal_bruto: subtotalBruto.toFixed(2),
+          comision_marketplace: comisionMonto.toFixed(2),
+          monto_neto_productor: montoNeto.toFixed(2),
+          moneda,
+          id_comision_aplicada: comision.id_comision ?? undefined,
+          actualizado_en: new Date(),
+        },
+      });
+    }
+  }
+
+  /** Devuelve todos los id_categoria distintos de los productos en un pedido. */
+  private async obtenerCategoriasDelPedido(id_pedido: bigint): Promise<number[]> {
+    const rows = await this.prisma.detalle_pedido.findMany({
+      where: { id_pedido },
+      select: {
+        productos: {
+          select: { categorias_productos: { select: { id_categoria: true } } },
+        },
+      },
+    });
+    const ids = new Set<number>();
+    for (const r of rows) {
+      for (const cp of r.productos?.categorias_productos ?? []) {
+        ids.add(cp.id_categoria);
+      }
+    }
+    return [...ids];
+  }
+
+  /**
+   * Calcula impuestos filtrando por país Y por las categorías de los productos del pedido.
+   * Tasas globales (id_categoria = null) se aplican a todos los pedidos del país.
+   * Tasas específicas de categoría (ej. FET para mezcal USA) solo se aplican si el pedido
+   * contiene productos de esa categoría.
+   */
   private async calcularImpuestos(
     subtotal: number,
     shippingAmount: number,
     paisDestino: string,
+    categoriaIds: number[] = [],
   ): Promise<{ taxAmount: number; taxBreakdown: { tipo: string; nombre: string; tasa: number; monto: number }[] }> {
     const ahora = new Date();
     const tasas = await this.prisma.tasas_impuesto.findMany({
@@ -546,6 +723,15 @@ export class PagosService {
         incluido_en_precio: false,
         vigente_desde: { lte: ahora },
         OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: ahora } }],
+        // Incluye tasas globales (sin categoría) Y tasas de las categorías del pedido
+        AND: [
+          {
+            OR: [
+              { id_categoria: null },
+              ...(categoriaIds.length > 0 ? [{ id_categoria: { in: categoriaIds } }] : []),
+            ],
+          },
+        ],
       },
     });
     const base = subtotal + shippingAmount;
@@ -811,48 +997,34 @@ export class PagosService {
           refundApplicationFee: true,
         });
       } else {
-        // Manual transfers: need to revert each transfer individually
-        const rows = await this.prisma.pedido_productor.findMany({
-          where: { id_pedido: pago.id_pedido },
-          include: { payout: { select: { referencia_externa: true, estado: true, intentos: true, ultimo_error: true } } },
+        // Manual transfers: reembolsar al comprador PRIMERO (idempotente en Stripe),
+        // luego intentar revertir transfers de productores.
+        // Si una reversión falla, se registra para reconciliación manual pero NO bloquea
+        // el reembolso al comprador.
+        await this.stripeService.createRefund({
+          paymentIntentId: pago.payment_intent_id,
         });
 
-        const missingTransfers = rows.filter((r) => !r.payout?.referencia_externa);
-        if (missingTransfers.length > 0) {
-          const detalles = missingTransfers
-            .map((r) => `Productor ${r.id_productor}: estado=${r.payout?.estado}, intentos=${r.payout?.intentos}, error=${r.payout?.ultimo_error}`)
-            .join('; ');
-          throw new UnprocessableEntityException(
-            `No se pueden revertir las transferencias automáticamente: ${missingTransfers.length} transfer(s) faltante(s). Detalles: ${detalles}. Requiere reconciliación manual.`,
-          );
-        }
+        const rows = await this.prisma.pedido_productor.findMany({
+          where: { id_pedido: pago.id_pedido },
+          include: { payout: { select: { id_payout: true, referencia_externa: true } } },
+        });
 
-        const stripeReversalErrors: string[] = [];
         for (const r of rows) {
           if (r.payout?.referencia_externa) {
             try {
               await this.stripeService.createTransferReversal(r.payout.referencia_externa);
             } catch (err: any) {
-              this.logger.error('[pagos] createTransferReversal failed for transfer', r.payout.referencia_externa, ':', err?.message);
-              stripeReversalErrors.push(`transfer ${r.payout.referencia_externa}: ${err?.message}`);
+              this.logger.error('[pagos] createTransferReversal fallida para', r.payout.referencia_externa, ':', err?.message);
+              if (r.payout?.id_payout) {
+                await this.prisma.payouts.update({
+                  where: { id_payout: r.payout.id_payout },
+                  data: { estado: 'reversal_pendiente_manual', ultimo_error: err?.message ?? 'reversal failed' },
+                }).catch(() => undefined);
+              }
             }
           }
         }
-
-        if (stripeReversalErrors.length > 0) {
-          await this.prisma.pagos.update({
-            where: { id_pago: pago.id_pago },
-            data: { estado: 'reembolso_pendiente_manual' },
-          });
-          throw new UnprocessableEntityException(
-            `${stripeReversalErrors.length} transfer(s) no pudo revertirse. El reembolso al cliente NO fue procesado. Requiere reconciliación manual: ${stripeReversalErrors.join('; ')}`,
-          );
-        }
-
-        // Revertir todas las transferencias fue exitoso — ahora reembolsar al cliente
-        await this.stripeService.createRefund({
-          paymentIntentId: pago.payment_intent_id,
-        });
       }
     }
 
@@ -1001,6 +1173,45 @@ export class PagosService {
         } catch (error: any) {
           await markFailed(error?.message ?? 'Unknown error');
         }
+      }
+    }
+  }
+
+  @Cron('*/30 * * * *')
+  async retryGuiasFallidas() {
+    if (!this.enviosService) return;
+
+    const cutoff = new Date(Date.now() - 5 * 60 * 1000);
+    let pedidos: any[];
+    try {
+      pedidos = await this.prisma.pedidos.findMany({
+        where: {
+          estado: 'pagado',
+          fecha_creacion: { lt: cutoff },
+          envios: {
+            none: {
+              envio_guias: { some: {} },
+            },
+          },
+        },
+        take: 10,
+        orderBy: { fecha_creacion: 'asc' },
+        select: { id_pedido: true },
+      });
+    } catch (dbErr: any) {
+      this.logger.warn(`[pagos] retryGuiasFallidas: DB no disponible. ${dbErr?.message}`);
+      return;
+    }
+
+    if (pedidos.length === 0) return;
+
+    this.logger.log(`[pagos] retryGuiasFallidas: reintentando guías para ${pedidos.length} pedido(s)`);
+
+    for (const pedido of pedidos) {
+      try {
+        await this.crearGuiasPostPago(pedido.id_pedido);
+      } catch (err: any) {
+        this.logger.error(`[pagos] retryGuiasFallidas pedido ${pedido.id_pedido}: ${err?.message}`);
       }
     }
   }

@@ -41,6 +41,9 @@ export class PagosController {
     const secret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
     const event = this.stripeService.constructWebhookEvent((req as any).rawBody as Buffer, signature, secret!);
 
+    const isNew = await this.service.deduplicateWebhookEvent('stripe', event.id, event.type);
+    if (!isNew) return { received: true };
+
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as any;
       const isDirectCharge = !!(paymentIntent.transfer_data?.destination);
@@ -81,6 +84,12 @@ export class PagosController {
 
     const event = JSON.parse(((req as any).rawBody as Buffer).toString());
     const eventType = event.event_type as string;
+    const eventId: string = event.id ?? '';
+
+    if (eventId) {
+      const isNew = await this.service.deduplicateWebhookEvent('paypal', eventId, eventType);
+      if (!isNew) return { received: true };
+    }
 
     if (eventType === 'PAYMENT.CAPTURE.COMPLETED') {
       const capture = event.resource as any;

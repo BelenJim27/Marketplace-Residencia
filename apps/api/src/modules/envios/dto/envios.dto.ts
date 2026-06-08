@@ -21,7 +21,7 @@ export class CreateEnvioDto {
   @IsOptional() @IsDateString() fecha_entrega_estimada?: string;
   @IsOptional() @IsDateString() fecha_entrega?: string;
   @IsOptional() @IsString() transportista_codigo?: string;
-  @IsOptional() @IsString() codigo_servicio?: string;       // 'FEDEX_GROUND', 'FEDEX_INTERNATIONAL_PRIORITY', etc.
+  @IsOptional() @IsString() codigo_servicio?: string;       // ej. 'SKYDROPX_STANDARD', 'SKYDROPX_EXPRESS'
 
 }
 export class UpdateEnvioDto extends PartialType(CreateEnvioDto) {}
@@ -32,6 +32,17 @@ export class DireccionDestinoDto {
   @IsString() estado!: string;
   @IsString() codigo_postal!: string;
   @IsOptional() @IsString() colonia?: string;
+}
+
+export class ShipperDto {
+  @IsString() codigo_postal!: string;
+  @IsString() estado!: string;
+  @IsString() ciudad!: string;
+  @IsOptional() @IsString() colonia?: string;
+  @IsOptional() @IsString() nombre?: string;
+  @IsOptional() @IsString() telefono?: string;
+  @IsOptional() @IsString() email?: string;
+  @IsOptional() @IsString() calle?: string;
 }
 
 export class CotizarEnvioDto {
@@ -45,4 +56,5 @@ export class CotizarEnvioDto {
   @IsOptional() @IsString() @MaxLength(200) descripcion_contenido?: string;
   @IsOptional() @IsString() @MaxLength(200) descripcion_contenido_en?: string;
   @IsOptional() @IsNumber() @Type(() => Number) valor_declarado_usd?: number;
+  @IsOptional() @ValidateNested() @Type(() => ShipperDto) shipper?: ShipperDto;
 }

@@ -74,6 +74,11 @@ export class AuthService {
     }
 
     try {
+      const rolCliente = await this.prisma.roles.findUnique({ where: { nombre: 'cliente' } });
+      if (!rolCliente) {
+        throw new InternalServerErrorException('Rol "cliente" no encontrado. Ejecuta el seed de roles.');
+      }
+
       const passwordHash = await hashPassword(dto.password);
       const user = await this.prisma.usuarios.create({
         data: {
@@ -89,7 +94,7 @@ export class AuthService {
           moneda_preferida: (dto.moneda_preferida?.trim() || 'MXN') as Moneda,
           usuario_rol: {
             create: {
-              id_rol: 1,
+              id_rol: rolCliente.id_rol,
               estado: 'activo',
             },
           },

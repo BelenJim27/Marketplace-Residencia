@@ -562,6 +562,12 @@ export const api = {
         headers: headers(token),
         body: JSON.stringify(data),
       }),
+    cotizarCarrito: (token: string, data: { items: Array<{ id_producto: number; cantidad: number }>; destino: any }) =>
+      fetchJson(endpoint("/envios/cotizar-carrito"), {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify(data),
+      }),
     guardarCotizacion: (token: string, data: any) =>
       fetchJson(endpoint("/envios/cotizaciones"), {
         method: "POST",
@@ -1371,6 +1377,10 @@ export const api = {
       fetchJson<{
         MXN: {
           USD: number | null;
+          EUR: number | null;
+          BRL: number | null;
+          CNY: number | null;
+          JPY: number | null;
         };
       }>(endpoint("/tasas-cambio/actuales")),
     list: (origen?: string, destino?: string) => {

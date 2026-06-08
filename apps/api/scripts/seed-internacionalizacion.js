@@ -132,7 +132,7 @@ async function seedTasasCambio() {
 const MEZCAL_CATEGORIA_SLUG = 'mezcal';
 
 const TASAS_IMPUESTO = [
-  // IVA México — aplica a todos los productos (id_categoria null = global)
+  // IVA México 16% — precios son netos, se calcula y muestra en checkout
   {
     pais_iso2: 'MX',
     id_categoria_slug: null,
@@ -150,17 +150,30 @@ const TASAS_IMPUESTO = [
     tipo: 'IEPS',
     nombre: 'IEPS Destilados (incluido en precio)',
     tasa_porcentaje: '0.2650',
-    incluido_en_precio: true,  // NO se cobra de nuevo, solo documentación
+    incluido_en_precio: true,
     activo: true,
     vigente_desde: new Date('2024-01-01'),
   },
-  // Sales Tax USA promedio — estimado para pedidos MX→USA con PayPal
+  // Sales Tax USA — desactivado; el FET se liquida en aduana por el importador
   {
     pais_iso2: 'US',
     id_categoria_slug: null,
     tipo: 'SALES_TAX',
     nombre: 'Sales Tax USA (estimado 8%)',
     tasa_porcentaje: '0.0800',
+    incluido_en_precio: false,
+    activo: false,
+    vigente_desde: new Date('2024-01-01'),
+  },
+  // FET (Federal Excise Tax) para destilados de agave exportados a USA.
+  // Tasa aproximada del ~5% basada en $13.50/proof-gallon típico para 750ml a 40% ABV.
+  // El importe exacto lo determina la aduana al momento de importación.
+  {
+    pais_iso2: 'US',
+    id_categoria_slug: MEZCAL_CATEGORIA_SLUG,
+    tipo: 'FET',
+    nombre: 'FET Federal Excise Tax (~5% estimado)',
+    tasa_porcentaje: '0.0500',
     incluido_en_precio: false,
     activo: true,
     vigente_desde: new Date('2024-01-01'),
