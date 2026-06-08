@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsInt, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, ValidateNested } from 'class-validator';
 export class CreateProductorDto {
   @IsString() id_usuario!: string;
   @IsOptional() @IsInt() @Type(() => Number) id_region?: number;
@@ -35,7 +35,13 @@ export class DireccionProduccionDto {
 
 export class SolicitarProductorDto {
   @IsOptional() @IsInt() @Type(() => Number) id_region?: number;
-  @IsOptional() @IsString() @MaxLength(13) rfc?: string;
+  @IsNotEmpty({ message: 'El RFC es obligatorio para trámites de envío y facturación' })
+  @IsString()
+  @MaxLength(13)
+  @Matches(/^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/i, {
+    message: 'RFC inválido. Formato: XXXX000000XX0 (ej: XAXX010101000 o MEXX900101H10)',
+  })
+  rfc!: string;
   @IsOptional() @IsString() @MaxLength(200) razon_social?: string;
   @IsOptional() @ValidateNested() @Type(() => DireccionFiscalDto) direccion_fiscal?: DireccionFiscalDto;
   @IsOptional() @ValidateNested() @Type(() => DireccionProduccionDto) direccion_produccion?: DireccionProduccionDto;
@@ -64,3 +70,13 @@ export class CreateRegionDto {
 }
 
 export class UpdateRegionDto extends PartialType(CreateRegionDto) {}
+
+export class ActualizarPerfilProductorDto {
+  @IsOptional() @IsInt() @Type(() => Number) id_region?: number;
+  @IsOptional() @IsString() @MaxLength(13) rfc?: string;
+  @IsOptional() @IsString() @MaxLength(200) razon_social?: string;
+  @IsOptional() @IsString() datos_bancarios?: string;
+  @IsOptional() @IsString() @MaxLength(254) paypal_email?: string;
+  @IsOptional() @ValidateNested() @Type(() => DireccionFiscalDto) direccion_fiscal?: DireccionFiscalDto;
+  @IsOptional() @ValidateNested() @Type(() => DireccionProduccionDto) direccion_produccion?: DireccionProduccionDto;
+}

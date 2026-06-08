@@ -24,7 +24,6 @@ export class DireccionesService {
     );
   }
   async create(dto: CreateDireccionDto) {
-    console.log("[DireccionesService.create] DTO recibido:", JSON.stringify(dto, null, 2));
     if (dto.es_predeterminada) {
       await this.prisma.direcciones.updateMany({
         where: { id_usuario: dto.id_usuario, es_predeterminada: true, eliminado_en: null },
@@ -53,7 +52,6 @@ export class DireccionesService {
         ubicacion: (dto.ubicacion ?? {}) as any,
       },
     });
-    console.log("[DireccionesService.create] Guardado en BD:", JSON.stringify(resultado, null, 2));
     return serializeBigInts(resultado);
   }
   async update(id: string, dto: UpdateDireccionDto, callerUserId: string) {

@@ -1,6 +1,21 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsNumberString, IsOptional, IsString, Length, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsNumberString, IsOptional, IsString, Length, MaxLength, Min, registerDecorator, ValidationOptions } from 'class-validator';
+
+function IsNonNegativeDecimal(options?: ValidationOptions) {
+  return (object: object, propertyName: string) =>
+    registerDecorator({
+      name: 'isNonNegativeDecimal',
+      target: (object as any).constructor,
+      propertyName,
+      options: { message: `${propertyName} debe ser un número >= 0`, ...options },
+      validator: {
+        validate(value: any) {
+          return typeof value === 'string' && !isNaN(Number(value)) && Number(value) >= 0;
+        },
+      },
+    });
+}
 
 export class CreateComisionDto {
   @IsIn(['global', 'pais', 'categoria', 'productor'])
@@ -22,10 +37,12 @@ export class CreateComisionDto {
   id_productor?: number;
 
   @IsNumberString()
+  @IsNonNegativeDecimal()
   porcentaje!: string;
 
   @IsOptional()
   @IsNumberString()
+  @IsNonNegativeDecimal()
   monto_fijo?: string;
 
   @IsOptional()

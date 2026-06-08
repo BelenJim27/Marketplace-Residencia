@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { NotificacionesService } from "../notificaciones/notificaciones.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
 import {
@@ -16,23 +17,32 @@ export class InventarioService {
     private readonly notificaciones: NotificacionesService,
   ) {}
 
-  async listInventario() {
-    const inventarios = await this.prisma.inventario.findMany({
-      include: {
-        productos: {
-          include: {
-            lotes: {
-              include: {
-                productores: {
-                  include: { usuarios: { select: { id_usuario: true, nombre: true } } },
+  async listInventario(query: PaginacionQueryDto = {}) {
+    const pagina = query.pagina ?? 1;
+    const limite = query.limite ?? 20;
+    const skip = (pagina - 1) * limite;
+
+    const [inventarios, total] = await Promise.all([
+      this.prisma.inventario.findMany({
+        include: {
+          productos: {
+            include: {
+              lotes: {
+                include: {
+                  productores: {
+                    include: { usuarios: { select: { id_usuario: true, nombre: true } } },
+                  },
+                  regiones: true,
                 },
-                regiones: true,
               },
             },
           },
         },
-      },
-    });
+        take: limite,
+        skip,
+      }),
+      this.prisma.inventario.count(),
+    ]);
 
     const items = inventarios.map((inv) => {
       let nombre_producto = inv.productos?.nombre || "Sin nombre";
@@ -69,7 +79,7 @@ export class InventarioService {
       total_productores: uniqueProductors.size,
     };
 
-    return serializeBigInts({ summary, items });
+    return serializeBigInts({ summary, items, paginacion: { pagina, limite, total, paginas: Math.ceil(total / limite) } });
   }
   async getInventario(id: string) {
     const item = await this.prisma.inventario.findUnique({

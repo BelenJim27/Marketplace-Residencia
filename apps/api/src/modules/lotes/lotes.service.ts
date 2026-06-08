@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { serializeBigInts } from '../shared/serialize';
 import { CreateLoteAtributoDto, CreateLoteDto, UpdateLoteAtributoDto, UpdateLoteDto } from './dto/lotes.dto';
 
@@ -13,13 +14,21 @@ export class LotesService {
 
   constructor(private readonly prisma: PrismaService) { }
 
-  async findAll() {
-    return serializeBigInts(
-      await this.prisma.lotes.findMany({
-        where: { eliminado_en: null },
+  async findAll(query: PaginacionQueryDto = {}) {
+    const pagina = query.pagina ?? 1;
+    const limite = query.limite ?? 20;
+    const skip = (pagina - 1) * limite;
+    const where = { eliminado_en: null };
+    const [items, total] = await Promise.all([
+      this.prisma.lotes.findMany({
+        where,
         include: { lote_atributos: true, productores: true, regiones: true },
+        take: limite,
+        skip,
       }),
-    );
+      this.prisma.lotes.count({ where }),
+    ]);
+    return serializeBigInts({ items, paginacion: { pagina, limite, total, paginas: Math.ceil(total / limite) } });
   }
 
   async findByProductor(id_productor: number) {

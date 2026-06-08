@@ -45,7 +45,9 @@ const translations: Record<string, Record<string, string>> = {
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState("es");
-  const [rates, setRates] = useState<Record<string, number>>({ MXN: 1, USD: 0.050 });
+  // USD: ~1/17 MXN (actualizado 2026). Se actualiza desde backend cada hora.
+  const FALLBACK_RATES: Record<string, number> = { MXN: 1, USD: 0.0588 };
+  const [rates, setRates] = useState<Record<string, number>>(FALLBACK_RATES);
   const [loadingRates, setLoadingRates] = useState(false);
   const [currency, setCurrencyState] = useState<Currency>("MXN");
 
@@ -80,7 +82,15 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setLoadingRates(true);
     getExchangeRates()
-      .then(r => setRates(r || { MXN: 1 }))
+      .then(r => {
+        // Asegurar que las claves esenciales estén presentes; si la API devuelve datos
+        // incompletos se mezcla con los fallbacks para evitar una tasa 1:1 accidental.
+        if (r && typeof r === 'object' && r['USD'] && r['USD'] > 0) {
+          setRates(r);
+        } else {
+          console.warn('[LocaleContext] getExchangeRates devolvió datos incompletos, usando tasas de respaldo');
+        }
+      })
       .finally(() => setLoadingRates(false));
   }, [locale]);
 

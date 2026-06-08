@@ -1,9 +1,10 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Logger, NotFoundException, Optional, UnprocessableEntityException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Moneda } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ComisionesService } from '../comisiones/comisiones.service';
 import { EmailService } from '../email/email.service';
-import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { EnviosService } from '../envios/envios.service';
 import { calcularEdadEnAnios } from '../productos/edad.helper';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 import { CreatePagoDto, CreateStripeIntentDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
@@ -19,7 +20,8 @@ export class PagosService {
     private readonly stripeService: StripeService,
     private readonly paypalService: PaypalService,
     private readonly emailService: EmailService,
-    private readonly notificacionesService: NotificacionesService,
+    private readonly comisionesService: ComisionesService,
+    @Optional() private readonly enviosService: EnviosService | null,
   ) {}
   async findAll(filtros?: { estado?: string; proveedor?: string }) {
     const where: any = {};
@@ -44,6 +46,24 @@ export class PagosService {
     );
   }
 
+  /**
+   * Inserta el event_id en webhook_events_log antes de procesar.
+   * Si el insert falla por unique constraint (P2002) el evento ya fue procesado → retorna false.
+   * El caller debe retornar inmediatamente cuando recibe false.
+   */
+  async deduplicateWebhookEvent(provider: string, event_id: string, event_type: string): Promise<boolean> {
+    try {
+      await this.prisma.webhook_events_log.create({ data: { provider, event_id, event_type } });
+      return true;
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        this.logger.warn(`[webhook] Evento duplicado ignorado: provider=${provider} event_id=${event_id}`);
+        return false;
+      }
+      throw err;
+    }
+  }
+
   async resolverManual(id_pago: string, notas?: string) {
     const pago = await this.prisma.pagos.findUnique({ where: { id_pago: toBigIntId(id_pago) } });
     if (!pago) throw new NotFoundException('Pago no encontrado');
@@ -63,7 +83,7 @@ export class PagosService {
   async remove(id_pago: string) { await this.prisma.pagos.delete({ where: { id_pago: toBigIntId(id_pago) } }); return { message: 'Pago eliminado' }; }
   async getIngresosResumen(id_productor: number) {
     const pedidoProductores = await this.prisma.pedido_productor.findMany({
-      where: { id_productor },
+      where: { id_productor, estado: { not: 'cancelado' } },
       select: {
         monto_neto_productor: true,
         subtotal_bruto: true,
@@ -134,9 +154,11 @@ export class PagosService {
 
     await this.validarEdadDelComprador(id_pedido_bi, pedido.id_usuario);
     await this.validarSubtotalContraDB(id_pedido_bi, dto.subtotal);
+    await this.validarShippingContraDB(id_pedido_bi, dto.shipping_amount ?? 0);
 
+    const categoriaIds = await this.obtenerCategoriasDelPedido(id_pedido_bi);
     const paisDestino = dto.shipping_address.country;
-    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino);
+    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds);
 
     const directCharge = await this.resolveDirectCharge(id_pedido_bi, dto.subtotal, dto.shipping_amount ?? 0);
 
@@ -166,6 +188,9 @@ export class PagosService {
         moneda,
       },
     });
+
+    // Recalcular distribución por productor ahora que tax y shipping son conocidos.
+    await this.recalcularDistribucionPedido(id_pedido_bi, moneda);
 
     const pago = await this.prisma.pagos.create({
       data: {
@@ -199,9 +224,11 @@ export class PagosService {
 
     await this.validarEdadDelComprador(id_pedido_bi, pedido.id_usuario);
     await this.validarSubtotalContraDB(id_pedido_bi, dto.subtotal);
+    await this.validarShippingContraDB(id_pedido_bi, dto.shipping_amount ?? 0);
 
+    const categoriaIds = await this.obtenerCategoriasDelPedido(id_pedido_bi);
     const paisDestino = dto.shipping_address?.country ?? 'MX';
-    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino);
+    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds);
 
     const totalAmount = dto.subtotal + (dto.shipping_amount ?? 0) + taxAmount;
 
@@ -221,6 +248,9 @@ export class PagosService {
         moneda,
       },
     });
+
+    // Recalcular distribución por productor ahora que tax y shipping son conocidos.
+    await this.recalcularDistribucionPedido(id_pedido_bi, moneda);
 
     const pago = await this.prisma.pagos.create({
       data: {
@@ -276,6 +306,7 @@ export class PagosService {
   }
 
   async updatePaymentStatus(payment_intent_id: string, estado: string, isDirectCharge = false, taxCalculationId?: string) {
+    // Lookup para obtener id_pago y datos de usuario (necesarios después)
     const pago = await this.prisma.pagos.findFirst({
       where: { payment_intent_id },
       include: { pedidos: { include: { usuarios: true } } },
@@ -285,19 +316,26 @@ export class PagosService {
       throw new NotFoundException('Pago no encontrado');
     }
 
-    // Idempotencia: si el pago ya alcanzó un estado final (completado/reembolsado),
-    // ignorar cualquier evento posterior. Esto protege contra webhooks retrasados de
-    // Stripe/PayPal donde payment_intent.payment_failed llega después de succeeded.
-    if (pago.estado === 'completado' || pago.estado === 'reembolsado') {
+    // Update atómico: solo actualiza si el estado actual NO es final.
+    // Esto elimina la race condition entre check y update — si dos webhooks
+    // concurrentes pasan el findFirst, solo uno logrará hacer el updateMany (count=1).
+    const result = await this.prisma.pagos.updateMany({
+      where: {
+        id_pago: pago.id_pago,
+        estado: { notIn: ['completado', 'reembolsado', 'cancelado'] },
+      },
+      data: { estado },
+    });
+
+    if (result.count === 0) {
       this.logger.warn(
         `[pagos] Webhook ignorado para payment_intent_id=${payment_intent_id}: estado actual=${pago.estado}, evento=${estado}`,
       );
       return serializeBigInts(pago);
     }
 
-    const updated = await this.prisma.pagos.update({
+    const updated = await this.prisma.pagos.findUnique({
       where: { id_pago: pago.id_pago },
-      data: { estado },
       include: { pedidos: true },
     });
 
@@ -369,7 +407,7 @@ export class PagosService {
             },
           );
         } catch (err: any) {
-          console.error('[pagos] sendOrderConfirmationEmail failed:', err?.message);
+          this.logger.warn(`[pagos] sendOrderConfirmationEmail failed: ${err?.message}`);
         }
       }
 
@@ -383,37 +421,52 @@ export class PagosService {
           pedidoProductores
             .filter((pp) => pp.productores?.id_usuario)
             .map((pp) =>
-              this.notificacionesService.notifyUser(
-                pp.productores!.id_usuario,
-                'pedido_pagado',
-                'Nuevo pedido recibido',
-                `Tienes un nuevo pedido #${pago.id_pedido} confirmado. Prepara el envío de tus productos.`,
-                '/dashboard/productor/pedidos',
-              )
+              this.prisma.notificaciones.create({
+                data: {
+                  id_usuario: pp.productores!.id_usuario,
+                  tipo: 'pedido_pagado',
+                  titulo: 'Nuevo pedido recibido',
+                  cuerpo: `Tienes un nuevo pedido #${pago.id_pedido} confirmado. Prepara el envío de tus productos.`,
+                  url_accion: '/dashboard/productor/pedidos',
+                  leido: false,
+                },
+              })
             )
         );
       } catch (err: any) {
         this.logger.error('[pagos] Failed to create pedido_pagado notifications:', err?.message);
+      }
+
+      // Fire-and-forget: auto-purchase shipping labels for each producer.
+      // Failure here does NOT fail the webhook — order stays in 'pagado' for admin retry.
+      if (this.enviosService) {
+        this.crearGuiasPostPago(pago.id_pedido).catch((err) =>
+          this.logger.error(`[pagos] crearGuiasPostPago failed for pedido=${pago.id_pedido}: ${err?.message}`),
+        );
       }
     } else if (estado === 'fallido') {
       await this.prisma.pedidos.update({
         where: { id_pedido: pago.id_pedido },
         data: { estado: 'pendiente' },
       });
-
-      const buyerFailed = (pago as any).pedidos?.usuarios;
-      if (buyerFailed?.id_usuario) {
-        this.notificacionesService.notifyUser(
-          buyerFailed.id_usuario,
-          'pago_fallido',
-          'No pudimos procesar tu pago',
-          `El pago de tu pedido #${pago.id_pedido} no pudo procesarse. Verifica tu método de pago e intenta de nuevo.`,
-          '/Cliente/pedidos',
-        ).catch(() => {});
-      }
     }
 
-    return serializeBigInts(updated);
+    return serializeBigInts(updated ?? pago);
+  }
+
+  private async crearGuiasPostPago(id_pedido: bigint): Promise<void> {
+    if (!this.enviosService) return;
+    const resultados = await this.enviosService.crearEnviosPorProductor(Number(id_pedido));
+    const exitosos = resultados.filter((r) => !r.error && !r.skipped);
+    if (exitosos.length > 0) {
+      await this.prisma.pedidos.update({
+        where: { id_pedido },
+        data: { estado: 'label_purchased' },
+      });
+    }
+    this.logger.log(
+      `[pagos] Guías post-pago: pedido=${id_pedido} exitosas=${exitosos.length} errores=${resultados.filter((r) => r.error).length}`,
+    );
   }
 
   /**
@@ -543,10 +596,137 @@ export class PagosService {
     }
   }
 
+  /**
+   * Validates shipping amount against the sum of the most-recent valid quotations stored in DB
+   * (one per productor, saved by the frontend after carrier selection).
+   * Allows ±2% tolerance for float-to-currency-conversion rounding only.
+   * Rejects any amount meaningfully below what was quoted to prevent price manipulation.
+   */
+  private async validarShippingContraDB(id_pedido: bigint, shippingCliente: number): Promise<void> {
+    if (shippingCliente < 0) {
+      throw new BadRequestException('El costo de envío no puede ser negativo.');
+    }
+    const cotizaciones = await this.prisma.envio_cotizaciones.findMany({
+      where: {
+        id_pedido,
+        valida_hasta: { gte: new Date() },
+      },
+      select: { precio_total: true },
+      orderBy: { fecha_solicitud: 'desc' },
+    });
+    if (cotizaciones.length === 0) {
+      // Verificar si existen cotizaciones pero expiradas para dar mensaje más específico
+      const expiradas = await this.prisma.envio_cotizaciones.count({
+        where: { id_pedido, valida_hasta: { lt: new Date() } },
+      });
+      if (expiradas > 0) {
+        throw new BadRequestException(
+          'COTIZACIONES_EXPIRADAS: Las cotizaciones de envío han expirado. Regresa al paso de envío para seleccionar una tarifa actualizada.',
+        );
+      }
+      throw new BadRequestException(
+        'Se requieren cotizaciones de envío guardadas para procesar el pago. Regresa al paso de envío y selecciona una tarifa.',
+      );
+    }
+    const precioTotal = cotizaciones.reduce((s, c) => s + Number(c.precio_total ?? 0), 0);
+    if (precioTotal <= 0) return;
+    const shippingRounded = Math.round(shippingCliente * 100) / 100;
+    // Tolerancia del 2%: cubre redondeos de conversión MXN↔USD, no manipulación real
+    if (shippingRounded < precioTotal * 0.98) {
+      this.logger.error(
+        `[pagos] Shipping manipulado detectado: cliente=${shippingRounded}, cotizado=${precioTotal.toFixed(2)}, pedido=${id_pedido}`,
+      );
+      throw new BadRequestException(
+        `El costo de envío enviado (${shippingRounded}) no coincide con las tarifas cotizadas (${precioTotal.toFixed(2)}). Recarga la página e intenta de nuevo.`,
+      );
+    }
+  }
+
+  /**
+   * Recalcula pedido_productor (subtotal_bruto, comision, monto_neto) para todos los
+   * productores del pedido usando los valores reales de tax_amount y shipping_amount
+   * que acaban de ser guardados en pedidos. Llamar DESPUÉS de actualizar pedidos.
+   */
+  private async recalcularDistribucionPedido(id_pedido: bigint, moneda: Moneda): Promise<void> {
+    const pedido = await this.prisma.pedidos.findUnique({
+      where: { id_pedido },
+      select: { tax_amount: true, shipping_amount: true },
+    });
+    if (!pedido) return;
+
+    const todosDetalles = await this.prisma.detalle_pedido.findMany({
+      where: { id_pedido },
+      select: { id_productor: true, precio_compra: true, cantidad: true },
+    });
+    if (todosDetalles.length === 0) return;
+
+    const subtotalTotal = todosDetalles.reduce(
+      (s, d) => s + Number(d.precio_compra) * Number(d.cantidad),
+      0,
+    );
+    if (subtotalTotal <= 0) return;
+
+    const productorIds = [...new Set(todosDetalles.map((d) => d.id_productor).filter(Boolean))] as number[];
+
+    for (const id_productor of productorIds) {
+      const detallesProd = todosDetalles.filter((d) => d.id_productor === id_productor);
+      const subtotalProd = detallesProd.reduce(
+        (s, d) => s + Number(d.precio_compra) * Number(d.cantidad),
+        0,
+      );
+      const pct = subtotalProd / subtotalTotal;
+      const taxProrrateado = Number(pedido.tax_amount ?? 0) * pct;
+      const envioProrrateado = Number(pedido.shipping_amount ?? 0) * pct;
+      const subtotalBruto = Number((subtotalProd + taxProrrateado + envioProrrateado).toFixed(2));
+
+      const comision = await this.comisionesService.resolver({ id_productor });
+      const comisionMonto = this.comisionesService.calcularMonto(subtotalBruto, comision);
+      const montoNeto = Number((subtotalBruto - comisionMonto).toFixed(2));
+
+      await this.prisma.pedido_productor.updateMany({
+        where: { id_pedido, id_productor },
+        data: {
+          subtotal_bruto: subtotalBruto.toFixed(2),
+          comision_marketplace: comisionMonto.toFixed(2),
+          monto_neto_productor: montoNeto.toFixed(2),
+          moneda,
+          id_comision_aplicada: comision.id_comision ?? undefined,
+          actualizado_en: new Date(),
+        },
+      });
+    }
+  }
+
+  /** Devuelve todos los id_categoria distintos de los productos en un pedido. */
+  private async obtenerCategoriasDelPedido(id_pedido: bigint): Promise<number[]> {
+    const rows = await this.prisma.detalle_pedido.findMany({
+      where: { id_pedido },
+      select: {
+        productos: {
+          select: { categorias_productos: { select: { id_categoria: true } } },
+        },
+      },
+    });
+    const ids = new Set<number>();
+    for (const r of rows) {
+      for (const cp of r.productos?.categorias_productos ?? []) {
+        ids.add(cp.id_categoria);
+      }
+    }
+    return [...ids];
+  }
+
+  /**
+   * Calcula impuestos filtrando por país Y por las categorías de los productos del pedido.
+   * Tasas globales (id_categoria = null) se aplican a todos los pedidos del país.
+   * Tasas específicas de categoría (ej. FET para mezcal USA) solo se aplican si el pedido
+   * contiene productos de esa categoría.
+   */
   private async calcularImpuestos(
     subtotal: number,
     shippingAmount: number,
     paisDestino: string,
+    categoriaIds: number[] = [],
   ): Promise<{ taxAmount: number; taxBreakdown: { tipo: string; nombre: string; tasa: number; monto: number }[] }> {
     const ahora = new Date();
     const tasas = await this.prisma.tasas_impuesto.findMany({
@@ -556,6 +736,15 @@ export class PagosService {
         incluido_en_precio: false,
         vigente_desde: { lte: ahora },
         OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: ahora } }],
+        // Incluye tasas globales (sin categoría) Y tasas de las categorías del pedido
+        AND: [
+          {
+            OR: [
+              { id_categoria: null },
+              ...(categoriaIds.length > 0 ? [{ id_categoria: { in: categoriaIds } }] : []),
+            ],
+          },
+        ],
       },
     });
     const base = subtotal + shippingAmount;
@@ -616,7 +805,7 @@ export class PagosService {
           });
         }
       } catch (error: any) {
-        console.warn('[pagos] retrieveAccount failed for', prod.stripe_account_id, ':', error?.message);
+        this.logger.warn(`[pagos] retrieveAccount failed for ${prod.stripe_account_id}: ${error?.message}`);
       }
     }
     if (!onboardingOk) return null;
@@ -676,15 +865,19 @@ export class PagosService {
         this.logger.warn(
           `[pagos] Transfer skipped: productor ${pp.id_productor} sin onboarding en pedido ${id_pedido}, monto pendiente: ${monto} ${moneda}`,
         );
-        this.notificacionesService.notifyUser(
-          pp.productores?.id_usuario || '',
-          'pago_pendiente_onboarding',
-          'Tienes un pago pendiente por transferir',
-          `Tienes un pago de ${monto} ${moneda} en el pedido #${id_pedido} pendiente. Por favor completa tu configuración de Stripe para recibirlo.`,
-          '/dashboard/productor/ingresos',
-        ).catch((err: any) => {
+        try {
+          await this.prisma.notificaciones.create({
+            data: {
+              id_usuario: pp.productores?.id_usuario || '',
+              tipo: 'pago_pendiente_onboarding',
+              titulo: 'Tienes un pago pendiente por transferir',
+              cuerpo: `Tienes un pago de ${monto} ${moneda} en el pedido #${id_pedido} que está pendiente de transferir. Por favor completa tu configuración de Stripe para recibirlo.`,
+              url_accion: '/dashboard/productor/ingresos',
+            },
+          });
+        } catch (err: any) {
           this.logger.error('[pagos] Failed to create notification for productor', pp.id_productor, ':', err?.message);
-        });
+        }
         continue;
       }
 
@@ -817,47 +1010,65 @@ export class PagosService {
           refundApplicationFee: true,
         });
       } else {
-        // Manual transfers: need to revert each transfer individually
-        const rows = await this.prisma.pedido_productor.findMany({
-          where: { id_pedido: pago.id_pedido },
-          include: { payout: { select: { referencia_externa: true, estado: true, intentos: true, ultimo_error: true } } },
+        // Manual transfers: reembolsar al comprador PRIMERO (idempotente en Stripe),
+        // luego intentar revertir transfers de productores.
+        // Si una reversión falla, se registra para reconciliación manual pero NO bloquea
+        // el reembolso al comprador.
+        await this.stripeService.createRefund({
+          paymentIntentId: pago.payment_intent_id,
         });
 
-        const missingTransfers = rows.filter((r) => !r.payout?.referencia_externa);
-        if (missingTransfers.length > 0) {
-          const detalles = missingTransfers
-            .map((r) => `Productor ${r.id_productor}: estado=${r.payout?.estado}, intentos=${r.payout?.intentos}, error=${r.payout?.ultimo_error}`)
-            .join('; ');
-          throw new UnprocessableEntityException(
-            `No se pueden revertir las transferencias automáticamente: ${missingTransfers.length} transfer(s) faltante(s). Detalles: ${detalles}. Requiere reconciliación manual.`,
-          );
-        }
+        const rows = await this.prisma.pedido_productor.findMany({
+          where: { id_pedido: pago.id_pedido },
+          include: { payout: { select: { id_payout: true, referencia_externa: true } } },
+        });
 
-        const stripeReversalErrors: string[] = [];
         for (const r of rows) {
           if (r.payout?.referencia_externa) {
             try {
               await this.stripeService.createTransferReversal(r.payout.referencia_externa);
             } catch (err: any) {
-              this.logger.error('[pagos] createTransferReversal failed for transfer', r.payout.referencia_externa, ':', err?.message);
-              stripeReversalErrors.push(`transfer ${r.payout.referencia_externa}: ${err?.message}`);
+              this.logger.error('[pagos] createTransferReversal fallida para', r.payout.referencia_externa, ':', err?.message);
+              if (r.payout?.id_payout) {
+                await this.prisma.payouts.update({
+                  where: { id_payout: r.payout.id_payout },
+                  data: { estado: 'reversal_pendiente_manual', ultimo_error: err?.message ?? 'reversal failed' },
+                }).catch(() => undefined);
+                this.emailService.sendAdminAlert(
+                  `Reversal manual requerido — Payout #${r.payout.id_payout}`,
+                  `No se pudo revertir automáticamente el transfer Stripe ${r.payout.referencia_externa}.\n\nError: ${err?.message}\n\nAcción requerida: Revertir manualmente en el dashboard de Stripe y actualizar el estado del payout #${r.payout.id_payout}.`,
+                ).catch(() => undefined);
+              }
             }
           }
         }
+      }
+    }
 
-        if (stripeReversalErrors.length > 0) {
-          await this.prisma.pagos.update({
-            where: { id_pago: pago.id_pago },
-            data: { estado: 'reembolso_pendiente_manual' },
-          });
-          throw new UnprocessableEntityException(
-            `${stripeReversalErrors.length} transfer(s) no pudo revertirse. El reembolso al cliente NO fue procesado. Requiere reconciliación manual: ${stripeReversalErrors.join('; ')}`,
-          );
-        }
-
-        // Revertir todas las transferencias fue exitoso — ahora reembolsar al cliente
-        await this.stripeService.createRefund({
-          paymentIntentId: pago.payment_intent_id,
+    // Restore stock for each order item before marking as cancelled
+    const detalles = await this.prisma.detalle_pedido.findMany({
+      where: { id_pedido: pago.id_pedido },
+      select: { id_producto: true, cantidad: true, id_pedido: true },
+    });
+    for (const d of detalles) {
+      const inv = await this.prisma.inventario.findFirst({
+        where: { id_producto: d.id_producto },
+        orderBy: { stock: 'asc' },
+      });
+      if (inv) {
+        await this.prisma.inventario.update({
+          where: { id_inventario: inv.id_inventario },
+          data: { stock: { increment: d.cantidad } },
+        });
+        await this.prisma.movimientos_inventario.create({
+          data: {
+            id_inventario: inv.id_inventario,
+            id_pedido: d.id_pedido,
+            tipo: 'cancelacion',
+            cantidad: d.cantidad,
+            stock_resultante: inv.stock + d.cantidad,
+            motivo: `Reversa por reembolso pago ${pago.id_pago}`,
+          },
         });
       }
     }
@@ -867,21 +1078,10 @@ export class PagosService {
       where: { id_pago: pago.id_pago },
       data: { estado: 'reembolsado' },
     });
-    const pedidoCancelado = await this.prisma.pedidos.update({
+    await this.prisma.pedidos.update({
       where: { id_pedido: pago.id_pedido },
       data: { estado: 'cancelado' },
-      select: { id_usuario: true },
     });
-
-    if (pedidoCancelado?.id_usuario) {
-      this.notificacionesService.notifyUser(
-        pedidoCancelado.id_usuario,
-        'pedido_cancelado',
-        'Tu pedido fue cancelado',
-        `Tu pedido #${pago.id_pedido} ha sido cancelado y el reembolso está en proceso.`,
-        '/Cliente/pedidos',
-      ).catch(() => {});
-    }
 
     return serializeBigInts({ id_pago: pago.id_pago, estado: 'reembolsado' });
   }
@@ -936,6 +1136,10 @@ export class PagosService {
         });
         if (nuevosIntentos >= MAX_INTENTOS) {
           this.logger.error(`[pagos] Payout AGOTADO productor ${pp?.id_productor} pedido ${pp?.id_pedido}: revisión manual requerida. Error: ${errorMsg}`);
+          this.emailService.sendAdminAlert(
+            `Payout agotado — Pedido #${pp?.id_pedido} Productor #${pp?.id_productor}`,
+            `El payout para el productor ${pp?.id_productor} del pedido ${pp?.id_pedido} ha fallado ${MAX_INTENTOS} veces y requiere revisión manual.\n\nÚltimo error: ${errorMsg}\n\nAcción requerida: Revisar en el panel admin y procesar manualmente.`,
+          ).catch(() => undefined);
         } else {
           this.logger.warn(`[pagos] Retry intento ${nuevosIntentos}/${MAX_INTENTOS} productor ${pp?.id_productor}: ${errorMsg}`);
         }
@@ -959,7 +1163,12 @@ export class PagosService {
               },
               orderBy: { vigente_desde: 'desc' },
             });
-            amountUSD = amountUSD / (tasa ? Number(tasa.tasa) : 20);
+            if (!tasa) {
+              throw new InternalServerErrorException(
+                `No hay tasa de cambio ${payout.moneda}→USD vigente. Configurar en la tabla tasas_cambio antes de procesar payouts.`,
+              );
+            }
+            amountUSD = amountUSD / Number(tasa.tasa);
           }
           amountUSD = parseFloat(amountUSD.toFixed(2));
 
@@ -1019,6 +1228,92 @@ export class PagosService {
           await markFailed(error?.message ?? 'Unknown error');
         }
       }
+    }
+  }
+
+  @Cron('*/30 * * * *')
+  async retryGuiasFallidas() {
+    if (!this.enviosService) return;
+
+    const cutoff = new Date(Date.now() - 5 * 60 * 1000);
+    let pedidos: any[];
+    try {
+      pedidos = await this.prisma.pedidos.findMany({
+        where: {
+          estado: 'pagado',
+          fecha_creacion: { lt: cutoff },
+          envios: {
+            none: {
+              envio_guias: { some: {} },
+            },
+          },
+        },
+        take: 10,
+        orderBy: { fecha_creacion: 'asc' },
+        select: { id_pedido: true },
+      });
+    } catch (dbErr: any) {
+      this.logger.warn(`[pagos] retryGuiasFallidas: DB no disponible. ${dbErr?.message}`);
+      return;
+    }
+
+    if (pedidos.length === 0) return;
+
+    this.logger.log(`[pagos] retryGuiasFallidas: reintentando guías para ${pedidos.length} pedido(s)`);
+
+    for (const pedido of pedidos) {
+      try {
+        await this.crearGuiasPostPago(pedido.id_pedido);
+      } catch (err: any) {
+        this.logger.error(`[pagos] retryGuiasFallidas pedido ${pedido.id_pedido}: ${err?.message}`);
+      }
+    }
+  }
+
+  /**
+   * Llamado cuando Stripe cierra una disputa (charge.dispute.closed).
+   * Si el merchant ganó ('won') → re-encola los payouts fallidos para ese pedido.
+   * Si el merchant perdió ('lost') → marca los payouts como agotados con motivo 'disputa_perdida'.
+   */
+  async handleDisputeClosed(paymentIntentId: string, disputeStatus: 'won' | 'lost' | string): Promise<void> {
+    const pago = await this.prisma.pagos.findFirst({
+      where: { payment_intent_id: paymentIntentId },
+      select: { id_pago: true, id_pedido: true },
+    });
+
+    if (!pago) {
+      this.logger.warn(`[disputa] No se encontró pago para payment_intent=${paymentIntentId}`);
+      return;
+    }
+
+    this.logger.log(`[disputa] charge.dispute.closed status=${disputeStatus} pedido=${pago.id_pedido}`);
+
+    const payouts = await this.prisma.payouts.findMany({
+      where: {
+        pedido_productor: { some: { id_pedido: pago.id_pedido } },
+        estado: { in: ['fallido', 'pendiente'] },
+      },
+      select: { id_payout: true, id_productor: true },
+    });
+
+    if (payouts.length === 0) {
+      this.logger.log(`[disputa] Sin payouts pendientes para pedido=${pago.id_pedido}`);
+      return;
+    }
+
+    if (disputeStatus === 'won') {
+      // El merchant ganó — resetear intentos para que el cron de retry los procese
+      await this.prisma.payouts.updateMany({
+        where: { id_payout: { in: payouts.map((p) => p.id_payout) } },
+        data: { intentos: 0, proximo_reintento: null, ultimo_error: 'Disputa ganada — reintento automático' },
+      });
+      this.logger.log(`[disputa] ${payouts.length} payout(s) re-encolados para pedido=${pago.id_pedido}`);
+    } else if (disputeStatus === 'lost') {
+      await this.prisma.payouts.updateMany({
+        where: { id_payout: { in: payouts.map((p) => p.id_payout) } },
+        data: { estado: 'agotado', ultimo_error: 'Disputa perdida — pago retenido por plataforma' },
+      });
+      this.logger.warn(`[disputa] ${payouts.length} payout(s) marcados como agotados (disputa perdida) para pedido=${pago.id_pedido}`);
     }
   }
 }

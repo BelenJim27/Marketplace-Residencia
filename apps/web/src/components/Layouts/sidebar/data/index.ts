@@ -115,7 +115,7 @@ export const ADMIN_NAV_DATA: NavSection[] = [
 
       {
         title: "Solicitudes Productores",
-        url: "/Administrador/solicitudes-productores",
+        url: "/administrador/solicitudes-productores",
         icon: UserRound,
       },
       {

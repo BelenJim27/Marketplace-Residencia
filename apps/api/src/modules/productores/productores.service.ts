@@ -1,15 +1,18 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
   InternalServerErrorException,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { serializeBigInts } from "../shared/serialize";
 import {
   CreateProductorDto,
   CreateRegionDto,
   RevisarSolicitudDto,
+  ActualizarPerfilProductorDto,
   SolicitarProductorDto,
   UpdateProductorDto,
   UpdateRegionDto,
@@ -63,6 +66,8 @@ function decrypt(text: string): string | null {
 
 @Injectable()
 export class ProductoresService {
+  private readonly logger = new Logger(ProductoresService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificaciones: NotificacionesService,
@@ -72,13 +77,21 @@ export class ProductoresService {
 
   // ── CRUD básico ────────────────────────────────────────────────────────────
 
-  async findAll() {
-    return serializeBigInts(
-      await this.prisma.productores.findMany({
-        where: { eliminado_en: null },
+  async findAll(query: PaginacionQueryDto = {}) {
+    const pagina = query.pagina ?? 1;
+    const limite = query.limite ?? 20;
+    const skip = (pagina - 1) * limite;
+    const where = { eliminado_en: null };
+    const [items, total] = await Promise.all([
+      this.prisma.productores.findMany({
+        where,
         include: { usuarios: true, regiones: true, lotes: true, tiendas: true },
+        take: limite,
+        skip,
       }),
-    );
+      this.prisma.productores.count({ where }),
+    ]);
+    return serializeBigInts({ items, paginacion: { pagina, limite, total, paginas: Math.ceil(total / limite) } });
   }
 
   async findOne(id_productor: number) {
@@ -327,8 +340,10 @@ export class ProductoresService {
           where: { id_usuario, tipo: "produccion", eliminado_en: null },
         });
 
+      let dirProduccionId: bigint;
+
       if (direccionProduccionExistente) {
-        await this.prisma.direcciones.update({
+        const updated = await this.prisma.direcciones.update({
           where: { id_direccion: direccionProduccionExistente.id_direccion },
           data: {
             ubicacion: (dto.direccion_produccion.ubicacion ?? {}) as any,
@@ -343,8 +358,9 @@ export class ProductoresService {
               dto.direccion_produccion.es_internacional ?? false,
           },
         });
+        dirProduccionId = updated.id_direccion;
       } else {
-        await this.prisma.direcciones.create({
+        const created = await this.prisma.direcciones.create({
           data: {
             id_usuario,
             ubicacion: (dto.direccion_produccion.ubicacion ?? {}) as any,
@@ -360,7 +376,13 @@ export class ProductoresService {
               dto.direccion_produccion.es_internacional ?? false,
           },
         });
+        dirProduccionId = created.id_direccion;
       }
+
+      await this.prisma.productores.update({
+        where: { id_productor: resultado.id_productor },
+        data: { id_direccion_bodega: dirProduccionId },
+      });
     }
 
     // ── Notificación y email ───────────────────────────────────────────────
@@ -382,7 +404,7 @@ export class ProductoresService {
       this.emailService
         .sendSolicitudRecibidaEmail(usuarioData.email, usuarioData.nombre)
         .catch((err) =>
-          console.error("[Email] sendSolicitudRecibidaEmail:", err),
+          this.logger.warn(`[Email] sendSolicitudRecibidaEmail: ${(err as Error)?.message}`),
         );
     }
 
@@ -582,7 +604,7 @@ export class ProductoresService {
           dto.motivo_aprobacion,
         )
         .catch((err) =>
-          console.error("[Email] sendProductorApprovedEmail:", err),
+          this.logger.warn(`[Email] sendProductorApprovedEmail: ${(err as Error)?.message}`),
         );
     } else {
       this.emailService
@@ -592,7 +614,7 @@ export class ProductoresService {
           dto.motivo_rechazo,
         )
         .catch((err) =>
-          console.error("[Email] sendProductorRejectedEmail:", err),
+          this.logger.warn(`[Email] sendProductorRejectedEmail: ${(err as Error)?.message}`),
         );
     }
 
@@ -605,6 +627,114 @@ export class ProductoresService {
         valor_anterior: { estado: 'pendiente' } as any,
         valor_nuevo: { estado: dto.estado, motivo_rechazo: dto.motivo_rechazo ?? null } as any,
       },
+    });
+
+    return serializeBigInts(actualizado);
+  }
+
+  // ── Actualizar mi perfil (productor aprobado) ──────────────────────────────
+
+  async actualizarMiPerfil(dto: ActualizarPerfilProductorDto, id_usuario: string) {
+    const productor = await this.prisma.productores.findFirst({
+      where: { id_usuario, eliminado_en: null },
+    });
+    if (!productor) throw new NotFoundException('No se encontró perfil de productor para este usuario');
+
+    const updateData: Record<string, any> = {};
+    if (dto.id_region !== undefined) updateData.id_region = dto.id_region;
+    if (dto.rfc !== undefined) updateData.rfc = dto.rfc;
+    if (dto.razon_social !== undefined) updateData.razon_social = dto.razon_social;
+    if (dto.paypal_email !== undefined) updateData.paypal_email = dto.paypal_email;
+    if (dto.datos_bancarios !== undefined) {
+      updateData.datos_bancarios = dto.datos_bancarios ? encrypt(dto.datos_bancarios) : null;
+    }
+
+    if (dto.direccion_fiscal) {
+      const fiscalExistente = await this.prisma.direcciones.findFirst({
+        where: { id_usuario, tipo: 'facturacion', eliminado_en: null },
+      });
+      if (fiscalExistente) {
+        await this.prisma.direcciones.update({
+          where: { id_direccion: fiscalExistente.id_direccion },
+          data: {
+            linea_1: dto.direccion_fiscal.linea_1 ?? null,
+            linea_2: dto.direccion_fiscal.linea_2 ?? null,
+            ciudad: dto.direccion_fiscal.ciudad ?? null,
+            estado: dto.direccion_fiscal.estado ?? null,
+            codigo_postal: dto.direccion_fiscal.codigo_postal ?? null,
+            pais_iso2: dto.direccion_fiscal.pais_iso2 ?? null,
+            referencia: dto.direccion_fiscal.referencia ?? null,
+            ubicacion: (dto.direccion_fiscal.ubicacion ?? {}) as any,
+            es_internacional: dto.direccion_fiscal.es_internacional ?? false,
+          },
+        });
+      } else {
+        await this.prisma.direcciones.create({
+          data: {
+            id_usuario,
+            linea_1: dto.direccion_fiscal.linea_1 ?? null,
+            linea_2: dto.direccion_fiscal.linea_2 ?? null,
+            ciudad: dto.direccion_fiscal.ciudad ?? null,
+            estado: dto.direccion_fiscal.estado ?? null,
+            codigo_postal: dto.direccion_fiscal.codigo_postal ?? null,
+            pais_iso2: dto.direccion_fiscal.pais_iso2 ?? null,
+            referencia: dto.direccion_fiscal.referencia ?? null,
+            ubicacion: (dto.direccion_fiscal.ubicacion ?? {}) as any,
+            tipo: 'facturacion',
+            es_internacional: dto.direccion_fiscal.es_internacional ?? false,
+          },
+        });
+      }
+    }
+
+    if (dto.direccion_produccion) {
+      const produccionExistente = await this.prisma.direcciones.findFirst({
+        where: { id_usuario, tipo: 'produccion', eliminado_en: null },
+      });
+
+      let dirProduccionId: bigint;
+
+      if (produccionExistente) {
+        const updated = await this.prisma.direcciones.update({
+          where: { id_direccion: produccionExistente.id_direccion },
+          data: {
+            linea_1: dto.direccion_produccion.linea_1 ?? null,
+            linea_2: dto.direccion_produccion.linea_2 ?? null,
+            ciudad: dto.direccion_produccion.ciudad ?? null,
+            estado: dto.direccion_produccion.estado ?? null,
+            codigo_postal: dto.direccion_produccion.codigo_postal ?? null,
+            pais_iso2: dto.direccion_produccion.pais_iso2 ?? null,
+            referencia: dto.direccion_produccion.referencia ?? null,
+            ubicacion: (dto.direccion_produccion.ubicacion ?? {}) as any,
+            es_internacional: dto.direccion_produccion.es_internacional ?? false,
+          },
+        });
+        dirProduccionId = updated.id_direccion;
+      } else {
+        const created = await this.prisma.direcciones.create({
+          data: {
+            id_usuario,
+            linea_1: dto.direccion_produccion.linea_1 ?? null,
+            linea_2: dto.direccion_produccion.linea_2 ?? null,
+            ciudad: dto.direccion_produccion.ciudad ?? null,
+            estado: dto.direccion_produccion.estado ?? null,
+            codigo_postal: dto.direccion_produccion.codigo_postal ?? null,
+            pais_iso2: dto.direccion_produccion.pais_iso2 ?? null,
+            referencia: dto.direccion_produccion.referencia ?? null,
+            ubicacion: (dto.direccion_produccion.ubicacion ?? {}) as any,
+            tipo: 'produccion',
+            es_internacional: dto.direccion_produccion.es_internacional ?? false,
+          },
+        });
+        dirProduccionId = created.id_direccion;
+      }
+
+      updateData.id_direccion_bodega = dirProduccionId;
+    }
+
+    const actualizado = await this.prisma.productores.update({
+      where: { id_productor: productor.id_productor },
+      data: updateData,
     });
 
     return serializeBigInts(actualizado);

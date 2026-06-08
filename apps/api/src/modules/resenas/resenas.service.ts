@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 import {
   CreateResenaDto,
@@ -18,13 +19,22 @@ export class ResenasService {
 
   // ─── Existentes (sin cambios) ──────────────────────────────────────────────
 
-  async findAll() {
-    return serializeBigInts(
-      await this.prisma.resenas.findMany({
-        where: { eliminado_en: null },
+  async findAll(query: PaginacionQueryDto = {}) {
+    const pagina = query.pagina ?? 1;
+    const limite = query.limite ?? 20;
+    const skip = (pagina - 1) * limite;
+    const where = { eliminado_en: null };
+    const [items, total] = await Promise.all([
+      this.prisma.resenas.findMany({
+        where,
         include: { usuarios: true, productos: true },
+        orderBy: { fecha: 'desc' },
+        take: limite,
+        skip,
       }),
-    );
+      this.prisma.resenas.count({ where }),
+    ]);
+    return serializeBigInts({ items, paginacion: { pagina, limite, total, paginas: Math.ceil(total / limite) } });
   }
 
   async findOne(id: string) {
@@ -37,7 +47,6 @@ export class ResenasService {
   }
 
   async create(dto: CreateResenaDto) {
-    // Verificar que no exista ya una reseña del mismo usuario para el mismo producto
     const existente = await this.prisma.resenas.findUnique({
       where: {
         id_usuario_id_producto: {
@@ -50,6 +59,16 @@ export class ResenasService {
       throw new BadRequestException('Ya existe una reseña de este usuario para este producto');
     }
 
+    const pedidoEntregado = await this.prisma.detalle_pedido.findFirst({
+      where: {
+        id_producto: BigInt(dto.id_producto),
+        pedidos: {
+          id_usuario: dto.id_usuario,
+          estado: 'entregado',
+        },
+      },
+    });
+
     return serializeBigInts(
       await this.prisma.resenas.create({
         data: {
@@ -58,7 +77,7 @@ export class ResenasService {
           calificacion: dto.calificacion,
           comentario: dto.comentario ?? null,
           idioma_comentario: dto.idioma_comentario ?? null,
-          compra_verificada: dto.compra_verificada ?? false,
+          compra_verificada: pedidoEntregado !== null,
           respuesta_vendedor: dto.respuesta_vendedor ?? null,
         },
       }),
@@ -73,7 +92,6 @@ export class ResenasService {
           calificacion: dto.calificacion,
           comentario: dto.comentario,
           idioma_comentario: dto.idioma_comentario,
-          compra_verificada: dto.compra_verificada,
           respuesta_vendedor: dto.respuesta_vendedor,
         },
       }),

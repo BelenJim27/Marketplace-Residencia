@@ -1,7 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
 import {
-  IsBoolean,
   IsInt,
   IsOptional,
   IsString,
@@ -15,7 +14,6 @@ export class CreateResenaDto {
   @IsInt() @Min(1) @Max(5) @Type(() => Number) calificacion!: number;
   @IsOptional() @IsString() comentario?: string;
   @IsOptional() @IsString() idioma_comentario?: string;
-  @IsOptional() @IsBoolean() compra_verificada?: boolean;
   @IsOptional() @IsString() respuesta_vendedor?: string;
 }
 

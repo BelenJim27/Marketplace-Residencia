@@ -14,11 +14,16 @@ const REGIONES = [
   { nombre: 'Costa', estado_prov: 'Oaxaca', pais_iso2: 'MX' },
 ];
 
+// HS codes: clasificación arancelaria usada en guías internacionales
+// 2208.90 = Otras bebidas espirituosas (mezcal, destilados de agave)
+// 6304.99 = Artículos de artesanía textil
+// 2106.90 = Preparaciones alimenticias diversas
+// 3304.99 = Preparaciones de belleza y cosméticos
 const CATEGORIAS = [
-  { nombre: 'Mezcal', slug: 'mezcal', descripcion: 'Bebidas destiladas de agave', tipo: 'producto', orden: 1 },
-  { nombre: 'Artesanía', slug: 'artesania', descripcion: 'Artículos artesanales', tipo: 'producto', orden: 2 },
-  { nombre: 'Alimentación', slug: 'alimentacion', descripcion: 'Productos alimenticios', tipo: 'producto', orden: 3 },
-  { nombre: 'Cosméticos', slug: 'cosmeticos', descripcion: 'Productos de belleza', tipo: 'producto', orden: 4 },
+  { nombre: 'Mezcal', slug: 'mezcal', descripcion: 'Bebidas destiladas de agave', tipo: 'producto', codigo_hs_default: '2208.90' },
+  { nombre: 'Artesanía', slug: 'artesania', descripcion: 'Artículos artesanales', tipo: 'producto', codigo_hs_default: '6304.99' },
+  { nombre: 'Alimentación', slug: 'alimentacion', descripcion: 'Productos alimenticios', tipo: 'producto', codigo_hs_default: '2106.90' },
+  { nombre: 'Cosméticos', slug: 'cosmeticos', descripcion: 'Productos de belleza', tipo: 'producto', codigo_hs_default: '3304.99' },
 ];
 
 const TRANSPORTISTAS = [
@@ -32,22 +37,17 @@ const TRANSPORTISTAS = [
       { codigo_servicio: 'EXPRESS', nombre: 'Envío Express', tiempo_estimado: '1-2 días' },
     ],
   },
-  {
-    codigo: 'FEDEX',
-    nombre: 'FedEx',
-    paises_operacion: ['MX', 'US'],
-    activo: true,
-    servicios: [
-      { codigo_servicio: 'GROUND', nombre: 'FedEx Ground', tiempo_estimado: '5-7 días' },
-      { codigo_servicio: 'EXPRESS', nombre: 'FedEx Express', tiempo_estimado: '2-3 días' },
-      { codigo_servicio: 'INTERNATIONAL', nombre: 'FedEx Internacional', tiempo_estimado: '7-10 días' },
-    ],
-  },
+];
+
+const COMISIONES_DEFAULT = [
+  { alcance: 'global', porcentaje: 0.1500, prioridad: 1000 },
+  { alcance: 'pais', pais_iso2: 'US', porcentaje: 0.1800, prioridad: 500 },
+  { alcance: 'pais', pais_iso2: 'MX', porcentaje: 0.1500, prioridad: 500 },
 ];
 
 const CONFIGURACION = [
-  { clave: 'IMPuesto_IVA', valor: '16', tipo: 'numero', descripcion: 'Porcentaje de IVA' },
-  { clave: 'IMPuesto_IEPS', valor: '26.5', tipo: 'numero', descripcion: 'Porcentaje de IEPS para bebidas alcohólicas' },
+  { clave: 'IMPUESTO_IVA', valor: '16', tipo: 'numero', descripcion: 'Porcentaje de IVA' },
+  { clave: 'IMPUESTO_IEPS', valor: '26.5', tipo: 'numero', descripcion: 'Porcentaje de IEPS para bebidas alcohólicas' },
   { clave: 'MONEDA_DEFAULT', valor: 'MXN', tipo: 'texto', descripcion: 'Moneda predeterminada' },
   { clave: 'MONEDA_REFERENCIA', valor: 'USD', tipo: 'texto', descripcion: 'Moneda de referencia para type de cambio' },
   { clave: 'PEDIDO_MINIMO', valor: '500', tipo: 'numero', descripcion: 'Monto mínimo para pedido' },
@@ -57,6 +57,27 @@ const CONFIGURACION = [
   { clave: 'COMISION_PLATAFORMA', valor: '10', tipo: 'numero', descripcion: 'Porcentaje de comisión de la plataforma' },
   { clave: 'IVA_INCLUIDO', valor: 'true', tipo: 'boolean', descripcion: 'IVA incluido en precios' },
 ];
+
+async function seedComisiones() {
+  console.log('\n=== Comisiones ===');
+  for (const c of COMISIONES_DEFAULT) {
+    const existing = await prisma.comisiones.findFirst({
+      where: {
+        alcance: c.alcance,
+        pais_iso2: c.pais_iso2 ?? null,
+        id_categoria: null,
+        id_productor: null,
+        activo: true,
+      },
+    });
+    if (existing) {
+      console.log(`  ✓ Already exists: ${c.alcance}${c.pais_iso2 ? `/${c.pais_iso2}` : ''} → ${(Number(existing.porcentaje) * 100).toFixed(2)}%`);
+    } else {
+      await prisma.comisiones.create({ data: c });
+      console.log(`  ✓ Created: ${c.alcance}${c.pais_iso2 ? `/${c.pais_iso2}` : ''} → ${(c.porcentaje * 100).toFixed(2)}% (prioridad ${c.prioridad})`);
+    }
+  }
+}
 
 async function main() {
   console.log('🌱 Starting base seed...\n');
@@ -79,10 +100,19 @@ async function main() {
     for (const cat of CATEGORIAS) {
       const existing = await prisma.categorias.findUnique({ where: { slug: cat.slug } });
       if (existing) {
-        console.log(`  ✓ Already exists: ${cat.slug}`);
+        // Actualizar HS code si no estaba seteado
+        if (!existing.codigo_hs_default && cat.codigo_hs_default) {
+          await prisma.categorias.update({
+            where: { slug: cat.slug },
+            data: { codigo_hs_default: cat.codigo_hs_default },
+          });
+          console.log(`  ✎ Updated HS code: ${cat.slug} → ${cat.codigo_hs_default}`);
+        } else {
+          console.log(`  ✓ Already exists: ${cat.slug}`);
+        }
       } else {
         await prisma.categorias.create({ data: { ...cat, activo: true } });
-        console.log(`  ✓ Created: ${cat.nombre}`);
+        console.log(`  ✓ Created: ${cat.nombre} (HS: ${cat.codigo_hs_default ?? 'N/A'})`);
       }
     }
 
@@ -113,6 +143,19 @@ async function main() {
       }
     }
 
+    // Renombrar claves con typo que puedan existir en BD de instalaciones previas
+    const CLAVE_RENAMES = [
+      { old: 'IMPuesto_IVA',  nuevo: 'IMPUESTO_IVA'  },
+      { old: 'IMPuesto_IEPS', nuevo: 'IMPUESTO_IEPS' },
+    ];
+    for (const r of CLAVE_RENAMES) {
+      const wrong = await prisma.configuracion_sistema.findUnique({ where: { clave: r.old } });
+      if (wrong) {
+        await prisma.configuracion_sistema.update({ where: { clave: r.old }, data: { clave: r.nuevo } });
+        console.log(`  ✎ Renamed config key: ${r.old} → ${r.nuevo}`);
+      }
+    }
+
     console.log('\n=== Configuración del Sistema ===');
     for (const config of CONFIGURACION) {
       const existing = await prisma.configuracion_sistema.findUnique({ where: { clave: config.clave } });
@@ -123,6 +166,8 @@ async function main() {
         console.log(`  ✓ Created: ${config.clave} = ${config.valor}`);
       }
     }
+
+    await seedComisiones();
 
     console.log('\n✅ Base seed completed successfully!');
   } catch (error) {

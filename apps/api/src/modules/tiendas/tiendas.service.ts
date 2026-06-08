@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { serializeBigInts } from '../shared/serialize';
 import { CreateTiendaDto, UpdateTiendaDto } from './dto/tiendas.dto';
 
@@ -7,29 +8,28 @@ import { CreateTiendaDto, UpdateTiendaDto } from './dto/tiendas.dto';
 export class TiendasService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(id_productor?: number) {
-    const stores = await this.prisma.tiendas.findMany({
-      where: {
-        eliminado_en: null,
-        // Solo filtra por productor si se recibe el parámetro
-        ...(id_productor ? { id_productor } : {}),
-      },
-      orderBy: { fecha_creacion: 'desc' },
-      // Incluye datos del productor para mostrarlos en el formulario
-      include: {
-        productores: {
-          include: {
-            usuarios: {
-              select: {
-                nombre: true,
-                apellido_paterno: true,
-                apellido_materno: true,
-              },
-            },
+  async findAll(id_productor?: number, query: PaginacionQueryDto = {}) {
+    const pagina = query.pagina ?? 1;
+    const limite = query.limite ?? 20;
+    const skip = (pagina - 1) * limite;
+    const where = {
+      eliminado_en: null,
+      ...(id_productor ? { id_productor } : {}),
+    };
+    const include = {
+      productores: {
+        include: {
+          usuarios: {
+            select: { nombre: true, apellido_paterno: true, apellido_materno: true },
           },
         },
       },
-    });
+    };
+
+    const [stores, total] = await Promise.all([
+      this.prisma.tiendas.findMany({ where, orderBy: { fecha_creacion: 'desc' }, include, take: limite, skip }),
+      this.prisma.tiendas.count({ where }),
+    ]);
 
     const storeIds = stores.map((store) => store.id_tienda);
     const productCounts =
@@ -37,25 +37,18 @@ export class TiendasService {
         ? []
         : await this.prisma.productos.groupBy({
             by: ['id_tienda'],
-            where: {
-              eliminado_en: null,
-              id_tienda: { in: storeIds },
-            },
-            _count: {
-              id_producto: true,
-            },
+            where: { eliminado_en: null, id_tienda: { in: storeIds } },
+            _count: { id_producto: true },
           });
 
     const stockByStore = new Map(
       productCounts.map((item) => [item.id_tienda, item._count.id_producto]),
     );
 
-    return serializeBigInts(
-      stores.map((store) => ({
-        ...store,
-        stock: stockByStore.get(store.id_tienda) ?? 0,
-      })),
-    );
+    return serializeBigInts({
+      items: stores.map((store) => ({ ...store, stock: stockByStore.get(store.id_tienda) ?? 0 })),
+      paginacion: { pagina, limite, total, paginas: Math.ceil(total / limite) },
+    });
   }
 
   async findOne(id_tienda: number) {

@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Moneda, Prisma, usuarios } from '@prisma/client';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { serializeBigInts } from '../shared/serialize';
 import { AssignUsuarioRolDto, CreateUsuarioDto, UpdateUsuarioDto } from './dto/usuarios.dto';
 
@@ -9,13 +10,22 @@ import { AssignUsuarioRolDto, CreateUsuarioDto, UpdateUsuarioDto } from './dto/u
 export class UsuariosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
-    const items = await this.prisma.usuarios.findMany({
-      where: { eliminado_en: null },
-      include: { usuario_rol: { include: { roles: true } } },
-      orderBy: { fecha_registro: 'desc' },
-    });
-    return serializeBigInts(items);
+  async findAll(query: PaginacionQueryDto = {}) {
+    const pagina = query.pagina ?? 1;
+    const limite = query.limite ?? 20;
+    const skip = (pagina - 1) * limite;
+    const where = { eliminado_en: null };
+    const [items, total] = await Promise.all([
+      this.prisma.usuarios.findMany({
+        where,
+        include: { usuario_rol: { include: { roles: true } } },
+        orderBy: { fecha_registro: 'desc' },
+        take: limite,
+        skip,
+      }),
+      this.prisma.usuarios.count({ where }),
+    ]);
+    return serializeBigInts({ items, paginacion: { pagina, limite, total, paginas: Math.ceil(total / limite) } });
   }
 
   async findOne(id_usuario: string) {

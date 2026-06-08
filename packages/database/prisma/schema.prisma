@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Moneda {
@@ -68,6 +69,7 @@ model categorias {
   imagen_url                    String?                         @db.VarChar(500)
   activo                        Boolean                         @default(true)
   requiere_edad_minima          Int?
+  codigo_hs_default             String?                         @db.VarChar(20)
   creado_en                     DateTime                        @default(now()) @db.Timestamptz(6)
   categorias                    categorias?                     @relation("categoriasTocategorias", fields: [id_padre], references: [id_categoria], onUpdate: NoAction)
   other_categorias              categorias[]                    @relation("categoriasTocategorias")
@@ -78,6 +80,8 @@ model categorias {
   tasas_impuesto                tasas_impuesto[]
 
   @@index([id_padre], map: "idx_cat_padre")
+  @@index([activo], map: "idx_cat_activo")
+  @@index([nombre], map: "idx_cat_nombre")
 }
 
 model configuracion_sistema {
@@ -106,6 +110,7 @@ model detalle_pedido {
   tiendas       tiendas?     @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
 
   @@index([id_pedido], map: "idx_detalle_pedido")
+  @@index([id_producto], map: "idx_detalle_producto")
   @@index([id_productor], map: "idx_detalle_productor")
   @@index([id_tienda], map: "idx_detalle_tienda")
 }
@@ -131,9 +136,10 @@ model direcciones {
   calle               String?   @db.VarChar(200)
   colonia             String?   @db.VarChar(150)
   numero              String?   @db.VarChar(20)
-  usuarios            usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
-  paises              paises?   @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
-  pedidos             pedidos[] @relation("DireccionEnvioPedido")
+  usuarios            usuarios     @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  paises              paises?      @relation(fields: [pais_iso2], references: [iso2], onDelete: Restrict, onUpdate: NoAction)
+  pedidos             pedidos[]    @relation("DireccionEnvioPedido")
+  productores_bodega  productores[] @relation("ProductorBodega")
 
   @@index([ubicacion], map: "idx_direcciones_ubicacion", type: Gin)
   @@index([id_usuario, es_predeterminada], map: "idx_direcciones_predeterminada")
@@ -217,6 +223,10 @@ model envios {
   moneda_costo             Moneda             @default(MXN)
   estado                   String             @default("preparando") @db.VarChar(30)
   requires_adult_signature Boolean            @default(false)
+  solicitar_proteccion     Boolean            @default(false)
+  costo_proteccion         Decimal?           @db.Decimal(14, 2)
+  moneda_proteccion        Moneda             @default(MXN)
+  proteccion_id            String?            @db.VarChar(200)
   fecha_envio              DateTime?          @db.Timestamptz(6)
   fecha_entrega_estimada   DateTime?          @db.Timestamptz(6)
   fecha_entrega            DateTime?          @db.Timestamptz(6)
@@ -278,6 +288,7 @@ model inventario {
   movimientos_inventario movimientos_inventario[]
 
   @@index([id_producto], map: "idx_inventario_producto")
+  @@index([id_producto, stock], map: "idx_inventario_producto_stock")
 }
 
 model lote_atributos {
@@ -325,6 +336,8 @@ model lotes {
 
   @@index([codigo_lote], map: "idx_lotes_codigo")
   @@index([id_productor], map: "idx_lotes_productor")
+  @@index([estado_lote], map: "idx_lotes_estado")
+  @@index([id_productor, estado_lote], map: "idx_lotes_productor_estado")
 }
 
 model ListaDeseosItem {
@@ -510,24 +523,27 @@ model productores {
   asociacion                  String?               @db.VarChar(150)
   nombre_marca                String?               @db.VarChar(150)
   certificado_url             String?               @db.VarChar(500)
-  // Dirección de la bodega/punto de despacho (remitente en guías FedEx)
+  // DEPRECATED: bodega_* reemplazados por id_direccion_bodega → direcciones
   bodega_calle                String?               @db.VarChar(200)
   bodega_ciudad               String?               @db.VarChar(100)
   bodega_estado               String?               @db.VarChar(100)
   bodega_codigo_postal        String?               @db.VarChar(20)
   bodega_pais_iso2            String?               @default("MX") @db.Char(2)
   bodega_telefono             String?               @db.VarChar(30)
+  id_direccion_bodega         BigInt?
   comisiones                  comisiones[]
   detalle_pedido              detalle_pedido[]
   lotes                       lotes[]
   payouts                     payouts[]
   pedido_productor            pedido_productor[]
   productor_categoria         productor_categoria[]
+  direccion_bodega            direcciones?          @relation("ProductorBodega", fields: [id_direccion_bodega], references: [id_direccion], onDelete: SetNull, onUpdate: NoAction)
   regiones                    regiones?             @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
   usuarios                    usuarios              @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
   revisor                     usuarios?             @relation("RevisorProductor", fields: [revisado_por], references: [id_usuario], onUpdate: NoAction)
   tiendas                     tiendas[]
   @@index([estado], map: "idx_productores_estado")
+  @@index([id_direccion_bodega], map: "idx_productores_dir_bodega")
 }
 
 model productos {
@@ -699,6 +715,7 @@ model tiendas {
   paises               paises                 @relation(fields: [pais_operacion], references: [iso2], onUpdate: NoAction)
   @@index([id_productor], map: "idx_tiendas_productor")
   @@index([nombre], map: "idx_tiendas_nombre")
+  @@index([id_productor, status], map: "idx_tiendas_productor_status")
 }
 
 model transportistas {
@@ -803,6 +820,7 @@ model pedido_productor {
   @@index([id_productor], map: "idx_pedido_prod_productor")
   @@index([id_payout], map: "idx_pedido_prod_payout")
   @@index([actualizado_en], map: "idx_pedido_productor_actualizado")
+  @@index([id_productor, estado, actualizado_en], map: "idx_pedido_prod_productor_estado")
 }
 
 model paises {

@@ -1,7 +1,10 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { verifyJwt } from '../auth.service';
 
-const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET ?? 'change-me-access-secret';
+const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET;
+if (!ACCESS_TOKEN_SECRET) {
+  throw new Error('[auth] JWT_ACCESS_SECRET no configurada. El servidor no puede iniciar sin secretos JWT seguros.');
+}
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -24,7 +27,7 @@ export class AuthGuard implements CanActivate {
         roles: string[];
         permisos: string[];
         id_productor: number | null;
-      }>(token, ACCESS_TOKEN_SECRET);
+      }>(token, ACCESS_TOKEN_SECRET!);
 
       if (payload.token_type !== 'access') {
         throw new UnauthorizedException('Token inválido');

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { existsSync } from "fs";
 import { join } from "path";
 import { Prisma } from "@prisma/client";
@@ -152,6 +152,7 @@ export class ProductosService {
       molienda?: string;
       maestroMezcalero?: string;
     },
+    limit = 200,
   ) {
     const where: Prisma.productosWhereInput = { eliminado_en: null };
 
@@ -251,6 +252,7 @@ export class ProductosService {
       },
       include: productoInclude as any,
       orderBy: { creado_en: 'desc' },
+      take: Math.min(limit, 200),
     });
 
     // Excluir productos sin precio o sin imagen de la vista del cliente
@@ -371,6 +373,18 @@ export class ProductosService {
       imagen_principal_url: dto.imagen_principal_url ?? (dto as any).imagen_url ?? null,
     };
 
+    // Require shipping dimensions when activating a product (not on borrador/inactivo)
+    const targetStatus = (data.status as string) ?? 'activo';
+    if (targetStatus !== 'borrador' && targetStatus !== 'inactivo') {
+      if (!dto.peso_kg || !dto.alto_cm || !dto.ancho_cm || !dto.largo_cm) {
+        throw new BadRequestException(
+          'Para publicar un producto debes especificar peso_kg, alto_cm, ancho_cm y largo_cm. ' +
+          'Estos datos son necesarios para calcular el costo de envío. ' +
+          'Guarda el producto como "borrador" si aún no tienes esta información.',
+        );
+      }
+    }
+
     const producto = await this.prisma.productos.create({
       data,
       include: {
@@ -438,6 +452,18 @@ export class ProductosService {
     if (dto.precio_base !== undefined) data.precio_base = new Prisma.Decimal(dto.precio_base);
     if (dto.metadata !== undefined) data.metadata = dto.metadata as any;
     if (dto.status !== undefined) data.status = dto.status;
+    // Validate dimensions when activating a product
+    if (dto.status === 'activo') {
+      const pesoFinal = dto.peso_kg !== undefined ? dto.peso_kg : (current.peso_kg ? String(current.peso_kg) : null);
+      const altoFinal = dto.alto_cm !== undefined ? dto.alto_cm : (current.alto_cm ? String(current.alto_cm) : null);
+      const anchoFinal = dto.ancho_cm !== undefined ? dto.ancho_cm : (current.ancho_cm ? String(current.ancho_cm) : null);
+      const largoFinal = dto.largo_cm !== undefined ? dto.largo_cm : (current.largo_cm ? String(current.largo_cm) : null);
+      if (!pesoFinal || !altoFinal || !anchoFinal || !largoFinal) {
+        throw new BadRequestException(
+          'Para activar un producto debes especificar peso_kg, alto_cm, ancho_cm y largo_cm.',
+        );
+      }
+    }
     if (dto.imagen_principal_url !== undefined) data.imagen_principal_url = dto.imagen_principal_url;
     if (dto.peso_kg !== undefined) data.peso_kg = dto.peso_kg ? new Prisma.Decimal(dto.peso_kg) : null;
     if (dto.alto_cm !== undefined) data.alto_cm = dto.alto_cm ? new Prisma.Decimal(dto.alto_cm) : null;
@@ -553,41 +579,58 @@ export class ProductosService {
   async assignLotesMatching() {
     const productosSinLote = await this.prisma.productos.findMany({
       where: { id_lote: null },
-      include: { tiendas: { include: { productores: true } } },
+      include: { tiendas: { select: { id_productor: true } } },
     });
 
+    // Collect unique producer IDs to batch-load their latest lote
+    const productorIds = [
+      ...new Set(
+        productosSinLote
+          .map((p) => p.tiendas?.id_productor)
+          .filter((id): id is number => id != null),
+      ),
+    ];
+
+    // Batch load: one query per producer via a raw approach using groupBy workaround
+    const lotes = await Promise.all(
+      productorIds.map((id_productor) =>
+        this.prisma.lotes.findFirst({
+          where: { id_productor },
+          orderBy: { creado_en: 'desc' },
+          select: { id_lote: true, id_productor: true },
+        }),
+      ),
+    );
+
+    // Build lookup map id_productor → id_lote
+    const lotePorProductor = new Map<number, number>();
+    for (const lote of lotes) {
+      if (lote) lotePorProductor.set(lote.id_productor, lote.id_lote);
+    }
+
+    // Assign lotes in batch using individual updates inside a transaction
     let asignados = 0;
     let skipped = 0;
+    const updates: { id_producto: bigint; id_lote: number }[] = [];
 
     for (const producto of productosSinLote) {
-      const tienda = producto.tiendas;
-      if (!tienda) {
-        skipped++;
-        continue;
-      }
-
-      const productor = tienda.productores;
-      if (!productor) {
-        skipped++;
-        continue;
-      }
-
-      const lote = await this.prisma.lotes.findFirst({
-        where: { id_productor: productor.id_productor },
-        orderBy: { creado_en: 'desc' },
-      });
-
-      if (!lote) {
-        skipped++;
-        continue;
-      }
-
-      await this.prisma.productos.update({
-        where: { id_producto: producto.id_producto },
-        data: { id_lote: lote.id_lote },
-      });
-
+      const idProductor = producto.tiendas?.id_productor;
+      if (!idProductor) { skipped++; continue; }
+      const idLote = lotePorProductor.get(idProductor);
+      if (!idLote) { skipped++; continue; }
+      updates.push({ id_producto: producto.id_producto, id_lote: idLote });
       asignados++;
+    }
+
+    if (updates.length > 0) {
+      await this.prisma.$transaction(
+        updates.map(({ id_producto, id_lote }) =>
+          this.prisma.productos.update({
+            where: { id_producto },
+            data: { id_lote },
+          }),
+        ),
+      );
     }
 
     return {

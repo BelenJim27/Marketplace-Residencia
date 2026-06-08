@@ -6,6 +6,131 @@ import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 
+// ─── Instrucciones de empaque por paquetería ─────────────────────────────────
+
+const PACKING_RULES: Record<string, { titulo: string; pasos: string[] }> = {
+  dhl: {
+    titulo: 'DHL Express',
+    pasos: [
+      'Caja de cartón doble corrugado (clase 4G)',
+      'Cada botella envuelta en plástico de burbujas (mín. 5 cm de protección)',
+      'Separadores de cartón entre botellas',
+      'Máx. 30 kg por paquete',
+      'Declara "Bebida alcohólica destilada – Mezcal" en el formulario de contenido',
+      'La guía ya incluye "Adult Signature Required" — no agregar etiquetas adicionales',
+      'Etiqueta "FRÁGIL" y "NO INVERTIR" en todas las caras de la caja',
+    ],
+  },
+  fedex: {
+    titulo: 'FedEx',
+    pasos: [
+      'Caja de doble corrugado o madera (clase 4G)',
+      'Cada botella sellada en bolsa de plástico individual (previene derrames)',
+      'Máx. 68 kg por paquete',
+      'Sella con cinta de seguridad en todas las costuras',
+      'La guía ya incluye "Adult Signature Required"',
+      'Declara el valor de la mercancía en la guía antes de imprimir',
+      'Etiqueta "FRÁGIL" en todas las caras',
+    ],
+  },
+  estafeta: {
+    titulo: 'Estafeta',
+    pasos: [
+      'Caja corrugada resistente (clase 4G)',
+      'Embalaje secundario interior: bolsa de plástico gruesa por si hay derrames',
+      'Separadores de cartón entre botellas',
+      'Máx. 30 kg por paquete',
+      'Declara "Bebida alcohólica" en el manifiesto de envío',
+      'Etiqueta "FRÁGIL" en las 6 caras de la caja',
+      'No cubrir el código de barras de la guía con cinta adhesiva',
+    ],
+  },
+  paquetexpress: {
+    titulo: 'Paquetexpress',
+    pasos: [
+      'Caja doble corrugado reforzada (clase 4G)',
+      'Máx. 20 kg por caja — divide en varias cajas si es necesario',
+      'Solo servicio Ground (terrestre) — solo destinos urbanos',
+      'Separadores de cartón o espuma entre botellas',
+      'Etiqueta "FRÁGIL" visible en las 4 caras laterales',
+      'No enviar a zonas rurales o de difícil acceso',
+    ],
+  },
+  redpack: {
+    titulo: 'Redpack',
+    pasos: [
+      'Caja de doble corrugado (clase 4G)',
+      'Material absorbente (papel kraft o espuma) entre botellas',
+      'Máx. 25 kg por paquete',
+      'Sella herméticamente con cinta de embalaje resistente',
+      'Etiqueta "FRÁGIL" y "NO INVERTIR" en todas las caras',
+    ],
+  },
+};
+
+const PACKING_GENERAL = [
+  'Usa siempre caja 4G (doble corrugado) — no cajas de supermercado ni usadas',
+  'Cada botella individualmente envuelta en plástico de burbujas',
+  'Separadores de cartón rígido entre botellas',
+  'Rellena los espacios vacíos con papel kraft o espuma',
+  'El peso máximo recomendado es 20 kg por caja',
+  'Etiqueta "FRÁGIL" y "NO INVERTIR" en todas las caras de la caja',
+];
+
+const ALCOHOL_EXTRA = [
+  'Requiere firma de adulto (+18) al momento de entrega — ya configurado en la guía',
+  'Declara el contenido como "Bebida alcohólica destilada – Mezcal"',
+  'Código SAT del producto: 50202200 (ya incluido en la carta porte)',
+  'Conserva la factura del productor durante el traslado',
+];
+
+function PackingInstructions({ carrierName, isAlcohol }: { carrierName: string | null; isAlcohol: boolean }) {
+  const key = (carrierName ?? '').toLowerCase().replace(/\s+/g, '');
+  const matched = Object.entries(PACKING_RULES).find(([k]) => key.includes(k));
+  const rules = matched ? matched[1] : null;
+
+  return (
+    <div className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3]/60 p-4">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E]">
+        <Package className="h-4 w-4 text-[#3D6B3F]" />
+        Instrucciones de Empaque
+        {rules && (
+          <span className="ml-auto rounded-full bg-[#3D6B3F]/10 px-2.5 py-0.5 text-xs font-medium text-[#3D6B3F]">
+            {rules.titulo}
+          </span>
+        )}
+      </div>
+
+      <ol className="space-y-1.5">
+        {(rules?.pasos ?? PACKING_GENERAL).map((paso, i) => (
+          <li key={i} className="flex gap-2 text-sm text-[#1F3A2E]/80">
+            <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#3D6B3F]/10 text-xs font-bold text-[#3D6B3F]">
+              {i + 1}
+            </span>
+            {paso}
+          </li>
+        ))}
+      </ol>
+
+      {isAlcohol && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3">
+          <p className="mb-1.5 text-xs font-semibold text-amber-800">Requisitos adicionales — Bebidas alcohólicas</p>
+          <ul className="space-y-1">
+            {ALCOHOL_EXTRA.map((item, i) => (
+              <li key={i} className="flex gap-1.5 text-xs text-amber-700">
+                <span className="flex-shrink-0">•</span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface PedidoProductor {
   id_pedido: number;
   estado_productor: string;
@@ -28,7 +153,7 @@ interface OrderDetail {
     direccion_envio_snapshot: any;
   };
   detalles: any[];
-  envio: { id_envio?: number; numero_rastreo?: string; estado?: string; valor_declarado_aduana?: string | null } | null;
+  envio: { id_envio?: number; numero_rastreo?: string; estado?: string; valor_declarado_aduana?: string | null; carrier_name?: string | null; is_alcohol?: boolean } | null;
   desglose?: {
     subtotal_bruto: string | null;
     comision_marketplace: string;
@@ -483,6 +608,14 @@ function DetalleModal({
                   )}
                 </div>
               </div>
+
+              {/* Instrucciones de empaque */}
+              {orden.envio?.id_envio && (
+                <PackingInstructions
+                  carrierName={orden.envio.carrier_name ?? null}
+                  isAlcohol={orden.envio.is_alcohol ?? false}
+                />
+              )}
 
               {/* Dirección */}
               {orden.pedido.direccion_envio_snapshot && (

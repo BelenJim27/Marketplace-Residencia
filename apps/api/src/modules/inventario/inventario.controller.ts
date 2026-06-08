@@ -6,7 +6,9 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from "@nestjs/common";
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import {
   CreateInventarioDto,
   CreateMovimientoInventarioDto,
@@ -27,11 +29,11 @@ export class InventarioController {
     return this.service.createMovimiento(dto);
   }
 
-  @Get("dashboard") getDashboard() {
-    return this.service.listInventario();
+  @Get("dashboard") getDashboard(@Query() query: PaginacionQueryDto) {
+    return this.service.listInventario(query);
   }
-  @Get() listInventario() {
-    return this.service.listInventario();
+  @Get() listInventario(@Query() query: PaginacionQueryDto) {
+    return this.service.listInventario(query);
   }
   @Get("producto/:id_producto") getByProducto(
     @Param("id_producto") id_producto: string,

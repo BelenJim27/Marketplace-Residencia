@@ -1,11 +1,20 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Moneda, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
 import { CreateTasaCambioDto } from './dto/tasas-cambio.dto';
 
+// Conservative static fallback rates (updated manually if needed).
+// Used when the DB has no active rate (cron hasn't run yet or failed repeatedly).
+const STATIC_FALLBACK_RATES: Record<string, number> = {
+  'MXN:USD': 0.050,  // ~20 MXN/USD (conservative)
+  'USD:MXN': 20.0,
+};
+
 @Injectable()
 export class TasasCambioService {
+  private readonly logger = new Logger(TasasCambioService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(origen?: string, destino?: string) {
@@ -35,6 +44,15 @@ export class TasasCambioService {
       orderBy: { vigente_desde: 'desc' },
     });
     if (!tasa) {
+      const fallbackKey = `${o}:${d}`;
+      const fallbackRate = STATIC_FALLBACK_RATES[fallbackKey];
+      if (fallbackRate !== undefined) {
+        this.logger.warn(
+          `[tasas-cambio] Sin tasa vigente ${o}→${d} en BD. Usando fallback estático ${fallbackRate}. ` +
+          `Verifica que el cron de sincronización de ExchangeRate-API esté activo.`,
+        );
+        return { tasa: String(fallbackRate), moneda_origen: o, moneda_destino: d, vigente_desde: fecha };
+      }
       throw new NotFoundException(`No hay tasa vigente ${o}→${d} para ${fecha.toISOString()}`);
     }
     return serializeBigInts(tasa);

@@ -11,7 +11,6 @@ import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
-import { useShipping } from "@/hooks/useShipping";
 const ResenasSeccion = lazy(() => import("@/components/Cliente/ResenasSeccion"));
 const ProductosSimilares = lazy(() => import("@/components/Cliente/ProductosRelacionados").then(m => ({ default: m.ProductosSimilares })));
 const TambienCompraron = lazy(() => import("@/components/Cliente/ProductosRelacionados").then(m => ({ default: m.TambienCompraron })));
@@ -95,7 +94,6 @@ export default function ProductoDetallePage() {
   const [agregado, setAgregado] = useState(false);
   const [forceAgeGate, setForceAgeGate] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
-  const { cotizarTodos } = useShipping();
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const fetchProducto = useCallback(async () => {
@@ -122,7 +120,6 @@ export default function ProductoDetallePage() {
   }, [params.id]);
 
   useEffect(() => { fetchProducto(); }, [fetchProducto]);
-  useEffect(() => { cotizarTodos(0.75, null); }, []);
 
   const handleAgregar = () => {
     if (!producto) return;

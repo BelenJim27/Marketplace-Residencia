@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
@@ -21,6 +22,8 @@ interface OAuthProfile {
 
 @Injectable()
 export class OAuthService {
+  private readonly logger = new Logger(OAuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
@@ -148,6 +151,11 @@ export class OAuthService {
 
     const { nombre, apellidoPaterno, apellidoMaterno } = this.parseGoogleName(profile.nombre || 'Usuario');
 
+    const rolCliente = await this.prisma.roles.findUnique({ where: { nombre: 'cliente' } });
+    if (!rolCliente) {
+      throw new InternalServerErrorException('Rol "cliente" no encontrado. Ejecuta el seed de roles.');
+    }
+
     const user = await this.prisma.usuarios.create({
       data: {
         nombre,
@@ -159,7 +167,7 @@ export class OAuthService {
         moneda_preferida: 'MXN',
         usuario_rol: {
           create: {
-            id_rol: 1, // Rol cliente
+            id_rol: rolCliente.id_rol,
             estado: 'activo',
           },
         },
@@ -170,7 +178,7 @@ export class OAuthService {
       try {
         await this.emailService.sendWelcomeEmail(profile.email, user.nombre);
       } catch (emailError) {
-        console.error('Error sending welcome email:', emailError);
+        this.logger.warn(`Error sending welcome email: ${(emailError as Error)?.message}`);
       }
     }
 

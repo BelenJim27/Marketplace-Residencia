@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
+import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { CreateLoteAtributoDto, CreateLoteDto, UpdateLoteAtributoDto, UpdateLoteDto } from './dto/lotes.dto';
 import { LotesService } from './lotes.service';
 
@@ -7,10 +8,10 @@ export class LotesController {
   constructor(private readonly service: LotesService) {}
 
   @Get()
-  findAll(@Query('id_productor') id_productor?: string) {
+  findAll(@Query('id_productor') id_productor?: string, @Query() query?: PaginacionQueryDto) {
     return id_productor
       ? this.service.findByProductor(Number(id_productor))
-      : this.service.findAll();
+      : this.service.findAll(query);
   }
 
   //  Estos endpoints deben ir ANTES de :id

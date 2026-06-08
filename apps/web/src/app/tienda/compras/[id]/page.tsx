@@ -738,6 +738,138 @@ function DetallePedidoContent() {
         </Card>
       </div>
 
+      {/* ── Sección de envío y tracking ── */}
+      {(pedido.estado === "pagado" || pedido.estado === "preparando" || pedido.estado === "enviado" || pedido.estado === "entregado") && (
+        <div className="fade" style={{ marginBottom: "20px", animationDelay: "90ms" }}>
+          <Card accentColor={C.amber}>
+            <SectionTitle>Seguimiento de envío</SectionTitle>
+
+            {/* Estado de la guía */}
+            {envio?.numero_rastreo ? (
+              <div style={{ marginBottom: "16px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                  <div style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    height: "38px", width: "38px", flexShrink: 0, borderRadius: "10px",
+                    background: `linear-gradient(135deg, rgba(168,194,107,0.10), rgba(201,122,62,0.04))`,
+                    border: `1px solid ${C.border}`,
+                  }}>
+                    <Truck size={16} style={{ color: C.amber }} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: "12px", color: C.muted, margin: 0 }}>Número de guía</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <p style={{ fontSize: "14px", fontWeight: "700", fontFamily: "monospace", color: C.text, margin: 0 }}>
+                        {envio.numero_rastreo}
+                      </p>
+                      <button
+                        onClick={copiarTracking}
+                        title="Copiar número de rastreo"
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: copied ? C.green : C.muted }}
+                      >
+                        {copied ? <CheckCircle size={13} /> : <Copy size={13} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botón refrescar tracking */}
+                <button
+                  onClick={() => envio.id_envio && fetchTracking(envio.id_envio)}
+                  disabled={trackingLoading}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "6px", fontSize: "12px",
+                    color: C.copper, background: "none", border: "none", cursor: "pointer",
+                    padding: "4px 0", fontWeight: "600", opacity: trackingLoading ? 0.6 : 1,
+                  }}
+                >
+                  <RefreshCw size={12} style={{ animation: trackingLoading ? "spin 1s linear infinite" : "none" }} />
+                  {trackingLoading ? "Actualizando..." : "Actualizar seguimiento"}
+                </button>
+              </div>
+            ) : envio?.id_envio ? (
+              <div style={{
+                display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px",
+                borderRadius: "8px", background: "rgba(201,122,62,0.06)", border: `1px solid rgba(201,122,62,0.15)`,
+                marginBottom: "16px",
+              }}>
+                <Loader2 size={14} style={{ color: C.copper, animation: "spin 1s linear infinite", flexShrink: 0 }} />
+                <span style={{ fontSize: "13px", color: C.copper }}>Preparando tu envío...</span>
+              </div>
+            ) : pedido.estado === "pagado" ? (
+              <div style={{
+                display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px",
+                borderRadius: "8px", background: "rgba(201,122,62,0.06)", border: `1px solid rgba(201,122,62,0.15)`,
+                marginBottom: "16px",
+              }}>
+                <Clock size={14} style={{ color: C.copper, flexShrink: 0 }} />
+                <span style={{ fontSize: "13px", color: C.copper }}>Estamos procesando tu pedido, pronto recibirás el número de guía.</span>
+              </div>
+            ) : null}
+
+            {/* Timeline de eventos de tracking */}
+            {tracking?.eventos && tracking.eventos.length > 0 && (
+              <div>
+                <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.muted, margin: "0 0 12px 0" }}>
+                  Historial de eventos
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+                  {(tracking.eventos as Array<{ descripcion: string; estado: string; fecha: string; ubicacion?: string }>).map((evento, idx) => {
+                    const badge = ESTADO_BADGE[evento.estado] ?? ESTADO_BADGE.en_transito;
+                    const isLast = idx === tracking.eventos.length - 1;
+                    return (
+                      <div key={idx} style={{ display: "flex", gap: "14px", position: "relative" }}>
+                        {/* Connector line */}
+                        {!isLast && (
+                          <div style={{
+                            position: "absolute", left: "7px", top: "22px", bottom: 0,
+                            width: "1px", background: C.border,
+                          }} />
+                        )}
+                        {/* Dot */}
+                        <div style={{
+                          flexShrink: 0, width: "15px", height: "15px",
+                          borderRadius: "50%", background: badge.dot,
+                          marginTop: "4px", border: `2px solid ${C.white}`,
+                          boxShadow: `0 0 0 1px ${badge.dot}`,
+                        }} />
+                        <div style={{ paddingBottom: "16px", flex: 1 }}>
+                          <p style={{ margin: 0, fontSize: "13px", fontWeight: "600", color: C.text }}>{evento.descripcion}</p>
+                          <div style={{ display: "flex", gap: "10px", marginTop: "3px", flexWrap: "wrap" }}>
+                            {evento.ubicacion && (
+                              <span style={{ fontSize: "11px", color: C.muted, display: "flex", alignItems: "center", gap: "3px" }}>
+                                <MapPin size={10} /> {evento.ubicacion}
+                              </span>
+                            )}
+                            <span style={{ fontSize: "11px", color: C.muted }}>
+                              {new Date(evento.fecha).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Fecha estimada de entrega */}
+            {tracking?.fecha_entrega_estimada && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: "8px", marginTop: "12px",
+                padding: "10px 14px", borderRadius: "8px",
+                background: "rgba(61,107,63,0.06)", border: "1px solid rgba(61,107,63,0.15)",
+              }}>
+                <CheckCircle size={14} style={{ color: C.green, flexShrink: 0 }} />
+                <span style={{ fontSize: "13px", color: C.greenDark }}>
+                  Entrega estimada: <strong>{new Date(tracking.fecha_entrega_estimada).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}</strong>
+                </span>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
       {/* ── Sección unificada ── */}
       <div className="fade" style={{
         animationDelay: "120ms",

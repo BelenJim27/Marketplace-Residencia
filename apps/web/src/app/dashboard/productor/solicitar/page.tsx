@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useLocale } from "@/context/LocaleContext";
-import { getCookie, setCookie } from "@/lib/cookies";
+import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
 import {
   AlertCircle, CheckCircle2, Loader2, UploadIcon,
@@ -106,7 +106,7 @@ export default function SolicitarPage() {
   const [uploading, setUploading]         = useState(false);
   const [noElegible, setNoElegible]       = useState(false);
   const [expandidas, setExpandidas]       = useState<number[]>([]);
-  const [touched, setTouched]             = useState({ nombre_marca: false, produccion_cp: false });
+  const [touched, setTouched]             = useState({ nombre_marca: false, rfc: false });
   const [attempted, setAttempted]         = useState(false);
   const [focusedField, setFocusedField]   = useState<string | null>(null);
   const [dragActive, setDragActive]       = useState(false);
@@ -116,25 +116,26 @@ export default function SolicitarPage() {
     rfc: "", razon_social: "", nombre_marca: "", asociacion: "",
     id_region: null as number | null,
     direccion_calle: "", direccion_cp: "", direccion_ciudad: "", direccion_estado: "",
-    produccion_calle: "", produccion_cp: "", produccion_ciudad: "", produccion_estado: "Oaxaca",
+    produccion_calle: "", produccion_cp: "", produccion_ciudad: "", produccion_estado: "",
     produccion_referencia: "",
     categorias_ids: [] as number[],
   });
 
   /* ── derived ──────────────────────────────────────────────────────────── */
-  const cpProd = form.produccion_cp;
-  const cpInvalido = cpProd.length === 5 && (Number(cpProd) < 68000 || Number(cpProd) > 71999);
+  const RFC_REGEX = /^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/i;
+  const rfcValido = RFC_REGEX.test(form.rfc.trim());
+
   const stepValid = [
     !!form.asociacion,
-    !!form.nombre_marca.trim() && !cpInvalido,
+    !!form.nombre_marca.trim() && !!form.rfc.trim() && rfcValido,
     form.categorias_ids.length > 0,
     !!certificadoUrl,
   ];
   const showErr = {
-    asociacion:    step === 1 && attempted && !form.asociacion,
-    nombre_marca:  step === 2 && (touched.nombre_marca || attempted) && !form.nombre_marca.trim(),
-    categorias:    step === 3 && attempted && form.categorias_ids.length === 0,
-    produccion_cp: step === 2 && (touched.produccion_cp || attempted) && cpInvalido,
+    asociacion:   step === 1 && attempted && !form.asociacion,
+    nombre_marca: step === 2 && (touched.nombre_marca || attempted) && !form.nombre_marca.trim(),
+    rfc:          step === 2 && (touched.rfc || attempted) && (!form.rfc.trim() || !rfcValido),
+    categorias:   step === 3 && attempted && form.categorias_ids.length === 0,
   };
 
   /* ── category helpers ─────────────────────────────────────────────────── */
@@ -158,103 +159,58 @@ export default function SolicitarPage() {
   };
 
   /* ── init ─────────────────────────────────────────────────────────────── */
-  const loadInitData = React.useCallback(async () => {
-    try {
-      const [regs, cats, asocs] = await Promise.all([
-        api.productores.getRegiones(),
-        api.categorias.getAll(),
-        api.configuracion.getAsociaciones(),
-      ]);
-      setRegiones(regs as Region[]);
-      setCategorias(cats as Categoria[]);
-      setAsociaciones(Array.isArray(asocs) ? asocs : []);
-
-      let token = getCookie("token") || (session as any)?.accessToken;
-      if (!token) { await new Promise(r => setTimeout(r, 300)); token = getCookie("token") || (session as any)?.accessToken; }
-
-      if (token) {
-        const userId = (user as any)?.id_usuario || (user as any)?.id;
-        if (userId) {
-          try {
-            const sol = await api.productores.getMiSolicitud(token) as any;
-            if (sol?.id_productor) setSolicitudActual(sol as Solicitud);
-          } catch { /* no solicitud */ }
-        }
-      }
-    } catch (err) {
-      setError(t("Error al cargar la información inicial."));
-    } finally {
-      setLoadingInit(false);
-    }
-  }, [session, user, t]);
-
   useEffect(() => {
     if (authLoading) return;
 
     if (!isAuthenticated) {
+      // Mostrar paso 0 de registro/login en lugar de redirigir
       setStep(0);
       setLoadingInit(false);
       return;
     }
 
+    // Usuario autenticado: avanzar desde paso 0 si venía del auth step
     setStep(s => s === 0 ? 1 : s);
-    loadInitData();
-  }, [isAuthenticated, authLoading, loadInitData]);
 
-  /* ── callback al completar login/registro dentro del flujo ───────────── */
-  const handleAuthSuccess = React.useCallback(() => {
-    setStep(1);
-    setLoadingInit(true);
-    loadInitData();
-  }, [loadInitData]);
+    const init = async () => {
+      try {
+        const [regs, cats, asocs] = await Promise.all([
+          api.productores.getRegiones(),
+          api.categorias.getAll(),
+          api.configuracion.getAsociaciones(),
+        ]);
+        setRegiones(regs as Region[]);
+        setCategorias(cats as Categoria[]);
+        setAsociaciones(Array.isArray(asocs) ? asocs : []);
+
+        let token = getCookie("token") || (session as any)?.accessToken;
+        if (!token) { await new Promise(r => setTimeout(r, 300)); token = getCookie("token") || (session as any)?.accessToken; }
+
+        if (token) {
+          const userId = (user as any)?.id_usuario || (user as any)?.id;
+          if (userId) {
+            try {
+              const sol = await api.productores.getMiSolicitud(token) as any;
+              if (sol?.id_productor) setSolicitudActual(sol as Solicitud);
+            } catch { /* no solicitud */ }
+          }
+        }
+      } catch (err) {
+        setError(t("Error al cargar la información inicial."));
+      } finally {
+        setLoadingInit(false);
+      }
+    };
+    init();
+  }, [isAuthenticated, authLoading, router, session, user]);
 
   /* ── file upload ──────────────────────────────────────────────────────── */
-  const getAuthToken = async (): Promise<string | null> => {
-    // 1. Check client-side sources first (fastest)
-    let token = (session as any)?.accessToken || getCookie("token");
-    if (token) return token;
-
-    // 2. Try refresh using stored refresh token (via proxy to avoid CORS issues)
-    const refreshToken = getCookie("refresh_token") || (session as any)?.refreshToken;
-    if (refreshToken) {
-      try {
-        const res = await fetch("/auth/refresh", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const newToken = data.tokens?.access_token;
-          if (newToken) {
-            setCookie("token", newToken, 7);
-            if (data.tokens?.refresh_token) {
-              setCookie("refresh_token", data.tokens.refresh_token, 30);
-            }
-          }
-          return newToken || null;
-        }
-      } catch { /* fall through */ }
-    }
-
-    // 3. Last resort: read from server-side NextAuth session (handles httpOnly cookie)
-    try {
-      const res = await fetch("/api/auth/session-token");
-      if (res.ok) {
-        const data = await res.json();
-        return data.access_token || null;
-      }
-    } catch { /* fall through */ }
-
-    return null;
-  };
-
   const uploadFile = async (file: File) => {
     if (file.size > 500 * 1024) { setError(t("El archivo debe pesar menos de 500 KB.")); return; }
     setUploading(true); setError("");
     try {
-      const token = await getAuthToken();
-      if (!token) { setError(t("No se detectó sesión. Cierra sesión e inicia de nuevo.")); return; }
+      const token = (session as any)?.accessToken || getCookie("token");
+      if (!token) { setError(t("No se detectó sesión.")); return; }
       const fd = new FormData();
       fd.append("archivo", file);
       fd.append("entidad_tipo", "productor_certificado");
@@ -299,8 +255,8 @@ export default function SolicitarPage() {
     if (!certificadoUrl) { setError(t("Sube el certificado primero")); return; }
     setIsSubmitting(true); setError("");
     try {
-      const token = await getAuthToken();
-      if (!token) { setError(t("No se detectó sesión. Cierra sesión e inicia de nuevo.")); return; }
+      const token = (session as any)?.accessToken || getCookie("token");
+      if (!token) { setError(t("No se detectó sesión.")); return; }
       await api.productores.solicitar(token, {
         rfc: form.rfc || undefined,
         razon_social: form.razon_social || undefined,
@@ -452,9 +408,9 @@ export default function SolicitarPage() {
 
                 {/* Form */}
                 {authTab === "login" ? (
-                  <SigninWithPassword isVenderFlow={true} onSuccess={handleAuthSuccess} />
+                  <SigninWithPassword isVenderFlow={true} />
                 ) : (
-                  <SignUpForm isVenderFlow={true} onSuccess={handleAuthSuccess} />
+                  <SignUpForm isVenderFlow={true} />
                 )}
               </div>
 
@@ -627,10 +583,10 @@ export default function SolicitarPage() {
             </div>
 
             {authTab === "login" ? (
-              <SigninWithPassword isVenderFlow={true} onSuccess={handleAuthSuccess} />
+              <SigninWithPassword isVenderFlow={true} />
             ) : (
               <div style={{ background:C.section, borderRadius:"12px", padding:"20px" }}>
-                <SignUpForm isVenderFlow={true} onSuccess={handleAuthSuccess} />
+                <SignUpForm isVenderFlow={true} />
               </div>
             )}
           </div>
@@ -706,6 +662,23 @@ export default function SolicitarPage() {
                 }
               </div>
 
+              {/* RFC */}
+              <div>
+                <Label text={t("RFC")} required C={C} SANS={SANS} />
+                <input
+                  type="text" value={form.rfc} maxLength={13}
+                  placeholder="XAXX010101000"
+                  style={{ ...inp("rfc", showErr.rfc), fontFamily: MONO, letterSpacing: "0.08em" }}
+                  onFocus={() => setFocusedField("rfc")}
+                  onBlur={() => { setFocusedField(null); setTouched(t => ({ ...t, rfc: true })); }}
+                  onChange={e => setField("rfc", e.target.value.toUpperCase().replace(/[^A-ZÑ&0-9]/g, ""))}
+                />
+                {showErr.rfc
+                  ? <ErrMsg msg={!form.rfc.trim() ? t("El RFC es obligatorio para envíos y facturación") : t("RFC inválido. Formato: XXXX000000XX0 (ej: XAXX010101000)")} C={C} SANS={SANS} />
+                  : <FieldHint text={`${form.rfc.length}/13 · ${t("Personas físicas: 13 chars · Personas morales: 12 chars")}`} C={C} SANS={SANS} />
+                }
+              </div>
+
             </Section>
 
             {/* — Región — */}
@@ -745,33 +718,25 @@ export default function SolicitarPage() {
                 </div>
                 <div>
                   <Label text={t("Estado")} C={C} SANS={SANS} />
-                  <input type="text" value="Oaxaca" readOnly
-                    style={{ ...inp("prod_estado"), opacity: 0.65, cursor: "not-allowed" }}
-                    title={t("Solo se aceptan productores del estado de Oaxaca")}
+                  <input type="text" value={form.produccion_estado} placeholder={t("Oaxaca")}
+                    style={inp("prod_estado")} onFocus={() => setFocusedField("prod_estado")} onBlur={() => setFocusedField(null)}
+                    onChange={e => setField("produccion_estado", e.target.value)}
                   />
                 </div>
                 <div>
                   <Label text={t("C.P.")} C={C} SANS={SANS} />
                   <input type="text" value={form.produccion_cp} placeholder={t("70300")} maxLength={5}
-                    style={inp("prod_cp", showErr.produccion_cp)}
-                    onFocus={() => setFocusedField("prod_cp")}
-                    onBlur={() => { setFocusedField(null); setTouched(p => ({ ...p, produccion_cp: true })); }}
+                    style={inp("prod_cp")} onFocus={() => setFocusedField("prod_cp")} onBlur={() => setFocusedField(null)}
                     onChange={e => setField("produccion_cp", e.target.value.replace(/\D/g, ""))}
                   />
-                  {showErr.produccion_cp && (
-                    <ErrMsg msg={t("El código postal debe corresponder al estado de Oaxaca (68000–71999)")} C={C} SANS={SANS} />
-                  )}
                 </div>
               </div>
               <div>
                 <Label text={t("Referencia")} C={C} SANS={SANS} />
-                <textarea value={form.produccion_referencia} placeholder={t("Entre calles, puntos de referencia...")}
-                  maxLength={150} rows={3}
-                  style={{ ...inp("prod_ref"), resize: "vertical", minHeight: "80px" }}
-                  onFocus={() => setFocusedField("prod_ref")} onBlur={() => setFocusedField(null)}
+                <input type="text" value={form.produccion_referencia} placeholder={t("Entre calles, puntos de referencia...")}
+                  style={inp("prod_ref")} onFocus={() => setFocusedField("prod_ref")} onBlur={() => setFocusedField(null)}
                   onChange={e => setField("produccion_referencia", e.target.value)}
                 />
-                <FieldHint text={`${form.produccion_referencia.length}/150 ${t("caracteres")}`} C={C} SANS={SANS} />
               </div>
             </Section>
           </div>
@@ -779,11 +744,10 @@ export default function SolicitarPage() {
 
         {/* ══════════════ STEP 3 — Categorías ════════════════════════ */}
         {step === 3 && (() => {
-          const mezcal      = catRaiz.find(c => c.nombre.toLowerCase() === "mezcal");
-          const hijasMezcal = mezcal ? subDe(mezcal.id_categoria) : [];
-          const otrosCats   = catRaiz.filter(c => c.nombre.toLowerCase() !== "mezcal");
-          const anyMezcal   = (mezcal ? form.categorias_ids.includes(mezcal.id_categoria) : false)
-                              || hijasMezcal.some(h => form.categorias_ids.includes(h.id_categoria));
+          const bebidas     = catRaiz.find(c => c.nombre.toLowerCase() === "bebidas");
+          const hijasBebs   = bebidas ? subDe(bebidas.id_categoria) : [];
+          const otrosCats   = catRaiz.filter(c => c.nombre.toLowerCase() !== "bebidas");
+          const anyBebs     = hijasBebs.some(h => form.categorias_ids.includes(h.id_categoria));
           const anyOtros    = otrosCats.some(c => {
             const hijas = subDe(c.id_categoria);
             return form.categorias_ids.includes(c.id_categoria) || hijas.some(h => form.categorias_ids.includes(h.id_categoria));
@@ -805,64 +769,30 @@ export default function SolicitarPage() {
               ) : (
                 <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
 
-                  {/* ── Mezcal (categoría principal, siempre expandida) ── */}
-                  {mezcal && (
-                    <div style={{ border:`1.5px solid ${anyMezcal ? C.copper : showErr.categorias ? C.error : C.inputBorder}`, borderRadius:"12px", overflow:"hidden", transition:"border-color 0.2s" }}>
+                  {/* ── Bebidas (primaria, siempre expandida) ───────────── */}
+                  {bebidas && (
+                    <div style={{ border:`1.5px solid ${anyBebs ? C.copper : showErr.categorias ? C.error : C.inputBorder}`, borderRadius:"12px", overflow:"hidden", transition:"border-color 0.2s" }}>
                       {/* cabecera */}
-                      <div style={{ display:"flex", alignItems:"center", gap:"10px", padding:"12px 16px", background: anyMezcal ? (isDark ? "rgba(201,122,62,0.12)" : "rgba(46,74,51,0.06)") : C.section }}>
-                        <CatIcon Icon={Wine} selected={anyMezcal} isDark={isDark} />
+                      <div style={{ display:"flex", alignItems:"center", gap:"10px", padding:"12px 16px", background: anyBebs ? (isDark ? "rgba(201,122,62,0.12)" : "rgba(46,74,51,0.06)") : C.section }}>
+                        <CatIcon Icon={Wine} selected={anyBebs} isDark={isDark} />
                         <div style={{ flex:1 }}>
-                          <span style={{ fontFamily:SANS, color: anyMezcal ? (isDark ? C.cream : C.green) : C.label, fontSize:"14px", fontWeight:700 }}>
-                            {mezcal.nombre}
+                          <span style={{ fontFamily:SANS, color: anyBebs ? (isDark ? C.cream : C.green) : C.label, fontSize:"14px", fontWeight:700 }}>
+                            {bebidas.nombre}
                           </span>
                           <span style={{ fontFamily:SANS, color:C.body, fontSize:"11px", marginLeft:"8px" }}>
                             · {t("Categoría principal")}
                           </span>
                         </div>
-                        {anyMezcal && (
+                        {anyBebs && (
                           <span style={{ fontFamily:SANS, color:C.copper, fontSize:"11px", fontWeight:600 }}>
-                            {hijasMezcal.filter(h => form.categorias_ids.includes(h.id_categoria)).length} {t("selec.")}
+                            {hijasBebs.filter(h => form.categorias_ids.includes(h.id_categoria)).length} {t("selec.")}
                           </span>
                         )}
                       </div>
 
-                      {/* subcategorías (incluye raíz + hijas) */}
+                      {/* subcategorías siempre visibles */}
                       <div style={{ borderTop:`1px solid ${C.border}` }}>
-                        <div style={{ padding:"8px 16px 6px 20px", borderBottom:`1px solid ${C.border}` }}>
-                          <span style={{ fontFamily:SANS, fontSize:"10px", fontWeight:700, color:C.copper, textTransform:"uppercase", letterSpacing:"0.08em" }}>
-                            {t("Subcategorías")}
-                          </span>
-                        </div>
-
-                        {/* Mezcal general */}
-                        {(() => {
-                          const rootSel = form.categorias_ids.includes(mezcal.id_categoria);
-                          return (
-                            <button type="button" onClick={() => toggleCat(mezcal.id_categoria)}
-                              style={{
-                                display:"flex", alignItems:"center", gap:"12px",
-                                background: rootSel ? (isDark ? "rgba(201,122,62,0.08)" : "rgba(46,74,51,0.05)") : "transparent",
-                                border:"none",
-                                borderBottom: `1px solid ${C.border}`,
-                                cursor:"pointer", padding:"11px 16px 11px 20px", width:"100%", textAlign:"left",
-                                transition:"background 0.15s",
-                              }}>
-                              <div style={{
-                                width:"18px", height:"18px", borderRadius:"4px", flexShrink:0,
-                                border:`2px solid ${rootSel ? C.copper : C.inputBorder}`,
-                                background: rootSel ? C.copper : "transparent",
-                                display:"flex", alignItems:"center", justifyContent:"center",
-                                transition:"all 0.2s",
-                              }}>
-                                {rootSel && <Check style={{ width:"10px", height:"10px", color:"#fff" }} strokeWidth={3} />}
-                              </div>
-                              <span style={{ fontFamily:SANS, color: rootSel ? (isDark ? C.cream : C.green) : C.label, fontSize:"13.5px", fontWeight: rootSel ? 600 : 400 }}>
-                                {mezcal.nombre} {t("(general)")}
-                              </span>
-                            </button>
-                          );
-                        })()}
-                        {hijasMezcal.map((h, idx) => {
+                        {hijasBebs.map((h, idx) => {
                           const hSel = form.categorias_ids.includes(h.id_categoria);
                           return (
                             <button key={h.id_categoria} type="button" onClick={() => toggleCat(h.id_categoria)}
@@ -870,7 +800,7 @@ export default function SolicitarPage() {
                                 display:"flex", alignItems:"center", gap:"12px",
                                 background: hSel ? (isDark ? "rgba(201,122,62,0.08)" : "rgba(46,74,51,0.05)") : "transparent",
                                 border:"none",
-                                borderBottom: idx < hijasMezcal.length - 1 ? `1px solid ${C.border}` : "none",
+                                borderBottom: idx < hijasBebs.length - 1 ? `1px solid ${C.border}` : "none",
                                 cursor:"pointer", padding:"11px 16px 11px 20px", width:"100%", textAlign:"left",
                                 transition:"background 0.15s",
                               }}>
@@ -889,7 +819,7 @@ export default function SolicitarPage() {
                             </button>
                           );
                         })}
-                        {hijasMezcal.length === 0 && !mezcal && (
+                        {hijasBebs.length === 0 && (
                           <p style={{ fontFamily:SANS, color:C.body, fontSize:"13px", padding:"12px 16px", margin:0 }}>
                             {t("Sin subcategorías")}
                           </p>

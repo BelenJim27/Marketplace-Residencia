@@ -7,7 +7,8 @@ import Link from "next/link";
 import { CheckCircle, ChevronRight, Truck, CreditCard, ShoppingBag, ArrowLeft, Lock, MapPin, Loader2, FileText } from "lucide-react";
 import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
-import { useCheckout, CheckoutStep } from "@/hooks/useCheckout";
+import { useCheckout, CheckoutStep, OpcionAgregada } from "@/hooks/useCheckout";
+import { getCookie } from "@/lib/cookies";
 import { useCarrito } from "@/context/CarritoContext";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
@@ -35,9 +36,75 @@ const PASO_INDEX: Record<CheckoutStep, number> = {
   resumen: 3,
 };
 
+// ─── Estados USA ────────────────────────────────────────────────────────────
+
+const US_STATES = [
+  { code: "AL", name: "Alabama" },
+  { code: "AK", name: "Alaska" },
+  { code: "AZ", name: "Arizona" },
+  { code: "AR", name: "Arkansas" },
+  { code: "CA", name: "California" },
+  { code: "CO", name: "Colorado" },
+  { code: "CT", name: "Connecticut" },
+  { code: "DE", name: "Delaware" },
+  { code: "FL", name: "Florida" },
+  { code: "GA", name: "Georgia" },
+  { code: "HI", name: "Hawaii" },
+  { code: "ID", name: "Idaho" },
+  { code: "IL", name: "Illinois" },
+  { code: "IN", name: "Indiana" },
+  { code: "IA", name: "Iowa" },
+  { code: "KS", name: "Kansas" },
+  { code: "KY", name: "Kentucky" },
+  { code: "LA", name: "Louisiana" },
+  { code: "ME", name: "Maine" },
+  { code: "MD", name: "Maryland" },
+  { code: "MA", name: "Massachusetts" },
+  { code: "MI", name: "Michigan" },
+  { code: "MN", name: "Minnesota" },
+  { code: "MS", name: "Mississippi" },
+  { code: "MO", name: "Missouri" },
+  { code: "MT", name: "Montana" },
+  { code: "NE", name: "Nebraska" },
+  { code: "NV", name: "Nevada" },
+  { code: "NH", name: "New Hampshire" },
+  { code: "NJ", name: "New Jersey" },
+  { code: "NM", name: "New Mexico" },
+  { code: "NY", name: "New York" },
+  { code: "NC", name: "North Carolina" },
+  { code: "ND", name: "North Dakota" },
+  { code: "OH", name: "Ohio" },
+  { code: "OK", name: "Oklahoma" },
+  { code: "OR", name: "Oregon" },
+  { code: "PA", name: "Pennsylvania" },
+  { code: "RI", name: "Rhode Island" },
+  { code: "SC", name: "South Carolina" },
+  { code: "SD", name: "South Dakota" },
+  { code: "TN", name: "Tennessee" },
+  { code: "TX", name: "Texas" },
+  { code: "UT", name: "Utah" },
+  { code: "VT", name: "Vermont" },
+  { code: "VA", name: "Virginia" },
+  { code: "WA", name: "Washington" },
+  { code: "WV", name: "West Virginia" },
+  { code: "WI", name: "Wisconsin" },
+  { code: "WY", name: "Wyoming" },
+  { code: "DC", name: "Washington D.C." },
+];
+
+// Estados con restricciones conocidas para envío de bebidas alcohólicas importadas
+const ALCOHOL_RESTRICTED_STATES = new Set([
+  "AL", // Control estatal, sin envío directo al consumidor
+  "AR", // Prohíbe envío directo de spirits importados
+  "KS", // Prohíbe envío directo de alcohol
+  "MS", // Estado parcialmente "seco", sin envío directo
+  "OK", // Requiere licencia estatal específica
+  "UT", // Control estatal estricto
+]);
+
 export default function CheckoutPage() {
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading, user, token } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const { items } = useCarrito();
   const { paises, loading: paisesLoading } = usePaises("envio");
 
@@ -51,11 +118,15 @@ export default function CheckoutPage() {
     nuevaDireccion,
     setNuevaDireccion,
     guardarNuevaDireccion,
-    cotizaciones,
+    gruposEnvio,
+    opcionesAgregadas,
+    nivelKey,
+    setNivel,
+    seleccionados,
     cotizandoLoading,
     cotizandoError,
-    envioSeleccionado,
-    setEnvioSeleccionado,
+    tieneAlcohol,
+    totalEnvioMXN,
     avanzarPaso,
     retrocederPaso,
     prepararPago,
@@ -75,6 +146,8 @@ export default function CheckoutPage() {
     dobRequired,
     submitDob,
     cargando,
+    solicitarProteccion,
+    setSolicitarProteccion,
   } = useCheckout();
 
   const { t, locale, rates } = useLocale();
@@ -90,22 +163,30 @@ export default function CheckoutPage() {
     { key: "resumen"   as CheckoutStep, label: t('checkout_step_confirm'), icon: <CheckCircle size={16} />, hint: t('checkout_step_summary') },
   ];
 
-  // Convierte un monto desde MXN a la moneda de visualización
+  // Convierte un monto desde MXN a la moneda de visualización.
+  // Si la tasa no está disponible se usa el fallback de LocaleContext (nunca 1:1).
   const convertFromMXN = (mxn: number): number => {
-    const rate = rates[displayCurrency] ?? 1;
+    const rate = rates[displayCurrency];
+    if (!rate || rate <= 0) return mxn; // MXN: rate=1 siempre presente; USD: fallback 0.05
     return Math.round(mxn * rate * 100) / 100;
   };
 
-  // Normaliza el costo de envío (puede venir en USD para rutas internacionales) a MXN, luego convierte
+  // Convierte un precio de cotización (en cualquier moneda) a displayCurrency.
+  // Para moneda extranjera usa rates (MXN-base) para ir a MXN primero y luego a displayCurrency.
+  const convertQuoteToDisplay = (precioTotal: number, moneda: string): number => {
+    const mon = (moneda ?? 'MXN').toUpperCase();
+    if (mon === 'MXN') return convertFromMXN(precioTotal);
+    if (mon === displayCurrency) return Math.round(precioTotal * 100) / 100;
+    // rates[mon] = cuántos MON por 1 MXN (ej. rates['USD']=0.0588 → 1 MXN = 0.0588 USD)
+    const rateToMXN = rates[mon];
+    if (rateToMXN && rateToMXN > 0) return convertFromMXN(precioTotal / rateToMXN);
+    return convertFromMXN(precioTotal); // fallback: asumir MXN
+  };
+
+  // Returns the total shipping amount in display currency (sum of all producer groups)
   const getShippingDisplayAmount = (): number | null => {
-    if (!envioSeleccionado) return null;
-    const sourceMoneda = (envioSeleccionado.moneda ?? 'MXN').toUpperCase();
-    let amountInMXN = envioSeleccionado.precioTotal;
-    if (sourceMoneda !== 'MXN') {
-      const sourceRate = rates[sourceMoneda];
-      if (sourceRate) amountInMXN = envioSeleccionado.precioTotal / sourceRate;
-    }
-    return convertFromMXN(amountInMXN);
+    if (Object.keys(seleccionados).length === 0) return null;
+    return convertFromMXN(totalEnvioMXN);
   };
 
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -156,7 +237,7 @@ export default function CheckoutPage() {
   // prepararPago se accede vía ref para que cambios de referencia (p.ej. cuando ratesMXN
   // se carga de forma asíncrona) no disparen este efecto y creen pedidos duplicados.
   useEffect(() => {
-    if (paso === "pago" && envioSeleccionado && direccionSeleccionada) {
+    if (paso === "pago" && Object.keys(seleccionados).length > 0 && direccionSeleccionada) {
       if (metodoPago === 'stripe' && !clientSecret) {
         prepararPagoRef.current().catch(() => {});
       } else if (metodoPago === 'paypal' && !paypalOrderId) {
@@ -164,7 +245,7 @@ export default function CheckoutPage() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paso, clientSecret, paypalOrderId, metodoPago, envioSeleccionado, direccionSeleccionada]);
+  }, [paso, clientSecret, paypalOrderId, metodoPago, seleccionados, direccionSeleccionada]);
 
   if (authLoading) {
     return (
@@ -323,11 +404,17 @@ export default function CheckoutPage() {
             {/* PASO 2: Envío */}
             {paso === "envio" && (
               <EnvioStep
-                cotizaciones={cotizaciones}
+                grupos={gruposEnvio}
+                opciones={opcionesAgregadas}
+                nivelKey={nivelKey}
+                setNivel={setNivel}
                 cotizandoLoading={cotizandoLoading}
                 cotizandoError={cotizandoError}
-                envioSeleccionado={envioSeleccionado}
-                setEnvioSeleccionado={setEnvioSeleccionado}
+                tieneAlcohol={tieneAlcohol}
+                convertQuotePrice={convertQuoteToDisplay}
+                displayCurrency={displayCurrency}
+                solicitarProteccion={solicitarProteccion}
+                setSolicitarProteccion={setSolicitarProteccion}
               />
             )}
 
@@ -531,16 +618,18 @@ export default function CheckoutPage() {
                           paso={paso}
                           items={items}
                           direccionSeleccionada={direccionSeleccionada}
-                          envioSeleccionado={envioSeleccionado}
+                          gruposEnvio={gruposEnvio}
+                          seleccionados={seleccionados}
                           pedidoId={pedidoIdCreado}
                           clientSecret={clientSecret!}
                           onError={setErrorMensaje}
                           convertToDisplay={convertFromMXN}
+                          convertQuotePrice={convertQuoteToDisplay}
                           displayCurrency={displayCurrency}
                           facturaData={facturaData}
                           shippingDisplayAmount={getShippingDisplayAmount()}
                           locale={locale}
-                          token={token}
+                          token={getCookie("token")}
                           numeroOrden={numeroOrdenCreado}
                         />
                       </Elements>
@@ -588,11 +677,11 @@ export default function CheckoutPage() {
                         </div>
                         <PaypalCheckoutButton
                           orderId={paypalOrderId}
-                          onCapture={() => {
+                          onCapture={async (orderId: string) => {
                             if (facturaData.solicitarFactura && pedidoIdCreado) {
                               localStorage.setItem('checkout_factura', JSON.stringify({ ...facturaData, pedidoId: pedidoIdCreado }));
                             }
-                            return capturePaypalOrder();
+                            await capturePaypalOrder(orderId);
                           }}
                           onError={setErrorMensaje}
                           disabled={cargando}
@@ -611,9 +700,11 @@ export default function CheckoutPage() {
                         <PagoYResumenPaypal
                           items={items}
                           direccionSeleccionada={direccionSeleccionada}
-                          envioSeleccionado={envioSeleccionado}
+                          gruposEnvio={gruposEnvio}
+                          seleccionados={seleccionados}
                           pedidoId={pedidoIdCreado}
                           convertToDisplay={convertFromMXN}
+                          convertQuotePrice={convertQuoteToDisplay}
                           displayCurrency={displayCurrency}
                           shippingDisplayAmount={getShippingDisplayAmount()}
                           locale={locale}
@@ -627,9 +718,15 @@ export default function CheckoutPage() {
 
             {/* Error */}
             {errorMensaje && (
-              <p aria-live="polite" role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
-                {errorMensaje}
-              </p>
+              <div aria-live="polite" role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+                <span style={{ whiteSpace: "pre-line" }}>{errorMensaje}</span>
+                <button
+                  onClick={() => setErrorMensaje(null)}
+                  style={{ flexShrink: 0, fontSize: "11px", fontWeight: "700", textDecoration: "underline", background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0 }}
+                >
+                  Intentar de nuevo
+                </button>
+              </div>
             )}
 
             {/* Botones de navegación mejorados */}
@@ -744,7 +841,7 @@ export default function CheckoutPage() {
                 const displayAmount = convertFromMXN(itemTotal);
                 return (
                   <div key={item.id_producto} style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px", fontSize: "13px" }}>
-                    <span style={{ truncate: "true", maxWidth: "140px" }}>{item.nombre} x{item.cantidad}</span>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "140px" }}>{item.nombre} x{item.cantidad}</span>
                     <span style={{ fontWeight: 500 }}>${formatPrice(displayAmount, { showCurrency: false })}</span>
                   </div>
                 );
@@ -763,46 +860,47 @@ export default function CheckoutPage() {
               <div style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
                 <span>{t('checkout_summary_shipping')}</span>
                 <span style={{ fontWeight: 500 }}>
-                  {envioSeleccionado ? `$${formatPrice(getShippingDisplayAmount() ?? 0, { showCurrency: false })}` : "—"}
+                  {nivelKey ? `$${formatPrice(getShippingDisplayAmount() ?? 0, { showCurrency: false })} ${displayCurrency}` : '—'}
                 </span>
               </div>
-              {taxAmount > 0 && taxBreakdown.length > 0 ? (
-                taxBreakdown.map((line, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
-                    <span>{line.nombre} ({(line.tasa * 100).toFixed(0)}%)</span>
-                    <span style={{ fontWeight: 500 }}>
-                      ${formatPrice(convertFromMXN(line.monto), { showCurrency: false })}
-                    </span>
+              {taxBreakdown.length > 0
+                ? taxBreakdown.map((line, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
+                      <span>{line.nombre} ({(line.tasa * 100).toFixed(0)}%)</span>
+                      <span style={{ fontWeight: 500 }}>
+                        ${formatPrice(convertFromMXN(line.monto), { showCurrency: false })} {displayCurrency}
+                      </span>
+                    </div>
+                  ))
+                : (
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#9CA3AF", marginBottom: "8px" }}>
+                    <span>{locale === 'en' ? 'Taxes' : 'Impuestos'}</span>
+                    <span style={{ fontSize: "12px" }}>{locale === 'en' ? 'Calculating...' : 'Calculando...'}</span>
                   </div>
-                ))
-              ) : taxAmount > 0 ? (
-                <div style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
-                  <span>{t('cart_summary_tax')}</span>
-                  <span style={{ fontWeight: 500 }}>
-                    ${formatPrice(convertFromMXN(taxAmount), { showCurrency: false })}
-                  </span>
-                </div>
+                )
+              }
+              {/* Nota fiscal */}
+              {pais_destino === "MX" ? (
+                <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "4px 0 8px 0" }}>
+                  {locale === 'en' ? 'IEPS included in product price.' : 'IEPS incluido en el precio del productor.'}
+                </p>
+              ) : pais_destino === "US" ? (
+                <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "4px 0 8px 0" }}>
+                  {locale === 'en'
+                    ? 'Import duties settled at customs by the importer.'
+                    : 'Impuestos de importación se liquidan en aduana por el importador.'}
+                </p>
               ) : null}
-              {/* Nota IEPS para México */}
-              {(() => {
-                const pais = direccionSeleccionada?.pais_iso2 ?? (direccionSeleccionada?.ubicacion as any)?.pais ?? "MX";
-                return pais === "MX" ? (
-                  <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "4px 0 0 0" }}>
-                    {locale === 'en' ? 'IEPS (spirits excise) included in product price.' : 'IEPS incluido en el precio del productor.'}
-                  </p>
-                ) : pais === "US" ? (
-                  <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "4px 0 0 0" }}>
-                    {locale === 'en'
-                      ? 'Federal Excise Tax (TTB) is settled at customs by the importer — not included here.'
-                      : 'El Federal Excise Tax (TTB) se liquida en aduana por el importador.'}
-                  </p>
-                ) : null;
-              })()}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${COLOR_PALETTE.border}`, paddingTop: "12px" }}>
               <span style={{ fontWeight: 600, color: COLOR_PALETTE.green }}>{t('checkout_summary_total')}</span>
               <span style={{ fontSize: "18px", fontWeight: 700, color: COLOR_PALETTE.copper }}>
-                ${formatPrice(convertFromMXN(totalConEnvio + taxAmount), { showCurrency: false })} {displayCurrency}
+                {`$${formatPrice(convertFromMXN(totalConEnvio + taxAmount), { showCurrency: false })} ${displayCurrency}`}
+                {taxAmount === 0 && (
+                  <span style={{ fontSize: "11px", color: "#9CA3AF", display: "block", fontWeight: 400 }}>
+                    {locale === 'en' ? '+ taxes' : '+ impuestos'}
+                  </span>
+                )}
               </span>
             </div>
             </div>
@@ -979,7 +1077,26 @@ function DireccionStep({
               <Field label="Dirección - Línea 1 *" value={nuevaDireccion.linea_1 || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, linea_1: v }))} placeholder="123 Main Street" />
               <Field label="Dirección - Línea 2" value={nuevaDireccion.linea_2 || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, linea_2: v }))} placeholder="Apt 4B (opcional)" />
               <Field label="Ciudad *" value={nuevaDireccion.ciudad || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, ciudad: v }))} placeholder="New York" />
-              <Field label="Estado *" value={nuevaDireccion.estado || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, estado: v }))} placeholder="NY" />
+
+              {/* Selector de estado USA */}
+              <div>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Estado *</label>
+                <select
+                  value={nuevaDireccion.estado || ""}
+                  onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, estado: e.target.value }))}
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none transition-all dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                >
+                  <option value="">Selecciona un estado…</option>
+                  {US_STATES.map((s) => (
+                    <option key={s.code} value={s.code}>{s.name}</option>
+                  ))}
+                </select>
+                {nuevaDireccion.estado && ALCOHOL_RESTRICTED_STATES.has(nuevaDireccion.estado) && (
+                  <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                    ⚠️ {nuevaDireccion.estado} tiene restricciones legales para el envío de bebidas alcohólicas. Algunos productos de mezcal podrían no poder enviarse a este estado.
+                  </p>
+                )}
+              </div>
 
               <div>
                 <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">ZIP Code *</label>
@@ -1404,77 +1521,148 @@ function FacturaSolicitudSection({
   );
 }
 
-function EnvioStep({ cotizaciones, cotizandoLoading, cotizandoError, envioSeleccionado, setEnvioSeleccionado }: any) {
+const PROVIDER_COLORS: Record<string, string> = {
+  fedex:         'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  dhl:           'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
+  ups:           'bg-amber-100  text-amber-700  dark:bg-amber-900/40  dark:text-amber-300',
+  estafeta:      'bg-red-100    text-red-700    dark:bg-red-900/40    dark:text-red-300',
+  paquetexpress: 'bg-blue-100   text-blue-700   dark:bg-blue-900/40   dark:text-blue-300',
+  redpack:       'bg-rose-100   text-rose-700   dark:bg-rose-900/40   dark:text-rose-300',
+};
+
+function carrierLabel(cot: any): string {
+  return cot.providerName ?? (cot.carrier === 'skydropx' ? 'SkydropX' : (cot.carrier ?? '').toUpperCase());
+}
+
+function carrierColor(cot: any): string {
+  const label = carrierLabel(cot).toLowerCase().replace(/\s+/g, '');
+  return PROVIDER_COLORS[label] ?? PROVIDER_COLORS[cot.carrier] ?? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300';
+}
+
+function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cotizandoError, tieneAlcohol, convertQuotePrice, displayCurrency, solicitarProteccion, setSolicitarProteccion }: {
+  grupos: any[];
+  opciones: OpcionAgregada[];
+  nivelKey: string | null;
+  setNivel: (key: string) => void;
+  cotizandoLoading: boolean;
+  cotizandoError: string | null;
+  tieneAlcohol?: boolean;
+  convertQuotePrice?: (price: number, currency: string) => number;
+  displayCurrency?: string;
+  solicitarProteccion: boolean;
+  setSolicitarProteccion: (v: boolean) => void;
+}) {
+  const hayOpciones = opciones && opciones.length > 0;
+  const numProductores = grupos?.length ?? 0;
+
   return (
     <div>
       <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Método de envío</h2>
-      {cotizandoLoading && (
-        <div className="flex items-center justify-center rounded-lg border-2 border-gray-200 p-8">
-          <div className="text-center">
-            <div className="mb-2 text-gray-500">Obteniendo cotizaciones de envío...</div>
+
+      {tieneAlcohol && !cotizandoLoading && (
+        <div className="mb-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-700/40 dark:bg-amber-900/20">
+          <span className="mt-0.5 flex-shrink-0 text-amber-500">⚠️</span>
+          <div className="text-sm text-amber-800 dark:text-amber-300">
+            <p className="font-semibold">Tu pedido contiene bebidas alcohólicas</p>
+            <p className="mt-0.5 text-amber-700/80 dark:text-amber-400/80">
+              Solo se muestran paqueterías autorizadas para envío de alcohol (DHL, FedEx, Estafeta).
+              Se requerirá <strong>firma de adulto</strong> al momento de la entrega.
+            </p>
           </div>
         </div>
       )}
+
+      {cotizandoLoading && (
+        <div className="flex items-center justify-center rounded-lg border-2 border-gray-200 p-8">
+          <div className="text-center text-gray-500">Obteniendo cotizaciones de envío...</div>
+        </div>
+      )}
+
       {cotizandoError && (
         <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
           {cotizandoError}
         </div>
       )}
-      {!cotizandoLoading && cotizaciones.length === 0 && !cotizandoError && (
+
+      {!cotizandoLoading && !hayOpciones && !cotizandoError && (
         <div className="rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400">
           No hay opciones de envío a esta dirección. Revisa el código postal o selecciona otra dirección.
         </div>
       )}
-      <div className="space-y-3">
-        {cotizaciones.map((cot: any) => {
-          const isSelected = envioSeleccionado?.carrier === cot.carrier && envioSeleccionado?.productCode === cot.productCode;
-          const carrierNames: Record<string, string> = {
-            fedex: 'FedEx',
-            skydropx: 'SkydropX',
-          };
-          const providerColors: Record<string, string> = {
-            fedex:        'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
-            dhl:          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
-            ups:          'bg-amber-100  text-amber-700  dark:bg-amber-900/40  dark:text-amber-300',
-            estafeta:     'bg-red-100    text-red-700    dark:bg-red-900/40    dark:text-red-300',
-            paquetexpress:'bg-blue-100   text-blue-700   dark:bg-blue-900/40   dark:text-blue-300',
-            redpack:      'bg-rose-100   text-rose-700   dark:bg-rose-900/40   dark:text-rose-300',
-          };
-          // Para sub-carriers de SkydropX, mostrar el nombre real (DHL, Paquetexpress…)
-          const carrierLabel = cot.providerName
-            ?? carrierNames[cot.carrier]
-            ?? (cot.carrier ?? '').toUpperCase();
-          const colorKey = carrierLabel.toLowerCase().replace(/\s+/g, '');
-          const carrierColor = providerColors[colorKey]
-            ?? providerColors[cot.carrier]
-            ?? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300';
-          return (
-            <label
-              key={`${cot.carrier}-${cot.productCode}`}
-              className={`flex cursor-pointer items-center gap-4 rounded-lg border-2 p-4 transition-all duration-150
-                ${isSelected ? "border-green-600 bg-green-50 shadow-sm dark:bg-green-900/20" : "border-gray-200 hover:shadow-sm dark:border-gray-700"}`}
-            >
-              <input
-                type="radio"
-                name="envio"
-                className="accent-green-600"
-                checked={isSelected}
-                onChange={() => setEnvioSeleccionado(cot)}
-              />
-              <Truck size={20} className="text-yellow-500 flex-shrink-0" />
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${carrierColor}`}>{carrierLabel}</span>
-                  <p className="font-medium text-gray-900 dark:text-white">{cot.productName}</p>
-                </div>
-                <p className="text-sm text-gray-500">{cot.diasHabilesEstimados} días hábiles</p>
-                {cot.tipo === "internacional" && <p className="text-xs text-blue-600 dark:text-blue-400">Envío internacional</p>}
-              </div>
-              <p className="font-bold text-green-600">${formatPrice(cot.precioTotal, { showCurrency: false })} {cot.moneda}</p>
-            </label>
-          );
-        })}
-      </div>
+
+      {hayOpciones && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {numProductores > 1 && (
+            <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700">
+              <Truck size={14} className="text-green-600 flex-shrink-0" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {numProductores} paquetes desde {numProductores} vendedores
+              </span>
+            </div>
+          )}
+
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {opciones.map((op) => {
+              const isSelected = nivelKey === op.key;
+              return (
+                <label
+                  key={op.key}
+                  className={`flex cursor-pointer items-center gap-4 px-4 py-3.5 transition-colors
+                    ${isSelected ? "bg-green-50 dark:bg-green-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"}`}
+                >
+                  <input
+                    type="radio"
+                    name="envio-nivel"
+                    className="accent-green-600 flex-shrink-0"
+                    checked={isSelected}
+                    onChange={() => setNivel(op.key)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${PROVIDER_COLORS[op.providerName.toLowerCase().replace(/\s+/g, '')] ?? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300'}`}>
+                        {op.providerName}
+                      </span>
+                      <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{op.productName}</p>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {op.diasMax} días hábiles
+                      {op.tipo === "internacional" && <span className="ml-1.5 text-blue-600 dark:text-blue-400">· Internacional</span>}
+                    </p>
+                  </div>
+                  <p className="font-bold text-green-600 text-sm flex-shrink-0">
+                    ${formatPrice(convertQuotePrice ? convertQuotePrice(op.precioTotal, op.moneda) : op.precioTotal, { showCurrency: false })} {displayCurrency ?? op.moneda}
+                  </p>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {hayOpciones && nivelKey && (
+        <label
+          className={`mt-3 flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors
+            ${solicitarProteccion
+              ? "border-green-300 bg-green-50 dark:border-green-700/50 dark:bg-green-900/20"
+              : "border-gray-200 bg-gray-50 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/40 dark:hover:bg-gray-800/60"}`}
+        >
+          <input
+            type="checkbox"
+            className="mt-0.5 accent-green-600 flex-shrink-0"
+            checked={solicitarProteccion}
+            onChange={(e) => setSolicitarProteccion(e.target.checked)}
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              Protección del envío · SkydropX
+            </p>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              Cubre pérdida o daño hasta el valor declarado del pedido.
+              El costo exacto se confirma al generar la guía.
+            </p>
+          </div>
+        </label>
+      )}
     </div>
   );
 }
@@ -1483,11 +1671,13 @@ function PagoYResumen({
   paso,
   items,
   direccionSeleccionada,
-  envioSeleccionado,
+  gruposEnvio,
+  seleccionados,
   pedidoId,
   clientSecret,
   onError,
   convertToDisplay,
+  convertQuotePrice,
   displayCurrency,
   facturaData,
   shippingDisplayAmount,
@@ -1498,11 +1688,13 @@ function PagoYResumen({
   paso: CheckoutStep;
   items: any[];
   direccionSeleccionada: any;
-  envioSeleccionado: any;
+  gruposEnvio: any[];
+  seleccionados: Record<number, any>;
   pedidoId: string | null;
   clientSecret: string;
   onError: (msg: string | null) => void;
   convertToDisplay: (amount: number) => number;
+  convertQuotePrice: (price: number, currency: string) => number;
   displayCurrency: string;
   facturaData?: { solicitarFactura: boolean; rfc: string; nombre_razon_social: string; uso_cfdi: string; regimen_fiscal: string; email_factura: string };
   shippingDisplayAmount: number | null;
@@ -1740,13 +1932,30 @@ function PagoYResumen({
             )}
           </div>
         )}
-        {envioSeleccionado && (
-          <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
-            <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">{locale === 'en' ? 'Shipping method:' : 'Método de envío:'}</p>
-            <p className="text-gray-600 dark:text-gray-400">{envioSeleccionado.productName} — {envioSeleccionado.diasHabilesEstimados} {locale === 'en' ? 'business days' : 'días hábiles'}</p>
-            <p className="text-gray-600 dark:text-gray-400">${formatPrice(shippingDisplayAmount ?? convertToDisplay(envioSeleccionado.precioTotal), { showCurrency: false })} {displayCurrency}</p>
-          </div>
-        )}
+        {shippingDisplayAmount != null && shippingDisplayAmount > 0 && (() => {
+          const firstQ = Object.values(seleccionados)[0] as any;
+          const numPaquetes = (gruposEnvio ?? []).length;
+          return (
+            <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="font-medium text-gray-800 dark:text-gray-200 truncate block">
+                    {locale === 'en' ? 'Shipping' : 'Envío'}
+                  </span>
+                  {firstQ && (
+                    <span className="text-xs text-gray-500">
+                      {firstQ.productName}
+                      {numPaquetes > 1 && ` · ${numPaquetes} ${locale === 'en' ? 'packages' : 'paquetes'}`}
+                    </span>
+                  )}
+                </div>
+                <span className="flex-shrink-0 font-semibold text-green-700 dark:text-green-400">
+                  ${formatPrice(shippingDisplayAmount, { showCurrency: false })} {displayCurrency}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
 
         <button
           onClick={handleConfirm}
@@ -1769,18 +1978,22 @@ function PagoYResumen({
 function PagoYResumenPaypal({
   items,
   direccionSeleccionada,
-  envioSeleccionado,
+  gruposEnvio,
+  seleccionados,
   pedidoId,
   convertToDisplay,
+  convertQuotePrice,
   displayCurrency,
   shippingDisplayAmount,
   locale,
 }: {
   items: any[];
   direccionSeleccionada: any;
-  envioSeleccionado: any;
+  gruposEnvio: any[];
+  seleccionados: Record<number, any>;
   pedidoId: string | null;
   convertToDisplay: (amount: number) => number;
+  convertQuotePrice: (price: number, currency: string) => number;
   displayCurrency: string;
   shippingDisplayAmount: number | null;
   locale: string;
@@ -1854,17 +2067,30 @@ function PagoYResumenPaypal({
         </div>
       )}
 
-      {envioSeleccionado && (
-        <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
-          <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">{locale === 'en' ? 'Shipping method:' : 'Método de envío:'}</p>
-          <p className="text-gray-600 dark:text-gray-400">
-            {envioSeleccionado.productName} — {envioSeleccionado.diasHabilesEstimados} {locale === 'en' ? 'business days' : 'días hábiles'}
-          </p>
-          <p className="text-gray-600 dark:text-gray-400">
-            ${formatPrice(shippingDisplayAmount ?? convertToDisplay(envioSeleccionado.precioTotal), { showCurrency: false })} {displayCurrency}
-          </p>
-        </div>
-      )}
+      {shippingDisplayAmount != null && shippingDisplayAmount > 0 && (() => {
+        const firstQ = Object.values(seleccionados)[0] as any;
+        const numPaquetes = (gruposEnvio ?? []).length;
+        return (
+          <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <span className="font-medium text-gray-800 dark:text-gray-200 truncate block">
+                  {locale === 'en' ? 'Shipping' : 'Envío'}
+                </span>
+                {firstQ && (
+                  <span className="text-xs text-gray-500">
+                    {firstQ.productName}
+                    {numPaquetes > 1 && ` · ${numPaquetes} ${locale === 'en' ? 'packages' : 'paquetes'}`}
+                  </span>
+                )}
+              </div>
+              <span className="flex-shrink-0 font-semibold text-green-700 dark:text-green-400">
+                ${formatPrice(shippingDisplayAmount, { showCurrency: false })} {displayCurrency}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
         <p className="font-medium">✓ {locale === 'en' ? 'Payment confirmed with PayPal' : 'Pago confirmado con PayPal'}</p>

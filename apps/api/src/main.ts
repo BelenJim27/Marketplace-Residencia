@@ -1,8 +1,10 @@
 import * as dotenv from 'dotenv';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { join, resolve } from 'path';
-import { static as expressStatic, raw } from 'express';
+import { SanitizeBodyInterceptor } from './common/interceptors/sanitize.interceptor';
+import { static as expressStatic } from 'express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 dotenv.config({ path: resolve(process.cwd(), 'apps/api/.env'), override: true });
 dotenv.config({ path: resolve(__dirname, '../.env'), override: false });
@@ -20,13 +22,25 @@ async function bootstrap() {
   });
   app.use('/uploads', expressStatic(join(__dirname, '..', 'uploads')));
 
+  const rawOrigins = process.env.CORS_ORIGINS ?? 'http://localhost:3000';
+  const allowedOrigins = rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
+  const isProd = process.env.NODE_ENV === 'production';
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'https://marketplace-mezcal.vercel.app',
-    ],
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (isProd && !origin) {
+        callback(new Error('Origin header required'));
+        return;
+      }
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
   });
+
+  app.useGlobalInterceptors(new SanitizeBodyInterceptor());
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -38,8 +52,19 @@ async function bootstrap() {
     }),
   );
 
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Marketplace Residencia API')
+    .setDescription('API del marketplace de mezcal')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
+
   const port = process.env.PORT || 3001;
   await app.listen(port);
-  console.log(`API running on http://localhost:${port}`);
+  app.get(Logger).log(`API running on http://localhost:${port}`);
+  app.get(Logger).log(`Swagger docs: http://localhost:${port}/api/docs`);
+  
 }
 bootstrap();

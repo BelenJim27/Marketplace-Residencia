@@ -6,6 +6,8 @@ import { CreateArchivoDto, UpdateArchivoDto } from './dto/archivos.dto';
 import { ArchivosService } from './archivos.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 
+const FILE_SIZE_LIMIT = 5 * 1024 * 1024; // 5 MB
+
 const archivoStorage = memoryStorage();
 
 @Controller('archivos')
@@ -24,7 +26,7 @@ export class ArchivosController {
 
   @Post('upload')
   @UseGuards(AuthGuard)
-  @UseInterceptors(FileInterceptor('archivo', { storage: archivoStorage }))
+  @UseInterceptors(FileInterceptor('archivo', { storage: archivoStorage, limits: { fileSize: FILE_SIZE_LIMIT } }))
   async createWithUpload(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() dto: CreateArchivoDto
@@ -49,7 +51,7 @@ export class ArchivosController {
 
   @Patch(':id/upload')
   @UseGuards(AuthGuard)
-  @UseInterceptors(FileInterceptor('archivo', { storage: archivoStorage }))
+  @UseInterceptors(FileInterceptor('archivo', { storage: archivoStorage, limits: { fileSize: FILE_SIZE_LIMIT } }))
   updateWithUpload(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
