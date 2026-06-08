@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ModalNuevoProducto from './nuevoProducto';
 import ModalEditarVer from './acciones';
-import { Eye, Pencil, Trash2, Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { formatPrice } from "@/lib/format-number";
@@ -31,7 +30,6 @@ export default function ProductosAdmin() {
     const [busqueda, setBusqueda] = useState("");
     const [loading, setLoading] = useState(true);
 
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
     const successToast = useSuccessToast("producto");
     const deleteAlert  = useDeleteAlert("producto");
@@ -122,13 +120,6 @@ export default function ProductosAdmin() {
                         Panel de administración de inventario
                     </p>
                 </div>
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="bg-[#3D6B3F] text-white text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-[#1F3A2E] transition-all duration-200 flex items-center gap-2"
-                >
-                    <Plus size={20} />
-                    Nuevo Producto
-                </button>
             </div>
 
             {/* CARDS */}
@@ -312,14 +303,6 @@ export default function ProductosAdmin() {
             )}
 
             <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
-
-            {/* MODAL NUEVO */}
-            <ModalNuevoProducto
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onRefresh={fetchProductos}
-                onSuccess={successToast.mostrarRegistrado}
-            />
 
             {/* MODAL VER / EDITAR */}
             {productoSeleccionado && modoModal && (

@@ -4,14 +4,14 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const REGIONES = [
-  { nombre: 'Oaxaca', estado_prov: 'Oaxaca', pais_iso2: 'MX' },
-  { nombre: 'Michoacán', estado_prov: 'Michoacán', pais_iso2: 'MX' },
-  { nombre: 'Guerrero', estado_prov: 'Guerrero', pais_iso2: 'MX' },
-  { nombre: 'San Luis Potosí', estado_prov: 'San Luis Potosí', pais_iso2: 'MX' },
-  { nombre: 'Zacatecas', estado_prov: 'Zacatecas', pais_iso2: 'MX' },
-  { nombre: 'Guanajuato', estado_prov: 'Guanajuato', pais_iso2: 'MX' },
-  { nombre: 'Durango', estado_prov: 'Durango', pais_iso2: 'MX' },
-  { nombre: 'Jalisco', estado_prov: 'Jalisco', pais_iso2: 'MX' },
+  { nombre: 'Valles Centrales', estado_prov: 'Oaxaca', pais_iso2: 'MX' },
+  { nombre: 'Sierra Norte', estado_prov: 'Oaxaca', pais_iso2: 'MX' },
+  { nombre: 'Sierra Sur', estado_prov: 'Oaxaca', pais_iso2: 'MX' },
+  { nombre: 'Mixteca', estado_prov: 'Oaxaca', pais_iso2: 'MX' },
+  { nombre: 'Cañada', estado_prov: 'Oaxaca', pais_iso2: 'MX' },
+  { nombre: 'Papaloapan', estado_prov: 'Oaxaca', pais_iso2: 'MX' },
+  { nombre: 'Istmo', estado_prov: 'Oaxaca', pais_iso2: 'MX' },
+  { nombre: 'Costa', estado_prov: 'Oaxaca', pais_iso2: 'MX' },
 ];
 
 const CATEGORIAS = [

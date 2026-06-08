@@ -15,7 +15,7 @@ export class CarritoService {
     return serializeBigInts(
       await this.prisma.carrito_item.upsert({
         where: { id_usuario_id_producto: { id_usuario: usuarioId, id_producto: productoId } },
-        update: { cantidad: { increment: dto.cantidad }, precio_unitario_snapshot: dto.precio_unitario_snapshot },
+        update: { cantidad: dto.cantidad, precio_unitario_snapshot: dto.precio_unitario_snapshot },
         create: { id_usuario: usuarioId, id_producto: productoId, cantidad: dto.cantidad, precio_unitario_snapshot: dto.precio_unitario_snapshot, moneda_snapshot: (dto.moneda_snapshot ?? 'MXN') as Moneda }
       })
     );

@@ -10,7 +10,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
 
-export default function SigninWithPassword({ isVenderFlow = false }: { isVenderFlow?: boolean }) {
+export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: { isVenderFlow?: boolean; onSuccess?: () => void }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect");
@@ -61,6 +61,7 @@ export default function SigninWithPassword({ isVenderFlow = false }: { isVenderF
       );
 
       if (isVenderFlow) {
+        if (onSuccess) { onSuccess(); return; }
         router.push("/dashboard/productor/solicitar");
         return;
       }

@@ -7,7 +7,7 @@ import GoogleSigninButton from "@/components/Administrator/Auth/GoogleSigninButt
 import { useAuth } from "@/context/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
 
-export function SignUpForm({ isVenderFlow: isVenderFlowProp }: { isVenderFlow?: boolean } = {}) {
+export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVenderFlow?: boolean; onSuccess?: () => void } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
@@ -125,7 +125,9 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp }: { isVenderFlow?: 
         result.tokens.refresh_token,
       );
 
-      if (isVenderFlow) {
+      if (onSuccess) {
+        onSuccess();
+      } else if (isVenderFlow) {
         router.push("/dashboard/productor/solicitar");
       } else {
         const redirectUrl = searchParams.get("redirect");

@@ -545,46 +545,169 @@ export class EmailService {
 
   async sendProductorApprovedEmail(email: string, nombre: string, motivo?: string | null): Promise<void> {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 30px; }
-          .button { display: inline-block; background: #16a34a; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin: 20px 0; }
-          .badge { display: inline-block; background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
-          .footer { margin-top: 20px; font-size: 12px; color: #666; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="card">
-            <span class="badge">✓ Aprobada</span>
-            <h2>¡Felicidades, ${nombre}!</h2>
-            <p>Tu solicitud para convertirte en productor ha sido <strong>aprobada</strong>.</p>
-            <p>Ahora puedes:</p>
-            <ul>
-              <li>Publicar tus productos en la plataforma</li>
-              <li>Gestionar tu tienda</li>
-              <li>Recibir pedidos de clientes</li>
-            </ul>
-            ${motivo ? `<p><strong>Nota del administrador:</strong> ${motivo}</p>` : ''}
-            <a href="${frontendUrl}/dashboard/productor" class="button">Ir a mi dashboard</a>
-            <div class="footer">
-              <p>© ${new Date().getFullYear()} Marketplace</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    const year = new Date().getFullYear();
+    const fecha = new Date().toLocaleDateString('es-MX', {
+      year: 'numeric', month: 'long', day: 'numeric',
+      timeZone: 'America/Mexico_City',
+    });
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>¡Solicitud de productor aprobada!</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f0ece0; font-family:Arial, Helvetica, sans-serif;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0ece0">
+  <tr><td align="center" style="padding:28px 10px;">
+
+    <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff; border:1px solid #c8bfa8; max-width:600px;">
+
+      <!-- Barra superior degradada -->
+      <tr>
+        <td height="5" style="background:linear-gradient(90deg,#2E4A33,#C97A3E,#C89B4A,#C97A3E,#2E4A33); font-size:1px; line-height:1px;">&nbsp;</td>
+      </tr>
+
+      <!-- Encabezado -->
+      <tr>
+        <td style="padding:32px 36px 24px; border-bottom:1px solid #e8e0d0;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td>
+                <p style="margin:0 0 4px; font-size:11px; font-weight:bold; color:#C97A3E; text-transform:uppercase; letter-spacing:1.5px;">Marketplace de Mezcal · Oaxaca</p>
+                <h1 style="margin:0; font-size:26px; font-weight:bold; color:#2E4A33; line-height:1.2;">¡Bienvenido al equipo,<br>${nombre}!</h1>
+              </td>
+              <td align="right" valign="top">
+                <table cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="background:#dcfce7; border:1px solid #bbf7d0; border-radius:20px; padding:6px 14px;">
+                      <span style="color:#166534; font-size:13px; font-weight:bold;">&#10003;&nbsp; Aprobado</span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Mensaje principal -->
+      <tr>
+        <td style="padding:28px 36px 20px;">
+          <p style="margin:0 0 16px; font-size:15px; color:#333; line-height:1.7;">
+            Nos complace informarte que tu solicitud para convertirte en <strong>productor certificado</strong> en nuestra plataforma ha sido <strong style="color:#2E4A33;">aprobada</strong> el <strong>${fecha}</strong>.
+          </p>
+          <p style="margin:0 0 24px; font-size:14px; color:#555; line-height:1.7;">
+            A partir de ahora puedes comenzar a publicar tus productos y gestionar tu tienda. ¡Es momento de compartir tu mezcal con el mundo!
+          </p>
+        </td>
+      </tr>
+
+      <!-- Tarjeta de pasos -->
+      <tr>
+        <td style="padding:0 36px 28px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f7f3ec; border-radius:8px; border:1px solid #e8e0d0;">
+            <tr>
+              <td style="padding:18px 20px 10px;">
+                <p style="margin:0 0 14px; font-size:11px; font-weight:bold; color:#C97A3E; text-transform:uppercase; letter-spacing:1px;">Próximos pasos</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 20px 6px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td valign="top" width="28" style="padding-bottom:12px;">
+                      <span style="display:inline-block; width:22px; height:22px; background:#2E4A33; border-radius:50%; text-align:center; line-height:22px; color:#fff; font-size:11px; font-weight:bold;">1</span>
+                    </td>
+                    <td style="padding-bottom:12px; padding-left:10px;">
+                      <p style="margin:0; font-size:13px; color:#333; line-height:1.5;"><strong>Configura tu tienda</strong> — Agrega tu logo, descripción y datos de contacto.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td valign="top" width="28" style="padding-bottom:12px;">
+                      <span style="display:inline-block; width:22px; height:22px; background:#2E4A33; border-radius:50%; text-align:center; line-height:22px; color:#fff; font-size:11px; font-weight:bold;">2</span>
+                    </td>
+                    <td style="padding-bottom:12px; padding-left:10px;">
+                      <p style="margin:0; font-size:13px; color:#333; line-height:1.5;"><strong>Publica tus productos</strong> — Agrega fotos, precios e inventario de tu mezcal.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td valign="top" width="28" style="padding-bottom:16px;">
+                      <span style="display:inline-block; width:22px; height:22px; background:#2E4A33; border-radius:50%; text-align:center; line-height:22px; color:#fff; font-size:11px; font-weight:bold;">3</span>
+                    </td>
+                    <td style="padding-bottom:16px; padding-left:10px;">
+                      <p style="margin:0; font-size:13px; color:#333; line-height:1.5;"><strong>Empieza a vender</strong> — Recibe y gestiona pedidos desde tu panel de productor.</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      ${motivo ? `
+      <!-- Nota del administrador -->
+      <tr>
+        <td style="padding:0 36px 24px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-left:4px solid #C97A3E; background:#fffbf5;">
+            <tr>
+              <td style="padding:14px 16px;">
+                <p style="margin:0 0 4px; font-size:11px; font-weight:bold; color:#C97A3E; text-transform:uppercase; letter-spacing:0.5px;">Nota del administrador</p>
+                <p style="margin:0; font-size:13px; color:#555; line-height:1.6;">${motivo}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>` : ''}
+
+      <!-- Botón CTA -->
+      <tr>
+        <td style="padding:4px 36px 36px; text-align:center;">
+          <a href="${frontendUrl}/dashboard/productor"
+             style="display:inline-block; background:#2E4A33; color:#ffffff; text-decoration:none; padding:14px 36px; border-radius:6px; font-size:14px; font-weight:bold; letter-spacing:0.3px;">
+            Ir a mi panel de productor &rarr;
+          </a>
+        </td>
+      </tr>
+
+      <!-- Pie -->
+      <tr>
+        <td bgcolor="#2E4A33" style="padding:14px 36px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td>
+                <p style="margin:0; font-size:12px; color:#a8c4a2;">Marketplace de Mezcal · Oaxaca de Juárez, México</p>
+              </td>
+              <td align="right">
+                <p style="margin:0; font-size:12px; color:#a8c4a2;">© ${year}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:10px 36px 14px;">
+          <p style="margin:0; font-size:11px; color:#aaa; text-align:center;">
+            Recibiste este correo porque tu solicitud de productor fue procesada.<br>
+            Si tienes dudas, visita <a href="${frontendUrl}" style="color:#C97A3E; text-decoration:none;">${frontendUrl.replace(/https?:\/\//, '')}</a>
+          </p>
+        </td>
+      </tr>
+
+    </table>
+
+  </td></tr>
+</table>
+
+</body>
+</html>`;
 
     await this.sendEmail({
       to: email,
-      subject: '¡Tu solicitud de productor fue aprobada!',
+      subject: '🎉 ¡Tu solicitud de productor fue aprobada! — Marketplace de Mezcal',
       html,
     });
   }

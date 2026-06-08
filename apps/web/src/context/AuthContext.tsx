@@ -140,6 +140,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshAuth();
   }, [refreshAuth, session]);
 
+  // Cuando token cookie expiró pero usuario + refresh_token siguen vigentes,
+  // refresca el access token en background sin interrumpir la UI.
+  useEffect(() => {
+    if (loading) return;
+    if (session?.user) return;  // NextAuth lo maneja
+    if (!user) return;          // sin usuario, el otro effect se encarga
+    if (getCookie("token")) return;  // token vigente, nada que hacer
+
+    const refreshToken = getCookie("refresh_token");
+    if (!refreshToken) return;
+
+    fetch("/auth/refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.tokens) return;
+        if (data.tokens.access_token) setCookie("token", data.tokens.access_token, 7);
+        if (data.tokens.refresh_token) setCookie("refresh_token", data.tokens.refresh_token, 30);
+      })
+      .catch(() => {});
+  }, [loading, user, session]);
+
   // Cuando usuario cookie expiró pero refresh_token sigue vigente,
   // llama al endpoint para obtener tokens + perfil frescos sin forzar re-login.
   useEffect(() => {

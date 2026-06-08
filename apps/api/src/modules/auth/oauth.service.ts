@@ -26,6 +26,15 @@ export class OAuthService {
     private readonly emailService: EmailService,
   ) {}
 
+  private parseGoogleName(fullName: string): { nombre: string; apellidoPaterno: string | null; apellidoMaterno: string | null } {
+    const parts = (fullName || 'Usuario').trim().split(/\s+/).filter(Boolean);
+    return {
+      nombre: parts[0] || 'Usuario',
+      apellidoPaterno: parts.length >= 2 ? parts[1] : null,
+      apellidoMaterno: parts.length >= 3 ? parts[2] : null,
+    };
+  }
+
   async upsertOAuthAccount(profile: OAuthProfile) {
     const existingAccount = await this.prisma.oauth_cuentas.findUnique({
       where: {
@@ -53,7 +62,30 @@ export class OAuthService {
         },
       });
 
-      if (profile.fotoUrl && !existingAccount.usuarios?.foto_url) {
+      const usuarioActual = existingAccount.usuarios;
+
+      if (usuarioActual && profile.nombre) {
+        const parsed = this.parseGoogleName(profile.nombre);
+        const nombreSinEspacios = (usuarioActual.nombre || '').trim().split(/\s+/).length > 1;
+        const faltaApellidoPaterno = !usuarioActual.apellido_paterno && !!parsed.apellidoPaterno;
+
+        if (nombreSinEspacios || faltaApellidoPaterno) {
+          await this.prisma.usuarios.update({
+            where: { id_usuario: existingAccount.id_usuario },
+            data: {
+              nombre: parsed.nombre,
+              ...(profile.fotoUrl && !usuarioActual.foto_url ? { foto_url: profile.fotoUrl } : {}),
+              ...(!usuarioActual.apellido_paterno && parsed.apellidoPaterno ? { apellido_paterno: parsed.apellidoPaterno } : {}),
+              ...(!usuarioActual.apellido_materno && parsed.apellidoMaterno ? { apellido_materno: parsed.apellidoMaterno } : {}),
+            },
+          });
+        } else if (profile.fotoUrl && !usuarioActual.foto_url) {
+          await this.prisma.usuarios.update({
+            where: { id_usuario: existingAccount.id_usuario },
+            data: { foto_url: profile.fotoUrl },
+          });
+        }
+      } else if (profile.fotoUrl && !usuarioActual?.foto_url) {
         await this.prisma.usuarios.update({
           where: { id_usuario: existingAccount.id_usuario },
           data: { foto_url: profile.fotoUrl },
@@ -70,7 +102,28 @@ export class OAuthService {
       : null;
 
     if (existingUserByEmail) {
-      if (profile.fotoUrl && !existingUserByEmail.foto_url) {
+      if (profile.nombre) {
+        const parsed = this.parseGoogleName(profile.nombre);
+        const nombreSinEspacios = (existingUserByEmail.nombre || '').trim().split(/\s+/).length > 1;
+        const faltaApellidoPaterno = !existingUserByEmail.apellido_paterno && !!parsed.apellidoPaterno;
+
+        if (nombreSinEspacios || faltaApellidoPaterno) {
+          await this.prisma.usuarios.update({
+            where: { id_usuario: existingUserByEmail.id_usuario },
+            data: {
+              nombre: parsed.nombre,
+              ...(profile.fotoUrl && !existingUserByEmail.foto_url ? { foto_url: profile.fotoUrl } : {}),
+              ...(!existingUserByEmail.apellido_paterno && parsed.apellidoPaterno ? { apellido_paterno: parsed.apellidoPaterno } : {}),
+              ...(!existingUserByEmail.apellido_materno && parsed.apellidoMaterno ? { apellido_materno: parsed.apellidoMaterno } : {}),
+            },
+          });
+        } else if (profile.fotoUrl && !existingUserByEmail.foto_url) {
+          await this.prisma.usuarios.update({
+            where: { id_usuario: existingUserByEmail.id_usuario },
+            data: { foto_url: profile.fotoUrl },
+          });
+        }
+      } else if (profile.fotoUrl && !existingUserByEmail.foto_url) {
         await this.prisma.usuarios.update({
           where: { id_usuario: existingUserByEmail.id_usuario },
           data: { foto_url: profile.fotoUrl },
@@ -93,9 +146,7 @@ export class OAuthService {
       return newAccount.id_usuario;
     }
 
-    const nombreParts = (profile.nombre || 'Usuario').split(' ');
-    const nombre = nombreParts[0];
-    const apellidoPaterno = nombreParts[1] || null;
+    const { nombre, apellidoPaterno, apellidoMaterno } = this.parseGoogleName(profile.nombre || 'Usuario');
 
     const user = await this.prisma.usuarios.create({
       data: {
@@ -103,6 +154,7 @@ export class OAuthService {
         email: profile.email || `${profile.providerUid}@${profile.provider}.local`,
         foto_url: profile.fotoUrl,
         apellido_paterno: apellidoPaterno,
+        apellido_materno: apellidoMaterno,
         idioma_preferido: 'es',
         moneda_preferida: 'MXN',
         usuario_rol: {

@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 import { AssignUsuarioRolDto, CreateUsuarioDto, UpdateUsuarioDto } from './dto/usuarios.dto';
 import { UsuariosService } from './usuarios.service';
 
-const USUARIOS_DIR = join(process.cwd(), 'uploads', 'usuarios');
+const USUARIOS_DIR = join(__dirname, '../../..', 'uploads', 'usuarios');
 
 @Controller('usuarios')
 export class UsuariosController {

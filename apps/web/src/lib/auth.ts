@@ -114,6 +114,7 @@ export const authOptions: AuthOptions = {
             const data = await response.json();
             token.accessToken = data.tokens.access_token;
             token.refreshToken = data.tokens.refresh_token;
+            token.accessTokenIssuedAt = Math.floor(Date.now() / 1000);
             token.id = data.user.id_usuario;
             token.id_usuario = data.user.id_usuario;
             token.email = user.email;
@@ -151,6 +152,7 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
+        token.accessTokenIssuedAt = Math.floor(Date.now() / 1000);
         token.id = user.id;
         token.id_usuario = user.id_usuario || user.id;
         token.email = user.email;
@@ -170,12 +172,17 @@ export const authOptions: AuthOptions = {
         return token;
       }
 
-      const now = Math.floor(Date.now() / 1000);
-      if (!token.exp || token.exp - now > 60) {
+      if (!token.refreshToken) {
         return token;
       }
 
-      if (!token.refreshToken) {
+      // Refresh the backend access token (15 min TTL) proactively before it expires
+      const now = Math.floor(Date.now() / 1000);
+      const issuedAt = (token.accessTokenIssuedAt as number) || 0;
+      const backendTokenAge = now - issuedAt;
+      const backendTokenNeedsRefresh = backendTokenAge > 13 * 60; // refresh after 13 min
+
+      if (!backendTokenNeedsRefresh) {
         return token;
       }
 
@@ -195,6 +202,7 @@ export const authOptions: AuthOptions = {
         const data = await response.json();
         token.accessToken = data.tokens.access_token;
         token.refreshToken = data.tokens.refresh_token;
+        token.accessTokenIssuedAt = now;
       } catch (err) {
         console.error("Error refreshing token:", err);
       }

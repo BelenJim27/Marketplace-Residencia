@@ -296,7 +296,7 @@ export default function VentasPage() {
 
       {/* Modal */}
       {modalAbierto && ventaSeleccionada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { setModalAbierto(false); setVentaSeleccionada(null); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => { setModalAbierto(false); setVentaSeleccionada(null); }}>
           <div role="dialog" aria-modal="true"
             className="w-full max-w-lg rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}>

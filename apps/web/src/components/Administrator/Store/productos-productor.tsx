@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Pencil, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
@@ -232,18 +232,6 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
     <div className="space-y-6">
       <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
       <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
-
-      {/* ── Botón Nuevo Producto ── */}
-      <div className="flex justify-end mb-6">
-        <button
-          type="button"
-          onClick={() => openModal("create")}
-          className="flex items-center gap-2 rounded-xl bg-[#3D6B3F] px-5 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:bg-[#1F3A2E]"
-        >
-          <Plus className="h-4 w-4" />
-          Nuevo Producto
-        </button>
-      </div>
 
       {/* ── Tarjetas de resumen ── */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

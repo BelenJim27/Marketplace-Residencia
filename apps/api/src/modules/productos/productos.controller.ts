@@ -10,7 +10,7 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/guards/roles.decorator';
 
-const UPLOADS_DIR = join(process.cwd(), 'uploads', 'productos');
+const UPLOADS_DIR = join(__dirname, '../../..', 'uploads', 'productos');
 mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const productosStorage = diskStorage({

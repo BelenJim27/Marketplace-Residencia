@@ -350,7 +350,7 @@ export default function ComisionesAdminPage() {
       <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] overflow-hidden p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">{editing ? "Editar regla" : "Nueva regla"}</h2>

@@ -63,7 +63,7 @@ async function main() {
       if (existing) {
         console.log(`  ✓ Already exists: ${l.codigo_lote}`);
       } else {
-        const region = await prisma.regiones.findFirst({ where: { nombre: 'Oaxaca' } });
+        const region = await prisma.regiones.findFirst({ where: { nombre: 'Valles Centrales' } });
         await prisma.lotes.create({
           data: {
             codigo_lote: l.codigo_lote,

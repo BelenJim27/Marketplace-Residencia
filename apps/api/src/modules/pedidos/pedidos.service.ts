@@ -8,6 +8,7 @@ import { FedexService } from "../envios/fedex.service";
 import { SkydropxService } from "../envios/skydropx.service";
 import { PaypalService } from "../pagos/paypal.service";
 import { StripeService } from "../pagos/stripe.service";
+import { NotificacionesService } from "../notificaciones/notificaciones.service";
 import { serializeBigInts, toBigIntId } from "../shared/serialize";
 import {
   CreateDetallePedidoDto,
@@ -32,6 +33,7 @@ export class PedidosService {
     private readonly skydropxService: SkydropxService,
     private readonly stripeService: StripeService,
     private readonly paypalService: PaypalService,
+    private readonly notificacionesService: NotificacionesService,
   ) {}
   async findAll() {
     return serializeBigInts(
@@ -444,18 +446,15 @@ export class PedidosService {
         });
         if (productor?.id_usuario) {
           const nombreProducto = (detalle as any).productos?.nombre ?? 'tu producto';
-          await this.prisma.notificaciones.create({
-            data: {
-              id_usuario: productor.id_usuario,
-              tipo: 'stock_bajo',
-              titulo: stockActual === 0 ? 'Producto agotado' : 'Stock bajo',
-              cuerpo: stockActual === 0
-                ? `"${nombreProducto}" se ha agotado. Actualiza tu inventario.`
-                : `"${nombreProducto}" tiene solo ${stockActual} unidades restantes.`,
-              url_accion: '/dashboard/productor/productos',
-              leido: false,
-            },
-          });
+          await this.notificacionesService.notifyUser(
+            productor.id_usuario,
+            'stock_bajo',
+            stockActual === 0 ? 'Producto agotado' : 'Stock bajo',
+            stockActual === 0
+              ? `"${nombreProducto}" se ha agotado. Actualiza tu inventario.`
+              : `"${nombreProducto}" tiene solo ${stockActual} unidades restantes.`,
+            '/dashboard/productor/productos',
+          );
         }
       } catch (err: any) {
         console.error('[pedidos] Failed to create stock_bajo notification:', err?.message);
@@ -926,6 +925,36 @@ export class PedidosService {
       },
     });
 
+    if (nuevoEstado === 'enviado' || nuevoEstado === 'entregado') {
+      try {
+        const pedido = await this.prisma.pedidos.findUnique({
+          where: { id_pedido: id_pedido_big },
+          select: { id_usuario: true },
+        });
+        if (pedido?.id_usuario) {
+          if (nuevoEstado === 'enviado') {
+            await this.notificacionesService.notifyUser(
+              pedido.id_usuario,
+              'pedido_enviado',
+              'Tu pedido ha sido enviado',
+              `Tu pedido #${id_pedido} está en camino. El productor ya lo despachó.`,
+              '/Cliente/pedidos',
+            );
+          } else {
+            await this.notificacionesService.notifyUser(
+              pedido.id_usuario,
+              'pedido_entregado',
+              '¡Tu pedido ha llegado!',
+              `Tu pedido #${id_pedido} fue marcado como entregado. ¡Esperamos que disfrutes tu mezcal!`,
+              '/Cliente/pedidos',
+            );
+          }
+        }
+      } catch (err: any) {
+        console.error('[pedidos] Error notifying buyer of status change:', err?.message);
+      }
+    }
+
     return serializeBigInts(updated);
   }
 
@@ -962,19 +991,13 @@ export class PedidosService {
       // PayPal Payouts flow
       if (!pp.productores?.paypal_email) {
         console.warn(`[pedidos] Productor ${id_productor} sin PayPal email. Dinero retenido en plataforma hasta completar configuración.`);
-        try {
-          await this.prisma.notificaciones.create({
-            data: {
-              id_usuario: pp.productores?.id_usuario || '',
-              tipo: 'pago_pendiente_onboarding',
-              titulo: 'Tienes un pago pendiente por transferir',
-              cuerpo: `Tu pedido #${id_pedido} ha sido entregado, pero tu pago de ${monto_neto} ${moneda} está pendiente de transferir. Por favor configura tu email de PayPal en tu perfil.`,
-              url_accion: '/dashboard/productor/ingresos',
-            },
-          });
-        } catch (err: any) {
-          console.error('[pedidos] Failed to create notification', err?.message);
-        }
+        await this.notificacionesService.notifyUser(
+          pp.productores?.id_usuario || '',
+          'pago_pendiente_onboarding',
+          'Tienes un pago pendiente por transferir',
+          `Tu pedido #${id_pedido} ha sido entregado, pero tu pago de ${monto_neto} ${moneda} está pendiente. Por favor configura tu email de PayPal en tu perfil.`,
+          '/dashboard/productor/ingresos',
+        );
         return;
       }
 
@@ -1055,19 +1078,13 @@ export class PedidosService {
       // Stripe Connect flow (unchanged)
       if (!pp.productores?.stripe_account_id || !pp.productores.stripe_onboarding_completed) {
         console.warn(`[pedidos] Productor ${id_productor} sin onboarding Stripe. Dinero retenido en plataforma hasta completar configuración.`);
-        try {
-          await this.prisma.notificaciones.create({
-            data: {
-              id_usuario: pp.productores?.id_usuario || '',
-              tipo: 'pago_pendiente_onboarding',
-              titulo: 'Tienes un pago pendiente por transferir',
-              cuerpo: `Tu pedido #${id_pedido} ha sido entregado, pero tu pago de ${monto_neto} ${moneda} está pendiente de transferir. Por favor completa tu configuración de Stripe.`,
-              url_accion: '/dashboard/productor/ingresos',
-            },
-          });
-        } catch (err: any) {
-          console.error('[pedidos] Failed to create notification', err?.message);
-        }
+        await this.notificacionesService.notifyUser(
+          pp.productores?.id_usuario || '',
+          'pago_pendiente_onboarding',
+          'Tienes un pago pendiente por transferir',
+          `Tu pedido #${id_pedido} ha sido entregado, pero tu pago de ${monto_neto} ${moneda} está pendiente. Por favor completa tu configuración de Stripe.`,
+          '/dashboard/productor/ingresos',
+        );
         return;
       }
 
@@ -1187,6 +1204,24 @@ export class PedidosService {
         estado: "enviado",
       },
     });
+
+    try {
+      const pedidoData = await this.prisma.pedidos.findUnique({
+        where: { id_pedido: toBigIntId(id_pedido) },
+        select: { id_usuario: true },
+      });
+      if (pedidoData?.id_usuario) {
+        await this.notificacionesService.notifyUser(
+          pedidoData.id_usuario,
+          'pedido_en_camino',
+          'Número de guía generado',
+          `Tu pedido #${id_pedido} ya tiene número de rastreo: ${numero_rastreo}.`,
+          '/Cliente/pedidos',
+        );
+      }
+    } catch (err: any) {
+      console.error('[pedidos] Error notifying buyer of tracking:', err?.message);
+    }
 
     return serializeBigInts(updated);
   }

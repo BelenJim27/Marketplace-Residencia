@@ -224,7 +224,7 @@ export default function RolesPermisosPage() {
 
   const inputCls      = "w-full rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] text-[#1F3A2E] p-3 text-sm outline-none focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 placeholder-[#3D6B3F]/40";
   const labelCls      = "mb-2 block text-sm font-medium text-[#1F3A2E]";
-  const modalWrapCls  = "fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4";
+  const modalWrapCls  = "fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm";
   const modalBoxCls   = "w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)]";
   const modalHdrCls   = "flex items-center justify-between border-b border-[#C5CFB0] bg-[#1F3A2E] p-6";
   const checkboxRowCls= (active: boolean) => `flex cursor-pointer items-center rounded-xl border p-3 transition-colors ${active ? "border-[#3D6B3F] bg-[#A8C26B]/10" : "border-[#C5CFB0] hover:bg-[#F4F0E3]"}`;

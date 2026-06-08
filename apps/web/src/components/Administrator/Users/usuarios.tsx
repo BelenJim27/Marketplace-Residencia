@@ -346,7 +346,7 @@ export default function UsuariosUI() {
 
       {/* Modal */}
       {showModalUsuario && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between bg-[#1F3A2E] p-6">

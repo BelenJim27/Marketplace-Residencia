@@ -28,6 +28,11 @@ const TYPE_EMOJIS: Record<string, string> = {
   nueva_solicitud_productor: "👤",
   nuevo_usuario:             "🧑",
   stock_bajo_admin:          "📦",
+  bienvenida:                "🧑",
+  pedido_enviado:            "📦",
+  pedido_en_camino:          "🔄",
+  pedido_entregado:          "✅",
+  pedido_cancelado:          "❌",
 };
 
 function getEmoji(tipo: string) {

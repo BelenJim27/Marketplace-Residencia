@@ -552,7 +552,7 @@ export default function PayoutsAdminPage() {
       </section>
 
       {estadoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Payout #{estadoModal.id_payout}</h2>
@@ -617,13 +617,13 @@ export default function PayoutsAdminPage() {
       )}
 
       {detalleLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <Loader2 className="animate-spin text-white" size={32} />
         </div>
       )}
 
       {detalleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Detalle payout #{detalleModal.id_payout}</h2>

@@ -369,7 +369,7 @@ export default function ReembolsosAdminPage() {
 
       {/* Modal de confirmación para resolver manual */}
       {modalPago && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_24px_48px_rgba(31,58,46,0.25)]">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">

@@ -6,7 +6,7 @@ import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs';
 import { join, extname } from 'path';
 import { randomUUID } from 'crypto';
 
-const ARCHIVOS_DIR = join(process.cwd(), 'uploads', 'archivos');
+const ARCHIVOS_DIR = join(__dirname, '../../..', 'uploads', 'archivos');
 
 function ensureDir() {
   if (!existsSync(ARCHIVOS_DIR)) {

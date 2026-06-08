@@ -102,6 +102,14 @@ export class AuthService {
         console.error('Error sending welcome email:', emailError);
       }
 
+      this.notificaciones.notifyUser(
+        user.id_usuario,
+        'bienvenida',
+        `¡Bienvenido, ${user.nombre}!`,
+        'Tu cuenta fue creada exitosamente. Explora los mejores mezcales artesanales de Oaxaca.',
+        '/',
+      ).catch(() => {});
+
       this.notificaciones.notifyAdmins(
         'nuevo_usuario',
         'Nuevo usuario registrado',

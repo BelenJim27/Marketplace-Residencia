@@ -31,7 +31,7 @@ export default function CategoriasAdminPage() {
   const [categorias, setCategorias]             = useState<Categoria[]>([]);
   const [showModal, setShowModal]               = useState(false);
   const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null);
-  const [formData, setFormData] = useState({ nombre: "", slug: "", descripcion: "", tipo: "general", activo: true, id_padre: "" });
+  const [formData, setFormData] = useState({ nombre: "", slug: "", tipo: "general", activo: true, id_padre: "", jerarquia: "categoria" as "categoria" | "subcategoria" });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -74,13 +74,13 @@ export default function CategoriasAdminPage() {
 
   const openCreateModal = (parentId?: number) => {
     setEditingCategoria(null);
-    setFormData({ nombre: "", slug: "", descripcion: "", tipo: "general", activo: true, id_padre: parentId ? String(parentId) : "" });
+    setFormData({ nombre: "", slug: "", tipo: "general", activo: true, id_padre: parentId ? String(parentId) : "", jerarquia: parentId ? "subcategoria" : "categoria" });
     setShowModal(true);
   };
 
   const openEditModal = (c: Categoria) => {
     setEditingCategoria(c);
-    setFormData({ nombre: c.nombre, slug: c.slug, descripcion: c.descripcion || "", tipo: c.tipo, activo: c.activo, id_padre: c.id_padre ? String(c.id_padre) : "" });
+    setFormData({ nombre: c.nombre, slug: c.slug, tipo: c.tipo, activo: c.activo, id_padre: c.id_padre ? String(c.id_padre) : "", jerarquia: c.id_padre ? "subcategoria" : "categoria" });
     setShowModal(true);
   };
 
@@ -90,7 +90,7 @@ export default function CategoriasAdminPage() {
     const isEditing = !!editingCategoria;
     const method    = isEditing ? "PATCH" : "POST";
     const url       = isEditing ? `${API_URL}/categorias/${editingCategoria!.id_categoria}` : `${API_URL}/categorias`;
-    const payload   = { nombre: formData.nombre, slug: formData.slug, descripcion: formData.descripcion || null, tipo: formData.tipo, activo: formData.activo, id_padre: formData.id_padre ? parseInt(formData.id_padre) : null };
+    const payload   = { nombre: formData.nombre, slug: formData.slug, tipo: formData.tipo, activo: formData.activo, id_padre: formData.jerarquia === "subcategoria" && formData.id_padre ? parseInt(formData.id_padre) : null };
     try {
       const res  = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await res.json();
@@ -298,7 +298,7 @@ export default function CategoriasAdminPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-6 pb-4">
               <h2 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">{editingCategoria ? "Editar" : "Nueva"} Categoría</h2>
@@ -315,8 +315,15 @@ export default function CategoriasAdminPage() {
                 <input type="text" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} required className={fieldCls} />
               </div>
               <div>
-                <label className={labelCls}>Descripción</label>
-                <textarea value={formData.descripcion} onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })} rows={2} className={fieldCls} />
+                <label className={labelCls}>Jerarquía</label>
+                <div className="mt-1 flex gap-3">
+                  {(["categoria", "subcategoria"] as const).map((opcion) => (
+                    <label key={opcion} className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all duration-150 ${formData.jerarquia === opcion ? "border-[#3D6B3F] bg-[#3D6B3F]/10 text-[#1F3A2E]" : "border-[#C5CFB0] bg-white text-[#1F3A2E]/60 hover:bg-[#F4F0E3]"}`}>
+                      <input type="radio" name="jerarquia" value={opcion} checked={formData.jerarquia === opcion} onChange={() => setFormData({ ...formData, jerarquia: opcion, id_padre: "" })} className="sr-only" />
+                      {opcion === "categoria" ? "Categoría" : "Subcategoría"}
+                    </label>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className={labelCls}>Tipo</label>
@@ -326,15 +333,17 @@ export default function CategoriasAdminPage() {
                   <option value="tipo_mezcal">Tipo Mezcal</option>
                 </select>
               </div>
-              <div>
-                <label className={labelCls}>Categoría padre (opcional)</label>
-                <select value={formData.id_padre} onChange={(e) => setFormData({ ...formData, id_padre: e.target.value })} className={fieldCls}>
-                  <option value="">— Ninguna (categoría raíz) —</option>
-                  {padres.map((p) => (
-                    <option key={p.id_categoria} value={String(p.id_categoria)}>{p.nombre}</option>
-                  ))}
-                </select>
-              </div>
+              {formData.jerarquia === "subcategoria" && (
+                <div>
+                  <label className={labelCls}>Categoría padre</label>
+                  <select value={formData.id_padre} onChange={(e) => setFormData({ ...formData, id_padre: e.target.value })} required className={fieldCls}>
+                    <option value="">— Selecciona una categoría —</option>
+                    {padres.map((p) => (
+                      <option key={p.id_categoria} value={String(p.id_categoria)}>{p.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <input type="checkbox" checked={formData.activo} onChange={(e) => setFormData({ ...formData, activo: e.target.checked })} className="h-4 w-4 rounded border-[#C5CFB0] text-[#3D6B3F]" />
                 <label className="text-sm text-[#1F3A2E]">Activo</label>

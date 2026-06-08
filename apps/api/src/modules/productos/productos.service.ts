@@ -273,7 +273,7 @@ export class ProductosService {
       // Para rutas locales /uploads/, verificar que el archivo exista en disco
       const tieneImagenValida = todasUrls.some((url) => {
         if (url.startsWith('/uploads/')) {
-          return existsSync(join(process.cwd(), url));
+          return existsSync(join(__dirname, '../../..', url));
         }
         // URL externa: asumir válida
         return true;

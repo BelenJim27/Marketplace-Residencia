@@ -280,7 +280,7 @@ export function Sidebar() {
 
       {/* Logout modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] p-6 shadow-2xl">
             <h3 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Cerrar sesión</h3>
             <p className="mt-2 text-sm text-[#3D6B3F]/70">¿Estás seguro que deseas cerrar sesión?</p>

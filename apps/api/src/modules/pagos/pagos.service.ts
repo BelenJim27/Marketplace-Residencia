@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { Moneda } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { calcularEdadEnAnios } from '../productos/edad.helper';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
 import { CreatePagoDto, CreateStripeIntentDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
@@ -18,6 +19,7 @@ export class PagosService {
     private readonly stripeService: StripeService,
     private readonly paypalService: PaypalService,
     private readonly emailService: EmailService,
+    private readonly notificacionesService: NotificacionesService,
   ) {}
   async findAll(filtros?: { estado?: string; proveedor?: string }) {
     const where: any = {};
@@ -381,16 +383,13 @@ export class PagosService {
           pedidoProductores
             .filter((pp) => pp.productores?.id_usuario)
             .map((pp) =>
-              this.prisma.notificaciones.create({
-                data: {
-                  id_usuario: pp.productores!.id_usuario,
-                  tipo: 'pedido_pagado',
-                  titulo: 'Nuevo pedido recibido',
-                  cuerpo: `Tienes un nuevo pedido #${pago.id_pedido} confirmado. Prepara el envío de tus productos.`,
-                  url_accion: '/dashboard/productor/pedidos',
-                  leido: false,
-                },
-              })
+              this.notificacionesService.notifyUser(
+                pp.productores!.id_usuario,
+                'pedido_pagado',
+                'Nuevo pedido recibido',
+                `Tienes un nuevo pedido #${pago.id_pedido} confirmado. Prepara el envío de tus productos.`,
+                '/dashboard/productor/pedidos',
+              )
             )
         );
       } catch (err: any) {
@@ -401,6 +400,17 @@ export class PagosService {
         where: { id_pedido: pago.id_pedido },
         data: { estado: 'pendiente' },
       });
+
+      const buyerFailed = (pago as any).pedidos?.usuarios;
+      if (buyerFailed?.id_usuario) {
+        this.notificacionesService.notifyUser(
+          buyerFailed.id_usuario,
+          'pago_fallido',
+          'No pudimos procesar tu pago',
+          `El pago de tu pedido #${pago.id_pedido} no pudo procesarse. Verifica tu método de pago e intenta de nuevo.`,
+          '/Cliente/pedidos',
+        ).catch(() => {});
+      }
     }
 
     return serializeBigInts(updated);
@@ -666,19 +676,15 @@ export class PagosService {
         this.logger.warn(
           `[pagos] Transfer skipped: productor ${pp.id_productor} sin onboarding en pedido ${id_pedido}, monto pendiente: ${monto} ${moneda}`,
         );
-        try {
-          await this.prisma.notificaciones.create({
-            data: {
-              id_usuario: pp.productores?.id_usuario || '',
-              tipo: 'pago_pendiente_onboarding',
-              titulo: 'Tienes un pago pendiente por transferir',
-              cuerpo: `Tienes un pago de ${monto} ${moneda} en el pedido #${id_pedido} que está pendiente de transferir. Por favor completa tu configuración de Stripe para recibirlo.`,
-              url_accion: '/dashboard/productor/ingresos',
-            },
-          });
-        } catch (err: any) {
+        this.notificacionesService.notifyUser(
+          pp.productores?.id_usuario || '',
+          'pago_pendiente_onboarding',
+          'Tienes un pago pendiente por transferir',
+          `Tienes un pago de ${monto} ${moneda} en el pedido #${id_pedido} pendiente. Por favor completa tu configuración de Stripe para recibirlo.`,
+          '/dashboard/productor/ingresos',
+        ).catch((err: any) => {
           this.logger.error('[pagos] Failed to create notification for productor', pp.id_productor, ':', err?.message);
-        }
+        });
         continue;
       }
 
@@ -861,10 +867,21 @@ export class PagosService {
       where: { id_pago: pago.id_pago },
       data: { estado: 'reembolsado' },
     });
-    await this.prisma.pedidos.update({
+    const pedidoCancelado = await this.prisma.pedidos.update({
       where: { id_pedido: pago.id_pedido },
       data: { estado: 'cancelado' },
+      select: { id_usuario: true },
     });
+
+    if (pedidoCancelado?.id_usuario) {
+      this.notificacionesService.notifyUser(
+        pedidoCancelado.id_usuario,
+        'pedido_cancelado',
+        'Tu pedido fue cancelado',
+        `Tu pedido #${pago.id_pedido} ha sido cancelado y el reembolso está en proceso.`,
+        '/Cliente/pedidos',
+      ).catch(() => {});
+    }
 
     return serializeBigInts({ id_pago: pago.id_pago, estado: 'reembolsado' });
   }

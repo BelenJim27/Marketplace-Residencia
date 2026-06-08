@@ -141,7 +141,7 @@ async function main() {
       // Tabla Productores
       const existingProd = await prisma.productores.findUnique({ where: { id_usuario: user.id_usuario } });
       if (!existingProd) {
-        const region = await prisma.regiones.findFirst({ where: { nombre: 'Oaxaca' } });
+        const region = await prisma.regiones.findFirst({ where: { nombre: 'Valles Centrales' } });
         await prisma.productores.create({
           data: {
             id_usuario: user.id_usuario,

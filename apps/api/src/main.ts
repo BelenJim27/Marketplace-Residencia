@@ -18,7 +18,7 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     rawBody: true,
   });
-  app.use('/uploads', expressStatic(join(process.cwd(), 'uploads')));
+  app.use('/uploads', expressStatic(join(__dirname, '..', 'uploads')));
 
   app.enableCors({
     origin: [
