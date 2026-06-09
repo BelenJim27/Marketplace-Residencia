@@ -599,64 +599,56 @@ export default function ProductoDetallePage() {
             </div>
           )}
 
-          {/* Producer + Store info - simplified grouping */}
-          <div className="space-y-4 pt-5 pb-6 border-b border-gray-200 dark:border-gray-700">
-            {/* Maestro Productor */}
-            {(productor || nombreProductor) && (
-              <div className="space-y-2">
-                <h3
-                  className="text-sm font-semibold"
-                  style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
-                >
-                  {t("Maestro Productor")}
-                </h3>
-                <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                  {loteData?.id_productor ? (
-                    <Link
-                      href={`/cliente/productor/${loteData.id_productor}`}
-                      className="font-medium hover:opacity-70 transition-opacity block"
-                      style={{ color: "#306B3F" }}
-                    >
-                      {nombreProductor} →
-                    </Link>
-                  ) : (
-                    <p className="font-medium">{nombreProductor}</p>
-                  )}
-                  {productor?.biografia && <p className="text-xs text-gray-600 dark:text-gray-400">{productor.biografia}</p>}
+          {/* Producer + Store info - side by side */}
+          <div className="pt-5 pb-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="grid grid-cols-2 gap-6">
+              {/* Maestro Productor */}
+              {(productor || nombreProductor) && (
+                <div className="space-y-2">
+                  <h3
+                    className="text-sm font-semibold"
+                    style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
+                  >
+                    {t("Maestro Productor")}
+                  </h3>
+                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                    <p className="font-medium" style={{ color: "#306B3F" }}>{nombreProductor}</p>
+                    {productor?.biografia && <p className="text-xs text-gray-600 dark:text-gray-400">{productor.biografia}</p>}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Tienda */}
-            {tiendaData && (
-              <div className="space-y-2">
-                <h3
-                  className="text-sm font-semibold"
-                  style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
-                >
-                  {t("Tienda")}
-                </h3>
-                <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                  {producto.id_tienda ? (
-                    <Link
-                      href={`/cliente/tienda/${producto.id_tienda}`}
-                      className="font-medium hover:opacity-70 transition-opacity block"
-                      style={{ color: "#306B3F" }}
-                    >
-                      {tiendaData.nombre} →
-                    </Link>
-                  ) : (
-                    <p className="font-medium">{tiendaData.nombre}</p>
-                  )}
-                  {(tiendaData.ciudad_origen || tiendaData.estado_origen) && (
-                    <p className="flex items-center gap-1 text-xs">
-                      <MapPin size={13} />
-                      {[tiendaData.ciudad_origen, tiendaData.estado_origen].filter(Boolean).join(", ")}
-                    </p>
-                  )}
+              {/* Tienda */}
+              {tiendaData && (
+                <div className="space-y-2">
+                  <h3
+                    className="text-sm font-semibold"
+                    style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
+                  >
+                    {t("Tienda")}
+                  </h3>
+                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                    {producto.id_tienda ? (
+                      <Link
+                        href={`/cliente/tienda/${producto.id_tienda}`}
+                        className="font-medium hover:opacity-70 transition-opacity block"
+                        style={{ color: "#306B3F" }}
+                      >
+                        {tiendaData.nombre} →
+                      </Link>
+                    ) : (
+                      <p className="font-medium">{tiendaData.nombre}</p>
+                    )}
+                    {(tiendaData.ciudad_origen || tiendaData.estado_origen) && (
+                      <p className="flex items-center gap-1 text-xs">
+                        <MapPin size={13} />
+                        {[tiendaData.ciudad_origen, tiendaData.estado_origen].filter(Boolean).join(", ")}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Descripción */}

@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
 import { RevisarSolicitudDto } from '../productores/dto/productores.dto';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AdminService {
@@ -11,6 +12,7 @@ export class AdminService {
   constructor(
     private prisma: PrismaService,
     private notificaciones: NotificacionesService,
+    private emailService: EmailService,
   ) {}
 
   async getStats() {
@@ -303,6 +305,16 @@ export class AdminService {
       titulo,
       cuerpo,
     });
+
+    if (dto.estado === 'aprobado') {
+      this.emailService
+        .sendProductorApprovedEmail(usuario.email, usuario.nombre, dto.motivo_aprobacion)
+        .catch((err) => this.logger.warn(`[Email] sendProductorApprovedEmail: ${(err as Error)?.message}`));
+    } else {
+      this.emailService
+        .sendProductorRejectedEmail(usuario.email, usuario.nombre, dto.motivo_rechazo)
+        .catch((err) => this.logger.warn(`[Email] sendProductorRejectedEmail: ${(err as Error)?.message}`));
+    }
 
     return serializeBigInts(actualizado);
   }

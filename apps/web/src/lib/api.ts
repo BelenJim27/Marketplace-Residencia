@@ -198,6 +198,7 @@ export const api = {
         method: "POST",
         headers: headers(),
         body: JSON.stringify({ refresh_token }),
+        silent: true,
       }),
     googleLogin: () => {
       window.location.href = "/auth/sign-in";

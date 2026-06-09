@@ -106,17 +106,18 @@ export default function SolicitarPage() {
   const [uploading, setUploading]         = useState(false);
   const [noElegible, setNoElegible]       = useState(false);
   const [expandidas, setExpandidas]       = useState<number[]>([]);
-  const [touched, setTouched]             = useState({ nombre_marca: false, rfc: false });
+  const [touched, setTouched]             = useState({ nombre_marca: false, rfc: false, produccion_cp: false });
   const [attempted, setAttempted]         = useState(false);
   const [focusedField, setFocusedField]   = useState<string | null>(null);
   const [dragActive, setDragActive]       = useState(false);
+  const [otraAsocInput, setOtraAsocInput] = useState("");
   const fileInputRef                      = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     rfc: "", razon_social: "", nombre_marca: "", asociacion: "",
     id_region: null as number | null,
     direccion_calle: "", direccion_cp: "", direccion_ciudad: "", direccion_estado: "",
-    produccion_calle: "", produccion_cp: "", produccion_ciudad: "", produccion_estado: "",
+    produccion_calle: "", produccion_cp: "", produccion_ciudad: "", produccion_estado: "Oaxaca",
     produccion_referencia: "",
     categorias_ids: [] as number[],
   });
@@ -125,17 +126,25 @@ export default function SolicitarPage() {
   const RFC_REGEX = /^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/i;
   const rfcValido = RFC_REGEX.test(form.rfc.trim());
 
+  const isOaxacaCP = (cp: string) => {
+    if (!cp || cp.length < 5) return true;
+    const n = parseInt(cp, 10);
+    return n >= 68000 && n <= 71999;
+  };
+  const cpProdOk = isOaxacaCP(form.produccion_cp);
+
   const stepValid = [
     !!form.asociacion,
-    !!form.nombre_marca.trim() && !!form.rfc.trim() && rfcValido,
+    !!form.nombre_marca.trim() && !!form.rfc.trim() && rfcValido && cpProdOk,
     form.categorias_ids.length > 0,
     !!certificadoUrl,
   ];
   const showErr = {
-    asociacion:   step === 1 && attempted && !form.asociacion,
-    nombre_marca: step === 2 && (touched.nombre_marca || attempted) && !form.nombre_marca.trim(),
-    rfc:          step === 2 && (touched.rfc || attempted) && (!form.rfc.trim() || !rfcValido),
-    categorias:   step === 3 && attempted && form.categorias_ids.length === 0,
+    asociacion:    step === 1 && attempted && !form.asociacion,
+    nombre_marca:  step === 2 && (touched.nombre_marca || attempted) && !form.nombre_marca.trim(),
+    rfc:           step === 2 && (touched.rfc || attempted) && (!form.rfc.trim() || !rfcValido),
+    produccion_cp: step === 2 && (touched.produccion_cp || attempted) && !cpProdOk,
+    categorias:    step === 3 && attempted && form.categorias_ids.length === 0,
   };
 
   /* ── category helpers ─────────────────────────────────────────────────── */
@@ -607,30 +616,66 @@ export default function SolicitarPage() {
                 <span style={{ fontFamily:SANS, color:C.body, fontSize:"13px" }}>{t("Cargando asociaciones...")}</span>
               </div>
             ) : (
-              <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
-                {asociaciones.map(asoc => {
-                  const sel = form.asociacion === asoc;
-                  return (
-                    <button key={asoc} type="button"
-                      onClick={() => setField("asociacion", sel ? "" : asoc)}
-                      style={{
-                        display:"flex", alignItems:"center", gap:"14px",
-                        background: sel ? (isDark ? "rgba(201,122,62,0.10)" : "rgba(46,74,51,0.05)") : C.section,
-                        border:`1.5px solid ${sel ? C.copper : showErr.asociacion ? C.error : C.inputBorder}`,
-                        borderRadius:"10px", padding:"14px 16px", cursor:"pointer", textAlign:"left", transition:"all 0.2s",
-                      }}>
-                      <span style={{ width:"18px", height:"18px", borderRadius:"50%", flexShrink:0, border:`2px solid ${sel ? C.copper : C.inputBorder}`, background: sel ? C.copper : "transparent", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s" }}>
-                        {sel && <Check style={{ width:"10px", height:"10px", color:"#fff" }} strokeWidth={3} />}
-                      </span>
-                      <span style={{ fontFamily:SANS, color: sel ? (isDark ? C.cream : C.green) : C.label, fontSize:"14px", fontWeight: sel ? 600 : 400 }}>
-                        {asoc}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              <>
+                <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+                  {asociaciones.map(asoc => {
+                    const sel = form.asociacion === asoc;
+                    return (
+                      <button key={asoc} type="button"
+                        onClick={() => { setField("asociacion", sel ? "" : asoc); setOtraAsocInput(""); }}
+                        style={{
+                          display:"flex", alignItems:"center", gap:"14px",
+                          background: sel ? (isDark ? "rgba(201,122,62,0.10)" : "rgba(46,74,51,0.05)") : C.section,
+                          border:`1.5px solid ${sel ? C.copper : showErr.asociacion ? C.error : C.inputBorder}`,
+                          borderRadius:"10px", padding:"14px 16px", cursor:"pointer", textAlign:"left", transition:"all 0.2s",
+                        }}>
+                        <span style={{ width:"18px", height:"18px", borderRadius:"50%", flexShrink:0, border:`2px solid ${sel ? C.copper : C.inputBorder}`, background: sel ? C.copper : "transparent", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s" }}>
+                          {sel && <Check style={{ width:"10px", height:"10px", color:"#fff" }} strokeWidth={3} />}
+                        </span>
+                        <span style={{ fontFamily:SANS, color: sel ? (isDark ? C.cream : C.green) : C.label, fontSize:"14px", fontWeight: sel ? 600 : 400 }}>
+                          {asoc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* ── Otra asociación ─────────────────────────────────────── */}
+                <div style={{ display:"flex", alignItems:"center", gap:"12px", margin:"8px 0 4px" }}>
+                  <div style={{ flex:1, height:"1px", background:C.border }} />
+                  <span style={{ fontFamily:SANS, color:C.body, fontSize:"10px", letterSpacing:"0.10em", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+                    {t("¿No perteneces a ninguna de las anteriores?")}
+                  </span>
+                  <div style={{ flex:1, height:"1px", background:C.border }} />
+                </div>
+
+                <div style={{
+                  border:`1.5px solid ${otraAsocInput.trim() ? C.copper : C.inputBorder}`,
+                  borderRadius:"10px", padding:"16px", background: otraAsocInput.trim() ? (isDark ? "rgba(201,122,62,0.07)" : "rgba(46,74,51,0.04)") : C.section,
+                  transition:"all 0.2s",
+                }}>
+                  <p style={{ fontFamily:SANS, color:C.body, fontSize:"12.5px", lineHeight:1.65, margin:"0 0 12px" }}>
+                    {t("Si eres del estado de Oaxaca y perteneces a una asociación que no aparece en la lista, escríbela aquí. El administrador la valorará al revisar tu solicitud.")}
+                  </p>
+                  <input
+                    type="text"
+                    value={otraAsocInput}
+                    placeholder={t("Ej: Asociación de Mezcaleros de la Sierra Sur")}
+                    maxLength={150}
+                    style={inp("otra_asoc")}
+                    onFocus={() => setFocusedField("otra_asoc")}
+                    onBlur={() => setFocusedField(null)}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setOtraAsocInput(val);
+                      setField("asociacion", val.trim());
+                    }}
+                  />
+                  <FieldHint text={`${otraAsocInput.length}/150 ${t("caracteres")}`} C={C} SANS={SANS} />
+                </div>
+              </>
             )}
-            {showErr.asociacion && <ErrMsg msg={t("Selecciona la asociación a la que perteneces")} C={C} SANS={SANS} />}
+            {showErr.asociacion && <ErrMsg msg={t("Selecciona la asociación a la que perteneces o escribe una nueva")} C={C} SANS={SANS} />}
           </div>
         )}
 
@@ -668,7 +713,7 @@ export default function SolicitarPage() {
                 <input
                   type="text" value={form.rfc} maxLength={13}
                   placeholder="XAXX010101000"
-                  style={{ ...inp("rfc", showErr.rfc), fontFamily: MONO, letterSpacing: "0.08em" }}
+                  style={{ ...inp("rfc", showErr.rfc), fontFamily: MONO, letterSpacing: "0.08em", textTransform: "uppercase" }}
                   onFocus={() => setFocusedField("rfc")}
                   onBlur={() => { setFocusedField(null); setTouched(t => ({ ...t, rfc: true })); }}
                   onChange={e => setField("rfc", e.target.value.toUpperCase().replace(/[^A-ZÑ&0-9]/g, ""))}
@@ -718,25 +763,48 @@ export default function SolicitarPage() {
                 </div>
                 <div>
                   <Label text={t("Estado")} C={C} SANS={SANS} />
-                  <input type="text" value={form.produccion_estado} placeholder={t("Oaxaca")}
-                    style={inp("prod_estado")} onFocus={() => setFocusedField("prod_estado")} onBlur={() => setFocusedField(null)}
-                    onChange={e => setField("produccion_estado", e.target.value)}
-                  />
+                  <div style={{ position:"relative" }}>
+                    <input
+                      type="text"
+                      value="Oaxaca"
+                      readOnly
+                      style={{ ...inp("prod_estado"), background: isDark ? "rgba(46,74,51,0.18)" : "rgba(46,74,51,0.06)", color: C.green, fontWeight:600, cursor:"not-allowed", paddingRight:"32px" }}
+                    />
+                    <span style={{ position:"absolute", right:"10px", top:"50%", transform:"translateY(-50%)", fontSize:"11px", color:C.copper, fontWeight:700, pointerEvents:"none" }}>
+                      OAX
+                    </span>
+                  </div>
                 </div>
                 <div>
                   <Label text={t("C.P.")} C={C} SANS={SANS} />
-                  <input type="text" value={form.produccion_cp} placeholder={t("70300")} maxLength={5}
-                    style={inp("prod_cp")} onFocus={() => setFocusedField("prod_cp")} onBlur={() => setFocusedField(null)}
+                  <input
+                    type="text"
+                    value={form.produccion_cp}
+                    placeholder="68000"
+                    maxLength={5}
+                    style={inp("prod_cp", showErr.produccion_cp)}
+                    onFocus={() => setFocusedField("prod_cp")}
+                    onBlur={() => { setFocusedField(null); setTouched(t => ({ ...t, produccion_cp: true })); }}
                     onChange={e => setField("produccion_cp", e.target.value.replace(/\D/g, ""))}
                   />
+                  {showErr.produccion_cp && (
+                    <ErrMsg msg={t("El C.P. debe corresponder al estado de Oaxaca (68000–71999)")} C={C} SANS={SANS} />
+                  )}
                 </div>
               </div>
               <div>
                 <Label text={t("Referencia")} C={C} SANS={SANS} />
-                <input type="text" value={form.produccion_referencia} placeholder={t("Entre calles, puntos de referencia...")}
-                  style={inp("prod_ref")} onFocus={() => setFocusedField("prod_ref")} onBlur={() => setFocusedField(null)}
+                <textarea
+                  value={form.produccion_referencia}
+                  placeholder={t("Entre calles, puntos de referencia...")}
+                  maxLength={150}
+                  rows={3}
+                  style={{ ...inp("prod_ref"), resize: "vertical", minHeight: "80px" }}
+                  onFocus={() => setFocusedField("prod_ref")}
+                  onBlur={() => setFocusedField(null)}
                   onChange={e => setField("produccion_referencia", e.target.value)}
                 />
+                <FieldHint text={`${form.produccion_referencia.length}/150 ${t("caracteres")}`} C={C} SANS={SANS} />
               </div>
             </Section>
           </div>
@@ -744,10 +812,11 @@ export default function SolicitarPage() {
 
         {/* ══════════════ STEP 3 — Categorías ════════════════════════ */}
         {step === 3 && (() => {
-          const bebidas     = catRaiz.find(c => c.nombre.toLowerCase() === "bebidas");
-          const hijasBebs   = bebidas ? subDe(bebidas.id_categoria) : [];
-          const otrosCats   = catRaiz.filter(c => c.nombre.toLowerCase() !== "bebidas");
-          const anyBebs     = hijasBebs.some(h => form.categorias_ids.includes(h.id_categoria));
+          const mezcal      = catRaiz.find(c => c.nombre.toLowerCase() === "mezcal" || c.nombre.toLowerCase() === "bebidas");
+          const hijasMezcal = mezcal ? subDe(mezcal.id_categoria) : [];
+          const otrosCats   = catRaiz.filter(c => c.id_categoria !== mezcal?.id_categoria);
+          const anyMezcal   = (mezcal ? form.categorias_ids.includes(mezcal.id_categoria) : false) ||
+                              hijasMezcal.some(h => form.categorias_ids.includes(h.id_categoria));
           const anyOtros    = otrosCats.some(c => {
             const hijas = subDe(c.id_categoria);
             return form.categorias_ids.includes(c.id_categoria) || hijas.some(h => form.categorias_ids.includes(h.id_categoria));
@@ -769,60 +838,87 @@ export default function SolicitarPage() {
               ) : (
                 <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
 
-                  {/* ── Bebidas (primaria, siempre expandida) ───────────── */}
-                  {bebidas && (
-                    <div style={{ border:`1.5px solid ${anyBebs ? C.copper : showErr.categorias ? C.error : C.inputBorder}`, borderRadius:"12px", overflow:"hidden", transition:"border-color 0.2s" }}>
+                  {/* ── Mezcal (primaria, siempre expandida) ────────────── */}
+                  {mezcal && (
+                    <div style={{ border:`1.5px solid ${anyMezcal ? C.copper : showErr.categorias ? C.error : C.inputBorder}`, borderRadius:"12px", overflow:"hidden", transition:"border-color 0.2s" }}>
                       {/* cabecera */}
-                      <div style={{ display:"flex", alignItems:"center", gap:"10px", padding:"12px 16px", background: anyBebs ? (isDark ? "rgba(201,122,62,0.12)" : "rgba(46,74,51,0.06)") : C.section }}>
-                        <CatIcon Icon={Wine} selected={anyBebs} isDark={isDark} />
+                      <div style={{ display:"flex", alignItems:"center", gap:"10px", padding:"12px 16px", background: anyMezcal ? (isDark ? "rgba(201,122,62,0.12)" : "rgba(46,74,51,0.06)") : C.section }}>
+                        <CatIcon Icon={Wine} selected={anyMezcal} isDark={isDark} />
                         <div style={{ flex:1 }}>
-                          <span style={{ fontFamily:SANS, color: anyBebs ? (isDark ? C.cream : C.green) : C.label, fontSize:"14px", fontWeight:700 }}>
-                            {bebidas.nombre}
+                          <span style={{ fontFamily:SANS, color: anyMezcal ? (isDark ? C.cream : C.green) : C.label, fontSize:"14px", fontWeight:700 }}>
+                            {mezcal.nombre}
                           </span>
                           <span style={{ fontFamily:SANS, color:C.body, fontSize:"11px", marginLeft:"8px" }}>
                             · {t("Categoría principal")}
                           </span>
                         </div>
-                        {anyBebs && (
+                        {anyMezcal && (
                           <span style={{ fontFamily:SANS, color:C.copper, fontSize:"11px", fontWeight:600 }}>
-                            {hijasBebs.filter(h => form.categorias_ids.includes(h.id_categoria)).length} {t("selec.")}
+                            {hijasMezcal.length > 0
+                              ? `${hijasMezcal.filter(h => form.categorias_ids.includes(h.id_categoria)).length} ${t("selec.")}`
+                              : t("seleccionado")
+                            }
                           </span>
                         )}
                       </div>
 
-                      {/* subcategorías siempre visibles */}
+                      {/* subcategorías (o selección directa si no hay hijas) */}
                       <div style={{ borderTop:`1px solid ${C.border}` }}>
-                        {hijasBebs.map((h, idx) => {
-                          const hSel = form.categorias_ids.includes(h.id_categoria);
-                          return (
-                            <button key={h.id_categoria} type="button" onClick={() => toggleCat(h.id_categoria)}
-                              style={{
-                                display:"flex", alignItems:"center", gap:"12px",
-                                background: hSel ? (isDark ? "rgba(201,122,62,0.08)" : "rgba(46,74,51,0.05)") : "transparent",
-                                border:"none",
-                                borderBottom: idx < hijasBebs.length - 1 ? `1px solid ${C.border}` : "none",
-                                cursor:"pointer", padding:"11px 16px 11px 20px", width:"100%", textAlign:"left",
-                                transition:"background 0.15s",
-                              }}>
-                              <div style={{
-                                width:"18px", height:"18px", borderRadius:"4px", flexShrink:0,
-                                border:`2px solid ${hSel ? C.copper : C.inputBorder}`,
-                                background: hSel ? C.copper : "transparent",
-                                display:"flex", alignItems:"center", justifyContent:"center",
-                                transition:"all 0.2s",
-                              }}>
-                                {hSel && <Check style={{ width:"10px", height:"10px", color:"#fff" }} strokeWidth={3} />}
-                              </div>
-                              <span style={{ fontFamily:SANS, color: hSel ? (isDark ? C.cream : C.green) : C.label, fontSize:"13.5px", fontWeight: hSel ? 600 : 400 }}>
-                                {h.nombre}
-                              </span>
-                            </button>
-                          );
-                        })}
-                        {hijasBebs.length === 0 && (
-                          <p style={{ fontFamily:SANS, color:C.body, fontSize:"13px", padding:"12px 16px", margin:0 }}>
-                            {t("Sin subcategorías")}
-                          </p>
+                        {hijasMezcal.length > 0 ? (
+                          hijasMezcal.map((h, idx) => {
+                            const hSel = form.categorias_ids.includes(h.id_categoria);
+                            return (
+                              <button key={h.id_categoria} type="button" onClick={() => toggleCat(h.id_categoria)}
+                                style={{
+                                  display:"flex", alignItems:"center", gap:"12px",
+                                  background: hSel ? (isDark ? "rgba(201,122,62,0.08)" : "rgba(46,74,51,0.05)") : "transparent",
+                                  border:"none",
+                                  borderBottom: idx < hijasMezcal.length - 1 ? `1px solid ${C.border}` : "none",
+                                  cursor:"pointer", padding:"11px 16px 11px 20px", width:"100%", textAlign:"left",
+                                  transition:"background 0.15s",
+                                }}>
+                                <div style={{
+                                  width:"18px", height:"18px", borderRadius:"4px", flexShrink:0,
+                                  border:`2px solid ${hSel ? C.copper : C.inputBorder}`,
+                                  background: hSel ? C.copper : "transparent",
+                                  display:"flex", alignItems:"center", justifyContent:"center",
+                                  transition:"all 0.2s",
+                                }}>
+                                  {hSel && <Check style={{ width:"10px", height:"10px", color:"#fff" }} strokeWidth={3} />}
+                                </div>
+                                <span style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+                                  <span style={{ fontFamily:SANS, color: hSel ? (isDark ? C.cream : C.green) : C.label, fontSize:"13.5px", fontWeight: hSel ? 600 : 400 }}>
+                                    {h.nombre}
+                                  </span>
+                                  <span style={{ fontFamily:SANS, color:C.body, fontSize:"11px", opacity:0.7 }}>
+                                    · {t("Subcategoría")}
+                                  </span>
+                                </span>
+                              </button>
+                            );
+                          })
+                        ) : (
+                          /* sin subcategorías: la categoría misma es seleccionable */
+                          <button type="button" onClick={() => toggleCat(mezcal.id_categoria)}
+                            style={{
+                              display:"flex", alignItems:"center", gap:"12px",
+                              background: form.categorias_ids.includes(mezcal.id_categoria) ? (isDark ? "rgba(201,122,62,0.08)" : "rgba(46,74,51,0.05)") : "transparent",
+                              border:"none", cursor:"pointer", padding:"11px 16px 11px 20px", width:"100%", textAlign:"left",
+                              transition:"background 0.15s",
+                            }}>
+                            <div style={{
+                              width:"18px", height:"18px", borderRadius:"4px", flexShrink:0,
+                              border:`2px solid ${form.categorias_ids.includes(mezcal.id_categoria) ? C.copper : C.inputBorder}`,
+                              background: form.categorias_ids.includes(mezcal.id_categoria) ? C.copper : "transparent",
+                              display:"flex", alignItems:"center", justifyContent:"center",
+                              transition:"all 0.2s",
+                            }}>
+                              {form.categorias_ids.includes(mezcal.id_categoria) && <Check style={{ width:"10px", height:"10px", color:"#fff" }} strokeWidth={3} />}
+                            </div>
+                            <span style={{ fontFamily:SANS, color: form.categorias_ids.includes(mezcal.id_categoria) ? (isDark ? C.cream : C.green) : C.label, fontSize:"13.5px", fontWeight: form.categorias_ids.includes(mezcal.id_categoria) ? 600 : 400 }}>
+                              {mezcal.nombre}
+                            </span>
+                          </button>
                         )}
                       </div>
                     </div>

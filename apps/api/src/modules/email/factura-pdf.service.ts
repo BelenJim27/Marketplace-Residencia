@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as PDFDocument from 'pdfkit';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface FacturaPdfData {
   folio: string;
@@ -81,17 +83,23 @@ export class FacturaPdfService {
       const rightW = W * 0.40;
       const rightX = ML + W - rightW;
 
-      // Logo circle + diamond
-      doc.circle(ML + 18, headerY + 18, 18).fill(G);
-      doc.polygon(
-        [ML + 18, headerY + 6],
-        [ML + 28, headerY + 18],
-        [ML + 18, headerY + 30],
-        [ML + 8,  headerY + 18]
-      ).fill(C);
+      // Logo del sistema
+      const logoPath = path.join(__dirname, '../../assets/logo.png');
+      const logoSize = 38;
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, ML, headerY, { fit: [logoSize, logoSize] });
+      } else {
+        doc.circle(ML + 18, headerY + 18, 18).fill(G);
+        doc.polygon(
+          [ML + 18, headerY + 6],
+          [ML + 28, headerY + 18],
+          [ML + 18, headerY + 30],
+          [ML + 8,  headerY + 18]
+        ).fill(C);
+      }
 
       // Emisor info
-      const exL = ML + 42;
+      const exL = ML + 44;
       doc.fillColor(C).fontSize(13).font('Helvetica-Bold')
         .text(data.emisor.nombre, exL, headerY, { width: leftW - 42 });
       doc.fillColor(GRAY).fontSize(7.5).font('Helvetica')

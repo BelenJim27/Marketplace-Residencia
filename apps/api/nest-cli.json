@@ -5,6 +5,7 @@
     "deleteOutDir": true,
     "tsConfigPath": "tsconfig.build.json",
     "builder": "tsc",
-    "typeCheck": true
+    "typeCheck": true,
+    "assets": [{ "include": "assets/**/*", "outDir": "./dist", "watchAssets": true }]
   }
 }

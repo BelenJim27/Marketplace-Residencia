@@ -367,6 +367,8 @@ export class ProductosService {
       alto_cm: dto.alto_cm ? new Prisma.Decimal(dto.alto_cm) : null,
       ancho_cm: dto.ancho_cm ? new Prisma.Decimal(dto.ancho_cm) : null,
       largo_cm: dto.largo_cm ? new Prisma.Decimal(dto.largo_cm) : null,
+      botellas_350ml: dto.botellas_350ml ? Number(dto.botellas_350ml) : null,
+      botellas_750ml: dto.botellas_750ml ? Number(dto.botellas_750ml) : null,
       status: dto.status || 'activo',
       creado_por: dto.creado_por ?? null,
       actualizado_por: dto.actualizado_por ?? null,
@@ -394,9 +396,13 @@ export class ProductosService {
       },
     });
 
-    if (dto.categorias && dto.categorias.length > 0) {
+    const categoriasToAssign: number[] = [
+      ...(dto.categorias ?? []),
+      ...(dto.id_categoria ? [Number(dto.id_categoria)] : []),
+    ];
+    if (categoriasToAssign.length > 0) {
       await Promise.all(
-        dto.categorias.map((id_categoria) =>
+        categoriasToAssign.map((id_categoria) =>
           this.prisma.categorias_productos.create({
             data: {
               id_producto: producto.id_producto,
@@ -469,6 +475,8 @@ export class ProductosService {
     if (dto.alto_cm !== undefined) data.alto_cm = dto.alto_cm ? new Prisma.Decimal(dto.alto_cm) : null;
     if (dto.ancho_cm !== undefined) data.ancho_cm = dto.ancho_cm ? new Prisma.Decimal(dto.ancho_cm) : null;
     if (dto.largo_cm !== undefined) data.largo_cm = dto.largo_cm ? new Prisma.Decimal(dto.largo_cm) : null;
+    if (dto.botellas_350ml !== undefined) data.botellas_350ml = dto.botellas_350ml ? Number(dto.botellas_350ml) : null;
+    if (dto.botellas_750ml !== undefined) data.botellas_750ml = dto.botellas_750ml ? Number(dto.botellas_750ml) : null;
     if (dto.id_lote !== undefined) {
       if (dto.id_lote) {
         data.lotes = { connect: { id_lote: Number(dto.id_lote) } };
@@ -487,14 +495,20 @@ export class ProductosService {
       },
     });
 
-    if (dto.categorias && Array.isArray(dto.categorias)) {
+    const updateCategorias = dto.categorias && Array.isArray(dto.categorias);
+    const updateIdCategoria = !updateCategorias && !!dto.id_categoria;
+    if (updateCategorias || updateIdCategoria) {
       await this.prisma.categorias_productos.deleteMany({
         where: { id_producto: BigInt(id) },
       });
 
-      if (dto.categorias.length > 0) {
+      const categoriasToAssign: number[] = updateCategorias
+        ? dto.categorias!
+        : dto.id_categoria ? [Number(dto.id_categoria)] : [];
+
+      if (categoriasToAssign.length > 0) {
         await Promise.all(
-          dto.categorias.map((id_categoria) =>
+          categoriasToAssign.map((id_categoria) =>
             this.prisma.categorias_productos.create({
               data: {
                 id_producto: BigInt(id),
@@ -685,6 +699,8 @@ const productoInclude = {
       descripcion: true,
       marca: true,
       url_trazabilidad: true,
+      botellas_350ml: true,
+      botellas_750ml: true,
       productores: {
         select: {
           biografia: true,

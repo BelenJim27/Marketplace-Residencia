@@ -25,18 +25,26 @@ export function ProductoHeader({
   disableNew: boolean;
 }) {
   return (
-    <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-      <div>
-        <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Gestión de productos</h1>
-        <p className="text-sm text-[#3D6B3F]/70">Solo se muestran productos de tus tiendas</p>
+    <div className="mb-6 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Gestión de productos</h1>
+          <p className="text-sm text-[#3D6B3F]/70">Solo se muestran productos de tus tiendas</p>
+        </div>
+        <button
+          onClick={onNew}
+          disabled={disableNew}
+          title={disableNew ? "Debes crear una tienda antes de registrar productos" : undefined}
+          className="inline-flex items-center gap-2 rounded-xl bg-[#3D6B3F] px-5 py-3 font-medium text-white transition hover:bg-[#1F3A2E] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Plus size={18} /> Nuevo producto
+        </button>
       </div>
-      <button
-        onClick={onNew}
-        disabled={disableNew}
-        className="inline-flex items-center gap-2 rounded-xl bg-[#3D6B3F] px-5 py-3 font-medium text-white transition hover:bg-[#1F3A2E] disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <Plus size={18} /> Nuevo producto
-      </button>
+      {disableNew && (
+        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
+          ⚠️ Necesitas <a href="/dashboard/productor/tienda" className="font-semibold underline">crear una tienda</a> antes de poder registrar productos.
+        </p>
+      )}
     </div>
   );
 }

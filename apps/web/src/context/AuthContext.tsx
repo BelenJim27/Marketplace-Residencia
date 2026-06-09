@@ -213,8 +213,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Productor resolution in background — does NOT block layout rendering
   useEffect(() => {
     if (!user?.id_usuario) return;
-    if (user.id_productor != null && user.id_productor !== 0) return;
-    if (productorResolved) return;
+
+    const hasProductorRole = user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r)) ?? false;
+
+    // Skip only when id_productor AND productor role are both confirmed
+    if (user.id_productor != null && user.id_productor !== 0 && hasProductorRole) return;
+    // Skip if already fully resolved AND has the role
+    if (productorResolved && hasProductorRole) return;
 
     const isAdminRole = user?.roles?.some((r) => ["ADMIN", "administrador", "admin"].includes(r));
     if (isAdminRole) {
@@ -352,8 +357,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (refreshToken) {
       try {
         await api.auth.logout(refreshToken);
-      } catch (error) {
-        console.error("Error en logout:", error);
+      } catch {
+        // best-effort: proceed with client-side logout even if the API is unreachable
       }
     }
 
@@ -362,7 +367,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     removeCookie("usuario");
     setUser(null);
     setProductorResolved(false);
-    await signOut({ redirect: false });
+    try {
+      await signOut({ redirect: false });
+    } catch {
+      // NextAuth may fail if no OAuth session exists; safe to ignore
+    }
 
     window.location.href = "/producto";
   }, []);

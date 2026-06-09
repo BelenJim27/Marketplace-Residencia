@@ -124,6 +124,7 @@ export default function ProductosPage() {
           saving={ctx.saving}
           onSubmit={ctx.handleSubmit}
           onClose={ctx.closeModal}
+          onLoteChange={ctx.handleLoteChange}
         />
       )}
 

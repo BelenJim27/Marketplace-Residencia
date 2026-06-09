@@ -38,6 +38,16 @@ export class NotificacionesService {
 
   async remove(id: string) { await this.prisma.notificaciones.delete({ where: { id_notificacion: toBigIntId(id) } }); return { message: 'Notificacion eliminada' }; }
 
+  async notifyUser(id_usuario: string, tipo: string, titulo: string, cuerpo: string, url_accion?: string) {
+    try {
+      await this.prisma.notificaciones.create({
+        data: { id_usuario, tipo, titulo, cuerpo, url_accion: url_accion ?? null, leido: false },
+      });
+    } catch (e) {
+      this.logger.error(`[Notificaciones] notifyUser error: ${(e as Error)?.message}`);
+    }
+  }
+
   async notifyAdmins(tipo: string, titulo: string, cuerpo: string, url_accion?: string) {
     try {
       const adminRole = await this.prisma.roles.findFirst({

@@ -11,7 +11,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import { getCookie } from "@/lib/cookies";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle, CircleAlert, CircleCheckBig, CreditCard,
   AlertCircle, RefreshCw, Bell, CheckCircle,
@@ -79,8 +79,11 @@ export function Notification({ dark = false }: { dark?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [alerts, setAlerts] = useState<StockAlert[]>([]);
   const [dbNotifs, setDbNotifs] = useState<DbNotif[]>([]);
+  const [visibleDbNotifs, setVisibleDbNotifs] = useState<DbNotif[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const isMobile = useIsMobile();
+  const dbNotifsRef = useRef<DbNotif[]>([]);
+  dbNotifsRef.current = dbNotifs;
 
   // Carga DB notifications independientemente del dropdown — mantiene el badge actualizado
   useEffect(() => {
@@ -99,6 +102,22 @@ export function Notification({ dark = false }: { dark?: boolean }) {
     const id = setInterval(fetchDbNotifs, 30_000);
     return () => { cancelled = true; clearInterval(id); };
   }, [user?.id_usuario, token]);
+
+  // Al abrir: snapshot de notifs no leídas + marcarlas leídas en BD → badge desaparece
+  // Al cerrar: limpia alertas de stock y el snapshot visible
+  useEffect(() => {
+    if (!isOpen) {
+      setAlerts([]);
+      setVisibleDbNotifs([]);
+      return;
+    }
+    const toMark = dbNotifsRef.current;
+    setVisibleDbNotifs(toMark);
+    setDbNotifs([]);
+    toMark.forEach((notif) => {
+      api.notificaciones.update(token, notif.id_notificacion, { leido: true }).catch(() => {});
+    });
+  }, [isOpen, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Carga alertas de stock solo cuando se abre el dropdown
   useEffect(() => {
@@ -159,25 +178,28 @@ export function Notification({ dark = false }: { dark?: boolean }) {
     return () => { cancelled = true; };
   }, [isOpen, user?.id_usuario, user?.id_productor, isAdmin, token]);
 
-  const alertCount = useMemo(() => alerts.length + dbNotifs.length, [alerts, dbNotifs]);
+  // Badge del ícono: solo notifs no leídas (dbNotifs se vacía al abrir el panel)
+  const alertCount = useMemo(() => dbNotifs.length, [dbNotifs]);
+  // Conteo dentro del panel abierto (snapshot + stock alerts)
+  const panelCount = useMemo(() => visibleDbNotifs.length + alerts.length, [visibleDbNotifs, alerts]);
 
   // Link contextual al pie del panel
   const bottomLink = useMemo(() => {
-    if (isAdmin && dbNotifs.some((n) => ["nueva_solicitud_productor"].includes(n.tipo))) {
+    if (isAdmin && visibleDbNotifs.some((n) => ["nueva_solicitud_productor"].includes(n.tipo))) {
       return { href: "/Administrador/solicitudes-productores", label: "Ver solicitudes de productores" };
     }
-    if (isAdmin && dbNotifs.some((n) => n.tipo === "nuevo_usuario")) {
+    if (isAdmin && visibleDbNotifs.some((n) => n.tipo === "nuevo_usuario")) {
       return { href: "/Administrador/usuarios", label: "Ver usuarios" };
     }
     if (isAdmin) return null;
     if (alerts.length > 0) {
       return { href: "/dashboard/productor/productos", label: "Ver todos los productos" };
     }
-    if (dbNotifs.length > 0) {
+    if (visibleDbNotifs.length > 0) {
       return { href: "/dashboard/productor/ingresos", label: "Ver mis ingresos" };
     }
     return null;
-  }, [isAdmin, alerts, dbNotifs]);
+  }, [isAdmin, alerts, visibleDbNotifs]);
 
   return (
     <Dropdown isOpen={isOpen} setIsOpen={setIsOpen}>
@@ -209,9 +231,9 @@ export function Notification({ dark = false }: { dark?: boolean }) {
       >
         <div className="mb-1 flex items-center justify-between px-2 py-1.5">
           <span className="text-lg font-medium text-dark dark:text-white">Notificaciones</span>
-          {alertCount > 0 && (
+          {panelCount > 0 && (
             <span className="rounded-md bg-primary px-[9px] py-0.5 text-xs font-medium text-white">
-              {alertCount} nueva{alertCount !== 1 ? "s" : ""}
+              {panelCount} nueva{panelCount !== 1 ? "s" : ""}
             </span>
           )}
         </div>
@@ -219,15 +241,15 @@ export function Notification({ dark = false }: { dark?: boolean }) {
         <ul className="mb-3 max-h-[23rem] space-y-1.5 overflow-y-auto">
           {isLoading ? (
             <li className="rounded-lg px-2 py-4 text-sm text-dark-5 dark:text-dark-6">Cargando...</li>
-          ) : alertCount > 0 ? (
+          ) : panelCount > 0 ? (
             <>
-              {dbNotifs.map((notif) => (
+              {visibleDbNotifs.map((notif) => (
                 <DbNotifItem
                   key={notif.id_notificacion}
                   notif={notif}
                   token={token}
                   onClose={() => setIsOpen(false)}
-                  onMarkRead={() => setDbNotifs((prev) => prev.filter((n) => n.id_notificacion !== notif.id_notificacion))}
+                  onMarkRead={() => setVisibleDbNotifs((prev) => prev.filter((n) => n.id_notificacion !== notif.id_notificacion))}
                 />
               ))}
               {alerts.map((item) => (

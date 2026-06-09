@@ -28,7 +28,9 @@ interface Producto {
   total_resenas?: number | null;
   stock?: number | null;
   lotes?: {
-    datos_api?: Record<string, string>;
+    datos_api?: Record<string, any>;
+    botellas_350ml?: number | null;
+    botellas_750ml?: number | null;
     productores?: { biografia?: string };
   };
   tiendas?: {
@@ -168,6 +170,9 @@ const ProductCard = memo(function ProductCard({
   const maguey = producto.lotes?.datos_api?.maguey || "Espadin";
   const alcohol = producto.lotes?.datos_api?.grado_alcohol || producto.lotes?.datos_api?.alcohol || "46";
   const maestro = producto.nombre_productor || producto.tiendas?.nombre || "Productor artesanal";
+  const botellas350 = producto.lotes?.botellas_350ml ?? producto.lotes?.datos_api?.botellas_350ml ?? null;
+  const botellas750 = producto.lotes?.botellas_750ml ?? producto.lotes?.datos_api?.botellas_750ml ?? null;
+  const tieneBotellas = (botellas350 && Number(botellas350) > 0) || (botellas750 && Number(botellas750) > 0);
   const rating = Number(producto.promedio_calificacion ?? 0);
   const totalResenas = Number(producto.total_resenas ?? 0);
   const hasReviews = totalResenas > 0;
@@ -307,6 +312,28 @@ const ProductCard = memo(function ProductCard({
               </div>
             </div>
           </div>
+
+          {/* Presentaciones en ml */}
+          {tieneBotellas && (
+            <div className="flex flex-wrap gap-1.5">
+              {botellas350 && Number(botellas350) > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                  style={{ backgroundColor: "rgba(201,122,62,0.1)", color: "#C97A3E", border: "1px solid rgba(201,122,62,0.25)" }}
+                >
+                  350 ml · {Number(botellas350)} bot.
+                </span>
+              )}
+              {botellas750 && Number(botellas750) > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                  style={{ backgroundColor: "rgba(201,122,62,0.1)", color: "#C97A3E", border: "1px solid rgba(201,122,62,0.25)" }}
+                >
+                  750 ml · {Number(botellas750)} bot.
+                </span>
+              )}
+            </div>
+          )}
 
           <div
             className="flex flex-col gap-2 sm:gap-3 pt-3 sm:pt-4 border-t"

@@ -581,7 +581,7 @@ export class EmailService {
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td>
-                <p style="margin:0 0 4px; font-size:11px; font-weight:bold; color:#C97A3E; text-transform:uppercase; letter-spacing:1.5px;">Marketplace de Mezcal · Oaxaca</p>
+                <p style="margin:0 0 4px; font-size:11px; font-weight:bold; color:#C97A3E; text-transform:uppercase; letter-spacing:1.5px;">MEZCANEA · Oaxaca</p>
                 <h1 style="margin:0; font-size:26px; font-weight:bold; color:#2E4A33; line-height:1.2;">¡Bienvenido al equipo,<br>${nombre}!</h1>
               </td>
               <td align="right" valign="top">
@@ -627,20 +627,12 @@ export class EmailService {
                       <span style="display:inline-block; width:22px; height:22px; background:#2E4A33; border-radius:50%; text-align:center; line-height:22px; color:#fff; font-size:11px; font-weight:bold;">1</span>
                     </td>
                     <td style="padding-bottom:12px; padding-left:10px;">
-                      <p style="margin:0; font-size:13px; color:#333; line-height:1.5;"><strong>Configura tu tienda</strong> — Agrega tu logo, descripción y datos de contacto.</p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td valign="top" width="28" style="padding-bottom:12px;">
-                      <span style="display:inline-block; width:22px; height:22px; background:#2E4A33; border-radius:50%; text-align:center; line-height:22px; color:#fff; font-size:11px; font-weight:bold;">2</span>
-                    </td>
-                    <td style="padding-bottom:12px; padding-left:10px;">
                       <p style="margin:0; font-size:13px; color:#333; line-height:1.5;"><strong>Publica tus productos</strong> — Agrega fotos, precios e inventario de tu mezcal.</p>
                     </td>
                   </tr>
                   <tr>
                     <td valign="top" width="28" style="padding-bottom:16px;">
-                      <span style="display:inline-block; width:22px; height:22px; background:#2E4A33; border-radius:50%; text-align:center; line-height:22px; color:#fff; font-size:11px; font-weight:bold;">3</span>
+                      <span style="display:inline-block; width:22px; height:22px; background:#2E4A33; border-radius:50%; text-align:center; line-height:22px; color:#fff; font-size:11px; font-weight:bold;">2</span>
                     </td>
                     <td style="padding-bottom:16px; padding-left:10px;">
                       <p style="margin:0; font-size:13px; color:#333; line-height:1.5;"><strong>Empieza a vender</strong> — Recibe y gestiona pedidos desde tu panel de productor.</p>
@@ -684,7 +676,7 @@ export class EmailService {
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td>
-                <p style="margin:0; font-size:12px; color:#a8c4a2;">Marketplace de Mezcal · Oaxaca de Juárez, México</p>
+                <p style="margin:0; font-size:12px; color:#a8c4a2;">MEZCANEA · Oaxaca de Juárez, México</p>
               </td>
               <td align="right">
                 <p style="margin:0; font-size:12px; color:#a8c4a2;">© ${year}</p>
@@ -712,7 +704,7 @@ export class EmailService {
 
     await this.sendEmail({
       to: email,
-      subject: '🎉 ¡Tu solicitud de productor fue aprobada! — Marketplace de Mezcal',
+      subject: '🎉 ¡Tu solicitud de productor fue aprobada! — MEZCANEA',
       html,
     });
   }

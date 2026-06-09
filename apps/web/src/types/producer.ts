@@ -14,8 +14,15 @@ export type LoteItem = {
   id_lote: number;
   codigo_lote: string;
   nombre_comun?: string | null;
+  nombre_cientifico?: string | null;
   estado_lote?: string | null;
   unidades?: number | null;
+  marca?: string | null;
+  grado_alcohol?: number | string | null;
+  sitio?: string | null;
+  botellas_350ml?: number | null;
+  botellas_750ml?: number | null;
+  url_trazabilidad?: string | null;
 };
 
 export type ProductItem = {
@@ -63,6 +70,8 @@ export type FormState = {
   largo_cm: string;
   id_lote: string;
   stock_inicial: string;
+  botellas_350ml: string;
+  botellas_750ml: string;
 };
 
 export type ModalMode = "create" | "edit" | "view";

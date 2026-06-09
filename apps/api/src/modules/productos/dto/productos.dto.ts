@@ -37,6 +37,9 @@ export class CreateProductoDto {
   @IsOptional() @IsString() @MaxLength(500) imagen_url?: string;
   @IsOptional() @IsString() @MaxLength(500) imagen_principal_url?: string;
   @IsOptional() @IsArray() @Type(() => Number) categorias?: number[];
+  @IsOptional() @IsNumberString() id_categoria?: string;
+  @IsOptional() @IsNumberString() botellas_350ml?: string;
+  @IsOptional() @IsNumberString() botellas_750ml?: string;
   @IsOptional() @IsArray() imagenes?: ProductoImagenDto[];
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import {
   type ImagenProductoState,
@@ -44,6 +44,8 @@ export const EMPTY_FORM: FormState = {
   largo_cm: "",
   id_lote: "",
   stock_inicial: "",
+  botellas_350ml: "",
+  botellas_750ml: "",
 };
 
 // ─── Hook principal ───────────────────────────────────────────────────────────
@@ -104,7 +106,13 @@ export function useProductos() {
       ]);
 
       setProducer(producerData as ProducerDetail);
-      setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);
+      const rawStores = storesData as any;
+      const storesArray: StoreItem[] = Array.isArray(rawStores)
+        ? rawStores
+        : Array.isArray(rawStores?.items)
+          ? rawStores.items
+          : [];
+      setStores(storesArray);
       setCategorias(Array.isArray(categoriasData) ? (categoriasData as CategoriaItem[]) : []);
       setLotes(Array.isArray(lotesData) ? (lotesData as LoteItem[]) : []);
       setProducts(
@@ -214,7 +222,7 @@ export function useProductos() {
   const openCreate = () => {
     setSelected(null);
     setImagen(resetImagenProductoState(imagen));
-    setForm({ ...EMPTY_FORM, id_tienda: String(stores[0]?.id_tienda ?? "") });
+    setForm({ ...EMPTY_FORM, id_tienda: String(stores[0]?.id_tienda ?? ""), status: "borrador" });
     setMode("create");
     setModalOpen(true);
   };
@@ -241,6 +249,8 @@ export function useProductos() {
       largo_cm: String(product.largo_cm ?? ""),
       id_lote: String(product.id_lote ?? ""),
       stock_inicial: String(product.stock ?? ""),
+      botellas_350ml: String((product as any).botellas_350ml ?? ""),
+      botellas_750ml: String((product as any).botellas_750ml ?? ""),
     });
     setMode("edit");
     setModalOpen(true);
@@ -268,6 +278,8 @@ export function useProductos() {
       largo_cm: String(product.largo_cm ?? ""),
       id_lote: String(product.id_lote ?? ""),
       stock_inicial: String(product.stock ?? ""),
+      botellas_350ml: String((product as any).botellas_350ml ?? ""),
+      botellas_750ml: String((product as any).botellas_750ml ?? ""),
     });
     setMode("view");
     setModalOpen(true);
@@ -278,11 +290,51 @@ export function useProductos() {
     setImagen(resetImagenProductoState(imagen));
   };
 
+  // ─── Lote auto-fill ───────────────────────────────────────────────────────
+
+  const handleLoteChange = (value: string) => {
+    const lote = lotes.find((l) => String(l.id_lote) === value);
+    if (!lote) {
+      setForm((c) => ({ ...c, id_lote: value }));
+      return;
+    }
+
+    const nombreAuto = [lote.nombre_comun, lote.marca].filter(Boolean).join(" - ") || lote.codigo_lote;
+
+    const partes: string[] = [];
+    if (lote.nombre_comun) partes.push(`Maguey: ${lote.nombre_comun}`);
+    if (lote.nombre_cientifico) partes.push(`(${lote.nombre_cientifico})`);
+    if (lote.grado_alcohol) partes.push(`Grado de alcohol: ${lote.grado_alcohol}%`);
+    if (lote.sitio) partes.push(`Sitio de producción: ${lote.sitio}`);
+    if (lote.codigo_lote) partes.push(`Folio: ${lote.codigo_lote}`);
+    const descripcionAuto = partes.join(" · ");
+
+    setForm((c) => ({
+      ...c,
+      id_lote: value,
+      nombre: nombreAuto,
+      descripcion: descripcionAuto,
+      stock_inicial: lote.unidades != null ? String(lote.unidades) : c.stock_inicial,
+      botellas_350ml: lote.botellas_350ml != null ? String(lote.botellas_350ml) : c.botellas_350ml,
+      botellas_750ml: lote.botellas_750ml != null ? String(lote.botellas_750ml) : c.botellas_750ml,
+    }));
+  };
+
   // ─── CRUD ─────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user?.id_usuario) return;
+
+    if (!form.nombre.trim()) { setError("El nombre del producto es obligatorio."); return; }
+    const precioNum = Number(form.precio_base);
+    if (!form.precio_base.trim() || isNaN(precioNum) || precioNum < 0) {
+      setError("El precio base es obligatorio y debe ser un número válido."); return;
+    }
+    if (!form.id_tienda || Number(form.id_tienda) === 0) {
+      setError("Debes seleccionar una tienda."); return;
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -297,6 +349,8 @@ export function useProductos() {
       payload.append("actualizado_por", user.id_usuario);
       if (form.id_categoria) payload.append("id_categoria", form.id_categoria);
       if (form.id_lote) payload.append("id_lote", form.id_lote);
+      if (form.botellas_350ml) payload.append("botellas_350ml", form.botellas_350ml);
+      if (form.botellas_750ml) payload.append("botellas_750ml", form.botellas_750ml);
       if (form.peso_kg) payload.append("peso_kg", form.peso_kg);
       if (form.alto_cm) payload.append("alto_cm", form.alto_cm);
       if (form.ancho_cm) payload.append("ancho_cm", form.ancho_cm);
@@ -331,9 +385,15 @@ export function useProductos() {
       closeModal();
       await loadData();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "No fue posible guardar el producto",
-      );
+      if (err instanceof ApiError && err.status === 403) {
+        setError(
+          "Tu sesión no tiene permisos de productor activos. Por favor recarga la página para sincronizar tu rol.",
+        );
+      } else {
+        setError(
+          err instanceof Error ? err.message : "No fue posible guardar el producto",
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -408,6 +468,7 @@ export function useProductos() {
     openEdit,
     openView,
     closeModal,
+    handleLoteChange,
     handleSubmit,
     handleDelete,
     handleDeleteSelected,
