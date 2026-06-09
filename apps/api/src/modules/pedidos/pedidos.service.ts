@@ -1030,9 +1030,19 @@ export class PedidosService {
 
     const detallesFiltrados = pedidoProductor.pedidos.detalle_pedido.filter(belongsToProductor);
 
-    // Prefer the envio linked directly via pedido_productor.id_envio (set by crearEnviosPorProductor).
-    // Fall back to pedidos.envios[0] for orders created before that FK was populated.
-    const envioData = (pedidoProductor as any).envios ?? pedidoProductor.pedidos.envios?.[0] ?? null;
+    // Use the envio linked directly via pedido_productor.id_envio (set by crearEnviosPorProductor).
+    // Legacy fallback: only for single-producer orders where id_envio was never set
+    // (pre-multi-producer data). Multi-producer orders must NEVER fall back to another
+    // producer's envio, even if only one guide has been generated so far.
+    const ownEnvio = pedidoProductor.envios ?? null;
+    const allPedidoEnvios = pedidoProductor.pedidos.envios ?? [];
+    let envioData = ownEnvio;
+    if (!envioData && allPedidoEnvios.length > 0) {
+      const producerCount = await this.prisma.pedido_productor.count({
+        where: { id_pedido: toBigIntId(id_pedido) },
+      });
+      envioData = producerCount === 1 ? (allPedidoEnvios[0] ?? null) : null;
+    }
     const guiaPayload = envioData?.envio_guias?.[0]?.payload_response as any;
     const cotizacion = await this.prisma.envio_cotizaciones.findFirst({
       where: { id_pedido: toBigIntId(id_pedido) },

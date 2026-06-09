@@ -62,6 +62,77 @@ function EstadoBadge({ estado }: { estado: string }) {
   );
 }
 
+const PASOS = [
+  { key: 'pagado',        label: 'Pagado' },
+  { key: 'preparando',    label: 'Preparando' },
+  { key: 'paqueteria',    label: 'En paquetería' },
+  { key: 'en_camino',     label: 'En camino' },
+  { key: 'por_llegar',    label: 'Por llegar' },
+  { key: 'entregado',     label: 'Entregado' },
+] as const;
+
+function calcularPasoActivo(pedidoEstado: string, envioEstado?: string): number {
+  const e = envioEstado ?? '';
+  if (e === 'entregado' || pedidoEstado === 'entregado') return 5;
+  if (e === 'en_reparto') return 4;
+  if (e === 'en_transito') return 3;
+  if (e === 'recogido' || pedidoEstado === 'enviado') return 2;
+  if (['preparando', 'confirmado'].includes(pedidoEstado)) return 1;
+  return 0; // pagado
+}
+
+function OrderStepper({ pedidoEstado, envioEstado }: { pedidoEstado: string; envioEstado?: string }) {
+  const pasoActivo = calcularPasoActivo(pedidoEstado, envioEstado);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm mb-4">
+      <h2 className="font-semibold text-gray-900 mb-4">Estado del pedido</h2>
+      <div className="flex items-start">
+        {PASOS.map((paso, idx) => {
+          const completado = idx < pasoActivo;
+          const activo = idx === pasoActivo;
+          const pendiente = idx > pasoActivo;
+          return (
+            <div key={paso.key} className="flex-1 flex flex-col items-center relative">
+              {/* Línea conectora izquierda */}
+              {idx > 0 && (
+                <div
+                  className={`absolute top-4 right-1/2 left-0 h-0.5 ${completado || activo ? 'bg-amber-500' : 'bg-gray-200'}`}
+                  style={{ transform: 'translateY(-50%)' }}
+                />
+              )}
+              {/* Círculo */}
+              <div
+                className={`relative z-10 flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors ${
+                  completado
+                    ? 'bg-amber-500 border-amber-500'
+                    : activo
+                    ? 'bg-white border-amber-500'
+                    : 'bg-white border-gray-300'
+                }`}
+              >
+                {completado ? (
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <span className={`w-2.5 h-2.5 rounded-full ${activo ? 'bg-amber-500' : 'bg-gray-300'}`} />
+                )}
+              </div>
+              {/* Label */}
+              <p className={`mt-2 text-center text-xs leading-tight ${
+                completado || activo ? 'text-gray-900 font-medium' : 'text-gray-400'
+              } ${pendiente ? '' : ''}`}>
+                {paso.label}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function RastreoPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -94,7 +165,6 @@ export default function RastreoPage() {
         });
         setPedido(data);
 
-        // Si hay envío, cargar tracking
         const envio = data?.envios?.[0];
         if (envio?.id_envio) {
           setLoadingTracking(true);
@@ -140,6 +210,8 @@ export default function RastreoPage() {
 
   const envio = pedido.envios?.[0];
   const carrierId = envio?.transportistas?.nombre ?? '';
+  // Mostrar eventos más reciente primero
+  const eventosOrdenados = tracking ? [...tracking.eventos].reverse() : [];
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -165,7 +237,10 @@ export default function RastreoPage() {
         </div>
       </div>
 
-      {/* Envío */}
+      {/* Stepper de ciclo de vida */}
+      <OrderStepper pedidoEstado={pedido.estado} envioEstado={envio?.estado} />
+
+      {/* Detalle del envío */}
       {!envio ? (
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-5 text-sm text-gray-500 text-center">
           Aún no hay envío registrado para este pedido.
@@ -208,7 +283,7 @@ export default function RastreoPage() {
               <div className="animate-spin h-4 w-4 rounded-full border-2 border-amber-400 border-t-transparent" />
               Consultando estado del envío…
             </div>
-          ) : !tracking || tracking.eventos.length === 0 ? (
+          ) : eventosOrdenados.length === 0 ? (
             <p className="text-sm text-gray-400">
               {envio.numero_rastreo
                 ? 'Aún no hay eventos de rastreo disponibles. Intenta de nuevo más tarde.'
@@ -216,7 +291,7 @@ export default function RastreoPage() {
             </p>
           ) : (
             <ol className="relative border-l border-gray-200 ml-2 space-y-5">
-              {tracking.eventos.map((evento, idx) => (
+              {eventosOrdenados.map((evento, idx) => (
                 <li key={idx} className="ml-5">
                   <span className={`absolute -left-2.5 flex items-center justify-center w-5 h-5 rounded-full ring-4 ring-white ${idx === 0 ? 'bg-amber-500' : 'bg-gray-300'}`} />
                   <div className="text-sm">

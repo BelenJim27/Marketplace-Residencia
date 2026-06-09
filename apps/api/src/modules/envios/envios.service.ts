@@ -123,9 +123,12 @@ export class EnviosService {
       }),
     );
   }
-  private async detectarFirmaAdulto(id_pedido: number): Promise<boolean> {
+  private async detectarFirmaAdulto(id_pedido: number, id_productor?: bigint | number): Promise<boolean> {
     const detalles = await this.prisma.detalle_pedido.findMany({
-      where: { id_pedido: BigInt(id_pedido) },
+      where: {
+        id_pedido: BigInt(id_pedido),
+        ...(id_productor != null ? { id_productor: Number(id_productor) } : undefined),
+      },
       select: {
         productos: {
           select: {
@@ -273,8 +276,37 @@ export class EnviosService {
     const destPais = snap.pais_iso2 ?? snap.pais ?? 'MX';
     const destEstado = snap.estado || '';
 
+    // Resolve producer first — needed to scope restriction checks and address lookup to
+    // this producer's items only, avoiding cross-producer interference in multi-producer orders.
+    const producerFields = {
+      nombre_marca: true,
+      rfc: true,
+      direccion_bodega: {
+        select: {
+          linea_1: true,
+          ciudad: true,
+          estado: true,
+          codigo_postal: true,
+          pais_iso2: true,
+          telefono: true,
+        },
+      },
+    } as const;
+
+    const pedidoProd = await this.prisma.pedido_productor.findFirst({
+      where: { id_envio: envio.id_envio },
+      select: {
+        id_productor: true,
+        subtotal_bruto: true,
+        productores: { select: producerFields },
+      },
+    });
+
     const detalles = await this.prisma.detalle_pedido.findMany({
-      where: { id_pedido: envio.id_pedido },
+      where: {
+        id_pedido: envio.id_pedido,
+        ...(pedidoProd?.id_productor ? { id_productor: pedidoProd.id_productor } : {}),
+      },
       include: {
         productos: {
           select: {
@@ -335,28 +367,6 @@ export class EnviosService {
       }
     }
 
-    // Prefer producer linked directly to this envio (multi-producer flow).
-    // Fall back to the first producer in the order for backwards compatibility.
-    const producerFields = {
-      nombre_marca: true,
-      rfc: true,
-      direccion_bodega: {
-        select: {
-          linea_1: true,
-          ciudad: true,
-          estado: true,
-          codigo_postal: true,
-          pais_iso2: true,
-          telefono: true,
-        },
-      },
-    } as const;
-
-    const pedidoProd = await this.prisma.pedido_productor.findFirst({
-      where: { id_envio: envio.id_envio },
-      select: { productores: { select: producerFields } },
-    });
-
     const primerDetalle = pedidoProd
       ? null
       : await this.prisma.detalle_pedido.findFirst({
@@ -406,8 +416,10 @@ export class EnviosService {
     if (valorAduana) {
       const raw = (envio.moneda_aduana as string) === 'USD' ? valorAduana : valorAduana / tipoCambio;
       valor_declarado_usd = Math.round(raw * 100) / 100;
+    } else if (pedidoProd?.subtotal_bruto != null) {
+      // Use this producer's subtotal — avoids declaring the full multi-producer order total
+      valor_declarado_usd = Math.round((Number(pedidoProd.subtotal_bruto) / tipoCambio) * 100) / 100;
     } else if (envio.pedidos?.total) {
-      // Usar el total del pedido como valor declarado cuando no se especificó uno explícito
       const totalPedido = Number(envio.pedidos.total);
       const monedaPedido = (envio.pedidos as any).moneda ?? 'MXN';
       const raw = monedaPedido === 'USD' ? totalPedido : totalPedido / tipoCambio;
@@ -530,7 +542,7 @@ export class EnviosService {
   ) {
     const guia = await this.prisma.envio_guias.findUnique({
       where: { numero_guia },
-      include: { envios: true },
+      include: { envios: { select: { id_envio: true, id_pedido: true } } },
     });
 
     if (!guia) {
@@ -557,6 +569,21 @@ export class EnviosService {
       where: { id_envio: guia.id_envio },
       data: { estado: estadoNormalizado ?? estado },
     });
+
+    // Sync pedidos.estado so buyer-facing order list stays current
+    const PEDIDO_ESTADO_MAP: Record<string, string> = {
+      recogido: 'preparando',
+      en_transito: 'enviado',
+      en_reparto: 'enviado',
+      entregado: 'entregado',
+    };
+    const nuevoPedidoEstado = estadoNormalizado ? PEDIDO_ESTADO_MAP[estadoNormalizado] : null;
+    if (nuevoPedidoEstado && guia.envios?.id_pedido) {
+      await this.prisma.pedidos.update({
+        where: { id_pedido: guia.envios.id_pedido },
+        data: { estado: nuevoPedidoEstado },
+      });
+    }
 
     return serializeBigInts({ id_envio: updated.id_envio, estado: updated.estado, numero_guia });
   }
@@ -843,6 +870,55 @@ export class EnviosService {
   }
 
   /**
+   * Creates the envio DB record for ONE specific producer in the order.
+   * Does NOT call SkydropX — the guide is purchased separately via crearGuia().
+   * Idempotent: returns the existing id_envio if already set.
+   */
+  async iniciarEnvioParaProductor(id_pedido: number, id_productor: number): Promise<{ id_envio: number }> {
+    const pp = await this.prisma.pedido_productor.findUnique({
+      where: { id_pedido_id_productor: { id_pedido: BigInt(id_pedido), id_productor } },
+    });
+    if (!pp) throw new NotFoundException('No tienes acceso a este pedido');
+    if (pp.id_envio) return { id_envio: Number(pp.id_envio) };
+
+    const items = await this.prisma.detalle_pedido.findMany({
+      where: { id_pedido: BigInt(id_pedido), id_productor },
+      include: { productos: { select: { nombre: true, peso_kg: true, alto_cm: true, ancho_cm: true, largo_cm: true } } },
+    });
+
+    const pesoReal = items.reduce((s, d) => s + Number(d.productos?.peso_kg ?? 1) * Number(d.cantidad), 0);
+    const sinDims = items.filter(d => !d.productos?.largo_cm || !d.productos?.ancho_cm || !d.productos?.alto_cm);
+    if (sinDims.length > 0) {
+      this.logger.warn(`[iniciarEnvio] Pedido ${id_pedido}: ${sinDims.length} producto(s) sin dimensiones, usando fallback 30×12×12`);
+    }
+    const maxLargo = Math.max(30, ...items.map(d => Number(d.productos?.largo_cm ?? 30)));
+    const maxAncho = Math.max(12, ...items.map(d => Number(d.productos?.ancho_cm ?? 12)));
+    const alturaTotal = items.reduce((s, d) => s + Number(d.productos?.alto_cm ?? 12) * Number(d.cantidad), 0);
+    const pesoVolumetrico = (maxLargo * maxAncho * alturaTotal) / 5000;
+    const pesoFacturable = Math.max(pesoReal, pesoVolumetrico);
+    const esAlcohol = await this.detectarFirmaAdulto(id_pedido, id_productor);
+
+    const envio = await this.prisma.envios.create({
+      data: {
+        id_pedido: BigInt(id_pedido),
+        peso_kg: pesoFacturable.toFixed(3),
+        largo_cm: maxLargo.toFixed(2),
+        ancho_cm: maxAncho.toFixed(2),
+        alto_cm: alturaTotal.toFixed(2),
+        estado: 'preparando',
+        requires_adult_signature: esAlcohol,
+      },
+    });
+
+    await this.prisma.pedido_productor.updateMany({
+      where: { id_pedido: BigInt(id_pedido), id_productor },
+      data: { id_envio: envio.id_envio, estado: 'preparando' },
+    });
+
+    return { id_envio: Number(envio.id_envio) };
+  }
+
+  /**
    * Creates one envio record + shipping label per producer group in the order.
    * Called automatically after payment confirmation.
    * Errors per producer are caught individually so partial success is possible.
@@ -909,7 +985,7 @@ export class EnviosService {
         const pesoVolumetrico = (maxLargo * maxAncho * alturaTotal) / 5000;
         const pesoFacturable = Math.max(pesoReal, pesoVolumetrico);
 
-        const esAlcohol = await this.detectarFirmaAdulto(id_pedido);
+        const esAlcohol = await this.detectarFirmaAdulto(id_pedido, pp.id_productor);
 
         const envio = await this.prisma.envios.create({
           data: {
