@@ -86,6 +86,7 @@ type ProductoModalProps = {
   onClose: () => void;
   onLoteChange?: (value: string) => void;
   categoriaProductorId?: number;
+  error?: string | null;
 };
 
 // ─── Componente ───────────────────────────────────────────────────────────────
@@ -93,7 +94,7 @@ type ProductoModalProps = {
 export function ProductoModal({
   mode, form, setForm, imagen, setImagen, selected,
   stores, categorias, lotes, saving, onSubmit, onClose,
-  onLoteChange, categoriaProductorId,
+  onLoteChange, categoriaProductorId, error,
 }: ProductoModalProps) {
   const title = mode === "create" ? "Nuevo producto" : mode === "edit" ? "Editar producto" : "Detalle de producto";
 
@@ -107,6 +108,18 @@ export function ProductoModal({
 
   const loteSeleccionado = lotes.find((l) => String(l.id_lote) === form.id_lote) ?? null;
   const tieneLote = !!form.id_lote;
+
+  // Campos que vienen del lote y no deben editarse manualmente
+  const loteNombreComun = (loteSeleccionado as any)?.nombre_comun;
+  const loteUnidades    = (loteSeleccionado as any)?.unidades;
+  const loteBot350      = (loteSeleccionado as any)?.botellas_350ml;
+  const loteBot750      = (loteSeleccionado as any)?.botellas_750ml;
+
+  const lockNombre    = mode !== "view" && tieneLote && !!loteNombreComun;
+  const lockDesc      = mode !== "view" && tieneLote;
+  const lockStock     = mode !== "view" && tieneLote && loteUnidades != null;
+  const lockBot350    = mode !== "view" && tieneLote && loteBot350 != null;
+  const lockBot750    = mode !== "view" && tieneLote && loteBot750 != null;
 
   const set = (key: keyof FormState) => (value: string) =>
     setForm((c) => ({ ...c, [key]: value }));
@@ -153,7 +166,7 @@ export function ProductoModal({
                 />
                 {tieneLote && loteSeleccionado && (
                   <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                    Los campos marcados con <span className="font-semibold text-green-600 dark:text-green-400">auto</span> se rellenaron desde este lote. Puedes editarlos.
+                    Los campos marcados con <span className="font-semibold text-green-600 dark:text-green-400">auto</span> se rellenaron desde este lote y <span className="font-medium">no se pueden editar directamente</span>. Cambia el lote para actualizarlos.
                   </p>
                 )}
               </>
@@ -170,8 +183,8 @@ export function ProductoModal({
               label="Nombre"
               value={form.nombre}
               onChange={set("nombre")}
-              disabled={mode === "view"}
-              badge={tieneLote ? "auto" : undefined}
+              disabled={mode === "view" || lockNombre}
+              badge={lockNombre ? "auto" : undefined}
             />
             <Field
               label="Precio base"
@@ -188,9 +201,9 @@ export function ProductoModal({
             label="Descripción"
             value={form.descripcion}
             onChange={set("descripcion")}
-            disabled={mode === "view"}
+            disabled={mode === "view" || lockDesc}
             textarea
-            badge={tieneLote ? "auto" : undefined}
+            badge={lockDesc ? "auto" : undefined}
           />
 
           {/* Imagen */}
@@ -246,25 +259,28 @@ export function ProductoModal({
                 label="Stock inicial"
                 value={form.stock_inicial ?? ""}
                 onChange={set("stock_inicial")}
-                disabled={mode === "view"}
+                disabled={mode === "view" || lockStock}
                 inputMode="numeric"
                 placeholder="0"
+                badge={lockStock ? "auto" : undefined}
               />
               <Field
                 label="Botellas 350 ml"
                 value={form.botellas_350ml ?? ""}
                 onChange={set("botellas_350ml")}
-                disabled={mode === "view"}
+                disabled={mode === "view" || lockBot350}
                 inputMode="numeric"
                 placeholder="0"
+                badge={lockBot350 ? "auto" : undefined}
               />
               <Field
                 label="Botellas 750 ml"
                 value={form.botellas_750ml ?? ""}
                 onChange={set("botellas_750ml")}
-                disabled={mode === "view"}
+                disabled={mode === "view" || lockBot750}
                 inputMode="numeric"
                 placeholder="0"
+                badge={lockBot750 ? "auto" : undefined}
               />
             </div>
           </div>
@@ -285,6 +301,13 @@ export function ProductoModal({
               <Field label="Largo (cm)" value={form.largo_cm} onChange={set("largo_cm")} disabled={mode === "view"} inputMode="decimal" placeholder="0.0" />
             </div>
           </div>
+
+          {/* Error */}
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+              {error}
+            </div>
+          )}
 
           {/* Botones */}
           <div className="flex justify-end gap-3 pt-2">

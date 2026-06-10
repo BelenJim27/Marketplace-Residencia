@@ -325,7 +325,7 @@ export default function CategoriaPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {productosFiltrados.map((producto) => {
                 const imagenUrl =
-                  producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
+                  producto.imagen_principal_url ?? producto.producto_imagenes?.[0]?.url;
                 const tipoMezcal = producto.lotes?.datos_api?.tipo_mezcal ?? "";
 
                 return (

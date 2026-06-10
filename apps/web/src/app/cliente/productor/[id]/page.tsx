@@ -93,7 +93,7 @@ function ProductCard({
   onViewDetails: () => void;
 }) {
   const { convertPrice } = useLocale();
-  const imagenUrl = producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
+  const imagenUrl = producto.imagen_principal_url ?? producto.producto_imagenes?.[0]?.url;
   const maguey = producto.lotes?.datos_api?.maguey;
   const tipoMezcal = producto.lotes?.datos_api?.tipo_mezcal;
   const rating = Number(producto.promedio_calificacion ?? 0);

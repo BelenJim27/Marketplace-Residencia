@@ -367,6 +367,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     removeCookie("usuario");
     setUser(null);
     setProductorResolved(false);
+    localStorage.removeItem("carrito_items_guest");
     try {
       await signOut({ redirect: false });
     } catch {

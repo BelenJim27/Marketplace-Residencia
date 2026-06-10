@@ -26,6 +26,7 @@ interface SolicitudProductor {
   estado: string;
   rfc?: string;
   razon_social?: string;
+  nombre_marca?: string;
   motivo_rechazo?: string;
   solicitado_en: string;
   revisado_en?: string;
@@ -381,6 +382,10 @@ export default function SolicitudesProductoresPage() {
                   <div>
                     <p className="text-xs text-[#3D6B3F]/60">Teléfono</p>
                     <p className="text-sm font-medium text-[#1F3A2E]">{selectedSolicitud.usuarios?.telefono || "No proporcionado"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#3D6B3F]/60">Nombre de Marca</p>
+                    <p className="text-sm font-medium text-[#1F3A2E]">{selectedSolicitud.nombre_marca || "No proporcionado"}</p>
                   </div>
                 </div>
               </div>

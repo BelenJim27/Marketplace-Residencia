@@ -1876,9 +1876,9 @@ function PagoYResumen({
           {items.map((item) => (
             <div key={item.id_producto} className="flex items-center gap-3">
               <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
-                {(item.producto_imagenes?.[0]?.url || item.imagen_principal_url) ? (
+                {(item.imagen_principal_url || item.producto_imagenes?.[0]?.url) ? (
                   <Image
-                    src={item.producto_imagenes?.[0]?.url || item.imagen_principal_url!}
+                    src={item.imagen_principal_url || item.producto_imagenes?.[0]?.url!}
                     alt={item.nombre}
                     fill
                     sizes="48px"
@@ -2011,9 +2011,9 @@ function PagoYResumenPaypal({
         {items.map((item: any) => (
           <div key={item.id_producto} className="flex items-center gap-3">
             <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
-              {(item.producto_imagenes?.[0]?.url || item.imagen_principal_url) ? (
+              {(item.imagen_principal_url || item.producto_imagenes?.[0]?.url) ? (
                 <Image
-                  src={item.producto_imagenes?.[0]?.url || item.imagen_principal_url!}
+                  src={item.imagen_principal_url || item.producto_imagenes?.[0]?.url!}
                   alt={item.nombre}
                   fill
                   sizes="48px"

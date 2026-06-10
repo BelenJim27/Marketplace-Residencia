@@ -78,6 +78,8 @@ export function useProductos() {
 
   const [selectionEnabled, setSelectionEnabled] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   // ─── Obtener id_productor del usuario autenticado ─────────────────────────
   // Ajusta el campo según lo que devuelva tu AuthContext:
@@ -221,6 +223,7 @@ export function useProductos() {
 
   const openCreate = () => {
     setSelected(null);
+    setError(null);
     setImagen(resetImagenProductoState(imagen));
     setForm({ ...EMPTY_FORM, id_tienda: String(stores[0]?.id_tienda ?? ""), status: "borrador" });
     setMode("create");
@@ -287,6 +290,7 @@ export function useProductos() {
 
   const closeModal = () => {
     setModalOpen(false);
+    setError(null);
     setImagen(resetImagenProductoState(imagen));
   };
 
@@ -299,15 +303,35 @@ export function useProductos() {
       return;
     }
 
-    const nombreAuto = [lote.nombre_comun, lote.marca].filter(Boolean).join(" - ") || lote.codigo_lote;
+    // Leer datos enriquecidos del endpoint individual si están disponibles
+    const datosApi = (lote as any).datos_api as Record<string, any> | null | undefined;
+    const especie = datosApi?.recolecciones?.[0]?.especie ?? datosApi?.especies?.[0];
 
+    // Nombre: solo el nombre del agave/especie, sin marca
+    const nombreAuto = especie?.nombre_comun || lote.nombre_comun || lote.codigo_lote;
+
+    // Descripción enriquecida
     const partes: string[] = [];
-    if (lote.nombre_comun) partes.push(`Maguey: ${lote.nombre_comun}`);
-    if (lote.nombre_cientifico) partes.push(`(${lote.nombre_cientifico})`);
+    const nombreComun = especie?.nombre_comun || lote.nombre_comun;
+    const nombreCientifico = especie?.nombre_cientifico || lote.nombre_cientifico;
+    if (nombreComun)       partes.push(`Maguey: ${nombreComun}`);
+    if (nombreCientifico)  partes.push(`Especie: ${nombreCientifico}`);
     if (lote.grado_alcohol) partes.push(`Grado de alcohol: ${lote.grado_alcohol}%`);
-    if (lote.sitio) partes.push(`Sitio de producción: ${lote.sitio}`);
-    if (lote.codigo_lote) partes.push(`Folio: ${lote.codigo_lote}`);
+    if (lote.sitio)        partes.push(`Sitio de producción: ${lote.sitio}`);
+    if (lote.unidades)     partes.push(`Unidades: ${lote.unidades}`);
+    if (datosApi?.impacto?.total_kg_maguey) partes.push(`Maguey utilizado: ${datosApi.impacto.total_kg_maguey} kg`);
+    if (datosApi?.impacto?.porcentaje_evidencia != null) partes.push(`Evidencia de trazabilidad: ${datosApi.impacto.porcentaje_evidencia}%`);
+    if (lote.codigo_lote)  partes.push(`Folio: ${lote.codigo_lote}`);
     const descripcionAuto = partes.join(" · ");
+
+    // Calcular botellas usando capacidad_ml (del endpoint lista, guardado en datos_api o en el lote)
+    const capacidadMl: number | null = (lote as any).capacidad_ml ?? datosApi?.capacidad_ml ?? null;
+    const bot750 = capacidadMl === 750
+      ? (lote.unidades ?? lote.botellas_750ml)
+      : lote.botellas_750ml;
+    const bot350 = capacidadMl === 350
+      ? (lote.unidades ?? lote.botellas_350ml)
+      : lote.botellas_350ml;
 
     setForm((c) => ({
       ...c,
@@ -315,8 +339,8 @@ export function useProductos() {
       nombre: nombreAuto,
       descripcion: descripcionAuto,
       stock_inicial: lote.unidades != null ? String(lote.unidades) : c.stock_inicial,
-      botellas_350ml: lote.botellas_350ml != null ? String(lote.botellas_350ml) : c.botellas_350ml,
-      botellas_750ml: lote.botellas_750ml != null ? String(lote.botellas_750ml) : c.botellas_750ml,
+      botellas_350ml: bot350 != null ? String(bot350) : c.botellas_350ml,
+      botellas_750ml: bot750 != null ? String(bot750) : c.botellas_750ml,
     }));
   };
 
@@ -411,6 +435,37 @@ export function useProductos() {
     }
   };
 
+  const syncFromLotes = async () => {
+    const currentIdProductor = user?.id_productor ? Number(user.id_productor) : undefined;
+    setSyncing(true);
+    setSyncMessage(null);
+    try {
+      const result = await api.lotes.sincronizarTodos(token, currentIdProductor);
+      const { creados = 0, actualizados = 0 } = (result as any) ?? {};
+      const total = creados + actualizados;
+      if (total === 0) {
+        setSyncMessage({
+          text: "La API de trazabilidad no tiene lotes disponibles en este momento o todos ya estaban sincronizados.",
+          type: "error",
+        });
+      } else {
+        setSyncMessage({
+          text: `¡Listo! ${creados} lote(s) y producto(s) creado(s), ${actualizados} actualizado(s). Puedes editar el precio e imagen de cada producto.`,
+          type: "success",
+        });
+        setTimeout(() => setSyncMessage(null), 8000);
+      }
+      await loadData();
+    } catch (err) {
+      setSyncMessage({
+        text: err instanceof Error ? err.message : "Error al sincronizar desde la API de trazabilidad.",
+        type: "error",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
     if (!confirm(`¿Eliminar ${selectedIds.length} producto(s) seleccionados?`)) return;
@@ -472,5 +527,8 @@ export function useProductos() {
     handleSubmit,
     handleDelete,
     handleDeleteSelected,
+    syncing,
+    syncMessage,
+    syncFromLotes,
   };
 }

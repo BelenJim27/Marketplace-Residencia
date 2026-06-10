@@ -53,6 +53,9 @@ export default function ProductosPage() {
       <ProductoHeader
         onNew={ctx.openCreate}
         disableNew={ctx.stores.length === 0}
+        onSync={ctx.syncFromLotes}
+        syncing={ctx.syncing}
+        syncMessage={ctx.syncMessage}
       />
 
       {ctx.error && (
@@ -125,6 +128,7 @@ export default function ProductosPage() {
           onSubmit={ctx.handleSubmit}
           onClose={ctx.closeModal}
           onLoteChange={ctx.handleLoteChange}
+          error={ctx.error}
         />
       )}
 

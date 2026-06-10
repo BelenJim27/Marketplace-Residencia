@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useSession } from "next-auth/react";
@@ -19,7 +18,6 @@ import {
 } from "lucide-react";
 import SigninWithPassword from "@/components/Administrator/Auth/SigninWithPassword";
 import { SignUpForm } from "@/app/auth/sign-up/_components/sign-up-form";
-import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
 
 /* ─── Interfaces ─────────────────────────────────────────────────────────── */
 interface Region    { id_region: number; nombre: string; estado_prov?: string; }
@@ -371,98 +369,6 @@ export default function SolicitarPage() {
     </StatusCard>
   );
 
-  /* ═══════════════════════ STEP 0 — FULL AUTH LAYOUT ════════════════════ */
-  if (step === 0) {
-    return (
-      <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
-        <style>{keyframes}</style>
-        <TiendaHeader />
-        <div className="p-4 md:p-6 2xl:p-10">
-          <div className="overflow-hidden rounded-2xl bg-white shadow-lg dark:bg-gray-dark min-h-[calc(100vh-8rem)]">
-            <div className="flex min-h-[calc(100vh-8rem)]">
-
-              {/* ── Left: Form ─────────────────────────────────── */}
-              <div className="flex w-full flex-col justify-center lg:w-[45%] p-8 sm:p-12 xl:p-16 overflow-y-auto">
-                <div className="mb-6">
-                  <h1 className="text-2xl font-bold text-dark dark:text-white">
-                    {t("Únete como Productor")}
-                  </h1>
-                  <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-                    {authTab === "login"
-                      ? t("Inicia sesión para continuar tu solicitud.")
-                      : t("Crea tu cuenta para empezar a vender.")}
-                  </p>
-                </div>
-
-                {/* Tabs */}
-                <div style={{ display:"flex", gap:"6px", marginBottom:"24px", background:C.section, borderRadius:"10px", padding:"4px" }}>
-                  {(["login", "register"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setAuthTab(tab)}
-                      style={{
-                        flex:1, padding:"9px 16px", borderRadius:"7px", border:"none",
-                        fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer",
-                        transition:"all 0.2s",
-                        background: authTab === tab ? C.green : "transparent",
-                        color:       authTab === tab ? C.cream : C.body,
-                        boxShadow:   authTab === tab ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
-                      }}
-                    >
-                      {tab === "login" ? t("Ya tengo cuenta") : t("Crear cuenta nueva")}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Form */}
-                {authTab === "login" ? (
-                  <SigninWithPassword isVenderFlow={true} />
-                ) : (
-                  <SignUpForm isVenderFlow={true} />
-                )}
-              </div>
-
-              {/* ── Right: Hero image ──────────────────────────── */}
-              <div className="hidden lg:flex lg:w-[55%] relative">
-                <Image
-                  src="/images/login/gemmi.png"
-                  alt="Mezcal Oaxaca"
-                  fill
-                  priority
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
-                <div className="absolute inset-0 flex flex-col justify-end p-12 pb-16">
-                  <p className="text-green-300 text-xs font-semibold tracking-widest uppercase mb-3">
-                    Marketplace Artesanal
-                  </p>
-                  <h2 className="text-5xl font-bold text-white leading-tight mb-4">
-                    Mezcal Oaxaqueño<br />
-                    <span className="text-green-400">del corazón</span><br />
-                    de México
-                  </h2>
-                  <p className="text-white/60 text-base max-w-xs leading-relaxed mb-8">
-                    Conectamos productores artesanales con amantes del buen mezcal en todo el mundo.
-                  </p>
-                  <div className="flex flex-col gap-2.5">
-                    {["Productores artesanales verificados", "Envíos a todo México y el mundo", "Variedad única de agaves oaxaqueños"].map((feat) => (
-                      <div key={feat} className="flex items-center gap-3">
-                        <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-500/25 text-green-300 text-xs font-bold">✓</span>
-                        <span className="text-white/75 text-sm">{feat}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   /* ═══════════════════════ MAIN WIZARD ═══════════════════════════════════ */
   const isLast = step === 4;
 
@@ -592,10 +498,10 @@ export default function SolicitarPage() {
             </div>
 
             {authTab === "login" ? (
-              <SigninWithPassword isVenderFlow={true} />
+              <SigninWithPassword isVenderFlow={true} onSuccess={() => setStep(1)} />
             ) : (
               <div style={{ background:C.section, borderRadius:"12px", padding:"20px" }}>
-                <SignUpForm isVenderFlow={true} />
+                <SignUpForm isVenderFlow={true} onSuccess={() => setStep(1)} />
               </div>
             )}
           </div>

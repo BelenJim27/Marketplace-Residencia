@@ -166,7 +166,7 @@ const ProductCard = memo(function ProductCard({
   stockDisponible?: number | null;
 }) {
   const { convertPrice, t } = useLocale();
-  const imagenUrl = producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
+  const imagenUrl = producto.imagen_principal_url ?? producto.producto_imagenes?.[0]?.url;
   const maguey = producto.lotes?.datos_api?.maguey || "Espadin";
   const alcohol = producto.lotes?.datos_api?.grado_alcohol || producto.lotes?.datos_api?.alcohol || "46";
   const maestro = producto.nombre_productor || producto.tiendas?.nombre || "Productor artesanal";
@@ -455,7 +455,7 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
   isAdded: boolean;
   onViewDetails: () => void;
 }) {
-  const imagenUrl = producto.producto_imagenes?.[0]?.url ?? producto.imagen_principal_url;
+  const imagenUrl = producto.imagen_principal_url ?? producto.producto_imagenes?.[0]?.url;
   const cardColor = CARD_COLORS[index % CARD_COLORS.length];
   const maguey = producto.lotes?.datos_api?.maguey || "";
   const maestro = producto.nombre_productor || "";

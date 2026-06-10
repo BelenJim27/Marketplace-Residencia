@@ -67,7 +67,7 @@ const ESTADO_CFG: Record<string, { label: string; bg: string; text: string; dot:
 /* ── Collage de imágenes del pedido ──────────────────────────────────────── */
 function ProductCollage({ items }: { items: DetallePedido[] }) {
   const imgs = items
-    .map((i) => i.productos?.producto_imagenes?.[0]?.url ?? i.productos?.imagen_principal_url ?? null)
+    .map((i) => i.productos?.imagen_principal_url ?? i.productos?.producto_imagenes?.[0]?.url ?? null)
     .filter(Boolean)
     .slice(0, 3) as string[];
 

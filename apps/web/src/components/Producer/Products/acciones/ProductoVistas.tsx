@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Pencil, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, Pencil, Plus, Trash2, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { ProductoThumbnail } from "@/components/Producer/Products/ImagenProducto";
 import type { ProductItem, StoreItem } from "@/hooks/useProductos";
 
@@ -20,9 +20,15 @@ export function ProductoStatCard({ title, value }: { title: string; value: numbe
 export function ProductoHeader({
   onNew,
   disableNew,
+  onSync,
+  syncing = false,
+  syncMessage,
 }: {
   onNew: () => void;
   disableNew: boolean;
+  onSync?: () => void;
+  syncing?: boolean;
+  syncMessage?: { text: string; type: "success" | "error" } | null;
 }) {
   return (
     <div className="mb-6 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
@@ -31,15 +37,39 @@ export function ProductoHeader({
           <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Gestión de productos</h1>
           <p className="text-sm text-[#3D6B3F]/70">Solo se muestran productos de tus tiendas</p>
         </div>
-        <button
-          onClick={onNew}
-          disabled={disableNew}
-          title={disableNew ? "Debes crear una tienda antes de registrar productos" : undefined}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#3D6B3F] px-5 py-3 font-medium text-white transition hover:bg-[#1F3A2E] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <Plus size={18} /> Nuevo producto
-        </button>
+        <div className="flex items-center gap-3">
+          {onSync && (
+            <button
+              onClick={onSync}
+              disabled={syncing}
+              title="Importar productos desde tus lotes registrados"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#C5CFB0] bg-white px-4 py-2.5 text-sm font-medium text-[#3D6B3F] transition hover:bg-[#C5CFB0]/30 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
+              {syncing ? "Sincronizando…" : "Sincronizar desde lotes"}
+            </button>
+          )}
+          <button
+            onClick={onNew}
+            disabled={disableNew}
+            title={disableNew ? "Debes crear una tienda antes de registrar productos" : undefined}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#3D6B3F] px-5 py-3 font-medium text-white transition hover:bg-[#1F3A2E] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Plus size={18} /> Nuevo producto
+          </button>
+        </div>
       </div>
+
+      {syncMessage && (
+        <p className={`mt-3 rounded-lg border px-4 py-2 text-sm ${
+          syncMessage.type === "error"
+            ? "border-red-200 bg-red-50 text-red-700"
+            : "border-[#A8C26B]/40 bg-[#A8C26B]/10 text-[#3D6B3F]"
+        }`}>
+          {syncMessage.text}
+        </p>
+      )}
+
       {disableNew && (
         <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
           ⚠️ Necesitas <a href="/dashboard/productor/tienda" className="font-semibold underline">crear una tienda</a> antes de poder registrar productos.

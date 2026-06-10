@@ -75,6 +75,7 @@ export default function LotesView() {
   const [loading, setLoading] = useState(true);
   const [sincronizando, setSincronizando] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [sincronizandoProductoIds, setSincronizandoProductoIds] = useState(new Set());
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("Todos");
@@ -92,7 +93,7 @@ export default function LotesView() {
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
-    setTimeout(() => setToast({ msg: "", type: "success" }), 4000);
+    setTimeout(() => setToast({ msg: "", type: "success" }), type === "error" ? 8000 : 4000);
   };
 
   const fetchLotes = useCallback(async (silent = false) => {
@@ -253,13 +254,36 @@ export default function LotesView() {
     const token = getCookie("token");
     try {
       setSincronizando(true);
-      await api.lotes.sincronizarTodos(token);
+      await api.lotes.sincronizarTodos(token, user?.id_productor ? Number(user.id_productor) : undefined);
       await fetchLotes();
       showToast("Sincronización completa.");
-    } catch {
-      showToast("Error al sincronizar.", "error");
+    } catch (error) {
+      const msg = error?.message || "Error al sincronizar.";
+      showToast(msg, "error");
     } finally {
       setSincronizando(false);
+    }
+  }
+
+  async function sincronizarProductoLote(lote) {
+    const token = getCookie("token");
+    setSincronizandoProductoIds((prev) => new Set(prev).add(lote.id_lote));
+    try {
+      await api.lotes.sincronizarProducto(token, lote.id_lote);
+      showToast(
+        lote.productoVinculado
+          ? `Producto del lote ${lote.lote} actualizado.`
+          : `Producto creado para el lote ${lote.lote}.`
+      );
+      await fetchLotes();
+    } catch (error) {
+      showToast(error?.message || "Error al sincronizar el producto.", "error");
+    } finally {
+      setSincronizandoProductoIds((prev) => {
+        const next = new Set(prev);
+        next.delete(lote.id_lote);
+        return next;
+      });
     }
   }
 
@@ -383,6 +407,8 @@ export default function LotesView() {
                         onEditar={abrirEditar}
                         onEliminar={abrirEliminar}
                         onGestionarStock={abrirStock}
+                        onSincronizarProducto={sincronizarProductoLote}
+                        sincronizandoProducto={sincronizandoProductoIds.has(item.id_lote)}
                       />
                     </td>
                   </tr>

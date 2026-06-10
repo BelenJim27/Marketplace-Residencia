@@ -142,7 +142,7 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
 
   return (
     <div className="space-y-3">
-      <GoogleSigninButton text="Registrate" />
+      <GoogleSigninButton text="Registrate" redirectUrl={isVenderFlow ? "/dashboard/productor/solicitar" : undefined} />
 
       <div className="my-6 flex items-center justify-center">
         <span className="block h-px w-full bg-stroke dark:bg-dark-3"></span>

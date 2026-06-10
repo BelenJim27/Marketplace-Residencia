@@ -30,6 +30,12 @@ function getStorageKey(usuarioId: string): string {
   return `${STORAGE_KEY_PREFIX}_${usuarioId}`;
 }
 
+// Guest cart uses sessionStorage (clears on tab close / no active session).
+// Logged-in users use localStorage (synced with backend).
+function getCartStorage(usuarioId: string): Storage {
+  return usuarioId === "guest" ? sessionStorage : localStorage;
+}
+
 function getUserId(): string {
   try {
     const usuario = getCookie("usuario");
@@ -59,7 +65,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     prevUserIdRef.current = usuarioId;
     setCurrentUserId(usuarioId);
     if (usuarioId === "guest") {
-      const stored = localStorage.getItem(getStorageKey("guest"));
+      const stored = getCartStorage("guest").getItem(getStorageKey("guest"));
       if (stored) {
         try { setItems(JSON.parse(stored)); } catch { /* ignore corrupt storage */ }
       }
@@ -96,7 +102,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
         const storageKey = getStorageKey(usuarioId);
 
         if (usuarioId === "guest") {
-          const stored = localStorage.getItem(storageKey);
+          const stored = getCartStorage("guest").getItem(storageKey);
           setItems(stored ? JSON.parse(stored) : []);
           return;
         }
@@ -107,7 +113,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
 
         // Merge with any guest items the user may have added before logging in
         const guestKey = getStorageKey("guest");
-        const guestStored = localStorage.getItem(guestKey);
+        const guestStored = getCartStorage("guest").getItem(guestKey);
         const guestItems: CarritoItem[] = guestStored ? JSON.parse(guestStored) : [];
 
         const merged = new Map<number | bigint, CarritoItem>();
@@ -138,7 +144,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
             console.error("Error syncing guest item to backend:", e);
           }
         }
-        localStorage.removeItem(guestKey);
+        getCartStorage("guest").removeItem(guestKey);
         localStorage.setItem(storageKey, JSON.stringify(mergedItems));
       } catch (e) {
         console.error("Error syncing cart on user change:", e);
@@ -146,11 +152,12 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     })();
   }, [mounted, currentUserId]);  // react to both mount and explicit user-id changes
 
-  // Save to localStorage whenever items change
+  // Save cart whenever items change
   useEffect(() => {
     if (!mounted) return;
-    const storageKey = getStorageKey(currentUserId || "guest");
-    localStorage.setItem(storageKey, JSON.stringify(items));
+    const uid = currentUserId || "guest";
+    const storageKey = getStorageKey(uid);
+    getCartStorage(uid).setItem(storageKey, JSON.stringify(items));
   }, [items, mounted, currentUserId]);
 
   // Debounced sync to backend

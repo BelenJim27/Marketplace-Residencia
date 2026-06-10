@@ -461,7 +461,7 @@ export function HeroMezcal() {
           ) : productos.length > 0 ? (
             (() => {
               const p = productos[activeIndex];
-              const imgSrc = p.producto_imagenes?.[0]?.url ?? p.imagen_principal_url;
+              const imgSrc = p.imagen_principal_url ?? p.producto_imagenes?.[0]?.url;
               const yaAgregado = agregadoId === p.id_producto;
               return (
                 <div className="flex flex-row lg:flex-col gap-4 items-center lg:items-start py-2">

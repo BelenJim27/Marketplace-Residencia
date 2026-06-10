@@ -458,8 +458,8 @@ export class ProductosService {
     if (dto.precio_base !== undefined) data.precio_base = new Prisma.Decimal(dto.precio_base);
     if (dto.metadata !== undefined) data.metadata = dto.metadata as any;
     if (dto.status !== undefined) data.status = dto.status;
-    // Validate dimensions when activating a product
-    if (dto.status === 'activo') {
+    // Solo validar dimensiones al ACTIVAR (transición desde otro estado, no al editar uno ya activo)
+    if (dto.status === 'activo' && current.status !== 'activo') {
       const pesoFinal = dto.peso_kg !== undefined ? dto.peso_kg : (current.peso_kg ? String(current.peso_kg) : null);
       const altoFinal = dto.alto_cm !== undefined ? dto.alto_cm : (current.alto_cm ? String(current.alto_cm) : null);
       const anchoFinal = dto.ancho_cm !== undefined ? dto.ancho_cm : (current.ancho_cm ? String(current.ancho_cm) : null);
@@ -494,6 +494,19 @@ export class ProductosService {
         producto_imagenes: true,
       },
     });
+
+    // Sync producto_imagenes when a new main image is uploaded
+    if (dto.imagen_principal_url) {
+      await this.prisma.producto_imagenes.deleteMany({ where: { id_producto: BigInt(id) } });
+      await this.prisma.producto_imagenes.create({
+        data: {
+          id_producto: BigInt(id),
+          url: dto.imagen_principal_url,
+          orden: 0,
+          es_principal: true,
+        },
+      });
+    }
 
     const updateCategorias = dto.categorias && Array.isArray(dto.categorias);
     const updateIdCategoria = !updateCategorias && !!dto.id_categoria;

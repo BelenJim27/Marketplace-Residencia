@@ -1,6 +1,16 @@
-import { Eye, Pencil, Trash2, PackagePlus } from "lucide-react";
+import { Eye, Pencil, Trash2, PackagePlus, Package, Loader2 } from "lucide-react";
 
-export default function LotesAcciones({ lote, onVer, onEditar, onEliminar, onGestionarStock }) {
+export default function LotesAcciones({
+  lote,
+  onVer,
+  onEditar,
+  onEliminar,
+  onGestionarStock,
+  onSincronizarProducto,
+  sincronizandoProducto = false,
+}) {
+  const tieneProducto = Boolean(lote.productoVinculado);
+
   return (
     <div className="flex items-center gap-1">
       <button
@@ -21,7 +31,6 @@ export default function LotesAcciones({ lote, onVer, onEditar, onEliminar, onGes
         <Pencil size={16} />
       </button>
 
-      {/* Botón nuevo de stock */}
       <button
         type="button"
         onClick={() => onGestionarStock(lote)}
@@ -29,6 +38,19 @@ export default function LotesAcciones({ lote, onVer, onEditar, onEliminar, onGes
         className="p-2 rounded-lg text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-all duration-200"
       >
         <PackagePlus size={16} />
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onSincronizarProducto(lote)}
+        title={tieneProducto ? "Sincronizar producto del lote" : "Crear producto desde lote"}
+        disabled={sincronizandoProducto}
+        className="p-2 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+      >
+        {sincronizandoProducto
+          ? <Loader2 size={16} className="animate-spin" />
+          : <Package size={16} className={tieneProducto ? "text-blue-400" : ""} />
+        }
       </button>
 
       <button

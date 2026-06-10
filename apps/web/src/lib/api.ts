@@ -989,8 +989,14 @@ export const api = {
         headers: headers(token),
         body: JSON.stringify(data),
       }),
-    sincronizarTodos: (token: string) =>
+    sincronizarTodos: (token: string, id_productor?: number) =>
       fetchJson(endpoint("/lotes/sincronizar-todos"), {
+        method: "POST",
+        headers: headers(token),
+        body: id_productor ? JSON.stringify({ id_productor }) : undefined,
+      }),
+    sincronizarProducto: (token: string, id: number) =>
+      fetchJson(endpoint(`/lotes/${id}/sincronizar-producto`), {
         method: "POST",
         headers: headers(token),
       }),

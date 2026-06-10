@@ -30,7 +30,7 @@ export function ProductDetailPremium({ producto, stock = null, onBack }: Product
   const sinStock = stockDisponible !== null && stockDisponible === 0;
   const stockBajo = stockDisponible !== null && stockDisponible > 0 && stockDisponible <= 10;
 
-  const imagenPrincipal = producto.producto_imagenes?.[0]?.url || producto.imagen_principal_url;
+  const imagenPrincipal = producto.imagen_principal_url || producto.producto_imagenes?.[0]?.url;
   const maguey = producto.lotes?.datos_api?.maguey || 'Espadin';
   const alcohol = producto.lotes?.datos_api?.grado_alcohol || producto.grado_alcohol || 46;
   const origen = producto.lotes?.sitio || 'Oaxaca';

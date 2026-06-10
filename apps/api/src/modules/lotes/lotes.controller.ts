@@ -27,8 +27,8 @@ export class LotesController {
   }
 
   @Post('sincronizar-todos')
-  sincronizarTodos() {
-    return this.service.sincronizarTodos();
+  sincronizarTodos(@Body() body?: { id_productor?: number }) {
+    return this.service.sincronizarTodos(body?.id_productor ? Number(body.id_productor) : undefined);
   }
 
   @Get(':id')
