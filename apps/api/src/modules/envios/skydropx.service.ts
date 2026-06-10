@@ -2,6 +2,7 @@ import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+import * as crypto from 'crypto';
 import { CotizarEnvioDto } from './dto/envios.dto';
 import { ICarrierService, ShippingQuote, TrackingEvent, ShipmentResult } from './interfaces/carrier.interface';
 
@@ -707,29 +708,9 @@ export class SkydropxService implements ICarrierService {
     };
   }
 
-  async getTracking(trackingNumber: string, options?: Record<string, any>): Promise<TrackingEvent[]> {
-    const carrierName = options?.carrierName ?? '';
-    // Tracking API de SkydropX (radar-api) usa el mismo bearer token
-    const token = await this.getToken();
-    try {
-      const res = await firstValueFrom(
-        this.http.post(
-          'https://radar-api.skydropx.com/v1/tracking',
-          { tracking_numbers: [{ carrier: carrierName, tracking_number: trackingNumber }] },
-          { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } },
-        ),
-      );
-      const items: any[] = Array.isArray(res.data) ? res.data : [res.data];
-      const events: any[] = items[0]?.events ?? [];
-      return events.map((e) => ({
-        descripcion: e.description ?? String(e.status ?? ''),
-        estado: String(e.status ?? 'unknown'),
-        fecha: e.date ? new Date(e.date) : new Date(),
-        ubicacion: e.location ?? e.city ?? '',
-      }));
-    } catch (err: any) {
-      this.logger.warn(`SkydropX tracking falló: ${err?.message}`);
-      return [];
-    }
+  async getTracking(_trackingNumber: string, _options?: Record<string, any>): Promise<TrackingEvent[]> {
+    // Tracking vía webhook — SkydropX notifica eventos automáticamente a POST /envios/webhook/skydropx.
+    // La consulta activa a radar-api.skydropx.com requiere una Radar API Key separada (no el OAuth clientSecret).
+    return [];
   }
 }

@@ -34,6 +34,7 @@ interface Envio {
   estado?: string;
   costo_envio?: string;
   fecha_entrega_estimada?: string;
+  transportistas?: { nombre: string };
 }
 
 interface Pedido {
@@ -149,9 +150,9 @@ function DetallePedidoContent() {
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tracking, setTracking] = useState<any | null>(null);
-  const [trackingLoading, setTrackingLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [trackingMap, setTrackingMap] = useState<Record<number, any>>({});
+  const [trackingLoadingIds, setTrackingLoadingIds] = useState<Set<number>>(new Set());
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   // Factura CFDI — modal
   const [mostrarFactura, setMostrarFactura] = useState(false);
@@ -221,9 +222,8 @@ function DetallePedidoContent() {
       .getOne(id)
       .then((data) => {
         setPedido(data as Pedido);
-        if ((data as Pedido).envios?.[0]?.id_envio) {
-          fetchTracking((data as Pedido).envios![0].id_envio);
-        }
+        const enviosConId = (data as Pedido).envios?.filter(e => e.id_envio) ?? [];
+        enviosConId.forEach(e => e.id_envio && fetchTracking(e.id_envio));
       })
       .catch(() => setError("No se pudo cargar el pedido."))
       .finally(() => setCargando(false));
@@ -236,25 +236,23 @@ function DetallePedidoContent() {
     return () => { document.body.style.overflow = ""; };
   }, [mostrarFactura]);
 
-  const fetchTracking = async (idEnvio: any) => {
-    setTrackingLoading(true);
+  const fetchTracking = async (idEnvio: number) => {
+    setTrackingLoadingIds(prev => new Set(prev).add(idEnvio));
     try {
       const token = getCookie("token") || "";
       const res = await api.envios.getTracking(String(idEnvio), token);
-      setTracking(res);
+      setTrackingMap(prev => ({ ...prev, [idEnvio]: res }));
     } catch {
-      setTracking(null);
+      // no-op — sección queda sin eventos pero visible
     } finally {
-      setTrackingLoading(false);
+      setTrackingLoadingIds(prev => { const s = new Set(prev); s.delete(idEnvio); return s; });
     }
   };
 
-  const copiarTracking = () => {
-    if (tracking?.numero_rastreo) {
-      navigator.clipboard.writeText(tracking.numero_rastreo);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const copiarTracking = (numero: string, idEnvio: number) => {
+    navigator.clipboard.writeText(numero);
+    setCopiedId(idEnvio);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   if (cargando) return <Skeleton />;
@@ -522,7 +520,9 @@ function DetallePedidoContent() {
         day: "2-digit", month: "long", year: "numeric",
       })
     : "—";
-  const envio = pedido.envios?.[0];
+  const enviosConGuia  = pedido.envios?.filter(e =>  e.numero_rastreo) ?? [];
+  const enviosSinGuia  = pedido.envios?.filter(e => !e.numero_rastreo) ?? [];
+  const hasPendingEnvio = enviosSinGuia.length > 0;
   const direccion = pedido.direccion_envio_snapshot;
   const timelineTotal = TIMELINE.length - 1;
 
@@ -744,59 +744,8 @@ function DetallePedidoContent() {
           <Card accentColor={C.amber}>
             <SectionTitle>Seguimiento de envío</SectionTitle>
 
-            {/* Estado de la guía */}
-            {envio?.numero_rastreo ? (
-              <div style={{ marginBottom: "16px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-                  <div style={{
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    height: "38px", width: "38px", flexShrink: 0, borderRadius: "10px",
-                    background: `linear-gradient(135deg, rgba(168,194,107,0.10), rgba(201,122,62,0.04))`,
-                    border: `1px solid ${C.border}`,
-                  }}>
-                    <Truck size={16} style={{ color: C.amber }} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: "12px", color: C.muted, margin: 0 }}>Número de guía</p>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <p style={{ fontSize: "14px", fontWeight: "700", fontFamily: "monospace", color: C.text, margin: 0 }}>
-                        {envio.numero_rastreo}
-                      </p>
-                      <button
-                        onClick={copiarTracking}
-                        title="Copiar número de rastreo"
-                        style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: copied ? C.green : C.muted }}
-                      >
-                        {copied ? <CheckCircle size={13} /> : <Copy size={13} />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Botón refrescar tracking */}
-                <button
-                  onClick={() => envio.id_envio && fetchTracking(envio.id_envio)}
-                  disabled={trackingLoading}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "6px", fontSize: "12px",
-                    color: C.copper, background: "none", border: "none", cursor: "pointer",
-                    padding: "4px 0", fontWeight: "600", opacity: trackingLoading ? 0.6 : 1,
-                  }}
-                >
-                  <RefreshCw size={12} style={{ animation: trackingLoading ? "spin 1s linear infinite" : "none" }} />
-                  {trackingLoading ? "Actualizando..." : "Actualizar seguimiento"}
-                </button>
-              </div>
-            ) : envio?.id_envio ? (
-              <div style={{
-                display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px",
-                borderRadius: "8px", background: "rgba(201,122,62,0.06)", border: `1px solid rgba(201,122,62,0.15)`,
-                marginBottom: "16px",
-              }}>
-                <Loader2 size={14} style={{ color: C.copper, animation: "spin 1s linear infinite", flexShrink: 0 }} />
-                <span style={{ fontSize: "13px", color: C.copper }}>Preparando tu envío...</span>
-              </div>
-            ) : pedido.estado === "pagado" ? (
+            {/* Sin ningún envío creado todavía */}
+            {(pedido.envios?.length ?? 0) === 0 && (
               <div style={{
                 display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px",
                 borderRadius: "8px", background: "rgba(201,122,62,0.06)", border: `1px solid rgba(201,122,62,0.15)`,
@@ -805,67 +754,163 @@ function DetallePedidoContent() {
                 <Clock size={14} style={{ color: C.copper, flexShrink: 0 }} />
                 <span style={{ fontSize: "13px", color: C.copper }}>Estamos procesando tu pedido, pronto recibirás el número de guía.</span>
               </div>
-            ) : null}
-
-            {/* Timeline de eventos de tracking */}
-            {tracking?.eventos && tracking.eventos.length > 0 && (
-              <div>
-                <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.muted, margin: "0 0 12px 0" }}>
-                  Historial de eventos
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-                  {(tracking.eventos as Array<{ descripcion: string; estado: string; fecha: string; ubicacion?: string }>).map((evento, idx) => {
-                    const badge = ESTADO_BADGE[evento.estado] ?? ESTADO_BADGE.en_transito;
-                    const isLast = idx === tracking.eventos.length - 1;
-                    return (
-                      <div key={idx} style={{ display: "flex", gap: "14px", position: "relative" }}>
-                        {/* Connector line */}
-                        {!isLast && (
-                          <div style={{
-                            position: "absolute", left: "7px", top: "22px", bottom: 0,
-                            width: "1px", background: C.border,
-                          }} />
-                        )}
-                        {/* Dot */}
-                        <div style={{
-                          flexShrink: 0, width: "15px", height: "15px",
-                          borderRadius: "50%", background: badge.dot,
-                          marginTop: "4px", border: `2px solid ${C.white}`,
-                          boxShadow: `0 0 0 1px ${badge.dot}`,
-                        }} />
-                        <div style={{ paddingBottom: "16px", flex: 1 }}>
-                          <p style={{ margin: 0, fontSize: "13px", fontWeight: "600", color: C.text }}>{evento.descripcion}</p>
-                          <div style={{ display: "flex", gap: "10px", marginTop: "3px", flexWrap: "wrap" }}>
-                            {evento.ubicacion && (
-                              <span style={{ fontSize: "11px", color: C.muted, display: "flex", alignItems: "center", gap: "3px" }}>
-                                <MapPin size={10} /> {evento.ubicacion}
-                              </span>
-                            )}
-                            <span style={{ fontSize: "11px", color: C.muted }}>
-                              {new Date(evento.fecha).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
             )}
 
-            {/* Fecha estimada de entrega */}
-            {tracking?.fecha_entrega_estimada && (
+            {/* Envíos pendientes de guía (primer envío o paquetes adicionales en pedido multiproductor) */}
+            {hasPendingEnvio && (
               <div style={{
-                display: "flex", alignItems: "center", gap: "8px", marginTop: "12px",
-                padding: "10px 14px", borderRadius: "8px",
-                background: "rgba(61,107,63,0.06)", border: "1px solid rgba(61,107,63,0.15)",
+                display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px",
+                borderRadius: "8px", background: "rgba(201,122,62,0.06)", border: `1px solid rgba(201,122,62,0.15)`,
+                marginBottom: "16px",
               }}>
-                <CheckCircle size={14} style={{ color: C.green, flexShrink: 0 }} />
-                <span style={{ fontSize: "13px", color: C.greenDark }}>
-                  Entrega estimada: <strong>{new Date(tracking.fecha_entrega_estimada).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}</strong>
+                <Loader2 size={14} style={{ color: C.copper, animation: "spin 1s linear infinite", flexShrink: 0 }} />
+                <span style={{ fontSize: "13px", color: C.copper }}>
+                  {enviosConGuia.length > 0
+                    ? `Preparando ${enviosSinGuia.length} paquete${enviosSinGuia.length > 1 ? "s" : ""} adicional${enviosSinGuia.length > 1 ? "es" : ""}...`
+                    : "Preparando tu envío..."}
                 </span>
               </div>
             )}
+
+            {/* Una tarjeta de tracking por cada envío con guía */}
+            {enviosConGuia.map((envio, envioIdx) => {
+              const id = envio.id_envio!;
+              const trk = trackingMap[id];
+              const isLoading = trackingLoadingIds.has(id);
+              const isCopied = copiedId === id;
+              return (
+                <div key={id} style={{ marginBottom: envioIdx < enviosConGuia.length - 1 ? "20px" : "0" }}>
+                  {/* Separador entre paquetes */}
+                  {envioIdx > 0 && (
+                    <div style={{ borderTop: `1px solid ${C.border}`, marginBottom: "16px" }} />
+                  )}
+                  {enviosConGuia.length > 1 && (
+                    <p style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px", color: C.muted, margin: "0 0 10px 0" }}>
+                      Paquete {envioIdx + 1}
+                    </p>
+                  )}
+
+                  {/* Número de guía + estado */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      height: "38px", width: "38px", flexShrink: 0, borderRadius: "10px",
+                      background: `linear-gradient(135deg, rgba(168,194,107,0.10), rgba(201,122,62,0.04))`,
+                      border: `1px solid ${C.border}`,
+                    }}>
+                      <Truck size={16} style={{ color: C.amber }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: "12px", color: C.muted, margin: 0 }}>Número de guía</p>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <p style={{ fontSize: "14px", fontWeight: "700", fontFamily: "monospace", color: C.text, margin: 0 }}>
+                          {envio.numero_rastreo}
+                        </p>
+                        <button
+                          onClick={() => copiarTracking(envio.numero_rastreo!, id)}
+                          title="Copiar número de rastreo"
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: isCopied ? C.green : C.muted }}
+                        >
+                          {isCopied ? <CheckCircle size={13} /> : <Copy size={13} />}
+                        </button>
+                      </div>
+                      {(trk?.estado_actual || envio.estado) && (() => {
+                        const est = trk?.estado_actual ?? envio.estado ?? '';
+                        const badge = ESTADO_BADGE[est] ?? ESTADO_BADGE.en_transito;
+                        return (
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", gap: "5px",
+                            fontSize: "11px", fontWeight: "700", padding: "3px 8px",
+                            borderRadius: "999px", background: badge.bg, color: badge.text,
+                            marginTop: "6px",
+                          }}>
+                            <span style={{
+                              width: "6px", height: "6px", borderRadius: "50%",
+                              background: badge.dot, flexShrink: 0,
+                              animation: badge.pulse ? "pulse 1.5s ease-in-out infinite" : "none",
+                            }} />
+                            {badge.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Botón refrescar */}
+                  <button
+                    onClick={() => fetchTracking(id)}
+                    disabled={isLoading}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "6px", fontSize: "12px",
+                      color: C.copper, background: "none", border: "none", cursor: "pointer",
+                      padding: "4px 0", fontWeight: "600", opacity: isLoading ? 0.6 : 1,
+                      marginBottom: "12px",
+                    }}
+                  >
+                    <RefreshCw size={12} style={{ animation: isLoading ? "spin 1s linear infinite" : "none" }} />
+                    {isLoading ? "Actualizando..." : "Actualizar seguimiento"}
+                  </button>
+
+                  {/* Timeline de eventos */}
+                  {trk?.eventos && trk.eventos.length > 0 && (
+                    <div>
+                      <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.muted, margin: "0 0 12px 0" }}>
+                        Historial de eventos
+                      </p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+                        {(trk.eventos as Array<{ descripcion: string; estado: string; fecha: string; ubicacion?: string }>).map((evento, idx) => {
+                          const badge = ESTADO_BADGE[evento.estado] ?? ESTADO_BADGE.en_transito;
+                          const isLast = idx === trk.eventos.length - 1;
+                          return (
+                            <div key={idx} style={{ display: "flex", gap: "14px", position: "relative" }}>
+                              {!isLast && (
+                                <div style={{
+                                  position: "absolute", left: "7px", top: "22px", bottom: 0,
+                                  width: "1px", background: C.border,
+                                }} />
+                              )}
+                              <div style={{
+                                flexShrink: 0, width: "15px", height: "15px",
+                                borderRadius: "50%", background: badge.dot,
+                                marginTop: "4px", border: `2px solid ${C.white}`,
+                                boxShadow: `0 0 0 1px ${badge.dot}`,
+                              }} />
+                              <div style={{ paddingBottom: "16px", flex: 1 }}>
+                                <p style={{ margin: 0, fontSize: "13px", fontWeight: "600", color: C.text }}>{evento.descripcion}</p>
+                                <div style={{ display: "flex", gap: "10px", marginTop: "3px", flexWrap: "wrap" }}>
+                                  {evento.ubicacion && (
+                                    <span style={{ fontSize: "11px", color: C.muted, display: "flex", alignItems: "center", gap: "3px" }}>
+                                      <MapPin size={10} /> {evento.ubicacion}
+                                    </span>
+                                  )}
+                                  <span style={{ fontSize: "11px", color: C.muted }}>
+                                    {new Date(evento.fecha).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fecha estimada de entrega */}
+                  {trk?.fecha_entrega_estimada && (
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: "8px", marginTop: "12px",
+                      padding: "10px 14px", borderRadius: "8px",
+                      background: "rgba(61,107,63,0.06)", border: "1px solid rgba(61,107,63,0.15)",
+                    }}>
+                      <CheckCircle size={14} style={{ color: C.green, flexShrink: 0 }} />
+                      <span style={{ fontSize: "13px", color: C.greenDark }}>
+                        Entrega estimada: <strong>{new Date(trk.fecha_entrega_estimada).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}</strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </Card>
         </div>
       )}
@@ -948,7 +993,7 @@ function DetallePedidoContent() {
         {(() => {
           const items = pedido.detalle_pedido ?? [];
           const subtotal = items.reduce((acc, item) => acc + Number(item.precio_compra) * item.cantidad, 0);
-          const costoEnvio = Number(envio?.costo_envio ?? 0);
+          const costoEnvio = (pedido.envios ?? []).reduce((sum, e) => sum + Number(e.costo_envio ?? 0), 0);
           const total = Number(pedido.total ?? subtotal + costoEnvio);
           const moneda = pedido.moneda || "MXN";
           return (
@@ -1195,7 +1240,7 @@ function DetallePedidoContent() {
               (acc, item) => acc + Number(item.precio_compra) * item.cantidad,
               0,
             );
-            const costoEnvio = Number(envio?.costo_envio ?? 0);
+            const costoEnvio = (pedido.envios ?? []).reduce((sum, e) => sum + Number(e.costo_envio ?? 0), 0);
             const total = Number(pedido.total ?? subtotal + costoEnvio);
             const moneda = pedido.moneda || "MXN";
             return (

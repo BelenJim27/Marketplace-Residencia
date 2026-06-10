@@ -1085,6 +1085,123 @@ export class EmailService {
     });
   }
 
+  async sendTrackingUpdateEmail(
+    email: string,
+    nombreCliente: string,
+    pedidoId: string,
+    numeroGuia: string,
+    estado: string,
+  ): Promise<void> {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const year = new Date().getFullYear();
+
+    const ESTADOS: Record<string, { asunto: string; titulo: string; icono: string; mensaje: string; color: string }> = {
+      en_transito: {
+        asunto: `Tu pedido #${pedidoId} está en camino`,
+        titulo: 'Tu pedido está en camino',
+        icono: '🚚',
+        mensaje: 'Tu paquete fue recogido y ya está en tránsito hacia tu domicilio.',
+        color: '#2563eb',
+      },
+      en_reparto: {
+        asunto: `Tu pedido #${pedidoId} está cerca`,
+        titulo: 'Tu pedido está en reparto',
+        icono: '📦',
+        mensaje: 'Tu paquete está en reparto local y llegará hoy.',
+        color: '#C97A3E',
+      },
+      entregado: {
+        asunto: `Tu pedido #${pedidoId} fue entregado`,
+        titulo: '¡Tu pedido llegó!',
+        icono: '✅',
+        mensaje: 'Tu paquete fue entregado exitosamente. Si tienes algún problema, contáctanos.',
+        color: '#2E4A33',
+      },
+    };
+
+    const info = ESTADOS[estado] ?? {
+      asunto: `Actualización de tu pedido #${pedidoId}`,
+      titulo: 'Actualización de envío',
+      icono: '📬',
+      mensaje: `El estado de tu envío cambió a: ${estado}.`,
+      color: '#2E4A33',
+    };
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${info.asunto}</title>
+</head>
+<body style="margin:0;padding:0;background:#f0ece0;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0ece0">
+  <tr><td align="center" style="padding:28px 10px;">
+  <table width="580" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border:1px solid #c8bfa8;max-width:580px;">
+
+    <tr><td height="5" style="background:linear-gradient(90deg,#2E4A33,#C97A3E,#C89B4A,#C97A3E,#2E4A33);font-size:1px;line-height:1px;">&nbsp;</td></tr>
+
+    <!-- Encabezado -->
+    <tr><td style="padding:28px 32px 20px;border-bottom:1px solid #e8e0d0;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:bold;color:#C97A3E;text-transform:uppercase;letter-spacing:1.5px;">MEZCANEA · Oaxaca</p>
+      <h1 style="margin:0;font-size:24px;font-weight:bold;color:#2E4A33;">${info.icono}&nbsp; ${info.titulo}</h1>
+    </td></tr>
+
+    <!-- Cuerpo -->
+    <tr><td style="padding:24px 32px;">
+      <p style="margin:0 0 16px;font-size:14px;color:#333;line-height:1.7;">Hola <strong>${nombreCliente}</strong>,</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.7;">${info.mensaje}</p>
+
+      <!-- Tarjeta de info -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f7f3ec;border-radius:8px;border:1px solid #e8e0d0;">
+        <tr>
+          <td style="padding:16px 20px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding:4px 0;font-size:12px;color:#888;width:40%;">Pedido</td>
+                <td style="padding:4px 0;font-size:13px;color:#1a1a1a;font-weight:bold;">#${pedidoId}</td>
+              </tr>
+              <tr>
+                <td style="padding:4px 0;font-size:12px;color:#888;">Número de guía</td>
+                <td style="padding:4px 0;font-size:13px;color:#1a1a1a;font-family:monospace;">${numeroGuia}</td>
+              </tr>
+              <tr>
+                <td style="padding:4px 0;font-size:12px;color:#888;">Estado</td>
+                <td style="padding:4px 0;">
+                  <span style="display:inline-block;background:${info.color};color:#fff;font-size:11px;font-weight:bold;padding:3px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:0.5px;">${estado.replace(/_/g, ' ')}</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+
+    <!-- Botón -->
+    <tr><td style="padding:0 32px 28px;text-align:center;">
+      <a href="${frontendUrl}/tienda/compras"
+         style="display:inline-block;background:#2E4A33;color:#fff;text-decoration:none;padding:12px 32px;border-radius:6px;font-size:13px;font-weight:bold;letter-spacing:0.3px;">
+        Ver detalles del pedido &rarr;
+      </a>
+    </td></tr>
+
+    <!-- Pie -->
+    <tr><td bgcolor="#2E4A33" style="padding:10px 16px;">
+      <p style="margin:0;font-size:11px;color:#a8c4a2;text-align:center;">MEZCANEA · OAXACA, MÉXICO</p>
+    </td></tr>
+    <tr><td style="padding:8px 16px 12px;border-top:1px solid #c8bfa8;">
+      <p style="margin:0;font-size:10px;color:#aaa;text-align:center;">© ${year} Marketplace de Mezcal · Notificación automática de envío</p>
+    </td></tr>
+
+  </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+
+    await this.sendEmail({ to: email, subject: info.asunto, html });
+  }
+
   async sendAdminAlert(subject: string, body: string): Promise<void> {
     const adminEmail = process.env.ADMIN_EMAIL || this.fromEmail;
     await this.sendEmail({

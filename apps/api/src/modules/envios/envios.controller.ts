@@ -223,14 +223,22 @@ export class EnviosController {
     }
 
     if (hmacHeader) {
-      // SkydropX sends: "HMAC <sha512-hex-digest>" (HMAC-SHA512, not SHA256)
       const rawBody = req.rawBody ?? Buffer.from(JSON.stringify(data));
-      const received = hmacHeader.startsWith('HMAC ') ? hmacHeader.slice(5) : hmacHeader;
-      const digest = crypto.createHmac('sha512', configuredSecret).update(rawBody).digest('hex');
-      const expectedBuf = Buffer.from(digest);
-      const receivedBuf = Buffer.alloc(expectedBuf.length, 0);
-      Buffer.from(received).copy(receivedBuf);
-      if (received.length !== digest.length || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
+      const secret = configuredSecret.trim();
+      const received = hmacHeader.replace(/^(HMAC |sha256=)/i, '').trim();
+
+      // SkydropX firma con HMAC-SHA512 sobre JSON.stringify del body parseado.
+      const jsonBody = JSON.stringify(data);
+      const digest = crypto.createHmac('sha512', secret).update(jsonBody).digest('hex');
+
+      this.logger.debug(
+        `[webhook] HMAC diag — received="${received.slice(0, 16)}..." computed="${digest.slice(0, 16)}..." len=${received.length}`,
+      );
+
+      const valid = received.length === digest.length &&
+        crypto.timingSafeEqual(Buffer.from(received), Buffer.from(digest));
+
+      if (!valid) {
         this.logger.warn('[webhook] SkydropX: firma HMAC inválida');
         throw new UnauthorizedException('Invalid SkydropX HMAC signature');
       }
@@ -250,10 +258,13 @@ export class EnviosController {
       data.tracking_number ??
       data.shipment?.tracking_number ??
       data.data?.tracking_number ??
+      data.data?.attributes?.tracking_number ??
+      data.attributes?.tracking_number ??
+      data.data?.shipment?.tracking_number ??
       '';
 
     if (!trackingNumber) {
-      this.logger.warn('SkydropX webhook: payload sin tracking_number');
+      this.logger.warn(`SkydropX webhook: payload sin tracking_number — keys: ${Object.keys(data).join(', ')}`);
       return { procesados: 0 };
     }
 

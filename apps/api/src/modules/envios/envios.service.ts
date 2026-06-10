@@ -6,6 +6,7 @@ import { serializeBigInts, toBigIntId } from "../shared/serialize";
 import { CreateEnvioDto, CotizarEnvioDto, DireccionDestinoDto, UpdateEnvioDto } from "./dto/envios.dto";
 import { ICarrierService } from "./interfaces/carrier.interface";
 import { SkydropxService } from "./skydropx.service";
+import { EmailService } from "../email/email.service";
 
 @Injectable()
 export class EnviosService {
@@ -14,6 +15,7 @@ export class EnviosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly skydropxService: SkydropxService,
+    private readonly emailService: EmailService,
   ) {}
 
   private async toUsd(precio: any, moneda: string): Promise<number> {
@@ -542,7 +544,15 @@ export class EnviosService {
   ) {
     const guia = await this.prisma.envio_guias.findUnique({
       where: { numero_guia },
-      include: { envios: { select: { id_envio: true, id_pedido: true } } },
+      include: {
+        envios: {
+          select: {
+            id_envio: true,
+            id_pedido: true,
+            pedidos: { select: { usuarios: { select: { email: true, nombre: true } } } },
+          },
+        },
+      },
     });
 
     if (!guia) {
@@ -583,6 +593,19 @@ export class EnviosService {
         where: { id_pedido: guia.envios.id_pedido },
         data: { estado: nuevoPedidoEstado },
       });
+    }
+
+    // Notificar al comprador por email en estados clave
+    const ESTADOS_NOTIFICAR = new Set(['en_transito', 'en_reparto', 'entregado']);
+    if (estadoNormalizado && ESTADOS_NOTIFICAR.has(estadoNormalizado)) {
+      const usuario = guia.envios?.pedidos?.usuarios;
+      const emailCliente = usuario?.email;
+      if (emailCliente) {
+        const nombreCliente = usuario?.nombre ?? 'Cliente';
+        const pedidoId = String(guia.envios?.id_pedido ?? '');
+        this.emailService.sendTrackingUpdateEmail(emailCliente, nombreCliente, pedidoId, numero_guia, estadoNormalizado)
+          .catch(err => this.logger.warn(`[tracking] Email a ${emailCliente} falló: ${err?.message}`));
+      }
     }
 
     return serializeBigInts({ id_envio: updated.id_envio, estado: updated.estado, numero_guia });
