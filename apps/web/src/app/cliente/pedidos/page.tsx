@@ -16,8 +16,19 @@ interface MiPedido {
   envios?: Array<{ numero_rastreo: string | null; estado: string }>;
 }
 
+const ESTADO_LABELS: Record<string, string> = {
+  pendiente: 'Pendiente',
+  confirmado: 'Confirmado',
+  preparando: 'Preparando',
+  enviado: 'Enviado',
+  en_transito: 'En tránsito',
+  entregado: 'Entregado',
+  cancelado: 'Cancelado',
+};
+
 const ESTADO_COLOR: Record<string, string> = {
   pendiente: 'bg-yellow-100 text-yellow-800',
+  confirmado: 'bg-lime-100 text-lime-800',
   preparando: 'bg-yellow-100 text-yellow-800',
   enviado: 'bg-blue-100 text-blue-800',
   en_transito: 'bg-blue-100 text-blue-800',
@@ -100,7 +111,7 @@ export default function MisPedidosPage() {
                   </p>
                 </div>
                 <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${estadoBadgeColor}`}>
-                  {pedido.estado}
+                  {ESTADO_LABELS[pedido.estado] ?? pedido.estado}
                 </span>
               </div>
               <div className="mt-2 flex justify-between items-center text-sm">

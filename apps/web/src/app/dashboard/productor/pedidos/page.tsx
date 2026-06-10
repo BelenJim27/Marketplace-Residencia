@@ -202,9 +202,14 @@ function DetalleModal({
     const fetchOrden = async () => {
       try {
         const token = getCookie("token") || "";
-        const res = await fetch(`/pedidos/productor/${pedidoId}/${idProductor}`, {
+        const response = await fetch(`/pedidos/productor/${pedidoId}/${idProductor}`, {
           headers: { Authorization: `Bearer ${token}` },
-        }).then((r) => r.json());
+        });
+        if (!response.ok) {
+          setError("Error al cargar la orden");
+          return;
+        }
+        const res = await response.json();
         setOrden(res);
         setNuevoEstado(res.estado_productor);
         setNumeroRastreo(res.envio?.numero_rastreo || "");
@@ -239,18 +244,39 @@ function DetalleModal({
   };
 
   const ejecutarGenerarGuia = async () => {
-    if (!orden?.envio?.id_envio) return;
     setGenerandoGuia(true);
     setError(null);
     setSuccess(null);
     try {
       const token = getCookie("token") || "";
-      const guia = await api.envios.crearGuia(token, String(orden.envio.id_envio));
+      let envioId = orden?.envio?.id_envio;
+
+      // No envio record yet — create one for this producer only (no SkydropX, no other producers)
+      if (!envioId) {
+        const prepRes = await fetch(`/envios/pedido/${pedidoId}/iniciar`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!prepRes.ok) throw new Error("No se pudo preparar el envío");
+        const prepData = await prepRes.json();
+        envioId = prepData.id_envio;
+      }
+
+      if (!envioId) throw new Error("No se pudo obtener el ID de envío");
+
+      // Generate guide via SkydropX for this envio only
+      const guia = await api.envios.crearGuia(token, String(envioId));
       setSuccess(`Guía generada: ${guia.numero_guia}. Ya puedes descargar la etiqueta.`);
-      setNumeroRastreo(guia.numero_guia);
-      setOrden((prev) =>
-        prev ? { ...prev, envio: { ...prev.envio, numero_rastreo: guia.numero_guia } } : prev
-      );
+
+      // Full reload so the download link and all envio fields are fresh
+      const orderRes = await fetch(`/pedidos/productor/${pedidoId}/${idProductor}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (orderRes.ok) {
+        const updatedOrden = await orderRes.json();
+        setOrden(updatedOrden);
+        setNumeroRastreo(updatedOrden?.envio?.numero_rastreo || "");
+      }
     } catch (err: any) {
       setError(err?.details?.message || err?.message || "Error al generar la guía");
     } finally {
@@ -259,10 +285,10 @@ function DetalleModal({
   };
 
   const handleGenerarGuia = async () => {
-    if (!orden?.envio?.id_envio) return;
-    const snap = orden.pedido?.direccion_envio_snapshot as any;
+    const snap = orden?.pedido?.direccion_envio_snapshot as any;
     const pais = snap?.pais_iso2 ?? snap?.pais ?? 'MX';
-    if (pais !== 'MX' && !orden.envio?.valor_declarado_aduana) {
+    // Only show international modal when envio already exists so we can update its customs data
+    if (pais !== 'MX' && orden?.envio?.id_envio && !orden.envio?.valor_declarado_aduana) {
       setShowInternacionalModal(true);
       return;
     }
@@ -281,6 +307,7 @@ function DetalleModal({
       const token = getCookie('token') || '';
       await api.envios.update(token, String(orden.envio.id_envio), {
         valor_declarado_aduana: internacionalConfig.valor_declarado_aduana,
+        moneda_aduana: 'USD',
         codigo_hs: internacionalConfig.codigo_hs || '220890',
       });
       setOrden((prev) =>
@@ -426,8 +453,8 @@ function DetalleModal({
                   <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E]">
                     <User className="h-4 w-4 text-[#3D6B3F]" /> Cliente
                   </div>
-                  <div className="font-medium text-[#1F3A2E]">{orden.pedido.usuarios.nombre}</div>
-                  <div className="text-xs text-[#3D6B3F]/60">{orden.pedido.usuarios.email}</div>
+                  <div className="font-medium text-[#1F3A2E]">{orden.pedido?.usuarios?.nombre ?? "—"}</div>
+                  <div className="text-xs text-[#3D6B3F]/60">{orden.pedido?.usuarios?.email ?? ""}</div>
                 </div>
 
                 {/* Cambiar estado */}
@@ -472,7 +499,7 @@ function DetalleModal({
                       </tr>
                     </thead>
                     <tbody>
-                      {orden.detalles.map((detalle) => (
+                      {(orden.detalles ?? []).map((detalle) => (
                         <tr key={detalle.id_detalle} className="border-b border-[#C5CFB0]/30 last:border-0">
                           <td className="py-2 text-[#1F3A2E]">{detalle.productos?.nombre}</td>
                           <td className="py-2 text-center text-[#3D6B3F]">{detalle.cantidad}</td>
@@ -559,7 +586,7 @@ function DetalleModal({
                     >
                       {saving ? "Guardando..." : "Guardar Tracking"}
                     </button>
-                    {orden.envio?.id_envio && !orden.envio?.numero_rastreo && (
+                    {!orden.envio?.numero_rastreo && orden.estado_productor !== 'cancelado' && (
                       <button
                         onClick={handleGenerarGuia}
                         disabled={generandoGuia || saving}
@@ -618,7 +645,7 @@ function DetalleModal({
               )}
 
               {/* Dirección */}
-              {orden.pedido.direccion_envio_snapshot && (
+              {orden.pedido?.direccion_envio_snapshot && (
                 <div className="rounded-xl border border-[#C5CFB0] bg-white p-4">
                   <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E]">
                     <MapPin className="h-4 w-4 text-[#3D6B3F]" /> Dirección de Envío
@@ -707,6 +734,7 @@ export default function PedidosProductor() {
       {/* Modal de detalle */}
       {pedidoSeleccionado !== null && user?.id_productor && (
         <DetalleModal
+          key={pedidoSeleccionado}
           pedidoId={pedidoSeleccionado}
           idProductor={user.id_productor}
           onClose={() => setPedidoSeleccionado(null)}

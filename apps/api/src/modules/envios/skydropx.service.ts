@@ -210,6 +210,7 @@ export class SkydropxService implements ICarrierService {
   private buildShipmentPackages(
     dims: { peso_kg?: any; largo_cm?: any; ancho_cm?: any; alto_cm?: any },
     consignmentCode: string,
+    declaredValueUsd?: number,
   ) {
     return [{
       package_number: 1,
@@ -219,6 +220,9 @@ export class SkydropxService implements ICarrierService {
       height: Number(dims.alto_cm ?? 20),
       consignment_note: consignmentCode,
       package_type: '4G',
+      ...(declaredValueUsd && declaredValueUsd > 0
+        ? { declared_value: String(Math.round(declaredValueUsd * 100) / 100) }
+        : {}),
     }];
   }
 
@@ -454,7 +458,15 @@ export class SkydropxService implements ICarrierService {
       colonia: (productor?.direccion_bodega as any)?.colonia,
     });
 
-    // 1. Cotizar para obtener quotation_id + rate_id frescos
+    const valorDeclaradoUsd = Math.round((Number((envio as any).valor_declarado_usd) || 50) * 100) / 100;
+
+    // Fetch consignment note code once — reused in both quotation parcel and shipment packages
+    // so that SkydropX prices both with identical packaging parameters.
+    const consignmentNoteCode = await this.getConsignmentNoteCode();
+
+    // 1. Cotizar para obtener quotation_id + rate_id frescos.
+    //    Parcel uses the same package_type/consignment_note as the shipment packages
+    //    to avoid SkydropX repricing due to packaging code mismatch.
     const shipmentQuotationBody: any = {
       address_from: fromAddress,
       address_to: {
@@ -469,17 +481,15 @@ export class SkydropxService implements ICarrierService {
         length: Number(envio.largo_cm ?? 40),
         width: Number(envio.ancho_cm ?? 30),
         height: Number(envio.alto_cm ?? 20),
-        // SAT Carta Porte codes: BX = Caja (c_TipoEmbalaje), CP = Carta Porte
-        consignment_note: 'CP',
-        package_type: 'BX',
+        consignment_note: consignmentNoteCode,
+        package_type: '4G',
       },
     };
     if (destPais !== 'MX') {
-      const valorUsd = Math.round((Number((envio as any).valor_declarado_usd) || 50) * 100) / 100;
       shipmentQuotationBody.products = [{
         description_en: 'Artisanal agave distillate mezcal from Oaxaca Mexico',
         quantity: 1,
-        price: valorUsd,
+        price: valorDeclaradoUsd,
         weight: Number(envio.peso_kg ?? 1),
         hs_code: await this.resolveHsCode((envio as any).codigo_hs),
         country_code: 'MX',
@@ -553,10 +563,6 @@ export class SkydropxService implements ICarrierService {
     const pedidoRef = String(envio.id_pedido ?? envio.id ?? 'ORD');
     this.logger.debug(`[createShipment] selectedRate.id=${selectedRate.id} packaging_type=${selectedRate.packaging_type} shipment_creation_type=${selectedRate.shipment_creation_type}`);
 
-    // package_type: SAT c_TipoEmbalaje code for outer shipping container (4G = caja de fibra/cartón)
-    // consignment_note: SAT c_TipoEmbalaje code for inner product packaging, fetched from catalog
-    const consignmentNoteCode = await this.getConsignmentNoteCode();
-
     const requiresAdultSignature = (envio as any).requires_adult_signature === true;
     const shipmentBody: any = {
       shipment: {
@@ -574,7 +580,7 @@ export class SkydropxService implements ICarrierService {
           name: snap.nombre_destinatario ?? snap.nombre ?? 'Destinatario',
           company: '',
           reference: pedidoRef,
-          street1: snap.calle ?? snap.direccion ?? '',
+          street1: snap.calle ?? snap.linea_1 ?? snap.direccion ?? '',
           phone: snap.telefono ?? snap.phone ?? '0000000000',
           email: snap.email || this.shipperEmail,
           postal_code: snap.codigo_postal ?? '',
@@ -583,7 +589,7 @@ export class SkydropxService implements ICarrierService {
           area_level2: snap.ciudad ?? '',
           area_level3: snap.colonia ?? snap.ciudad ?? 'Centro',
         },
-        packages: this.buildShipmentPackages(envio, consignmentNoteCode),
+        packages: this.buildShipmentPackages(envio, consignmentNoteCode, valorDeclaradoUsd),
         ...(requiresAdultSignature ? {
           adult_signature: true,
           content_description: (envio as any).contenido_descripcion ?? 'Destilado de agave artesanal',

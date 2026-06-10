@@ -1,5 +1,6 @@
-import { Headers, Logger, UnauthorizedException, ForbiddenException, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
+import { Headers, Logger, UnauthorizedException, ForbiddenException, NotFoundException, HttpException, HttpStatus, RawBodyRequest } from '@nestjs/common';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -158,6 +159,15 @@ export class EnviosController {
     return this.service.cotizarPorProductor(body.id_pedido, body.destino);
   }
 
+  /** Creates the envio DB record for the authenticated producer in this order (no SkydropX). */
+  @Post('pedido/:id_pedido/iniciar')
+  @UseGuards(AuthGuard)
+  async iniciarEnvioProductor(@Param('id_pedido') id_pedido: string, @Req() req: any) {
+    const id_productor: number | null = req.user?.id_productor ?? null;
+    if (!id_productor) throw new ForbiddenException('Solo productores pueden iniciar envíos');
+    return this.service.iniciarEnvioParaProductor(Number(id_pedido), id_productor);
+  }
+
   /** Admin/system endpoint to retry guide creation for orders where automatic purchase failed. */
   @Post('pedido/:id_pedido/crear-guias')
   @UseGuards(AuthGuard)
@@ -202,23 +212,38 @@ export class EnviosController {
    */
   @Post('webhook/skydropx')
   async registrarEventoSkydropx(
+    @Req() req: RawBodyRequest<Request>,
     @Body() data: any,
-    @Headers('x-skydropx-secret') secret: string,
+    @Headers('x-skydropx-signature') hmacHeader: string,
+    @Headers('x-skydropx-secret') secretHeader: string,
   ) {
     const configuredSecret = this.config.get<string>('SKYDROPX_WEBHOOK_SECRET', '');
     if (!configuredSecret) {
       throw new UnauthorizedException('SkydropX webhook secret not configured');
     }
-    // Use timingSafeEqual to prevent timing oracle attacks.
-    // Pad to equal length before comparison so Buffer.from lengths match.
-    const provided = secret ?? '';
-    const expectedBuf = Buffer.from(configuredSecret);
-    const receivedBuf = Buffer.alloc(expectedBuf.length, 0);
-    Buffer.from(provided).copy(receivedBuf);
-    const lengthMatch = provided.length === configuredSecret.length;
-    if (!lengthMatch || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
-      this.logger.warn(`[webhook] SkydropX: firma inválida recibida`);
-      throw new UnauthorizedException('Invalid SkydropX webhook secret');
+
+    if (hmacHeader) {
+      // SkydropX sends: "HMAC <sha512-hex-digest>" (HMAC-SHA512, not SHA256)
+      const rawBody = req.rawBody ?? Buffer.from(JSON.stringify(data));
+      const received = hmacHeader.startsWith('HMAC ') ? hmacHeader.slice(5) : hmacHeader;
+      const digest = crypto.createHmac('sha512', configuredSecret).update(rawBody).digest('hex');
+      const expectedBuf = Buffer.from(digest);
+      const receivedBuf = Buffer.alloc(expectedBuf.length, 0);
+      Buffer.from(received).copy(receivedBuf);
+      if (received.length !== digest.length || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
+        this.logger.warn('[webhook] SkydropX: firma HMAC inválida');
+        throw new UnauthorizedException('Invalid SkydropX HMAC signature');
+      }
+    } else {
+      // Static secret: compare x-skydropx-secret header directly
+      const provided = secretHeader ?? '';
+      const expectedBuf = Buffer.from(configuredSecret);
+      const receivedBuf = Buffer.alloc(expectedBuf.length, 0);
+      Buffer.from(provided).copy(receivedBuf);
+      if (provided.length !== configuredSecret.length || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
+        this.logger.warn('[webhook] SkydropX: firma inválida recibida');
+        throw new UnauthorizedException('Invalid SkydropX webhook secret');
+      }
     }
 
     const trackingNumber: string =
