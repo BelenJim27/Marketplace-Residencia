@@ -10,6 +10,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "next-themes";
+import { getPostLoginUrl } from "@/lib/get-post-login-url";
 import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
 import {
   UserCircle, Users, Tag, LayoutGrid, ShieldCheck,
@@ -32,7 +33,7 @@ const WIZARD_STEPS = [
 function SignInContent() {
   const searchParams = useSearchParams();
   const isVenderFlow = searchParams.get("vender") === "true";
-  const { isAuthenticated, loading, isAdmin, isProductor } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const router = useRouter();
@@ -42,25 +43,11 @@ function SignInContent() {
     if (!isAuthenticated) return;
 
     const redirectUrl = searchParams.get("redirect");
+    const roles = user?.roles ?? [];
+    const permisos = user?.permisos ?? [];
 
-    if (isVenderFlow) {
-      router.replace("/dashboard/productor/solicitar");
-      return;
-    }
-    if (isAdmin) {
-      router.replace("/Administrador/dashboard");
-      return;
-    }
-    if (isProductor) {
-      router.replace("/dashboard/productor");
-      return;
-    }
-    if (redirectUrl) {
-      router.replace(redirectUrl);
-      return;
-    }
-    router.replace("/cliente/producto");
-  }, [isAuthenticated, loading, isVenderFlow, isAdmin, isProductor, router, searchParams]);
+    router.replace(getPostLoginUrl(roles, permisos, { isVenderFlow, redirectUrl }));
+  }, [isAuthenticated, loading, isVenderFlow, user, router, searchParams]);
 
   /* ── Vender flow: wizard layout igual que sign-up ── */
   if (isVenderFlow) {

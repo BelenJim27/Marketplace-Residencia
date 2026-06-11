@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
+import { getPostLoginUrl } from "@/lib/get-post-login-url";
 
 export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: { isVenderFlow?: boolean; onSuccess?: () => void }) {
   const router = useRouter();
@@ -60,29 +61,9 @@ export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: 
         data.remember,
       );
 
-      if (isVenderFlow) {
-        if (onSuccess) { onSuccess(); return; }
-        router.push("/dashboard/productor/solicitar");
-        return;
-      }
+      if (isVenderFlow && onSuccess) { onSuccess(); return; }
 
-      const isAdmin = roles.some((rol: string) => ["ADMIN", "administrador", "admin"].includes(rol));
-      if (isAdmin) {
-        router.push("/Administrador/dashboard");
-        return;
-      }
-
-      if (permisos.includes("panel_productor") || roles.some((rol: string) => ["PRODUCTOR", "productor"].includes(rol))) {
-        router.push("/dashboard/productor");
-        return;
-      }
-
-      if (redirectUrl) {
-        router.push(redirectUrl);
-        return;
-      }
-
-      router.push("/cliente/producto");
+      router.push(getPostLoginUrl(roles, permisos, { isVenderFlow, redirectUrl }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión");
     } finally {

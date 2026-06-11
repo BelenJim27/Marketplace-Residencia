@@ -4,6 +4,7 @@ import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { setCookie, getCookie } from "@/lib/cookies";
 import { useSession } from "next-auth/react";
+import { getPostLoginUrl } from "@/lib/get-post-login-url";
 
 export const dynamic = 'force-dynamic';
 export const prerender = false;
@@ -17,45 +18,37 @@ function AuthCallbackContent() {
     const token = searchParams.get("token");
     const refresh = searchParams.get("refresh");
 
-    console.log("📍 AuthCallback ejecutado", {
-      hasToken: !!token,
-      hasRefresh: !!refresh,
-      hasSession: !!session,
-    });
-
     if (token && refresh) {
-      console.log("✅ Token encontrado en URL, guardando...");
       setCookie("token", token, 7);
       setCookie("refresh_token", refresh, 30);
-      
+
       fetch(`/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => res.json())
         .then((userData) => {
-          if (userData && userData.id_usuario) {
+          if (userData?.id_usuario) {
             setCookie("usuario", JSON.stringify(userData), 7);
           }
+          const dest = getPostLoginUrl(
+            Array.isArray(userData?.roles) ? userData.roles : [],
+            Array.isArray(userData?.permisos) ? userData.permisos : [],
+          );
+          router.replace(dest);
         })
-        .catch((err) => console.error("Error fetching user:", err))
-        .finally(() => {
-          console.log("✅ Redirigiendo a /Cliente/producto");
+        .catch(() => {
           router.replace("/cliente/producto");
         });
     } else if (session?.accessToken) {
-      console.log("✅ Sesión encontrada en NextAuth con token");
-      router.replace("/cliente/producto");
+      const su = session.user as any;
+      const dest = getPostLoginUrl(
+        Array.isArray(su?.roles) ? su.roles : [],
+        Array.isArray(su?.permisos) ? su.permisos : [],
+      );
+      router.replace(dest);
     } else {
       const existingToken = getCookie("token");
-      if (existingToken) {
-        console.log("✅ Token existente encontrado en cookies");
-        router.replace("/cliente/producto");
-      } else {
-        console.log("❌ No se encontró token ni sesión, redirigiendo a sign-in");
-        router.replace("/auth/sign-in");
-      }
+      router.replace(existingToken ? "/auth/sign-in" : "/auth/sign-in");
     }
   }, [router, searchParams, session]);
 
