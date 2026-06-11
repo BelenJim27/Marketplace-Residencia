@@ -277,7 +277,9 @@ export const api = {
         { headers: headers(token) },
       ),
     getOne: (id: string) =>
-      fetchJson<ProductItem>(endpoint(`/productos/${id}`)),
+      fetchJson<ProductItem>(endpoint(`/productos/${id}`), {
+        next: { revalidate: 300 },
+      }),
     create: (token: string, data: any) =>
       fetchJson<ProductItem>(endpoint("/productos"), {
         method: "POST",
