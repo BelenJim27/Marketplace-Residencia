@@ -8,6 +8,9 @@ import { Minus, Plus, Trash2, ShoppingBag, Info, X, UserPlus, LogIn } from "luci
 import { useCarrito } from "@/context/CarritoContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
+import { useFeedback } from "@/hooks/useFeedback";
+import { useDeleteAlert } from "@/hooks/useDeleteAlert";
+import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 
 const C = {
   green: "#3D6B3F",
@@ -141,6 +144,8 @@ export default function CarritoPage() {
   const { isAuthenticated } = useAuth();
   const { t, convertPrice } = useLocale();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const fb = useFeedback("carrito_item");
+  const deleteAlert = useDeleteAlert("carrito_item");
 
   const handleCheckout = () => {
     if (!isAuthenticated) {
@@ -148,6 +153,13 @@ export default function CarritoPage() {
       return;
     }
     router.push("/tienda/checkout");
+  };
+
+  const handleEliminar = (id_producto: number | bigint, nombre: string) => {
+    deleteAlert.abrir(nombre, () => {
+      eliminarProducto(id_producto);
+      fb.eliminado();
+    });
   };
 
   if (items.length === 0) {
@@ -230,6 +242,7 @@ export default function CarritoPage() {
           onLogin={() => router.push("/auth/sign-in?redirect=/tienda/checkout")}
         />
       )}
+      <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
       <style>{`
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
         .cart-item{transition:background 160ms ease}
@@ -319,9 +332,9 @@ export default function CarritoPage() {
                   background: C.cream, border: `1px solid ${C.border}`,
                 }}>
                   {item.producto_imagenes?.[0] ? (
-                    <Image src={item.producto_imagenes[0].url} alt={item.nombre} fill sizes="64px" className="object-cover" />
+                    <Image src={item.producto_imagenes[0].url} alt={item.nombre} fill sizes="64px" className="object-contain" />
                   ) : item.imagen_principal_url ? (
-                    <Image src={item.imagen_principal_url} alt={item.nombre} fill sizes="64px" className="object-cover" />
+                    <Image src={item.imagen_principal_url} alt={item.nombre} fill sizes="64px" className="object-contain" />
                   ) : (
                     <div style={{
                       display: "flex", height: "100%",
@@ -392,7 +405,8 @@ export default function CarritoPage() {
               <div className="item-del" style={{ display: "flex", justifyContent: "center" }}>
                 <button
                   className="del-btn"
-                  onClick={() => eliminarProducto(item.id_producto)}
+                  onClick={() => handleEliminar(item.id_producto, item.nombre)}
+                  aria-label={`Quitar ${item.nombre} del carrito`}
                   style={{
                     height: "32px", width: "32px", display: "flex",
                     alignItems: "center", justifyContent: "center",

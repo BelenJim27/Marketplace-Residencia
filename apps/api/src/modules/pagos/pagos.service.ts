@@ -668,33 +668,37 @@ export class PagosService {
 
     const productorIds = [...new Set(todosDetalles.map((d) => d.id_productor).filter(Boolean))] as number[];
 
-    for (const id_productor of productorIds) {
-      const detallesProd = todosDetalles.filter((d) => d.id_productor === id_productor);
-      const subtotalProd = detallesProd.reduce(
-        (s, d) => s + Number(d.precio_compra) * Number(d.cantidad),
-        0,
-      );
-      const pct = subtotalProd / subtotalTotal;
-      const taxProrrateado = Number(pedido.tax_amount ?? 0) * pct;
-      const envioProrrateado = Number(pedido.shipping_amount ?? 0) * pct;
-      const subtotalBruto = Number((subtotalProd + taxProrrateado + envioProrrateado).toFixed(2));
+    // Cada productor es independiente (resolver comisión + update de su slice):
+    // se procesan en paralelo en vez de en serie para reducir round-trips.
+    await Promise.all(
+      productorIds.map(async (id_productor) => {
+        const detallesProd = todosDetalles.filter((d) => d.id_productor === id_productor);
+        const subtotalProd = detallesProd.reduce(
+          (s, d) => s + Number(d.precio_compra) * Number(d.cantidad),
+          0,
+        );
+        const pct = subtotalProd / subtotalTotal;
+        const taxProrrateado = Number(pedido.tax_amount ?? 0) * pct;
+        const envioProrrateado = Number(pedido.shipping_amount ?? 0) * pct;
+        const subtotalBruto = Number((subtotalProd + taxProrrateado + envioProrrateado).toFixed(2));
 
-      const comision = await this.comisionesService.resolver({ id_productor });
-      const comisionMonto = this.comisionesService.calcularMonto(subtotalBruto, comision);
-      const montoNeto = Number((subtotalBruto - comisionMonto).toFixed(2));
+        const comision = await this.comisionesService.resolver({ id_productor });
+        const comisionMonto = this.comisionesService.calcularMonto(subtotalBruto, comision);
+        const montoNeto = Number((subtotalBruto - comisionMonto).toFixed(2));
 
-      await this.prisma.pedido_productor.updateMany({
-        where: { id_pedido, id_productor },
-        data: {
-          subtotal_bruto: subtotalBruto.toFixed(2),
-          comision_marketplace: comisionMonto.toFixed(2),
-          monto_neto_productor: montoNeto.toFixed(2),
-          moneda,
-          id_comision_aplicada: comision.id_comision ?? undefined,
-          actualizado_en: new Date(),
-        },
-      });
-    }
+        await this.prisma.pedido_productor.updateMany({
+          where: { id_pedido, id_productor },
+          data: {
+            subtotal_bruto: subtotalBruto.toFixed(2),
+            comision_marketplace: comisionMonto.toFixed(2),
+            monto_neto_productor: montoNeto.toFixed(2),
+            moneda,
+            id_comision_aplicada: comision.id_comision ?? undefined,
+            actualizado_en: new Date(),
+          },
+        });
+      }),
+    );
   }
 
   /** Devuelve todos los id_categoria distintos de los productos en un pedido. */
@@ -849,6 +853,30 @@ export class PagosService {
       applicationFeeAmount,
       id_productor,
     };
+  }
+
+  /** Crea una notificación in-app para todos los administradores activos. */
+  private async notificarAdmins(tipo: string, titulo: string, cuerpo: string, url_accion?: string) {
+    try {
+      const adminRole = await this.prisma.roles.findFirst({
+        where: { nombre: { in: ['administrador', 'admin', 'ADMIN'] } },
+        select: { id_rol: true },
+      });
+      if (!adminRole) return;
+      const adminUsers = await this.prisma.usuario_rol.findMany({
+        where: { id_rol: adminRole.id_rol, estado: 'activo' },
+        select: { id_usuario: true },
+      });
+      await Promise.all(
+        adminUsers.map(({ id_usuario }) =>
+          this.prisma.notificaciones.create({
+            data: { id_usuario, tipo, titulo, cuerpo, url_accion: url_accion ?? null, leido: false },
+          }),
+        ),
+      );
+    } catch (err: any) {
+      this.logger.error(`[pagos] notificarAdmins failed: ${err?.message}`);
+    }
   }
 
   private async createTransfersForPedido(id_pedido: bigint, moneda: Moneda) {
@@ -1164,6 +1192,12 @@ export class PagosService {
               orderBy: { vigente_desde: 'desc' },
             });
             if (!tasa) {
+              await this.notificarAdmins(
+                'fx_faltante',
+                'Falta tasa de cambio para procesar un payout',
+                `No hay tasa ${payout.moneda}→USD vigente. El payout #${payout.id_payout} (productor ${payout.id_productor ?? '—'}) no se puede procesar hasta configurarla en tasas_cambio.`,
+                '/dashboard/admin/tasas-cambio',
+              );
               throw new InternalServerErrorException(
                 `No hay tasa de cambio ${payout.moneda}→USD vigente. Configurar en la tabla tasas_cambio antes de procesar payouts.`,
               );

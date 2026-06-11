@@ -40,8 +40,14 @@ export class EnviosController {
       if (!envio) throw new NotFoundException('Envío no encontrado');
 
       const isBuyer = (envio as any).pedidos?.id_usuario === user.id_usuario;
-      const isProductor = user.id_productor !== null;
-      if (!isBuyer && !isProductor) {
+      // El productor solo puede ver el tracking si este envío le pertenece
+      // (existe un pedido_productor con su id_productor ligado a este envío).
+      const isOwningProductor =
+        user.id_productor != null &&
+        (await this.prisma.pedido_productor.count({
+          where: { id_envio: BigInt(id), id_productor: user.id_productor },
+        })) > 0;
+      if (!isBuyer && !isOwningProductor) {
         throw new ForbiddenException('No tienes acceso a este tracking');
       }
     }
@@ -182,6 +188,10 @@ export class EnviosController {
   @Post(':id/crear-guia')
   @UseGuards(AuthGuard)
   crearGuia(@Param('id') id: string) { return this.service.crearGuia(id); }
+
+  @Post(':id/refrescar-guia')
+  @UseGuards(AuthGuard)
+  refrescarGuia(@Param('id') id: string) { return this.service.refrescarGuiaPendiente(id); }
 
   @Get(':id/guia/download')
   @UseGuards(AuthGuard)

@@ -22,14 +22,16 @@ export class CarritoController {
   @UseGuards(AuthGuard)
   @Get()
   findAll(@Req() req: any) {
-    const isAdmin = req.user.roles?.some((r: string) => r.toLowerCase() === 'admin');
-    if (!isAdmin) throw new ForbiddenException('Solo administradores pueden listar todos los carritos');
+    if (!isAdmin(req.user)) throw new ForbiddenException('Solo administradores pueden listar todos los carritos');
     return this.service.findAll();
   }
 
   @UseGuards(AuthGuard)
   @Get(':id_usuario')
-  findByUser(@Param('id_usuario', ParseUUIDPipe) id_usuario: string) {
+  findByUser(@Param('id_usuario', ParseUUIDPipe) id_usuario: string, @Req() req: any) {
+    if (!isAdmin(req.user) && req.user.id_usuario !== id_usuario) {
+      throw new ForbiddenException('No puedes ver el carrito de otro usuario');
+    }
     return this.service.findByUser(id_usuario);
   }
 
@@ -53,7 +55,14 @@ export class CarritoController {
 
   @UseGuards(AuthGuard)
   @Delete('usuario/:id_usuario')
-  clearByUser(@Param('id_usuario', ParseUUIDPipe) id_usuario: string) {
+  clearByUser(@Param('id_usuario', ParseUUIDPipe) id_usuario: string, @Req() req: any) {
+    if (!isAdmin(req.user) && req.user.id_usuario !== id_usuario) {
+      throw new ForbiddenException('No puedes vaciar el carrito de otro usuario');
+    }
     return this.service.clearByUser(id_usuario);
   }
+}
+
+function isAdmin(user: any): boolean {
+  return user?.roles?.some((r: string) => ['admin', 'administrador'].includes(r.toLowerCase())) ?? false;
 }

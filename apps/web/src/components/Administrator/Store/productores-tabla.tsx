@@ -135,7 +135,7 @@ export function ProductoresTabla() {
       if (!token) throw new Error("No autorizado");
       await api.productores.delete(token, deleting.id as any);
       setProductores((c) => c.filter((p) => p.id !== deleting.id));
-      setNotice({ type: "success", message: "Productor eliminado correctamente." });
+      successToast.mostrar("Productor eliminado correctamente.");
       setDeleting(null);
     } catch (error) {
       setNotice({ type: "error", message: error instanceof Error ? error.message : "No fue posible eliminar el productor." });

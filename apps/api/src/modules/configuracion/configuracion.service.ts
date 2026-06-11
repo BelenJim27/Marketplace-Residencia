@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Moneda } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
@@ -9,11 +9,26 @@ import * as bcrypt from 'bcrypt';
 export class ConfiguracionService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Cache en memoria para listSistema(): la configuración cambia muy poco pero se
+  // lee en muchos requests (colores, fuentes, payout days, etc.). TTL corto para
+  // que ediciones del admin se reflejen pronto; las mutaciones invalidan de inmediato.
+  private static readonly CONFIG_TTL_MS = 60_000;
+  private configCache: { data: any; expiry: number } | null = null;
+
+  private invalidateConfigCache() {
+    this.configCache = null;
+  }
+
   async listSistema() {
+    if (this.configCache && Date.now() < this.configCache.expiry) {
+      return this.configCache.data;
+    }
     const items = await this.prisma.configuracion_sistema.findMany({
       orderBy: { clave: 'asc' },
     });
-    return serializeBigInts(items);
+    const data = serializeBigInts(items);
+    this.configCache = { data, expiry: Date.now() + ConfiguracionService.CONFIG_TTL_MS };
+    return data;
   }
   async getSistema(id_config: number) { const item = await this.prisma.configuracion_sistema.findUnique({ where: { id_config } }); if (!item) throw new NotFoundException('Configuracion no encontrada'); return serializeBigInts(item); }
   async createSistema(dto: CreateConfiguracionSistemaDto) {
@@ -28,6 +43,7 @@ export class ConfiguracionService {
         valor_nuevo: { clave: config.clave, valor: config.valor } as any,
       },
     });
+    this.invalidateConfigCache();
     return serializeBigInts(config);
   }
 
@@ -46,6 +62,7 @@ export class ConfiguracionService {
         valor_nuevo: { clave: dto.clave, valor: dto.valor } as any,
       },
     });
+    this.invalidateConfigCache();
     return serializeBigInts(updated);
   }
 
@@ -60,6 +77,7 @@ export class ConfiguracionService {
         valor_anterior: { clave: current?.clave, valor: current?.valor } as any,
       },
     });
+    this.invalidateConfigCache();
     return { message: 'Configuracion eliminada' };
   }
 
@@ -85,6 +103,7 @@ export class ConfiguracionService {
       update: { valor: JSON.stringify(lista), tipo: 'json' },
       create: { clave: 'asociaciones', valor: JSON.stringify(lista), tipo: 'json', descripcion: 'Lista de asociaciones de productores' },
     });
+    this.invalidateConfigCache();
     await this.prisma.auditoria.create({
       data: {
         accion: 'actualizar_asociaciones',
@@ -108,16 +127,17 @@ export class ConfiguracionService {
   }
 
   async upsertConfigs(configs: { clave: string; valor: string; tipo?: string }[]) {
-    const results = [];
-    for (const config of configs) {
-      const result = await this.prisma.configuracion_sistema.upsert({
-        where: { clave: config.clave },
-        update: { valor: config.valor },
-        create: { clave: config.clave, valor: config.valor, tipo: config.tipo ?? 'texto' },
-      });
-      results.push(serializeBigInts(result));
-    }
-    return results;
+    const results = await Promise.all(
+      configs.map((config) =>
+        this.prisma.configuracion_sistema.upsert({
+          where: { clave: config.clave },
+          update: { valor: config.valor },
+          create: { clave: config.clave, valor: config.valor, tipo: config.tipo ?? 'texto' },
+        }),
+      ),
+    );
+    this.invalidateConfigCache();
+    return results.map((r) => serializeBigInts(r));
   }
 
   async seedDefaults() {
@@ -161,19 +181,29 @@ export class ConfiguracionService {
       { clave: 'font_family_ui', valor: 'Satoshi, system-ui, -apple-system, sans-serif', tipo: 'texto', descripcion: 'Fuente del panel admin/productor' },
       { clave: 'font_family_store', valor: "'Playfair Display', Georgia, serif", tipo: 'texto', descripcion: 'Fuente de la tienda cliente' },
     ];
-    const results = [];
-    for (const config of bioculturalTokens) {
-      const result = await this.prisma.configuracion_sistema.upsert({
-        where: { clave: config.clave },
-        update: {},
-        create: { clave: config.clave, valor: config.valor, tipo: config.tipo, descripcion: config.descripcion },
-      });
-      results.push(serializeBigInts(result));
-    }
-    return results;
+    const results = await Promise.all(
+      bioculturalTokens.map((config) =>
+        this.prisma.configuracion_sistema.upsert({
+          where: { clave: config.clave },
+          update: {},
+          create: { clave: config.clave, valor: config.valor, tipo: config.tipo, descripcion: config.descripcion },
+        }),
+      ),
+    );
+    this.invalidateConfigCache();
+    return results.map((r) => serializeBigInts(r));
   }
 
   async seedAll() {
+    // Este seed crea usuarios demo con contraseñas conocidas (admin123, productor123,
+    // cliente123). Permitir esto en producción dejaría cuentas con credenciales
+    // predecibles. Se bloquea salvo que se habilite explícitamente con ALLOW_DEMO_SEED=true.
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_SEED !== 'true') {
+      throw new ForbiddenException(
+        'seedAll con usuarios demo está deshabilitado en producción. Define ALLOW_DEMO_SEED=true para forzarlo.',
+      );
+    }
+
     const results: Record<string, unknown> = {};
 
     const roles = [

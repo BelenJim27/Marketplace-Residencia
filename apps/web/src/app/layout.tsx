@@ -7,6 +7,14 @@ import type { PropsWithChildren } from "react";
 import { Providers } from "./providers";
 import { RootContent } from "./root-content";
 
+// NOTA DE RENDIMIENTO (Fase 1): se intentó mover este `force-dynamic` a layouts
+// de rutas autenticadas para que las páginas públicas (home/producto/categoria/
+// legal) fueran estáticamente optimizables y cacheables en CDN. El build reveló
+// que componentes cliente compartidos (providers/headers) construyen
+// `new URL(NEXT_PUBLIC_API_URL)` durante el render y esa env está vacía en build,
+// rompiendo el prerender de TODAS las páginas públicas. Habilitar SSG requiere
+// primero blindar esas llamadas (mover a efectos cliente / guardas) y fijar la env
+// de build. Queda como PR dedicado. Por ahora se mantiene el render dinámico global.
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 

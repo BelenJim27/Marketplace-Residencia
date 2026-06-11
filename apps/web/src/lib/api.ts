@@ -323,7 +323,8 @@ export const api = {
   },
 
   tiendas: {
-    getAll: () => fetchJson(endpoint("/tiendas")),
+    // Las tiendas cambian poco: cache de 30 min para evitar refetch en cada vista.
+    getAll: () => fetchJson(endpoint("/tiendas"), { next: { revalidate: 1800 } }),
     getOne: (id: number) => fetchJson(endpoint(`/tiendas/${id}`)),
     getByProductor: (id_productor: number, token?: string) =>
       fetchJson(endpoint(`/tiendas?id_productor=${id_productor}`), {
@@ -362,7 +363,10 @@ export const api = {
         params.set("id_categoria", String(filters.id_categoria));
       if (filters?.estado) params.set("estado", filters.estado);
       const qs = params.toString();
-      return fetchJson<any[]>(endpoint(`/productores${qs ? `?${qs}` : ""}`));
+      // Sin filtros (listado público completo) se cachea 30 min; con filtros se
+      // consulta fresco para reflejar la selección del usuario.
+      const cacheOpts = !qs ? { next: { revalidate: 1800 } } : undefined;
+      return fetchJson<any[]>(endpoint(`/productores${qs ? `?${qs}` : ""}`), cacheOpts);
     },
     getOne: <T = any>(id: number) => fetchJson<T>(endpoint(`/productores/${id}`)),
     getByUsuario: (id_usuario: string) =>
@@ -474,7 +478,16 @@ export const api = {
   },
 
   pedidos: {
-    getAll: (token?: string) => fetchJson(endpoint("/pedidos"), token ? { headers: headers(token) } : {}),
+    // El backend pagina /pedidos devolviendo { items, paginacion }. Los consumidores
+    // (gráficas admin, tabla de pedidos, búsqueda global) esperan un arreglo, así que
+    // pedimos el máximo permitido (limite=100) y desenvolvemos siempre a un arreglo.
+    getAll: async (token?: string) => {
+      const res = await fetchJson(
+        endpoint("/pedidos?limite=100"),
+        token ? { headers: headers(token) } : {},
+      );
+      return Array.isArray(res) ? res : ((res as any)?.items ?? []);
+    },
     getOne: (id: string) => fetchJson(endpoint(`/pedidos/${id}`)),
     getMineSales: (token: string) =>
       fetchJson(endpoint("/pedidos/mis-ventas"), { headers: headers(token) }),
@@ -584,6 +597,12 @@ export const api = {
       }),
     crearGuia: (token: string, id: string) =>
       fetchJson(endpoint(`/envios/${id}/crear-guia`), {
+        method: "POST",
+        headers: headers(token),
+      }),
+    /** Completa una guía que quedó "en proceso" (in_creation) re-consultando al carrier. */
+    refrescarGuia: (token: string, id: string) =>
+      fetchJson(endpoint(`/envios/${id}/refrescar-guia`), {
         method: "POST",
         headers: headers(token),
       }),
@@ -1109,8 +1128,15 @@ export const api = {
   },
 
   usuarios: {
-    getAll: (token: string) =>
-      fetchJson(endpoint("/usuarios"), { headers: headers(token) }),
+    // El backend pagina /usuarios devolviendo { items, paginacion }. Los
+    // consumidores filtran/pagina del lado del cliente, así que pedimos el
+    // máximo permitido (limite=100) y desenvolvemos siempre a un arreglo.
+    getAll: async (token: string) => {
+      const res = await fetchJson(endpoint("/usuarios?limite=100"), {
+        headers: headers(token),
+      });
+      return Array.isArray(res) ? res : ((res as any)?.items ?? []);
+    },
     getOne: (token: string, id: string) =>
       fetchJson(endpoint(`/usuarios/${id}`), { headers: headers(token) }),
     update: (token: string, id: string, data: any) =>

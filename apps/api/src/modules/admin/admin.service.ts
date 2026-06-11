@@ -22,17 +22,24 @@ export class AdminService {
       totalPedidos,
       totalIngresos,
       pedidosPendientes,
+      pedidosEnviados,
       productoresActivos,
     ] = await Promise.all([
       this.prisma.usuarios.count({ where: { eliminado_en: null } }),
       this.prisma.productores.count({ where: { eliminado_en: null } }),
-      this.prisma.pedidos.count({ where: { eliminado_en: null } }),
+      // Pedidos pagados: solo los que cobraron (estado = 'pagado').
+      this.prisma.pedidos.count({ where: { estado: 'pagado', eliminado_en: null } }),
+      // Ventas totales: suma del total de los pedidos pagados.
       this.prisma.pedidos.aggregate({
-        where: { eliminado_en: null, estado: { in: ['entregado', 'enviado'] } },
+        where: { estado: 'pagado', eliminado_en: null },
         _sum: { total: true },
       }),
       this.prisma.pedidos.count({
         where: { estado: 'pendiente', eliminado_en: null },
+      }),
+      // Pedidos enviados: ya despachados (en tránsito o entregados).
+      this.prisma.pedidos.count({
+        where: { estado: { in: ['enviado', 'entregado'] }, eliminado_en: null },
       }),
       this.prisma.productores.count({
         where: { eliminado_en: null },
@@ -45,6 +52,7 @@ export class AdminService {
       totalPedidos: Number(totalPedidos),
       totalIngresos: Number(totalIngresos._sum.total ?? 0),
       pedidosPendientes: Number(pedidosPendientes),
+      pedidosEnviados: Number(pedidosEnviados),
       productoresActivos: Number(productoresActivos),
     };
   }
@@ -63,40 +71,33 @@ export class AdminService {
   }
 
   async getTopProductores(limit = 5) {
-    const pedidos = await this.prisma.pedidos.findMany({
-      where: { estado: { in: ['entregado', 'enviado'] }, eliminado_en: null },
-      include: {
-        detalle_pedido: {
-          include: {
-            productos: {
-              include: { tiendas: { include: { productores: true } } },
-            },
-          },
-        },
-      },
-    });
+    // Agregación en la BD (GROUP BY) en vez de descargar todos los pedidos con
+    // includes anidados y sumar en JS. groupBy de Prisma no soporta SUM de una
+    // expresión (precio_compra * cantidad), por eso se usa $queryRaw.
+    const rows = await this.prisma.$queryRaw<
+      Array<{ id_productor: number; nombre: string | null; totalventas: unknown; pedidos: unknown }>
+    >`
+      SELECT t.id_productor              AS id_productor,
+             p.biografia                 AS nombre,
+             SUM(dp.precio_compra * dp.cantidad) AS totalventas,
+             COUNT(*)                    AS pedidos
+      FROM detalle_pedido dp
+      JOIN productos   pr ON pr.id_producto  = dp.id_producto
+      JOIN tiendas     t  ON t.id_tienda     = pr.id_tienda
+      JOIN productores p  ON p.id_productor  = t.id_productor
+      JOIN pedidos     pe ON pe.id_pedido    = dp.id_pedido
+      WHERE pe.estado IN ('entregado', 'enviado') AND pe.eliminado_en IS NULL
+      GROUP BY t.id_productor, p.biografia
+      ORDER BY totalventas DESC
+      LIMIT ${limit}
+    `;
 
-    const productoresMap = new Map<number, { totalVentas: number; pedidos: number; nombre: string }>();
-
-    for (const pedido of pedidos) {
-      for (const detalle of pedido.detalle_pedido) {
-        const idProductor = detalle.productos.tiendas.id_productor;
-        const current = productoresMap.get(idProductor) || {
-          totalVentas: 0,
-          pedidos: 0,
-          nombre: '',
-        };
-        current.totalVentas += Number(detalle.precio_compra) * detalle.cantidad;
-        current.pedidos += 1;
-        current.nombre = detalle.productos.tiendas.productores.biografia || 'Productor';
-        productoresMap.set(idProductor, current);
-      }
-    }
-
-    return Array.from(productoresMap.entries())
-      .map(([id_productor, data]) => ({ id_productor, ...data }))
-      .sort((a, b) => b.totalVentas - a.totalVentas)
-      .slice(0, limit);
+    return rows.map((r) => ({
+      id_productor: Number(r.id_productor),
+      totalVentas: Number(r.totalventas ?? 0),
+      pedidos: Number(r.pedidos ?? 0),
+      nombre: r.nombre || 'Productor',
+    }));
   }
 
   // ── FIX: incluye productor_categoria y mapea a "categorias" ──────────────
@@ -152,6 +153,7 @@ export class AdminService {
         productor_categoria: { include: { categorias: { select: { id_categoria: true, nombre: true } } } },
       },
       orderBy: { solicitado_en: 'desc' },
+      take: 200,
     });
 
     return serializeBigInts(rows.map((r) => ({
@@ -203,6 +205,7 @@ export class AdminService {
           },
         },
         orderBy: { creado_en: 'desc' },
+        take: 200,
       });
 
       return serializeBigInts(items.map((item: any) => {

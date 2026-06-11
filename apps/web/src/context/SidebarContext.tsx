@@ -1,7 +1,7 @@
 "use client";
 
 import { useIsMobile } from "@/hooks/useMobile";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 type SidebarContextType = {
   isOpen: boolean;
@@ -42,27 +42,30 @@ export function SidebarProvider({
     }
   }, [isMobile]);
 
-  function toggleSidebar() {
+  const toggleSidebar = useCallback(() => {
     setIsOpen((prev) => !prev);
-  }
+  }, []);
 
-  function toggleCollapse() {
+  const toggleCollapse = useCallback(() => {
     setIsCollapsed((prev) => !prev);
-  }
+  }, []);
+
+  // Memoizamos el value para no re-renderizar a todos los consumidores en cada
+  // render del provider; setIsOpen/setIsCollapsed son estables (useState).
+  const value = useMemo(
+    () => ({
+      isOpen,
+      setIsOpen,
+      isCollapsed,
+      setIsCollapsed,
+      isMobile,
+      toggleSidebar,
+      toggleCollapse,
+    }),
+    [isOpen, isCollapsed, isMobile, toggleSidebar, toggleCollapse],
+  );
 
   return (
-    <SidebarContext.Provider
-      value={{
-        isOpen,
-        setIsOpen,
-        isCollapsed,
-        setIsCollapsed,
-        isMobile,
-        toggleSidebar,
-        toggleCollapse,
-      }}
-    >
-      {children}
-    </SidebarContext.Provider>
+    <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>
   );
 }

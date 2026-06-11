@@ -959,7 +959,7 @@ function DetallePedidoContent() {
                       background: C.cream, border: `1px solid ${C.border}`,
                     }}>
                       {imgUrl ? (
-                        <Image src={imgUrl} alt={nombre} fill sizes="58px" className="object-cover" />
+                        <Image src={imgUrl} alt={nombre} fill sizes="58px" className="object-contain" />
                       ) : (
                         <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center" }}>
                           <Package size={20} style={{ color: C.border }} />
@@ -989,26 +989,47 @@ function DetallePedidoContent() {
           )}
         </div>
 
-        {/* Resumen de costos */}
+        {/* Resumen de costos — usa los montos REALES del pedido (impuestos, descuentos, envío) */}
         {(() => {
           const items = pedido.detalle_pedido ?? [];
           const subtotal = items.reduce((acc, item) => acc + Number(item.precio_compra) * item.cantidad, 0);
-          const costoEnvio = (pedido.envios ?? []).reduce((sum, e) => sum + Number(e.costo_envio ?? 0), 0);
-          const total = Number(pedido.total ?? subtotal + costoEnvio);
+          const impuestos = Number((pedido as any).tax_amount ?? 0);
+          const descuento = Number((pedido as any).discount_amount ?? 0);
+          // Preferir shipping_amount del pedido; si no existe, sumar el costo real de los envíos.
+          const enviosSum = (pedido.envios ?? []).reduce((sum, e) => sum + Number(e.costo_envio ?? 0), 0);
+          const costoEnvio = (pedido as any).shipping_amount != null
+            ? Number((pedido as any).shipping_amount)
+            : enviosSum;
+          const total = Number(pedido.total ?? subtotal - descuento + impuestos + costoEnvio);
           const moneda = pedido.moneda || "MXN";
+          const rowStyle = { display: "flex", justifyContent: "space-between" } as const;
+          const labelStyle = { fontSize: "14px", color: C.muted } as const;
+          const valueStyle = { fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: C.text } as const;
           return (
             <div style={{ padding: "22px", borderBottom: `1px solid ${C.border}` }}>
               <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.6px", textTransform: "uppercase", color: C.copper, margin: "0 0 16px 0" }}>
                 Resumen de costos
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "14px", color: C.muted }}>Subtotal</span>
-                  <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: C.text }}>${formatPrice(subtotal, { showCurrency: false })}</span>
+                <div style={rowStyle}>
+                  <span style={labelStyle}>Subtotal</span>
+                  <span style={valueStyle}>${formatPrice(subtotal, { showCurrency: false })}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "14px", color: C.muted }}>Envío</span>
-                  <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: costoEnvio === 0 ? C.green : C.text }}>
+                {descuento > 0 && (
+                  <div style={rowStyle}>
+                    <span style={labelStyle}>Descuento</span>
+                    <span style={{ ...valueStyle, color: C.green }}>−${formatPrice(descuento, { showCurrency: false })}</span>
+                  </div>
+                )}
+                {impuestos > 0 && (
+                  <div style={rowStyle}>
+                    <span style={labelStyle}>Impuestos</span>
+                    <span style={valueStyle}>${formatPrice(impuestos, { showCurrency: false })}</span>
+                  </div>
+                )}
+                <div style={rowStyle}>
+                  <span style={labelStyle}>Envío</span>
+                  <span style={{ ...valueStyle, color: costoEnvio === 0 ? C.green : C.text }}>
                     {costoEnvio === 0 ? "Gratis" : `$${formatPrice(costoEnvio, { showCurrency: false })}`}
                   </span>
                 </div>
@@ -1022,7 +1043,9 @@ function DetallePedidoContent() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                   <ShieldCheck size={13} style={{ color: C.border, flexShrink: 0 }} />
-                  <span style={{ fontSize: "12px", color: C.muted }}>Pago protegido · IVA incluido</span>
+                  <span style={{ fontSize: "12px", color: C.muted }}>
+                    {impuestos > 0 ? "Pago protegido" : "Pago protegido · IVA incluido"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1146,7 +1169,7 @@ function DetallePedidoContent() {
                             alt={nombre}
                             fill
                             sizes="58px"
-                            className="object-cover"
+                            className="object-contain"
                           />
                         ) : (
                           <div style={{

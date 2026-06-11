@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { api } from "@/lib/api";
 
 const STORAGE_KEY = "app_config_cache";
@@ -154,7 +154,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       const cached = localStorage.getItem(STORAGE_KEY);
       if (cached) {
@@ -192,12 +192,12 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const refreshAndUpdate = async () => {
+  const refreshAndUpdate = useCallback(async () => {
     setLoading(true);
     await fetchConfig();
-  };
+  }, [fetchConfig]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -257,12 +257,22 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     return () => observer.disconnect();
   }, [config]);
 
-  const get = (key: string, fallback = ""): string => config[key] || fallback;
+  // Memoizamos el value para evitar re-renderizar a todos los consumidores en cada
+  // render del provider. `get` se deriva de `config`, por lo que se recalcula solo
+  // cuando cambia config/loading o las funciones memoizadas.
+  const value = useMemo<ConfigContextType>(
+    () => ({
+      config,
+      loading,
+      refresh: fetchConfig,
+      get: (key: string, fallback = "") => config[key] || fallback,
+      refreshAndUpdate,
+    }),
+    [config, loading, fetchConfig, refreshAndUpdate],
+  );
 
   return (
-    <ConfigContext.Provider value={{ config, loading, refresh: fetchConfig, get, refreshAndUpdate }}>
-      {children}
-    </ConfigContext.Provider>
+    <ConfigContext.Provider value={value}>{children}</ConfigContext.Provider>
   );
 }
 

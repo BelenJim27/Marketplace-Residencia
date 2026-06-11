@@ -8,11 +8,16 @@ import {
 import { EnviosService } from './envios.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SkydropxService } from './skydropx.service';
+import { EmailService } from '../email/email.service';
 
 const mockSkydropx = {
   cotizarEnvio: jest.fn(),
   createShipment: jest.fn(),
   getTracking: jest.fn(),
+};
+
+const mockEmail = {
+  sendTrackingUpdateEmail: jest.fn(),
 };
 
 const mockPrisma: any = {
@@ -122,6 +127,7 @@ describe('EnviosService', () => {
         EnviosService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: SkydropxService, useValue: mockSkydropx },
+        { provide: EmailService, useValue: mockEmail },
       ],
     }).compile();
     service = module.get<EnviosService>(EnviosService);
@@ -511,16 +517,22 @@ describe('EnviosService', () => {
       expect(mockSkydropx.createShipment).toHaveBeenCalledTimes(1);
     });
 
-    it('uses valor_declarado_aduana in USD directly without conversion', async () => {
+    // Valor declarado 100% automático: el manual (valor_declarado_aduana) se IGNORA.
+    it('computes declared value from producer subtotal_bruto (MXN→USD), ignoring any manual value', async () => {
       mockPrisma.envios.findUnique.mockResolvedValue({
         ...makeEnvio(),
-        valor_declarado_aduana: '100',
+        // Aunque venga un valor manual viejo, debe ignorarse.
+        valor_declarado_aduana: '9999',
         moneda_aduana: 'USD',
       });
       mockPrisma.detalle_pedido.findMany.mockResolvedValue([{
         productos: { nombre: 'P', requiere_edad_minima: 0, categorias_productos: [] },
       }]);
-      mockPrisma.pedido_productor.findFirst.mockResolvedValue(makeProductorConBodega());
+      mockPrisma.pedido_productor.findFirst.mockResolvedValue({
+        ...makeProductorConBodega(),
+        id_productor: 7,
+        subtotal_bruto: '1750', // MXN reales del productor
+      });
       mockPrisma.envio_cotizaciones.findFirst.mockResolvedValue({ payload_response: null });
       mockPrisma.tasas_cambio.findFirst.mockResolvedValue({ tasa: '17.5' });
       mockSkydropx.createShipment.mockResolvedValue({
@@ -534,18 +546,16 @@ describe('EnviosService', () => {
       await service.crearGuia('1');
 
       const shipmentCallArg = mockSkydropx.createShipment.mock.calls[0][0];
-      expect(shipmentCallArg.valor_declarado_usd).toBeCloseTo(100, 2);
+      expect(shipmentCallArg.valor_declarado_usd).toBeCloseTo(100, 2); // 1750 / 17.5 = 100
     });
 
-    it('converts valor_declarado_aduana from MXN to USD using exchange rate', async () => {
-      mockPrisma.envios.findUnique.mockResolvedValue({
-        ...makeEnvio(),
-        valor_declarado_aduana: '1750',
-        moneda_aduana: 'MXN',
-      });
-      mockPrisma.detalle_pedido.findMany.mockResolvedValue([{
-        productos: { nombre: 'P', requiere_edad_minima: 0, categorias_productos: [] },
-      }]);
+    it('falls back to sum of detalle_pedido line items when subtotal_bruto is absent', async () => {
+      mockPrisma.envios.findUnique.mockResolvedValue(makeEnvio());
+      mockPrisma.detalle_pedido.findMany.mockResolvedValue([
+        { productos: { nombre: 'P1', requiere_edad_minima: 0, categorias_productos: [] }, precio_compra: '500', cantidad: 2 },
+        { productos: { nombre: 'P2', requiere_edad_minima: 0, categorias_productos: [] }, precio_compra: '750', cantidad: 1 },
+      ]);
+      // pedido_productor sin subtotal_bruto → usa la suma de detalle_pedido (500*2 + 750 = 1750)
       mockPrisma.pedido_productor.findFirst.mockResolvedValue(makeProductorConBodega());
       mockPrisma.envio_cotizaciones.findFirst.mockResolvedValue({ payload_response: null });
       mockPrisma.tasas_cambio.findFirst.mockResolvedValue({ tasa: '17.5' });
@@ -563,7 +573,7 @@ describe('EnviosService', () => {
       expect(shipmentCallArg.valor_declarado_usd).toBeCloseTo(100, 2); // 1750 / 17.5 = 100
     });
 
-    it('falls back to $50 USD when no valor_declarado_aduana and no pedido total', async () => {
+    it('throws UnprocessableEntityException when no real product value can be determined', async () => {
       mockPrisma.envios.findUnique.mockResolvedValue({
         ...makeEnvio(),
         valor_declarado_aduana: null,
@@ -579,18 +589,8 @@ describe('EnviosService', () => {
       mockPrisma.pedido_productor.findFirst.mockResolvedValue(makeProductorConBodega());
       mockPrisma.envio_cotizaciones.findFirst.mockResolvedValue({ payload_response: null });
       mockPrisma.tasas_cambio.findFirst.mockResolvedValue({ tasa: '17.5' });
-      mockSkydropx.createShipment.mockResolvedValue({
-        trackingNumber: 'TRK1',
-        labelBuffer: Buffer.from('%PDFfakedata'),
-        labelFormat: 'PDF',
-      });
-      mockPrisma.envio_guias.create.mockResolvedValue({ id_guia: BigInt(1), numero_guia: 'TRK1', formato_etiqueta: 'PDF', label_pdf: null });
-      mockPrisma.envios.update.mockResolvedValue(makeEnvio());
 
-      await service.crearGuia('1');
-
-      const shipmentCallArg = mockSkydropx.createShipment.mock.calls[0][0];
-      expect(shipmentCallArg.valor_declarado_usd).toBe(50);
+      await expect(service.crearGuia('1')).rejects.toThrow(UnprocessableEntityException);
     });
 
     it('throws UnprocessableEntityException when createShipment returns no labelBuffer', async () => {

@@ -413,22 +413,34 @@ export class EnviosService {
       );
     }
     const tipoCambio = Number(tasaRow.tasa);
-    const valorAduana = envio.valor_declarado_aduana ? Number(envio.valor_declarado_aduana) : null;
-    let valor_declarado_usd: number;
-    if (valorAduana) {
-      const raw = (envio.moneda_aduana as string) === 'USD' ? valorAduana : valorAduana / tipoCambio;
-      valor_declarado_usd = Math.round(raw * 100) / 100;
-    } else if (pedidoProd?.subtotal_bruto != null) {
-      // Use this producer's subtotal — avoids declaring the full multi-producer order total
-      valor_declarado_usd = Math.round((Number(pedidoProd.subtotal_bruto) / tipoCambio) * 100) / 100;
+    // Valor declarado de aduana 100% automático: el productor captura precios solo en MXN
+    // y el sistema deriva el valor real desde la BD y lo convierte a USD. NUNCA se pide al
+    // productor convertir ni capturar un valor manual.
+    // Fuente del valor real en MXN, en orden de preferencia:
+    //   1) subtotal_bruto del productor (subtotal real de SUS productos en el pedido)
+    //   2) suma de detalle_pedido (precio_compra * cantidad) de este productor
+    //   3) total del pedido (fallback final, multi-producer)
+    const subtotalDetallesMxn = detalles.reduce(
+      (acc, d) => acc + Number(d.precio_compra) * d.cantidad,
+      0,
+    );
+    let valorRealMxn: number | null = null;
+    if (pedidoProd?.subtotal_bruto != null) {
+      valorRealMxn = Number(pedidoProd.subtotal_bruto);
+    } else if (subtotalDetallesMxn > 0) {
+      valorRealMxn = subtotalDetallesMxn;
     } else if (envio.pedidos?.total) {
       const totalPedido = Number(envio.pedidos.total);
       const monedaPedido = (envio.pedidos as any).moneda ?? 'MXN';
-      const raw = monedaPedido === 'USD' ? totalPedido : totalPedido / tipoCambio;
-      valor_declarado_usd = Math.round(raw * 100) / 100;
-    } else {
-      valor_declarado_usd = 50;
+      // Si el pedido ya está en USD, no re-convertir; si está en MXN, convertir abajo.
+      valorRealMxn = monedaPedido === 'USD' ? totalPedido * tipoCambio : totalPedido;
     }
+    if (valorRealMxn == null || valorRealMxn <= 0) {
+      throw new UnprocessableEntityException(
+        'No se pudo determinar el valor real de la mercancía para la declaración aduanal. Verifica que el pedido tenga productos con precio.',
+      );
+    }
+    const valor_declarado_usd = Math.round((valorRealMxn / tipoCambio) * 100) / 100;
 
     const result = await carrier.createShipment({
       ...envio,
@@ -439,23 +451,25 @@ export class EnviosService {
       valor_declarado_usd,
     });
 
-    if (!result.labelBuffer) {
-      throw new UnprocessableEntityException(
-        'El carrier generó la guía pero no devolvió el PDF de la etiqueta. Intenta de nuevo.',
-      );
+    // El carrier aceptó el envío pero la etiqueta puede seguir generándose de forma asíncrona
+    // ("in_creation"). En ese caso NO fallamos: persistimos la guía "en proceso" y se completa
+    // luego con refrescarGuia. (En sandbox las guías internacionales nunca terminan de generarse.)
+    const isPending = result.pending || !result.labelBuffer;
+
+    if (!isPending) {
+      // Validar que el buffer es un PDF real (magic bytes %PDF) antes de persistir.
+      const pdfMagic = result.labelBuffer!.slice(0, 4).toString('ascii');
+      if (pdfMagic !== '%PDF') {
+        throw new UnprocessableEntityException(
+          `El label recibido del carrier no es un PDF válido (magic bytes: ${pdfMagic}). Intenta de nuevo.`,
+        );
+      }
     }
 
-    // Validar que el buffer es un PDF real (magic bytes %PDF) antes de persistir.
-    const pdfMagic = result.labelBuffer.slice(0, 4).toString('ascii');
-    if (pdfMagic !== '%PDF') {
-      throw new UnprocessableEntityException(
-        `El label recibido del carrier no es un PDF válido (magic bytes: ${pdfMagic}). Intenta de nuevo.`,
-      );
-    }
-
-    // Protección SkydropX — se llama fuera de la transacción (HTTP externo)
+    // Protección SkydropX — se llama fuera de la transacción (HTTP externo). Solo aplica cuando
+    // la etiqueta ya está lista; si está pendiente, se omite (se podrá proteger al completarse).
     let proteccionData: { costo_proteccion?: string; moneda_proteccion?: any; proteccion_id?: string } = {};
-    if (envio.solicitar_proteccion && result.providerShipmentId && carrier.protegerEnvio) {
+    if (!isPending && envio.solicitar_proteccion && result.providerShipmentId && carrier.protegerEnvio) {
       try {
         const prot = await carrier.protegerEnvio(result.providerShipmentId, valor_declarado_usd, 'USD');
         proteccionData = {
@@ -475,23 +489,31 @@ export class EnviosService {
           data: {
             id_envio: toBigIntId(id_envio),
             id_transportista: envio.id_transportista ?? null,
-            numero_guia: result.trackingNumber,
-            label_pdf: result.labelBuffer,
+            // numero_guia es @unique y obligatorio: si la etiqueta aún no existe usamos el
+            // shipment_id del carrier como placeholder; refrescarGuia lo sustituye por el real.
+            numero_guia: isPending
+              ? (result.providerShipmentId ?? result.trackingNumber)
+              : result.trackingNumber,
+            label_pdf: isPending ? null : result.labelBuffer,
             formato_etiqueta: result.labelFormat,
-            estado_paqueteria: 'creada',
+            estado_paqueteria: isPending ? 'in_creation' : 'creada',
             payload_response: {
               trackingNumber: result.trackingNumber,
               labelFormat: result.labelFormat,
               carrierName: result.carrierName,
+              providerShipmentId: result.providerShipmentId,
+              pending: isPending,
             } as any,
           },
         });
-        // Persist actual carrier cost + tracking number + protection data
+        // Persist actual carrier cost. tracking_number/estado final solo cuando hay etiqueta;
+        // si está pendiente, estado='in_creation' y numero_rastreo se completa al refrescar.
         await tx.envios.update({
           where: { id_envio: toBigIntId(id_envio) },
           data: {
-            numero_rastreo: result.trackingNumber,
-            estado: 'label_purchased',
+            ...(isPending
+              ? { estado: 'in_creation' }
+              : { numero_rastreo: result.trackingNumber, estado: 'label_purchased' }),
             ...proteccionData,
             ...(result.cost && result.cost > 0
               ? { costo_envio: result.cost.toFixed(2), moneda_costo: (result.currency ?? 'MXN') as any }
@@ -502,12 +524,90 @@ export class EnviosService {
         const { label_pdf: _, ...guiaMeta } = guia as any;
         return {
           ...guiaMeta,
-          tiene_pdf: true,
+          tiene_pdf: !isPending,
+          pendiente: isPending,
+          providerShipmentId: result.providerShipmentId,
           ...(result.tarifa_fallback ? {
             tarifa_fallback: true,
             tarifa_original_solicitada: result.tarifa_original_solicitada,
           } : {}),
         };
+      }),
+    );
+  }
+
+  /**
+   * Completa una guía que quedó "en proceso" (in_creation): re-consulta al carrier por el
+   * shipment_id guardado y, si la etiqueta ya está lista, la persiste (PDF + número real de
+   * rastreo). Si sigue generándose, devuelve { pendiente: true } sin error.
+   */
+  async refrescarGuiaPendiente(id_envio: string) {
+    const envio = await this.prisma.envios.findUnique({
+      where: { id_envio: toBigIntId(id_envio) },
+      include: {
+        envio_guias: {
+          where: { eliminado_en: null },
+          orderBy: { fecha_creacion: 'desc' },
+          take: 1,
+        },
+      },
+    });
+    if (!envio) throw new NotFoundException('Envío no encontrado');
+
+    const guia = envio.envio_guias?.[0];
+    if (!guia) throw new UnprocessableEntityException('SIN_GUIA');
+
+    // Ya completada: devolver metadata tal cual.
+    if (guia.estado_paqueteria !== 'in_creation' && guia.label_pdf) {
+      const { label_pdf: _done, ...meta } = guia as any;
+      return serializeBigInts({ ...meta, tiene_pdf: true, pendiente: false });
+    }
+
+    const payload = (guia.payload_response ?? {}) as any;
+    const providerShipmentId = payload.providerShipmentId;
+    if (!providerShipmentId) throw new UnprocessableEntityException('GUIA_SIN_SHIPMENT_ID');
+
+    const carrier = this.selectCarrier();
+    if (!carrier.obtenerGuiaPendiente) {
+      throw new UnprocessableEntityException('El carrier no soporta refrescar guías pendientes.');
+    }
+
+    const result = await carrier.obtenerGuiaPendiente(String(providerShipmentId));
+
+    // Sigue en generación → responder pendiente (sin error) para que el frontend reintente.
+    if (result.pending || !result.labelBuffer) {
+      return serializeBigInts({ id_guia: guia.id_guia, pendiente: true, tiene_pdf: false });
+    }
+
+    const pdfMagic = result.labelBuffer.slice(0, 4).toString('ascii');
+    if (pdfMagic !== '%PDF') {
+      throw new UnprocessableEntityException(
+        `El label recibido del carrier no es un PDF válido (magic bytes: ${pdfMagic}).`,
+      );
+    }
+
+    return serializeBigInts(
+      await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.envio_guias.update({
+          where: { id_guia: guia.id_guia },
+          data: {
+            numero_guia: result.trackingNumber,
+            label_pdf: result.labelBuffer,
+            estado_paqueteria: 'creada',
+            payload_response: {
+              ...payload,
+              trackingNumber: result.trackingNumber,
+              carrierName: result.carrierName ?? payload.carrierName,
+              pending: false,
+            } as any,
+          },
+        });
+        await tx.envios.update({
+          where: { id_envio: envio.id_envio },
+          data: { numero_rastreo: result.trackingNumber, estado: 'label_purchased' },
+        });
+        const { label_pdf: _, ...meta } = updated as any;
+        return { ...meta, tiene_pdf: true, pendiente: false };
       }),
     );
   }
@@ -972,13 +1072,15 @@ export class EnviosService {
 
     if (pedidoProds.length === 0) return [];
 
-    const results: any[] = [];
-
-    for (const pp of pedidoProds) {
+    // Cada productor genera un envío + guía (API de paquetería) de forma
+    // independiente. Se procesan en paralelo con allSettled-equivalente (cada
+    // iteración captura su propio error y devuelve un resultado) en vez de serie,
+    // reduciendo la latencia de O(n × latencia_API) a ~max(latencia_API).
+    const results: any[] = await Promise.all(
+      pedidoProds.map(async (pp) => {
       if (pp.id_envio) {
         this.logger.log(`[envios] Productor ${pp.id_productor} en pedido ${id_pedido} ya tiene envío #${pp.id_envio}, omitiendo`);
-        results.push({ id_productor: pp.id_productor, skipped: true, id_envio: Number(pp.id_envio) });
-        continue;
+        return { id_productor: pp.id_productor, skipped: true, id_envio: Number(pp.id_envio) };
       }
 
       try {
@@ -1032,18 +1134,19 @@ export class EnviosService {
         const guiaResult = await this.crearGuia(String(envio.id_envio));
 
         this.logger.log(`[envios] Guía creada: productor=${pp.id_productor} pedido=${id_pedido} envio=${envio.id_envio}`);
-        results.push({
+        return {
           id_productor: pp.id_productor,
           id_envio: Number(envio.id_envio),
           guia: guiaResult,
-        });
+        };
       } catch (err: any) {
         this.logger.error(
           `[envios] Error creando guía: productor=${pp.id_productor} pedido=${id_pedido}: ${err?.message}`,
         );
-        results.push({ id_productor: pp.id_productor, error: err?.message });
+        return { id_productor: pp.id_productor, error: err?.message };
       }
-    }
+      }),
+    );
 
     return results;
   }

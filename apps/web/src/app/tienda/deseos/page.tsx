@@ -55,7 +55,7 @@ export default function WishlistPage() {
                   alt={item.producto.nombre}
                   fill
                   sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover transition-transform duration-300 hover:scale-105"
+                  className="object-contain transition-transform duration-300 hover:scale-105"
                 />
               ) : item.producto.imagen_principal_url ? (
                 <Image
@@ -63,7 +63,7 @@ export default function WishlistPage() {
                   alt={item.producto.nombre}
                   fill
                   sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover transition-transform duration-300 hover:scale-105"
+                  className="object-contain transition-transform duration-300 hover:scale-105"
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-gray-400">

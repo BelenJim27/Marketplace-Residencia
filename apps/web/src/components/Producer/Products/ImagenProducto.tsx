@@ -55,7 +55,7 @@ export function ProductoThumbnail({ src, alt }: { src?: string | null; alt: stri
     return <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">Sin img</div>;
   }
 
-  return <img src={getImagenProductoUrl(src)} alt={alt} className="h-10 w-10 rounded-lg object-cover" />;
+  return <img src={getImagenProductoUrl(src)} alt={alt} className="h-10 w-10 rounded-lg bg-gray-50 object-contain" />;
 }
 
 export function ImagenProducto({
@@ -76,7 +76,7 @@ export function ImagenProducto({
       <span className="mb-2 block text-sm font-medium text-dark dark:text-white">{label}</span>
       <div className="flex items-center gap-4">
         {imagen.preview ? (
-          <img src={getImagenProductoUrl(imagen.preview)} alt="Vista previa" className="h-16 w-16 rounded-lg object-cover" />
+          <img src={getImagenProductoUrl(imagen.preview)} alt="Vista previa" className="h-16 w-16 rounded-lg bg-gray-50 object-contain" />
         ) : (
           <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">Sin img</div>
         )}

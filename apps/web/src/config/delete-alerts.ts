@@ -170,4 +170,27 @@ export const DELETE_ALERT_CONFIG: Record<string, DeleteAlertConfig> = {
     confirmText: "Sí, eliminar",
     cancelText: "Cancelar",
   },
+
+  // ── CLIENTE / TIENDA ────────────────────────────────────────────────────
+
+  direccion: {
+    titulo: "¿Eliminar dirección?",
+    mensaje: (nombre) =>
+      nombre
+        ? `¿Estás seguro de que deseas eliminar la dirección "${nombre}"?`
+        : "¿Estás seguro de que deseas eliminar esta dirección?",
+    advertencia: "Esta acción no se puede deshacer.",
+    confirmText: "Sí, eliminar",
+    cancelText: "Cancelar",
+  },
+
+  carrito_item: {
+    titulo: "¿Quitar producto del carrito?",
+    mensaje: (nombre) =>
+      nombre
+        ? `¿Deseas quitar "${nombre}" de tu carrito?`
+        : "¿Deseas quitar este producto de tu carrito?",
+    confirmText: "Sí, quitar",
+    cancelText: "Cancelar",
+  },
 };

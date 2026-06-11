@@ -20,7 +20,8 @@ const REGIONES = [
 // 2106.90 = Preparaciones alimenticias diversas
 // 3304.99 = Preparaciones de belleza y cosméticos
 const CATEGORIAS = [
-  { nombre: 'Mezcal', slug: 'mezcal', descripcion: 'Bebidas destiladas de agave', tipo: 'producto', codigo_hs_default: '2208.90' },
+  // HS completo (10 díg.) — SkydropX rechaza los de 6 díg. ("2208.90"/"220890") con "No existe el código harmonizado".
+  { nombre: 'Mezcal', slug: 'mezcal', descripcion: 'Bebidas destiladas de agave', tipo: 'producto', codigo_hs_default: '2208.907200' },
   { nombre: 'Artesanía', slug: 'artesania', descripcion: 'Artículos artesanales', tipo: 'producto', codigo_hs_default: '6304.99' },
   { nombre: 'Alimentación', slug: 'alimentacion', descripcion: 'Productos alimenticios', tipo: 'producto', codigo_hs_default: '2106.90' },
   { nombre: 'Cosméticos', slug: 'cosmeticos', descripcion: 'Productos de belleza', tipo: 'producto', codigo_hs_default: '3304.99' },

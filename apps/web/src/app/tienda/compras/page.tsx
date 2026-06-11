@@ -87,9 +87,9 @@ function ProductCollage({ items }: { items: DetallePedido[] }) {
     return (
       <div style={{
         position: "relative", width: "68px", height: "56px", flexShrink: 0,
-        borderRadius: "10px", overflow: "hidden", border: `1px solid ${C.border}`,
+        borderRadius: "10px", overflow: "hidden", background: C.cream, border: `1px solid ${C.border}`,
       }}>
-        <Image src={imgs[0]} alt="" fill sizes="68px" className="object-cover" />
+        <Image src={imgs[0]} alt="" fill sizes="68px" className="object-contain" />
       </div>
     );
   }
@@ -114,10 +114,11 @@ function ProductCollage({ items }: { items: DetallePedido[] }) {
             overflow: "hidden",
             border: `2px solid ${C.white}`,
             boxShadow: "0 1px 4px rgba(0,0,0,0.13)",
+            background: C.cream,
             zIndex: i,
           }}
         >
-          <Image src={url} alt="" fill sizes={`${imgW}px`} className="object-cover" />
+          <Image src={url} alt="" fill sizes={`${imgW}px`} className="object-contain" />
         </div>
       ))}
     </div>
