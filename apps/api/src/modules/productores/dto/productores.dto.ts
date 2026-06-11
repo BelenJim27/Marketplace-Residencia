@@ -9,6 +9,16 @@ export class CreateProductorDto {
 
 export class UpdateProductorDto extends PartialType(CreateProductorDto) {}
 
+export class AdminUpdateProductorDto {
+  @IsOptional() @IsString() @MaxLength(100) nombre?: string;
+  @IsOptional() @IsString() @MaxLength(100) apellido_paterno?: string;
+  @IsOptional() @IsString() @MaxLength(100) apellido_materno?: string;
+  @IsOptional() @IsInt() @Type(() => Number) id_region?: number;
+  @IsOptional() @IsString() @MaxLength(20) status?: string; // activa | pausada | inactiva
+  @IsOptional() @IsString() biografia?: string;
+  @IsOptional() @IsString() @MaxLength(255) otras_caracteristicas?: string;
+}
+
 export class DireccionFiscalDto {
   @IsOptional() @IsString() @MaxLength(200) linea_1?: string;
   @IsOptional() @IsString() @MaxLength(200) linea_2?: string;

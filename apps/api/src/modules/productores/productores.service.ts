@@ -9,6 +9,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { serializeBigInts } from "../shared/serialize";
 import {
+  AdminUpdateProductorDto,
   CreateProductorDto,
   CreateRegionDto,
   RevisarSolicitudDto,
@@ -142,6 +143,47 @@ export class ProductoresService {
       await this.prisma.productores.update({
         where: { id_productor },
         data: { eliminado_en: new Date() },
+      }),
+    );
+  }
+
+  // Edición completa desde el panel admin: toca usuarios (nombre/apellidos/foto),
+  // tiendas (status) y productores (region/bio/otras_caracteristicas) en una sola
+  // transacción.
+  async adminUpdate(
+    id_productor: number,
+    dto: AdminUpdateProductorDto,
+    fotoFilename?: string,
+  ) {
+    const productor = await this.prisma.productores.findUnique({
+      where: { id_productor },
+    });
+    if (!productor || productor.eliminado_en)
+      throw new NotFoundException("Productor no encontrado");
+
+    return serializeBigInts(
+      await this.prisma.$transaction(async (tx) => {
+        const usuarioData: Record<string, unknown> = {};
+        if (dto.nombre !== undefined) usuarioData.nombre = dto.nombre;
+        if (dto.apellido_paterno !== undefined) usuarioData.apellido_paterno = dto.apellido_paterno;
+        if (dto.apellido_materno !== undefined) usuarioData.apellido_materno = dto.apellido_materno;
+        if (fotoFilename) usuarioData.foto_url = `/uploads/productores/${fotoFilename}`;
+        if (Object.keys(usuarioData).length)
+          await tx.usuarios.update({ where: { id_usuario: productor.id_usuario }, data: usuarioData });
+
+        if (dto.status)
+          await tx.tiendas.updateMany({ where: { id_productor }, data: { status: dto.status } });
+
+        const productorData: Record<string, unknown> = {};
+        if (dto.id_region !== undefined) productorData.id_region = dto.id_region;
+        if (dto.biografia !== undefined) productorData.biografia = dto.biografia;
+        if (dto.otras_caracteristicas !== undefined) productorData.otras_caracteristicas = dto.otras_caracteristicas;
+
+        return tx.productores.update({
+          where: { id_productor },
+          data: productorData,
+          include: { usuarios: true, regiones: true, lotes: true, tiendas: true },
+        });
       }),
     );
   }

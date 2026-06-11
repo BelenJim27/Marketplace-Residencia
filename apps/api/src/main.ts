@@ -3,6 +3,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { join, resolve } from 'path';
 import { SanitizeBodyInterceptor } from './common/interceptors/sanitize.interceptor';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { static as expressStatic } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -41,6 +42,7 @@ async function bootstrap() {
   });
 
   app.useGlobalInterceptors(new SanitizeBodyInterceptor());
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   app.useGlobalPipes(
     new ValidationPipe({

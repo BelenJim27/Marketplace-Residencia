@@ -9,6 +9,7 @@ import { LocaleProvider } from "@/context/LocaleContext"; // ← agrega este imp
 import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
+import { AlertConfirmHost } from "@/shared/alerts";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -22,6 +23,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                   <LocaleProvider> {/* ← agrega este */}
                     {children}
                     <Toaster position="top-right" richColors closeButton />
+                    <AlertConfirmHost />
                   </LocaleProvider> {/* ← y este */}
                 </SidebarProvider>
               </ConfigProvider>

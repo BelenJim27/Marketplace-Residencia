@@ -37,7 +37,13 @@ export class CarritoController {
 
   @UseGuards(AuthGuard)
   @Post()
-  create(@Body() dto: CreateCarritoItemDto) {
+  create(@Body() dto: CreateCarritoItemDto, @Req() req: any) {
+    // Anclar al usuario del token: un no-admin siempre escribe en su propio
+    // carrito (cierra BOLA y corrige desajustes cuando la cookie de cliente está
+    // desfasada). Un admin sin id_usuario explícito usa el suyo.
+    if (!isAdmin(req.user) || !dto.id_usuario) {
+      dto.id_usuario = req.user.id_usuario;
+    }
     return this.service.create(dto);
   }
 
@@ -47,12 +53,22 @@ export class CarritoController {
     return this.service.update(id, dto);
   }
 
+  // Vacía el carrito del usuario autenticado (derivado del token). El cliente no
+  // envía ningún id, evitando desajustes con la cookie `usuario`.
+  @UseGuards(AuthGuard)
+  @Delete('mi-carrito')
+  clearMine(@Req() req: any) {
+    return this.service.clearByUser(req.user.id_usuario);
+  }
+
   @UseGuards(AuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
 
+  // Solo admin: vaciar el carrito de un usuario arbitrario. Los no-admin usan
+  // `DELETE /carrito/mi-carrito` (clearMine).
   @UseGuards(AuthGuard)
   @Delete('usuario/:id_usuario')
   clearByUser(@Param('id_usuario', ParseUUIDPipe) id_usuario: string, @Req() req: any) {

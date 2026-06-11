@@ -1,9 +1,20 @@
-import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  STRONG_PASSWORD_MESSAGE,
+  STRONG_PASSWORD_REGEX,
+  USERNAME_MESSAGE,
+  USERNAME_REGEX,
+} from './password.validator';
+
+const normalizeEmail = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.toLowerCase().trim() : value;
 
 export class RegisterAuthDto {
   @IsString()
   @MinLength(2)
   @MaxLength(50)
+  @Matches(USERNAME_REGEX, { message: USERNAME_MESSAGE })
   nombre_usuario!: string;
 
   @IsString()
@@ -11,6 +22,7 @@ export class RegisterAuthDto {
   @MaxLength(100)
   nombre!: string;
 
+  @Transform(normalizeEmail)
   @IsEmail()
   @MaxLength(255)
   email!: string;
@@ -18,6 +30,7 @@ export class RegisterAuthDto {
   @IsString()
   @MinLength(8)
   @MaxLength(128)
+  @Matches(STRONG_PASSWORD_REGEX, { message: STRONG_PASSWORD_MESSAGE })
   password!: string;
 
   @IsOptional()
@@ -57,6 +70,7 @@ export class RegisterAuthDto {
 }
 
 export class LoginAuthDto {
+  @Transform(normalizeEmail)
   @IsEmail()
   @MaxLength(255)
   email!: string;
@@ -78,6 +92,7 @@ export class LogoutAuthDto {
 }
 
 export class RequestPasswordResetDto {
+  @Transform(normalizeEmail)
   @IsEmail()
   @MaxLength(255)
   email!: string;
@@ -90,6 +105,7 @@ export class ResetPasswordDto {
   @IsString()
   @MinLength(8)
   @MaxLength(128)
+  @Matches(STRONG_PASSWORD_REGEX, { message: STRONG_PASSWORD_MESSAGE })
   password!: string;
 }
 

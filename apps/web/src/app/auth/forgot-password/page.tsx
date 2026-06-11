@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { api } from "@/lib/api";
 import { PasswordIcon } from "@/assets/icons";
 import InputGroup from "@/components/FormElements/InputGroup";
+import { isValidEmail } from "@/shared/validation/auth";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -20,6 +21,12 @@ export default function ForgotPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!isValidEmail(email)) {
+      setError("Ingresa un correo electrónico válido");
+      return;
+    }
+
     setLoading(true);
 
     try {

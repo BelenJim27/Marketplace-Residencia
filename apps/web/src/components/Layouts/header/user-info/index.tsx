@@ -8,11 +8,12 @@ import {
 } from "@/components/ui/dropdown";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useState } from "react";
-import { LogOutIcon, SettingsIcon, UserIcon } from "./icons";
+import { useEffect, useState } from "react";
+import { LogOutIcon, UserIcon } from "./icons";
 import { useAuth } from "@/context/AuthContext";
 import { useSession } from "next-auth/react";
-import { MapPin } from "lucide-react";
+import { useTheme } from "next-themes";
+import { MapPin, Moon, Sun } from "lucide-react";
 
 /* ─── Role badges ─────────────────────────────────────────────────────────── */
 const ROLE_LABELS: Record<string, { label: string; subtitle: string; className: string }> = {
@@ -74,6 +75,10 @@ export function UserInfo({ whiteText = false }: { whiteText?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const { user: contextUser, logout } = useAuth();
   const { data: session } = useSession();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = theme === "dark";
 
   /* ── datos del usuario ── */
   const rawName =
@@ -192,6 +197,19 @@ export function UserInfo({ whiteText = false }: { whiteText?: boolean }) {
             <span className="mr-auto text-base font-medium">Ver perfil</span>
           </Link>
 
+          {mounted && (
+            <button
+              type="button"
+              onClick={() => setTheme(isDark ? "light" : "dark")}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
+            >
+              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              <span className="mr-auto text-base font-medium">
+                Tema: {isDark ? "Oscuro" : "Claro"}
+              </span>
+            </button>
+          )}
+
           {!isAdmin && !isProductor && (
             <Link
               href="/cliente/direcciones"
@@ -200,17 +218,6 @@ export function UserInfo({ whiteText = false }: { whiteText?: boolean }) {
             >
               <MapPin className="h-5 w-5" />
               <span className="mr-auto text-base font-medium">Mis Direcciones</span>
-            </Link>
-          )}
-
-          {!isAdmin && !isProductor && (
-            <Link
-              href="/pages/settings"
-              onClick={() => setIsOpen(false)}
-              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
-            >
-              <SettingsIcon />
-              <span className="mr-auto text-base font-medium">Configuración</span>
             </Link>
           )}
         </div>

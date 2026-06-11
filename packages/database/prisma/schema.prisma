@@ -598,6 +598,8 @@ model productos {
   @@index([traducciones], map: "idx_productos_traducciones", type: Gin)
   @@index([id_tienda, status, eliminado_en], map: "idx_productos_tienda_status")
   @@index([id_lote], map: "idx_productos_lote")
+  // Catálogo público: WHERE status='activo' + eliminado_en IS NULL ORDER BY creado_en DESC.
+  @@index([status, eliminado_en, creado_en(sort: Desc)], map: "idx_productos_status_creado")
   // Trigram GIN para búsqueda de catálogo (WHERE nombre/descripcion ILIKE '%term%').
   // Evita el full table scan que provoca `contains` sin índice. Requiere pg_trgm.
   @@index([nombre(ops: raw("gin_trgm_ops"))], map: "idx_productos_nombre_trgm", type: Gin)

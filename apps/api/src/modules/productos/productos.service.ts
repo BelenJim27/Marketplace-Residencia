@@ -1,6 +1,4 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { existsSync } from "fs";
-import { join } from "path";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { serializeBigInts } from "../shared/serialize";
@@ -139,6 +137,15 @@ function getUserIdFromAccessToken(token: string) {
 export class ProductosService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Cache en memoria del catálogo público sin filtros (el caso más frecuente).
+  // Se invalida en create/update/remove o expira por TTL.
+  private static readonly PUBLIC_CATALOG_TTL_MS = 60_000;
+  private publicCatalogCache: { data: unknown; expires: number } | null = null;
+
+  private invalidatePublicCatalogCache() {
+    this.publicCatalogCache = null;
+  }
+
   async findAll(
     token?: string,
     idProductor?: number,
@@ -243,26 +250,48 @@ export class ProductosService {
       );
     }
 
-    // Vista pública: solo productos activos con stock disponible
+    // Vista pública: solo productos activos con stock disponible.
+    // El catálogo por defecto (sin productor, sin búsqueda ni filtros) se cachea
+    // en memoria por un TTL corto para evitar rehacer la query en cada request.
+    const sinFiltros =
+      !idProductor &&
+      !filtros?.busqueda &&
+      !filtros?.tipoMezcal &&
+      !filtros?.maguey &&
+      !filtros?.precioMin &&
+      !filtros?.precioMax &&
+      !filtros?.destilacion &&
+      !filtros?.molienda &&
+      !filtros?.maestroMezcalero;
+    const cacheable = sinFiltros && limit >= 200;
+
+    if (
+      cacheable &&
+      this.publicCatalogCache &&
+      this.publicCatalogCache.expires > Date.now()
+    ) {
+      return this.publicCatalogCache.data;
+    }
+
     const items = await this.prisma.productos.findMany({
       where: {
         ...where,
         status: 'activo',
         inventario: { some: { stock: { gt: 0 } } },
       },
-      include: productoInclude as any,
+      select: productoListSelect as any,
       orderBy: { creado_en: 'desc' },
       take: Math.min(limit, 200),
     });
 
     // Excluir productos sin precio o sin imagen de la vista del cliente
-    const itemsPublicos = items.filter((p) => {
+    const itemsPublicos = items.filter((p: any) => {
       // Precio: Prisma devuelve Decimal, convertir a número con parseFloat
       const precio = parseFloat(String(p.precio_base ?? '0'));
       if (isNaN(precio) || precio <= 0) return false;
 
-      // Imagen: verificar campos directos y tabla relacionada producto_imagenes
-      const urlsDirectas = [p.imagen_principal_url, p.imagen_url].filter(
+      // Imagen: verificar campo directo y tabla relacionada producto_imagenes
+      const urlsDirectas = [p.imagen_principal_url].filter(
         (u): u is string => typeof u === 'string' && u.trim() !== '',
       );
       const urlsRelacionadas: string[] = (p.producto_imagenes ?? [])
@@ -272,22 +301,94 @@ export class ProductosService {
       const todasUrls = [...urlsDirectas, ...urlsRelacionadas];
       if (todasUrls.length === 0) return false;
 
-      // Para rutas locales /uploads/, verificar que el archivo exista en disco
-      const tieneImagenValida = todasUrls.some((url) => {
-        if (url.startsWith('/uploads/')) {
-          return existsSync(join(__dirname, '../../..', url));
-        }
-        // URL externa: asumir válida
-        return true;
-      });
-      if (!tieneImagenValida) return false;
-
       return true;
     });
 
-    return serializeBigInts(
+    const resultado = serializeBigInts(
       mapProductoResponse(applyFiltersToProductos(itemsPublicos)),
     );
+
+    if (cacheable) {
+      this.publicCatalogCache = {
+        data: resultado,
+        expires: Date.now() + ProductosService.PUBLIC_CATALOG_TTL_MS,
+      };
+    }
+
+    return resultado;
+  }
+
+  /**
+   * Alertas de stock calculadas en el servidor (fuente autoritativa).
+   * El productor se resuelve desde el token — nunca se confía en un id externo —
+   * y solo se devuelven productos de sus propias tiendas. Sustituye el cálculo
+   * que antes hacía el frontend para que toda alerta venga verificada del backend.
+   *
+   * Umbral: stock <= stock_minimo del producto (fallback a 10 si no hay mínimo
+   * configurado, conservando el comportamiento histórico).
+   */
+  async getAlertasStock(token?: string) {
+    if (!token) return [];
+
+    const id_usuario = getUserIdFromAccessToken(token);
+    const productor = await this.prisma.productores.findFirst({
+      where: { id_usuario, eliminado_en: null },
+      select: { id_productor: true },
+    });
+    if (!productor) return [];
+
+    const stores = await this.prisma.tiendas.findMany({
+      where: { id_productor: productor.id_productor, eliminado_en: null },
+      select: { id_tienda: true, nombre: true },
+    });
+    if (stores.length === 0) return [];
+
+    const storeMap = new Map(
+      stores.map((s) => [
+        Number(s.id_tienda),
+        s.nombre ?? `Tienda #${Number(s.id_tienda)}`,
+      ]),
+    );
+
+    const productos = await this.prisma.productos.findMany({
+      where: {
+        id_tienda: { in: stores.map((s) => s.id_tienda) },
+        eliminado_en: null,
+      },
+      select: {
+        id_producto: true,
+        nombre: true,
+        id_tienda: true,
+        inventario: { select: { stock: true, stock_minimo: true } },
+      },
+    });
+
+    const alertas = productos
+      .map((p) => {
+        const stock = getProductoStock(p.inventario);
+        const minimo = Number(p.inventario?.[0]?.stock_minimo ?? 0) || 10;
+        if (stock > minimo) return null;
+        const tipo: "sin_existencias" | "stock_bajo" =
+          stock === 0 ? "sin_existencias" : "stock_bajo";
+        return {
+          id: `alert-${Number(p.id_producto)}`,
+          id_producto: Number(p.id_producto),
+          tipo,
+          producto: p.nombre ?? "Producto sin nombre",
+          tienda:
+            storeMap.get(Number(p.id_tienda)) ??
+            `Tienda #${Number(p.id_tienda)}`,
+          stock_actual: stock,
+        };
+      })
+      .filter((a): a is NonNullable<typeof a> => a !== null);
+
+    alertas.sort((a, b) => {
+      if (a.tipo !== b.tipo) return a.tipo === "sin_existencias" ? -1 : 1;
+      return a.producto.localeCompare(b.producto);
+    });
+
+    return alertas;
   }
 
   async findOne(id: string) {
@@ -438,6 +539,7 @@ export class ProductosService {
       },
     });
 
+    this.invalidatePublicCatalogCache();
     return serializeBigInts(producto);
   }
 
@@ -543,6 +645,7 @@ export class ProductosService {
       },
     });
 
+    this.invalidatePublicCatalogCache();
     return serializeBigInts(producto);
   }
 
@@ -569,6 +672,7 @@ export class ProductosService {
       },
     });
 
+    this.invalidatePublicCatalogCache();
     return serializeBigInts(producto);
   }
 
@@ -658,6 +762,7 @@ export class ProductosService {
           }),
         ),
       );
+      this.invalidatePublicCatalogCache();
     }
 
     return {
@@ -751,4 +856,96 @@ const productoInclude = {
       },
     },
   },
+};
+
+// Include aligerado para el listado del catálogo: solo los campos que consumen
+// las tarjetas del catálogo (catalog/Client.tsx), mapProductoResponse y los
+// filtros (applyFiltersToProductos lee lotes.datos_api). Omite biografía del
+// productor, escalares de lote no usados y datos de contacto/origen de tienda.
+const productoListInclude = {
+  inventario: {
+    select: {
+      stock: true,
+      stock_minimo: true,
+    },
+  },
+  producto_imagenes: {
+    select: {
+      url: true,
+      orden: true,
+      es_principal: true,
+    },
+    orderBy: {
+      orden: "asc" as const,
+    },
+  },
+  categorias_productos: {
+    include: {
+      categorias: {
+        select: {
+          id_categoria: true,
+          nombre: true,
+          requiere_edad_minima: true,
+        },
+      },
+    },
+  },
+  lotes: {
+    select: {
+      datos_api: true,
+      botellas_350ml: true,
+      botellas_750ml: true,
+      productores: {
+        select: {
+          usuarios: {
+            select: {
+              nombre: true,
+              apellido_paterno: true,
+              apellido_materno: true,
+            },
+          },
+        },
+      },
+    },
+  },
+  tiendas: {
+    select: {
+      nombre: true,
+      productores: {
+        select: {
+          usuarios: {
+            select: {
+              nombre: true,
+              apellido_paterno: true,
+              apellido_materno: true,
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+// Versión `select` del listado público. A diferencia de `include`, NO trae todas
+// las columnas escalares de `productos`: omite las JSONB pesadas `metadata`
+// (~34 KB/fila, ~190 KB por listado) y `traducciones`, que las tarjetas del
+// catálogo no consumen. Reutiliza los mismos sub-selects de relaciones.
+const productoListSelect = {
+  // Escalares usados por catalog/Client.tsx, mapProductoResponse (itemsPublicos)
+  // y los filtros. metadata y traducciones se omiten a propósito.
+  id_producto: true,
+  id_tienda: true,
+  id_lote: true,
+  nombre: true,
+  descripcion: true,
+  precio_base: true,
+  moneda_base: true,
+  status: true,
+  requiere_edad_minima: true,
+  imagen_principal_url: true,
+  inventario: productoListInclude.inventario,
+  producto_imagenes: productoListInclude.producto_imagenes,
+  categorias_productos: productoListInclude.categorias_productos,
+  lotes: productoListInclude.lotes,
+  tiendas: productoListInclude.tiendas,
 };

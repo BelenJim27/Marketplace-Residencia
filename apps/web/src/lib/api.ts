@@ -25,7 +25,13 @@ export class ApiError extends Error {
   code?: string;
   details: any;
   constructor(status: number, payload: any) {
-    super(payload?.message ?? `Error ${status}`);
+    // NestJS ValidationPipe devuelve `message` como arreglo de strings; lo unimos
+    // en un texto legible para que los toasts no muestren "a,b,c" sin formato.
+    const raw = payload?.message;
+    const message = Array.isArray(raw)
+      ? raw.filter(Boolean).join(" · ")
+      : (raw ?? `Error ${status}`);
+    super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = payload?.code;
@@ -82,31 +88,17 @@ async function fetchJson<T>(
 
   if (response.status === 401) {
     console.warn("🔐 401 detectado, intentando refresh de token...");
+
+    // Paso 1: refrescar el token. Solo un fallo AQUÍ significa sesión expirada.
+    let newAccessToken: string;
     try {
       if (!pendingRefresh) {
         pendingRefresh = refreshAccessToken().finally(() => {
           pendingRefresh = null;
         });
       }
-
-      const newAccessToken = await pendingRefresh;
-      console.warn("✅ Token refrescado, reintentandorequest...");
-
-      const newHeaders = { ...options?.headers } as Record<string, string>;
-      newHeaders["Authorization"] = `Bearer ${newAccessToken}`;
-
-      const retryResponse = await fetch(url, {
-        ...options,
-        headers: newHeaders,
-      });
-      console.warn("📡 Retry response status:", retryResponse.status);
-      if (!retryResponse.ok) {
-        const error = await retryResponse
-          .json()
-          .catch(() => ({ message: "Error desconocido" }));
-        throw new Error(error.message || `Error ${retryResponse.status}`);
-      }
-      return retryResponse.json() as Promise<T>;
+      newAccessToken = await pendingRefresh;
+      console.warn("✅ Token refrescado, reintentando request...");
     } catch (refreshErr) {
       // Limpiar cookies
       console.warn("❌ Refresh falló, limpiando cookies...");
@@ -121,6 +113,33 @@ async function fetchJson<T>(
       window.dispatchEvent(new CustomEvent("auth:session-expired"));
       throw new Error("Sesión expirada. Por favor inicia sesión de nuevo.");
     }
+
+    // Paso 2: reintentar el request original. Un fallo aquí es un error real del
+    // backend (no sesión expirada) → se propaga como ApiError con status/mensaje real.
+    const newHeaders = { ...options?.headers } as Record<string, string>;
+    newHeaders["Authorization"] = `Bearer ${newAccessToken}`;
+
+    let retryResponse: Response;
+    try {
+      retryResponse = await fetch(url, { ...options, headers: newHeaders });
+    } catch (networkError) {
+      if (!options?.silent) {
+        console.error("Network error retrying", url, networkError);
+      }
+      throw new Error(
+        `No se pudo conectar con el servidor. Verifica que la API esté disponible.`,
+      );
+    }
+
+    console.warn("📡 Retry response status:", retryResponse.status);
+    if (!retryResponse.ok) {
+      const error = await retryResponse
+        .json()
+        .catch(() => ({ message: `Error ${retryResponse.status}` }));
+      // ApiError (no Error plano) para preservar status/details del backend.
+      throw new ApiError(retryResponse.status, error);
+    }
+    return retryResponse.json() as Promise<T>;
   }
 
   if (!response.ok) {
@@ -276,8 +295,22 @@ export const api = {
         ),
         { headers: headers(token) },
       ),
+    // Alertas de stock calculadas por el backend (el productor se resuelve del token).
+    getAlertasStock: (token?: string) =>
+      fetchJson<
+        Array<{
+          id: string;
+          id_producto: number;
+          tipo: "sin_existencias" | "stock_bajo";
+          producto: string;
+          tienda: string;
+          stock_actual: number;
+        }>
+      >(endpoint("/productos/alertas-stock"), { headers: headers(token) }),
     getOne: (id: string) =>
-      fetchJson<ProductItem>(endpoint(`/productos/${id}`)),
+      fetchJson<ProductItem>(endpoint(`/productos/${id}`), {
+        next: { revalidate: 300 },
+      }),
     create: (token: string, data: any) =>
       fetchJson<ProductItem>(endpoint("/productos"), {
         method: "POST",
@@ -384,6 +417,13 @@ export const api = {
         method: "PATCH",
         headers: headers(token),
         body: JSON.stringify(data),
+      }),
+    // Edición completa desde el panel admin (multipart, incluye foto).
+    adminUpdate: (token: string, id: number, formData: FormData) =>
+      fetchJson(endpoint(`/productores/${id}/admin`), {
+        method: "PATCH",
+        headers: headers(token, true),
+        body: formData,
       }),
     delete: (token: string, id: number) =>
       fetchJson(endpoint(`/productores/${id}`), {
@@ -857,6 +897,12 @@ export const api = {
       }),
     deleteByUsuario: (token: string, usuarioId: string) =>
       fetchJson(endpoint(`/carrito/usuario/${usuarioId}`), {
+        method: "DELETE",
+        headers: headers(token),
+      }),
+    // Vacía el carrito del usuario autenticado (id derivado del token en backend).
+    deleteMine: (token: string) =>
+      fetchJson(endpoint("/carrito/mi-carrito"), {
         method: "DELETE",
         headers: headers(token),
       }),

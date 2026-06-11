@@ -21,7 +21,7 @@ export class StripeShippingAddressDto {
   @IsString() line1!: string;
   @IsOptional() @IsString() line2?: string;
   @IsString() city!: string;
-  @IsString() @MaxLength(10) state!: string;
+  @IsString() @MaxLength(100) state!: string;
   @IsString() @MaxLength(20) postal_code!: string;
   @IsString() @Length(2, 2) country!: string;
 }

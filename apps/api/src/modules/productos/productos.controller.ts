@@ -61,6 +61,15 @@ export class ProductosController {
     return this.service.assignLotesMatching();
   }
 
+  // Alertas de stock del productor autenticado (calculadas en el backend).
+  // Debe ir antes de @Get(':id') para que la ruta dinámica no la capture.
+  @Get('alertas-stock')
+  @UseGuards(AuthGuard)
+  getAlertasStock(@Headers('authorization') authorization?: string) {
+    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined;
+    return this.service.getAlertasStock(token);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
