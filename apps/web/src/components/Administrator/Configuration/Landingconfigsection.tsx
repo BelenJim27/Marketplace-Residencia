@@ -250,7 +250,10 @@ export default function LandingConfigSection() {
   useEffect(() => {
     const cargar = async () => {
       try {
-        const res = await fetch(`${API_URL}/configuracion/sistema/mapa`);
+        const t = getCookie("token");
+        const res = await fetch(`${API_URL}/configuracion/sistema/mapa`, {
+          headers: t ? { Authorization: `Bearer ${t}` } : {},
+        });
         if (!res.ok) throw new Error("Error al cargar");
         const data: Record<string, string> = await res.json();
         setFormData((prev) => {

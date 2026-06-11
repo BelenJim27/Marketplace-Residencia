@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Pencil, Trash2, Loader2, Package, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Eye, Pencil, Trash2, Loader2, Package, ChevronLeft, ChevronRight, Search, X, FilterX } from "lucide-react";
 import { api } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
 import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 import { SuccessToast } from "@/components/ui/SuccessToast";
 
 const PAGE_SIZE = 10;
+
+const ESTADOS = ["pendiente", "confirmado", "preparando", "enviado", "entregado", "cancelado"] as const;
 
 interface Productor {
   id_productor: number;
@@ -76,14 +79,262 @@ function productorLabel(p: Productor): string {
   return marca ? `${marca}${nombre ? ` (${nombre})` : ""}` : nombre || `Productor #${p.id_productor}`;
 }
 
+// ── Modal de detalle ──────────────────────────────────────────────────────────
+function ViewModal({ pedido, productoresMap, onClose }: {
+  pedido: Pedido;
+  productoresMap: Map<number, Productor>;
+  onClose: () => void;
+}) {
+  const productoresEnPedido = [
+    ...new Set(
+      (pedido.detalle_pedido ?? [])
+        .map((d) => d.id_productor)
+        .filter((id): id is number => id != null),
+    ),
+  ]
+    .map((id) => productoresMap.get(id))
+    .filter((p): p is Productor => p !== undefined);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl w-full max-w-md shadow-[0_24px_48px_rgba(31,58,46,0.25)] overflow-hidden border border-[#C5CFB0]"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 bg-[#1F3A2E]">
+          <div>
+            <h2 className="text-xl font-extrabold text-white [font-family:'Playfair_Display',serif]">
+              Detalles del Pedido
+            </h2>
+            <p className="text-xs text-white/60">ID: #{pedido.id_pedido}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-white/10 rounded-full transition-all duration-200"
+          >
+            <X className="w-5 h-5 text-white/70" />
+          </button>
+        </div>
+
+        {/* Contenido */}
+        <div className="p-6 space-y-4">
+          {/* Cliente */}
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-[#1F3A2E]">Cliente</label>
+            <input
+              type="text"
+              value={pedido.usuarios?.nombre || "—"}
+              disabled
+              className="w-full px-4 py-2 text-sm bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl text-[#1F3A2E] opacity-70"
+            />
+          </div>
+
+          {/* Email */}
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-[#1F3A2E]">Email</label>
+            <input
+              type="text"
+              value={pedido.usuarios?.email || "—"}
+              disabled
+              className="w-full px-4 py-2 text-sm bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl text-[#1F3A2E] opacity-70"
+            />
+          </div>
+
+          {/* Fecha + Total */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-[#1F3A2E]">Fecha</label>
+              <input
+                type="text"
+                value={pedido.fecha_creacion ? formatDate(pedido.fecha_creacion) : "—"}
+                disabled
+                className="w-full px-4 py-2 text-sm bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl text-[#1F3A2E] opacity-70"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-[#1F3A2E]">Total</label>
+              <input
+                type="text"
+                value={formatTotal(pedido.total)}
+                disabled
+                className="w-full px-4 py-2 text-sm bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl text-[#1F3A2E] opacity-70 font-semibold"
+              />
+            </div>
+          </div>
+
+          {/* Estado */}
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-[#1F3A2E]">Estado</label>
+            <div className="flex items-center px-4 py-2 bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl">
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase ${STATUS_STYLES[pedido.estado] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                {pedido.estado}
+              </span>
+            </div>
+          </div>
+
+          {/* Productores */}
+          {productoresEnPedido.length > 0 && (
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-[#1F3A2E]">Productor(es)</label>
+              <div className="flex flex-wrap gap-1.5 px-4 py-2.5 bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl min-h-[38px]">
+                {productoresEnPedido.map((pr) => (
+                  <span
+                    key={pr.id_productor}
+                    className="inline-flex rounded-full bg-[#3D6B3F]/10 px-2.5 py-0.5 text-xs font-medium text-[#3D6B3F]"
+                  >
+                    {productorLabel(pr)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="flex gap-3 pt-4 border-t border-[#C5CFB0]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 bg-[#F4F0E3] text-[#1F3A2E] text-sm font-medium rounded-xl border border-[#C5CFB0] hover:bg-[#C5CFB0]/30 transition-all duration-200"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Modal de edición ──────────────────────────────────────────────────────────
+function EditModal({ pedido, token, onClose, onSaved }: {
+  pedido: Pedido;
+  token: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [estado, setEstado] = useState(pedido.estado);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr]       = useState<string | null>(null);
+
+  const handleSave = async () => {
+    if (estado === pedido.estado) { onClose(); return; }
+    try {
+      setSaving(true);
+      setErr(null);
+      await api.pedidos.update(token, String(pedido.id_pedido), { estado });
+      onSaved();
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Error al actualizar");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl w-full max-w-md shadow-[0_24px_48px_rgba(31,58,46,0.25)] overflow-hidden border border-[#C5CFB0]"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 bg-[#1F3A2E]">
+          <div>
+            <h2 className="text-xl font-extrabold text-white [font-family:'Playfair_Display',serif]">
+              Editar Pedido
+            </h2>
+            <p className="text-xs text-white/60">ID: #{pedido.id_pedido}</p>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="p-2 hover:bg-white/10 rounded-full transition-all duration-200 disabled:opacity-50"
+          >
+            <X className="w-5 h-5 text-white/70" />
+          </button>
+        </div>
+
+        {/* Contenido */}
+        <div className="p-6 space-y-4">
+          {/* Cliente (solo lectura) */}
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-[#1F3A2E]">Cliente</label>
+            <input
+              type="text"
+              value={pedido.usuarios?.nombre || "—"}
+              disabled
+              className="w-full px-4 py-2 text-sm bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl text-[#1F3A2E] opacity-60"
+            />
+          </div>
+
+          {/* Estado (editable) */}
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-[#1F3A2E]">Estado del pedido</label>
+            <select
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              className="w-full px-4 py-3 text-base bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl text-[#1F3A2E] outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent transition-all"
+            >
+              {ESTADOS.map((s) => (
+                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+
+          {err && (
+            <p className="text-sm text-red-600">{err}</p>
+          )}
+
+          {/* Footer */}
+          <div className="flex gap-3 pt-4 border-t border-[#C5CFB0]">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="flex-1 py-3 bg-[#F4F0E3] text-[#1F3A2E] text-sm font-medium rounded-xl border border-[#C5CFB0] hover:bg-[#C5CFB0]/30 transition-all duration-200 disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 py-3 bg-[#3D6B3F] text-white text-sm font-medium rounded-xl hover:bg-[#1F3A2E] disabled:opacity-50 transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              {saving && <Loader2 size={15} className="animate-spin" />}
+              {saving ? "Guardando..." : "Guardar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
 export default function Pedidos() {
-  const [pedidos, setPedidos]             = useState<Pedido[]>([]);
+  const token = getCookie("token") ?? "";
+
+  const [pedidos, setPedidos]               = useState<Pedido[]>([]);
   const [productoresMap, setProductoresMap] = useState<Map<number, Productor>>(new Map());
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState<string | null>(null);
-  const [searchTerm, setSearchTerm]       = useState("");
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState<string | null>(null);
+  const [searchTerm, setSearchTerm]         = useState("");
   const [productorFilter, setProductorFilter] = useState<string>("");
-  const [page, setPage]                   = useState(1);
+  const [page, setPage]                     = useState(1);
+  const [viewPedido, setViewPedido]         = useState<Pedido | null>(null);
+  const [editPedido, setEditPedido]         = useState<Pedido | null>(null);
 
   const deleteAlert  = useDeleteAlert("pedido");
   const successToast = useSuccessToast("pedido");
@@ -110,7 +361,7 @@ export default function Pedidos() {
       }
       setProductoresMap(map);
     } catch {
-      // silencioso: el filtro queda vacío pero los pedidos sí cargan
+      // silencioso
     }
   };
 
@@ -119,20 +370,14 @@ export default function Pedidos() {
     fetchProductores();
   }, []);
 
-  // Productores únicos que aparecen en algún pedido, cruzados con el mapa cargado
-  const productores = useMemo(() => {
-    const ids = new Set<number>();
-    for (const p of pedidos) {
-      for (const d of p.detalle_pedido ?? []) {
-        const id = Number(d.id_productor);
-        if (!isNaN(id)) ids.add(id);
-      }
-    }
-    return [...ids]
-      .map((id) => productoresMap.get(id))
-      .filter((p): p is Productor => p !== undefined)
-      .sort((a, b) => productorLabel(a).localeCompare(productorLabel(b)));
-  }, [pedidos, productoresMap]);
+  // Todos los productores registrados (no solo los que aparecen en pedidos)
+  const productores = useMemo(
+    () =>
+      [...productoresMap.values()].sort((a, b) =>
+        productorLabel(a).localeCompare(productorLabel(b)),
+      ),
+    [productoresMap],
+  );
 
   const filtered = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -152,8 +397,13 @@ export default function Pedidos() {
     });
   }, [pedidos, searchTerm, productorFilter]);
 
-  // Reset a página 1 cuando cambian los filtros
   const resetPage = () => setPage(1);
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setProductorFilter("");
+    setPage(1);
+  };
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = useMemo(
@@ -172,7 +422,7 @@ export default function Pedidos() {
   const handleDelete = (pedido: Pedido) => {
     const nombre = `#${pedido.id_pedido}${pedido.usuarios?.nombre ? ` — ${pedido.usuarios.nombre}` : ""}`;
     deleteAlert.abrir(nombre, async () => {
-      await fetch(`/pedidos/${pedido.id_pedido}`, { method: "DELETE" });
+      await api.pedidos.delete(token ?? "", String(pedido.id_pedido));
       await fetchPedidos();
       successToast.mostrar("Pedido eliminado correctamente.");
     });
@@ -220,16 +470,13 @@ export default function Pedidos() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#1F3A2E] tracking-tight [font-family:'Playfair_Display',serif]">
-            Gestión de Pedidos
-          </h1>
-          <p className="text-[#3D6B3F]/70 text-sm mt-0.5">
-            Administra y gestiona las órdenes de compra de mezcal
-          </p>
-        </div>
-        <span className="text-sm text-[#3D6B3F]/70">{filtered.length} pedidos</span>
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-[#1F3A2E] tracking-tight [font-family:'Playfair_Display',serif]">
+          Gestión de Pedidos
+        </h1>
+        <p className="text-[#3D6B3F]/70 text-sm mt-0.5">
+          Administra y gestiona las órdenes de compra de mezcal
+        </p>
       </div>
 
       {/* Stats */}
@@ -276,6 +523,15 @@ export default function Pedidos() {
             ))}
           </select>
 
+          {/* Limpiar filtros */}
+          <button
+            onClick={clearFilters}
+            className="flex items-center gap-1.5 bg-white text-[#C97A3E] text-sm font-medium px-4 py-2.5 rounded-xl border border-[#C97A3E]/30 hover:bg-[#C97A3E]/10 transition-all duration-200"
+          >
+            <FilterX size={15} />
+            Limpiar filtros
+          </button>
+
           <button
             onClick={handleExportCSV}
             className="bg-[#F4F0E3] text-[#1F3A2E] text-sm font-medium px-4 py-2.5 rounded-xl border border-[#C5CFB0] hover:bg-[#C5CFB0]/30 transition-all duration-200"
@@ -308,7 +564,6 @@ export default function Pedidos() {
                 </tr>
               ) : (
                 paginated.map((pedido) => {
-                  // Productores únicos en este pedido, resueltos desde el mapa
                   const productoresEnPedido = [
                     ...new Set(
                       (pedido.detalle_pedido ?? [])
@@ -363,13 +618,25 @@ export default function Pedidos() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end items-center gap-1">
-                          <button className="p-1.5 text-[#3D6B3F]/50 hover:text-[#3D6B3F] hover:bg-[#A8C26B]/20 rounded-lg transition-all duration-200">
+                          <button
+                            onClick={() => setViewPedido(pedido)}
+                            title="Ver detalle"
+                            className="p-1.5 text-[#3D6B3F]/50 hover:text-[#3D6B3F] hover:bg-[#A8C26B]/20 rounded-lg transition-all duration-200"
+                          >
                             <Eye size={16} />
                           </button>
-                          <button className="p-1.5 text-[#3D6B3F]/50 hover:text-[#C97A3E] hover:bg-[#C97A3E]/10 rounded-lg transition-all duration-200">
+                          <button
+                            onClick={() => setEditPedido(pedido)}
+                            title="Editar estado"
+                            className="p-1.5 text-[#3D6B3F]/50 hover:text-[#C97A3E] hover:bg-[#C97A3E]/10 rounded-lg transition-all duration-200"
+                          >
                             <Pencil size={16} />
                           </button>
-                          <button onClick={() => handleDelete(pedido)} className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200">
+                          <button
+                            onClick={() => handleDelete(pedido)}
+                            title="Eliminar"
+                            className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                          >
                             <Trash2 size={16} />
                           </button>
                         </div>
@@ -412,6 +679,23 @@ export default function Pedidos() {
           </div>
         )}
       </div>
+
+      {/* Modales */}
+      {viewPedido && (
+        <ViewModal
+          pedido={viewPedido}
+          productoresMap={productoresMap}
+          onClose={() => setViewPedido(null)}
+        />
+      )}
+      {editPedido && (
+        <EditModal
+          pedido={editPedido}
+          token={token}
+          onClose={() => setEditPedido(null)}
+          onSaved={fetchPedidos}
+        />
+      )}
 
       <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
       <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
