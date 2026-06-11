@@ -260,15 +260,20 @@ function DetalleModal({
     setSuccess(null);
     try {
       const token = getCookie("token") || "";
-      await fetch(`/pedidos/productor/${orden.id_pedido}/${idProductor}/estado`, {
+      const res = await fetch(`/pedidos/productor/${orden.id_pedido}/${idProductor}/estado`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ estado: nuevoEstado }),
-      }).then((r) => r.json());
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = Array.isArray(data?.message) ? data.message.join(" · ") : data?.message;
+        throw new Error(msg || `Error ${res.status}`);
+      }
       setSuccess("Estado actualizado correctamente");
       setOrden({ ...orden, estado_productor: nuevoEstado });
-    } catch {
-      setError("Error al actualizar el estado");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al actualizar el estado");
     } finally {
       setSaving(false);
     }
@@ -418,14 +423,19 @@ function DetalleModal({
     setSuccess(null);
     try {
       const token = getCookie("token") || "";
-      await fetch(`/pedidos/productor/${orden.id_pedido}/${idProductor}/tracking`, {
+      const res = await fetch(`/pedidos/productor/${orden.id_pedido}/${idProductor}/tracking`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ numero_rastreo: numeroRastreo }),
-      }).then((r) => r.json());
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = Array.isArray(data?.message) ? data.message.join(" · ") : data?.message;
+        throw new Error(msg || `Error ${res.status}`);
+      }
       setSuccess("Número de rastreo guardado correctamente");
-    } catch {
-      setError("Error al guardar el número de rastreo");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al guardar el número de rastreo");
     } finally {
       setSaving(false);
     }

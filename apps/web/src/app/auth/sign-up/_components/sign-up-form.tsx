@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import GoogleSigninButton from "@/components/Administrator/Auth/GoogleSigninButton";
 import { useAuth } from "@/context/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
+import { getPasswordChecks, isValidEmail, isValidUsername } from "@/shared/validation/auth";
 
 export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVenderFlow?: boolean; onSuccess?: () => void } = {}) {
   const router = useRouter();
@@ -36,35 +37,11 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
     confirmarPassword: "",
   });
 
-  // --- Validaciones de Password ---
-  const passwordValidations = useMemo(() => {
-    const p = formData.password;
-    const userPart = formData.email.split("@")[0].toLowerCase();
-
-    return [
-      { label: "De 1 a 8 caracteres", fulfilled: p.length >= 1 && p.length >= 8 },
-      { label: "Una letra mayúscula", fulfilled: /[A-Z]/.test(p) },
-      { label: "Un símbolo especial", fulfilled: /[!@#$%^&*(),.?":{}|<>_]/.test(p) },
-      { label: "Un número", fulfilled: /\d/.test(p) },
-      {
-        label: "Sin números consecutivos (ej. 12)",
-        fulfilled:
-          p.length > 0 &&
-          !p.split("").some((char, i) => {
-            const next = p[i + 1];
-            return (
-              /\d/.test(char) &&
-              /\d/.test(next) &&
-              Number(next) === Number(char) + 1
-            );
-          }),
-      },
-      {
-        label: "No debe contener tu usuario",
-        fulfilled: userPart.length > 0 ? !p.toLowerCase().includes(userPart) : p.length > 0,
-      },
-    ];
-  }, [formData.password, formData.email]);
+  // --- Validaciones de Password (utilidad compartida) ---
+  const passwordValidations = useMemo(
+    () => getPasswordChecks(formData.password, formData.email),
+    [formData.password, formData.email],
+  );
 
   const allPasswordValid = passwordValidations.every((v) => v.fulfilled);
   const passwordsMatch =
@@ -76,24 +53,46 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
     setError(null);
 
     const errors: Record<string, string> = {};
-    if (!formData.nombre.trim() || formData.nombre.trim().length < 2)
+
+    // Nombre de usuario
+    if (!formData.nombre_usuario.trim())
+      errors.nombre_usuario = "El nombre de usuario es obligatorio";
+    else if (!isValidUsername(formData.nombre_usuario))
+      errors.nombre_usuario =
+        "Usuario inválido (2-50 caracteres: letras, números, punto, guion o guion bajo)";
+
+    // Correo
+    if (!formData.email.trim()) errors.email = "El correo electrónico es obligatorio";
+    else if (!isValidEmail(formData.email))
+      errors.email = "Ingresa un correo electrónico válido";
+
+    // Nombre
+    if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
+    else if (formData.nombre.trim().length < 2)
       errors.nombre = "Ingresa un nombre válido (mínimo 2 letras)";
-    if (!formData.apellido_paterno.trim() || formData.apellido_paterno.trim().length < 2)
+
+    // Apellido paterno
+    if (!formData.apellido_paterno.trim())
+      errors.apellido_paterno = "El apellido paterno es obligatorio";
+    else if (formData.apellido_paterno.trim().length < 2)
       errors.apellido_paterno = "Ingresa un apellido válido (mínimo 2 letras)";
+
+    // Apellido materno (opcional, pero si se llena debe ser válido)
     if (formData.apellido_materno.trim().length > 0 && formData.apellido_materno.trim().length < 2)
       errors.apellido_materno = "El apellido debe tener al menos 2 letras";
+
+    // Contraseña
+    if (!formData.password) errors.password = "La contraseña es obligatoria";
+    else if (!allPasswordValid) errors.password = "La contraseña no cumple con los requisitos";
+
+    // Confirmar contraseña
+    if (!formData.confirmarPassword)
+      errors.confirmarPassword = "Confirma tu contraseña";
+    else if (!passwordsMatch)
+      errors.confirmarPassword = "Las contraseñas no coinciden";
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      return;
-    }
-
-    if (!allPasswordValid) {
-      setError("La contraseña no cumple con los requisitos");
-      return;
-    }
-
-    if (!passwordsMatch) {
-      setError("Las contraseñas no coinciden");
       return;
     }
 
@@ -152,7 +151,7 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
         <span className="block h-px w-full bg-stroke dark:bg-dark-3"></span>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} noValidate className="space-y-3">
         {error && (
           <div className="rounded-lg bg-red-50 p-3 text-sm text-red-500">
             {error}
@@ -168,11 +167,15 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
             <input
               type="text"
               required
-              className="w-full rounded-lg border border-green-200 bg-white px-3 py-2 text-sm outline-none focus:border-green-400 dark:bg-gray-dark"
+              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none dark:bg-gray-dark ${fieldErrors.nombre_usuario ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
               placeholder="Tu usuario"
               value={formData.nombre_usuario}
-              onChange={(e) => setFormData({ ...formData, nombre_usuario: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, nombre_usuario: e.target.value });
+                setFieldErrors((prev) => ({ ...prev, nombre_usuario: "" }));
+              }}
             />
+            {fieldErrors.nombre_usuario && <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.nombre_usuario}</p>}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
@@ -181,11 +184,15 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
             <input
               type="email"
               required
-              className="w-full rounded-lg border border-green-200 bg-white px-3 py-2 text-sm outline-none focus:border-green-400 dark:bg-gray-dark"
+              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none dark:bg-gray-dark ${fieldErrors.email ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
               placeholder="tu@correo.com"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, email: e.target.value });
+                setFieldErrors((prev) => ({ ...prev, email: "" }));
+              }}
             />
+            {fieldErrors.email && <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.email}</p>}
           </div>
         </div>
 
@@ -247,18 +254,21 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                required
                 autoComplete="new-password"
-                className="w-full rounded-lg border border-green-200 bg-white px-3 py-2 pr-9 text-sm outline-none focus:border-green-400 dark:bg-gray-dark"
+                className={`w-full rounded-lg border bg-white px-3 py-2 pr-9 text-sm outline-none dark:bg-gray-dark ${fieldErrors.password ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
                 placeholder="••••••••"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, password: e.target.value });
+                  setFieldErrors((prev) => ({ ...prev, password: "" }));
+                }}
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+            {fieldErrors.password && <p aria-live="polite" className="mt-1 text-[11px] text-red-500">{fieldErrors.password}</p>}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
@@ -267,25 +277,31 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
             <div className="relative">
               <input
                 type={showConfirmPassword ? "text" : "password"}
-                required
                 autoComplete="new-password"
                 className={`w-full rounded-lg border px-3 py-2 pr-9 text-sm outline-none dark:bg-gray-dark ${
-                  formData.confirmarPassword.length > 0
-                    ? passwordsMatch ? "border-green-500" : "border-red-400"
-                    : "border-green-200"
+                  fieldErrors.confirmarPassword
+                    ? "border-red-400 focus:border-red-400"
+                    : formData.confirmarPassword.length > 0
+                      ? passwordsMatch ? "border-green-500" : "border-red-400"
+                      : "border-green-200"
                 }`}
                 placeholder="••••••••"
                 value={formData.confirmarPassword}
-                onChange={(e) => setFormData({ ...formData, confirmarPassword: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, confirmarPassword: e.target.value });
+                  setFieldErrors((prev) => ({ ...prev, confirmarPassword: "" }));
+                }}
               />
               <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                 {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            {formData.confirmarPassword.length > 0 && !passwordsMatch && (
+            {fieldErrors.confirmarPassword ? (
+              <p aria-live="polite" className="mt-1 text-[11px] text-red-500">{fieldErrors.confirmarPassword}</p>
+            ) : formData.confirmarPassword.length > 0 && !passwordsMatch ? (
               <p className="mt-1 text-[11px] text-red-500">Las contraseñas no coinciden</p>
-            )}
+            ) : null}
           </div>
         </div>
 

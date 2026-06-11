@@ -1,8 +1,24 @@
-import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards, Logger } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors, Logger } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { mkdirSync } from 'fs';
+import { randomBytes } from 'crypto';
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
-import { ActualizarPerfilProductorDto, CreateProductorDto, CreateRegionDto, RevisarSolicitudDto, SolicitarProductorDto, UpdateProductorDto, UpdateRegionDto } from './dto/productores.dto';
+import { ActualizarPerfilProductorDto, AdminUpdateProductorDto, CreateProductorDto, CreateRegionDto, RevisarSolicitudDto, SolicitarProductorDto, UpdateProductorDto, UpdateRegionDto } from './dto/productores.dto';
 import { ProductoresService } from './productores.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
+
+const FOTOS_DIR = join(__dirname, '../../..', 'uploads', 'productores');
+mkdirSync(FOTOS_DIR, { recursive: true });
+
+const fotosStorage = diskStorage({
+  destination: (_req, _file, cb) => cb(null, FOTOS_DIR),
+  filename: (_req, file, cb) => {
+    const ext = extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}-${randomBytes(8).toString('hex')}${ext}`);
+  },
+});
 
 @Controller('productores')
 export class ProductoresController {
@@ -88,6 +104,21 @@ export class ProductoresController {
       throw new HttpException('Solo puedes editar tu propio perfil de productor', HttpStatus.FORBIDDEN);
     }
     return this.service.update(id, dto);
+  }
+
+  @UseGuards(AuthGuard)
+  @Patch(':id/admin')
+  @UseInterceptors(FileInterceptor('foto', { storage: fotosStorage, limits: { fileSize: 500 * 1024 } }))
+  async adminUpdate(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body() dto: AdminUpdateProductorDto,
+    @Req() req: any,
+  ) {
+    if (!req.user.roles?.some((r: string) => r.toLowerCase() === 'administrador')) {
+      throw new HttpException('Solo administradores pueden editar productores', HttpStatus.FORBIDDEN);
+    }
+    return this.service.adminUpdate(id, dto, file?.filename);
   }
 
   @UseGuards(AuthGuard)

@@ -139,8 +139,8 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
         // Persist guest items to backend and clear guest storage
         for (const item of guestItems) {
           try {
+            // id_usuario lo deriva el backend del token (la cookie puede estar desfasada).
             await api.carritoItems.create(token, {
-              id_usuario: usuarioId,
               id_producto: Number(item.id_producto),
               cantidad: item.cantidad,
               precio_unitario_snapshot: String(item.precio_base),
@@ -180,8 +180,8 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
       try {
         const token = getToken();
         for (const item of items) {
+          // id_usuario lo deriva el backend del token (la cookie puede estar desfasada).
           await api.carritoItems.create(token, {
-            id_usuario: currentUserId,
             id_producto: Number(item.id_producto),
             cantidad: item.cantidad,
             precio_unitario_snapshot: String(item.precio_base),
@@ -242,7 +242,9 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     if (currentUserId && currentUserId !== "guest") {
       try {
         const token = getToken();
-        await api.carritoItems.deleteByUsuario(token, currentUserId);
+        // El backend deriva el usuario del token, evitando un 403 si la cookie
+        // `usuario` (currentUserId) no coincide con el sub del JWT.
+        await api.carritoItems.deleteMine(token);
       } catch (e) {
         console.error("Error clearing backend cart:", e);
       }

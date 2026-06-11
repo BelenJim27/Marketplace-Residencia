@@ -9,9 +9,9 @@ import { api } from "@/lib/api";
 import { getMediaUrl } from "@/lib/media";
 import { useTheme } from "next-themes";
 import {
-  User, Camera, Lock, Settings, ShoppingBag,
-  ChevronRight, Check, Eye, EyeOff, Bell,
-  Moon, Sun, Globe, Pencil, AlertCircle, Loader2, DollarSign, MapPin
+  User, Camera, Lock, ShoppingBag,
+  ChevronRight, Check, Eye, EyeOff,
+  Pencil, AlertCircle, Loader2, MapPin
 } from "lucide-react";
 
 // --- TIPOS ---
@@ -28,7 +28,7 @@ interface StoredUser {
   roles: string[];
 }
 
-type Tab = "perfil" | "seguridad" | "preferencias" | "direcciones";
+type Tab = "perfil" | "seguridad" | "direcciones";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -40,17 +40,12 @@ function getInitials(nombre?: string, apellido?: string) {
     .slice(0, 2);
 }
 
-const MONEDAS = [
-  { value: "MXN", label: "🇲🇽 MXN" },
-  { value: "USD", label: "🇺🇸 USD" },
-];
-
 export default function ClientePerfilPage() {
   const { user: authUser, refreshAuth } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
@@ -76,7 +71,6 @@ export default function ClientePerfilPage() {
   const [tab, setTab] = useState<Tab>("perfil");
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
-  const [savingPrefs, setSavingPrefs] = useState(false);
   const [uploadingFoto, setUploadingFoto] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
@@ -90,21 +84,12 @@ export default function ClientePerfilPage() {
   const [showPwActual, setShowPwActual] = useState(false);
   const [showPwNueva, setShowPwNueva] = useState(false);
   const [showPwConfirmar, setShowPwConfirmar] = useState(false);
-  const [prefs, setPrefs] = useState({ idioma: "es", notificaciones: true, moneda: "MXN" });
   const [loadingDir, setLoadingDir] = useState(false);
   const [savingDir, setSavingDir] = useState(false);
   const [editandoDir, setEditandoDir] = useState(false);
   const [dirProduccion, setDirProduccion] = useState<{ calle: string; cp: string; ciudad: string; estado: string; referencia: string } | null>(null);
   const [formDir, setFormDir] = useState({ calle: "", cp: "", ciudad: "", estado: "", referencia: "" });
   const [region, setRegion] = useState<string | null>(null);
-
-  // Admin addresses
-  const [adminDirs, setAdminDirs] = useState<any[]>([]);
-  const [loadingAdminDir, setLoadingAdminDir] = useState(false);
-  const [savingAdminDir, setSavingAdminDir] = useState(false);
-  const [editandoAdminDir, setEditandoAdminDir] = useState<number | "new" | null>(null);
-  const emptyAdminForm = { nombre_etiqueta: "", nombre_destinatario: "", telefono: "", calle: "", numero: "", colonia: "", ciudad: "", estado: "", codigo_postal: "", referencia: "" };
-  const [formAdminDir, setFormAdminDir] = useState(emptyAdminForm);
 
   const cargarPerfil = useCallback(async () => {
     const token = getCookie("token");
@@ -119,11 +104,6 @@ export default function ClientePerfilPage() {
         email: profile.email ?? "",
         telefono: profile.telefono ?? "",
       });
-      setPrefs((p) => ({
-        ...p,
-        idioma: profile.idioma_preferido ?? "es",
-        moneda: profile.moneda_preferida ?? "MXN",
-      }));
     } catch (e) { console.error(e); }
   }, []);
 
@@ -213,69 +193,7 @@ export default function ClientePerfilPage() {
     } catch { flash("err", "Error"); } finally { setSavingPassword(false); }
   };
 
-  const handleSavePrefs = async () => {
-    if (!user) return;
-    setSavingPrefs(true);
-    try {
-      const token = getCookie("token");
-      await fetch(`${API_URL}/usuarios/${user.id_usuario}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ 
-          idioma_preferido: prefs.idioma,
-          moneda_preferida: prefs.moneda
-        }),
-      });
-      await cargarPerfil();
-      refreshAuth();
-      flash("ok", "Preferencias guardadas");
-    } catch { flash("err", "Error"); } finally { setSavingPrefs(false); }
-  };
-
   const isProductor = user?.roles?.some((r: string) => ["productor", "PRODUCTOR"].includes(r));
-  const isAdmin     = user?.roles?.some((r: string) => ["administrador", "admin", "ADMIN"].includes(r));
-
-  const cargarAdminDirs = async () => {
-    if (!user?.id_usuario) return;
-    const token = getCookie("token");
-    if (!token) return;
-    setLoadingAdminDir(true);
-    try {
-      const res = await api.direcciones.getByUsuario(user.id_usuario, token) as any[];
-      setAdminDirs(Array.isArray(res) ? res : []);
-    } catch { /* sin direcciones */ } finally { setLoadingAdminDir(false); }
-  };
-
-  const handleSaveAdminDir = async () => {
-    const token = getCookie("token");
-    if (!token || !user?.id_usuario) return;
-    setSavingAdminDir(true);
-    try {
-      const payload = {
-        id_usuario: user.id_usuario,
-        nombre_etiqueta: formAdminDir.nombre_etiqueta || undefined,
-        nombre_destinatario: formAdminDir.nombre_destinatario || undefined,
-        telefono: formAdminDir.telefono || undefined,
-        calle: formAdminDir.calle || undefined,
-        numero: formAdminDir.numero || undefined,
-        colonia: formAdminDir.colonia || undefined,
-        ciudad: formAdminDir.ciudad || undefined,
-        estado: formAdminDir.estado || undefined,
-        codigo_postal: formAdminDir.codigo_postal || undefined,
-        referencia: formAdminDir.referencia || undefined,
-        pais_iso2: "MX",
-      };
-      if (editandoAdminDir === "new") {
-        await api.direcciones.create(token, payload);
-      } else if (typeof editandoAdminDir === "number") {
-        await api.direcciones.update(token, String(editandoAdminDir), payload);
-      }
-      await cargarAdminDirs();
-      setEditandoAdminDir(null);
-      setFormAdminDir(emptyAdminForm);
-      flash("ok", "Dirección guardada");
-    } catch { flash("err", "Error al guardar la dirección"); } finally { setSavingAdminDir(false); }
-  };
 
   const handleSaveDir = async () => {
     const token = getCookie("token");
@@ -325,8 +243,7 @@ export default function ClientePerfilPage() {
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "perfil", label: t("Editar perfil"), icon: <User size={17} /> },
     { id: "seguridad", label: t("Contraseña"), icon: <Lock size={17} /> },
-    { id: "preferencias", label: t("Preferencias"), icon: <Settings size={17} /> },
-    ...((isProductor || isAdmin) ? [{ id: "direcciones" as Tab, label: t("Mis Direcciones"), icon: <MapPin size={17} /> }] : []),
+    ...(isProductor ? [{ id: "direcciones" as Tab, label: t("Mis Direcciones"), icon: <MapPin size={17} /> }] : []),
   ];
 
   return (
@@ -372,7 +289,7 @@ export default function ClientePerfilPage() {
 
         <div style={{ display: "flex", gap: "6px", background: colors.bgCard, padding: "6px", borderRadius: "12px", border: `1px solid ${colors.border}`, marginBottom: "16px" }}>
           {TABS.map((tb) => (
-            <button key={tb.id} onClick={() => { setTab(tb.id); if (tb.id === "direcciones") { if (isProductor && !dirProduccion) cargarDirecciones(); if (isAdmin && adminDirs.length === 0) cargarAdminDirs(); } }} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", cursor: "pointer", fontSize: "13px", background: tab === tb.id ? "#3D6B3F" : "transparent", color: tab === tb.id ? "#fff" : colors.textSub, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "all 0.2s", fontWeight: tab === tb.id ? "bold" : "normal" }}>
+            <button key={tb.id} onClick={() => { setTab(tb.id); if (tb.id === "direcciones") { if (isProductor && !dirProduccion) cargarDirecciones(); } }} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", cursor: "pointer", fontSize: "13px", background: tab === tb.id ? "#3D6B3F" : "transparent", color: tab === tb.id ? "#fff" : colors.textSub, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "all 0.2s", fontWeight: tab === tb.id ? "bold" : "normal" }}>
               {tb.icon} {tb.label}
             </button>
           ))}
@@ -484,143 +401,6 @@ export default function ClientePerfilPage() {
             </div>
           )}
 
-          {tab === "preferencias" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              <h2 style={{ fontSize: "18px", color: colors.textMain, marginBottom: "10px" }}>{t("Preferencias")}</h2>
-              
-              <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${colors.border}`, background: colors.inputBg }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                  <Globe size={18} color="#3D6B3F" />
-                  <span style={{ fontSize: "14px", fontWeight: 600, color: colors.textMain }}>{t("Idioma")}</span>
-                </div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  {[{ v: "es", l: "🇲🇽 Español" }, { v: "en", l: "🇺🇸 English" }].map((tm) => (
-                    <button key={tm.v} onClick={() => setPrefs({...prefs, idioma: tm.v})} style={{ padding: "8px 16px", borderRadius: "8px", border: prefs.idioma === tm.v ? "1.5px solid #3D6B3F" : `1px solid ${colors.border}`, background: prefs.idioma === tm.v ? "rgba(26,93,59,0.1)" : colors.bgCard, color: prefs.idioma === tm.v ? "#3D6B3F" : colors.textSub, cursor: "pointer", fontSize: "14px", fontWeight: "medium" }}>
-                      {tm.l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${colors.border}`, background: colors.inputBg }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                  <DollarSign size={18} color="#3D6B3F" />
-                  <span style={{ fontSize: "14px", fontWeight: 600, color: colors.textMain }}>{t("Moneda Preferida")}</span>
-                </div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  {MONEDAS.map((m) => (
-                    <button key={m.value} onClick={() => setPrefs({...prefs, moneda: m.value})} style={{ padding: "8px 16px", borderRadius: "8px", border: prefs.moneda === m.value ? "1.5px solid #3D6B3F" : `1px solid ${colors.border}`, background: prefs.moneda === m.value ? "rgba(26,93,59,0.1)" : colors.bgCard, color: prefs.moneda === m.value ? "#3D6B3F" : colors.textSub, cursor: "pointer", fontSize: "14px", fontWeight: "medium" }}>
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${colors.border}`, background: colors.inputBg }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                  {isDark ? <Moon size={18} color="#3D6B3F" /> : <Sun size={18} color="#3D6B3F" />}
-                  <span style={{ fontSize: "14px", fontWeight: 600, color: colors.textMain }}>{t("Tema")}</span>
-                </div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  {[{ v: "light", l: "☀️ Claro" }, { v: "dark", l: "🌙 Oscuro" }].map((tm) => (
-                    <button key={tm.v} onClick={() => setTheme(tm.v)} style={{ padding: "8px 16px", borderRadius: "8px", border: theme === tm.v ? "1.5px solid #3D6B3F" : `1px solid ${colors.border}`, background: theme === tm.v ? "rgba(26,93,59,0.1)" : colors.bgCard, color: theme === tm.v ? "#3D6B3F" : colors.textSub, cursor: "pointer", fontSize: "14px", fontWeight: "medium" }}>
-                      {tm.l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              <div style={{display: "flex", justifyContent: "flex-end", marginTop: "24px"}}>
-                <button onClick={handleSavePrefs} disabled={savingPrefs} style={{ background: savingPrefs ? "#C5CFB0" : "#3D6B3F", color: "#fff", padding: "10px 24px", borderRadius: "8px", border: "none", cursor: savingPrefs ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "14px", display: "inline-flex", gap: "8px", alignItems: "center" }}>
-                    {savingPrefs ? <Loader2 className="animate-spin" size={15}/> : <Settings size={15} />}
-                    {savingPrefs ? t("Guardando...") : t("Guardar preferencias")}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {tab === "direcciones" && isAdmin && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <h2 style={{ fontSize: "18px", color: colors.textMain, margin: 0 }}>{t("Mis Direcciones")}</h2>
-                {editandoAdminDir === null && (
-                  <button
-                    onClick={() => { setFormAdminDir(emptyAdminForm); setEditandoAdminDir("new"); }}
-                    style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", fontWeight: 600, color: "#fff", background: "#3D6B3F", padding: "6px 14px", borderRadius: "999px", border: "none", cursor: "pointer" }}
-                  >
-                    + {t("Agregar")}
-                  </button>
-                )}
-              </div>
-
-              {loadingAdminDir ? (
-                <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}>
-                  <Loader2 className="animate-spin" size={28} color="#3D6B3F" />
-                </div>
-              ) : (
-                <>
-                  {/* Lista de direcciones */}
-                  {adminDirs.length === 0 && editandoAdminDir === null && (
-                    <p style={{ fontSize: "13px", color: colors.textSub, margin: 0 }}>No tienes direcciones guardadas aún.</p>
-                  )}
-                  {adminDirs.map((dir) => (
-                    <div key={dir.id_direccion} style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${colors.border}`, background: colors.inputBg }}>
-                      {editandoAdminDir === dir.id_direccion ? (
-                        /* Formulario edición */
-                        <AdminDirForm
-                          form={formAdminDir}
-                          onChange={(f) => setFormAdminDir(f)}
-                          onSave={handleSaveAdminDir}
-                          onCancel={() => setEditandoAdminDir(null)}
-                          saving={savingAdminDir}
-                          inputStyle={inputStyle}
-                          colors={colors}
-                          t={t}
-                        />
-                      ) : (
-                        <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                          <MapPin size={16} color="#3D6B3F" style={{ marginTop: "2px", flexShrink: 0 }} />
-                          <div style={{ flex: 1, fontSize: "14px", color: colors.textSub, lineHeight: "1.7" }}>
-                            {dir.nombre_etiqueta && <p style={{ margin: 0, fontWeight: 600, color: colors.textMain }}>{dir.nombre_etiqueta}</p>}
-                            {dir.nombre_destinatario && <p style={{ margin: 0, color: colors.textMain }}>{dir.nombre_destinatario}</p>}
-                            {(dir.calle || dir.numero) && <p style={{ margin: 0 }}>{[dir.calle, dir.numero].filter(Boolean).join(" ")}</p>}
-                            {dir.colonia && <p style={{ margin: 0 }}>{dir.colonia}</p>}
-                            {(dir.ciudad || dir.estado) && <p style={{ margin: 0 }}>{[dir.ciudad, dir.estado].filter(Boolean).join(", ")}</p>}
-                            {dir.codigo_postal && <p style={{ margin: 0 }}>CP {dir.codigo_postal}</p>}
-                            {dir.referencia && <p style={{ margin: "2px 0 0", fontSize: "12px" }}>{dir.referencia}</p>}
-                          </div>
-                          <button
-                            onClick={() => { setFormAdminDir({ nombre_etiqueta: dir.nombre_etiqueta ?? "", nombre_destinatario: dir.nombre_destinatario ?? "", telefono: dir.telefono ?? "", calle: dir.calle ?? "", numero: dir.numero ?? "", colonia: dir.colonia ?? "", ciudad: dir.ciudad ?? "", estado: dir.estado ?? "", codigo_postal: dir.codigo_postal ?? "", referencia: dir.referencia ?? "" }); setEditandoAdminDir(dir.id_direccion); }}
-                            style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 600, color: "#3D6B3F", background: "rgba(61,107,63,0.08)", padding: "4px 10px", borderRadius: "999px", border: "none", cursor: "pointer", flexShrink: 0 }}
-                          >
-                            <Pencil size={11} /> {t("Editar")}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Formulario nueva dirección */}
-                  {editandoAdminDir === "new" && (
-                    <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${colors.border}`, background: colors.inputBg }}>
-                      <p style={{ fontSize: "13px", fontWeight: 600, color: colors.textMain, marginBottom: "14px" }}>{t("Nueva dirección")}</p>
-                      <AdminDirForm
-                        form={formAdminDir}
-                        onChange={(f) => setFormAdminDir(f)}
-                        onSave={handleSaveAdminDir}
-                        onCancel={() => setEditandoAdminDir(null)}
-                        saving={savingAdminDir}
-                        inputStyle={inputStyle}
-                        colors={colors}
-                        t={t}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
           {tab === "direcciones" && isProductor && (
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               <h2 style={{ fontSize: "18px", color: colors.textMain, marginBottom: "10px" }}>{t("Mis Direcciones")}</h2>
@@ -713,74 +493,6 @@ export default function ClientePerfilPage() {
           )}
 
         </div>
-      </div>
-    </div>
-  );
-}
-
-function AdminDirForm({ form, onChange, onSave, onCancel, saving, inputStyle, colors, t }: {
-  form: any; onChange: (f: any) => void; onSave: () => void; onCancel: () => void;
-  saving: boolean; inputStyle: React.CSSProperties; colors: any; t: (s: string) => string;
-}) {
-  const lbl = { fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" } as React.CSSProperties;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <div>
-          <label style={lbl}>{t("Etiqueta")}</label>
-          <input value={form.nombre_etiqueta} onChange={(e) => onChange({ ...form, nombre_etiqueta: e.target.value })} style={inputStyle} placeholder="Casa, Oficina…" />
-        </div>
-        <div>
-          <label style={lbl}>{t("Nombre del destinatario")}</label>
-          <input value={form.nombre_destinatario} onChange={(e) => onChange({ ...form, nombre_destinatario: e.target.value })} style={inputStyle} placeholder="Juan García" />
-        </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <div>
-          <label style={lbl}>{t("Calle")}</label>
-          <input value={form.calle} onChange={(e) => onChange({ ...form, calle: e.target.value })} style={inputStyle} placeholder="Av. Principal" />
-        </div>
-        <div>
-          <label style={lbl}>{t("Número")}</label>
-          <input value={form.numero} onChange={(e) => onChange({ ...form, numero: e.target.value })} style={inputStyle} placeholder="#123" />
-        </div>
-      </div>
-      <div>
-        <label style={lbl}>{t("Colonia")}</label>
-        <input value={form.colonia} onChange={(e) => onChange({ ...form, colonia: e.target.value })} style={inputStyle} placeholder="Centro" />
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <div>
-          <label style={lbl}>{t("Ciudad")}</label>
-          <input value={form.ciudad} onChange={(e) => onChange({ ...form, ciudad: e.target.value })} style={inputStyle} placeholder="Oaxaca" />
-        </div>
-        <div>
-          <label style={lbl}>{t("Estado")}</label>
-          <input value={form.estado} onChange={(e) => onChange({ ...form, estado: e.target.value })} style={inputStyle} placeholder="Oaxaca" />
-        </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <div>
-          <label style={lbl}>{t("Código Postal")}</label>
-          <input value={form.codigo_postal} onChange={(e) => onChange({ ...form, codigo_postal: e.target.value.replace(/\D/g, "").slice(0, 5) })} style={inputStyle} placeholder="12345" maxLength={5} />
-        </div>
-        <div>
-          <label style={lbl}>{t("Teléfono")}</label>
-          <input value={form.telefono} onChange={(e) => onChange({ ...form, telefono: e.target.value.replace(/\D/g, "").slice(0, 10) })} style={inputStyle} placeholder="9511234567" maxLength={10} />
-        </div>
-      </div>
-      <div>
-        <label style={lbl}>{t("Referencia (opcional)")}</label>
-        <input value={form.referencia} onChange={(e) => onChange({ ...form, referencia: e.target.value })} style={inputStyle} placeholder="Entre calles, color de fachada…" />
-      </div>
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "4px" }}>
-        <button onClick={onCancel} style={{ padding: "9px 20px", borderRadius: "8px", border: `1px solid ${colors.border}`, background: "transparent", color: colors.textSub, cursor: "pointer", fontSize: "13px" }}>
-          {t("Cancelar")}
-        </button>
-        <button onClick={onSave} disabled={saving} style={{ background: saving ? "#C5CFB0" : "#3D6B3F", color: "#fff", padding: "9px 20px", borderRadius: "8px", border: "none", cursor: saving ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "13px", display: "inline-flex", gap: "8px", alignItems: "center" }}>
-          {saving ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
-          {saving ? t("Guardando...") : t("Guardar")}
-        </button>
       </div>
     </div>
   );

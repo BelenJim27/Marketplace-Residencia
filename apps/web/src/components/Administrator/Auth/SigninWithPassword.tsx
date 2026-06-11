@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
+import { isValidEmail } from "@/shared/validation/auth";
 
 export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: { isVenderFlow?: boolean; onSuccess?: () => void }) {
   const router = useRouter();
@@ -35,8 +36,18 @@ export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: 
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    if (!data.email.trim() || !data.password) {
+      setError("Ingresa tu correo y contraseña");
+      return;
+    }
+    if (!isValidEmail(data.email)) {
+      setError("Ingresa un correo electrónico válido");
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const response = await api.auth.login(data.email, data.password);

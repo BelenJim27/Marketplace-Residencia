@@ -8,6 +8,8 @@ import { getCookie } from "../../../lib/cookies";
 
 export type ProductorAdmin = {
   id: number;
+  id_usuario?: string;
+  id_region?: number | null;
   nombre: string;
   apellido_paterno: string;
   apellido_materno: string;
@@ -35,18 +37,27 @@ type FormState = {
   nombre: string;
   apellido_paterno: string;
   apellido_materno: string;
-  region: string;
+  id_region: string;
   status: ProductorAdmin["status"];
   biografia: string;
   otras_caracteristicas: string;
   foto: File | null;
 };
 
+type Region = { id_region: number; nombre: string };
+
+// Mapa entre el status mostrado en el panel y el status real de la tienda.
+const STATUS_TO_TIENDA: Record<ProductorAdmin["status"], string> = {
+  ACTIVO: "activa",
+  PAUSADO: "pausada",
+  INACTIVO: "inactiva",
+};
+
 const INITIAL_STATE: FormState = {
   nombre: "",
   apellido_paterno: "",
   apellido_materno: "",
-  region: "",
+  id_region: "",
   status: "ACTIVO",
   biografia: "",
   otras_caracteristicas: "",
@@ -64,6 +75,15 @@ export function ProductoresForm({
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [regiones, setRegiones] = useState<Region[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    api.productores
+      .getRegiones()
+      .then((data) => setRegiones(Array.isArray(data) ? (data as Region[]) : []))
+      .catch(() => setRegiones([]));
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -73,7 +93,7 @@ export function ProductoresForm({
         nombre: productor.nombre,
         apellido_paterno: productor.apellido_paterno || "",
         apellido_materno: productor.apellido_materno || "",
-        region: productor.region,
+        id_region: productor.id_region != null ? String(productor.id_region) : "",
         status: productor.status,
         biografia: productor.biografia || "",
         otras_caracteristicas: productor.otras_caracteristicas || "",
@@ -100,7 +120,7 @@ export function ProductoresForm({
     const nextErrors: Partial<Record<keyof FormState, string>> = {};
     if (!form.nombre.trim()) nextErrors.nombre = "El nombre es obligatorio.";
     if (!form.apellido_paterno.trim()) nextErrors.apellido_paterno = "El apellido paterno es obligatorio.";
-    if (!form.region.trim()) nextErrors.region = "La región es obligatoria.";
+    if (!form.id_region) nextErrors.id_region = "La región es obligatoria.";
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }
@@ -119,24 +139,17 @@ export function ProductoresForm({
       payload.append("nombre", form.nombre.trim());
       payload.append("apellido_paterno", form.apellido_paterno.trim());
       payload.append("apellido_materno", form.apellido_materno.trim());
-      payload.append("region", form.region.trim());
-      payload.append("status", form.status);
-      if (form.biografia.trim()) payload.append("biografia", form.biografia.trim());
-      if (form.otras_caracteristicas.trim()) payload.append("otras_caracteristicas", form.otras_caracteristicas.trim());
+      payload.append("id_region", form.id_region);
+      payload.append("status", STATUS_TO_TIENDA[form.status]);
+      payload.append("biografia", form.biografia.trim());
+      payload.append("otras_caracteristicas", form.otras_caracteristicas.trim());
       if (form.foto) payload.append("foto", form.foto);
 
-      let result;
-      if (mode === "create") {
-        result = await api.productores.create(token, payload);
-      } else {
-        result = await api.productores.update(token, productor!.id, payload);
-      }
+      const result = await api.productores.adminUpdate(token, productor!.id, payload);
 
       onSaved(
         result as ProductorAdmin,
-        mode === "create"
-          ? "Productor creado correctamente."
-          : "Productor actualizado correctamente.",
+        "Productor actualizado correctamente.",
       );
       onClose();
     } catch (error) {
@@ -215,14 +228,18 @@ export function ProductoresForm({
           </div>
 
           {/* Fila 3: Región sola */}
-          <Field label="Región" error={errors.region}>
-            <input
-              value={form.region}
-              onChange={(event) => handleChange("region", event.target.value)}
+          <Field label="Región" error={errors.id_region}>
+            <select
+              value={form.id_region}
+              onChange={(event) => handleChange("id_region", event.target.value)}
               disabled={isReadOnly}
               className="w-full rounded-lg sm:rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 sm:px-4 sm:py-3 text-sm text-[#1F3A2E] outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 disabled:cursor-not-allowed disabled:opacity-70"
-              placeholder="Ej. Sierra Sur"
-            />
+            >
+              <option value="">— Selecciona una región —</option>
+              {regiones.map((r) => (
+                <option key={r.id_region} value={String(r.id_region)}>{r.nombre}</option>
+              ))}
+            </select>
           </Field>
 
           {/* Status */}

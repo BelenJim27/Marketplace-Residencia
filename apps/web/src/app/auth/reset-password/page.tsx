@@ -8,6 +8,7 @@ import { Input } from "@/components/shadcn";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/shadcn";
 import { api } from "@/lib/api";
 import { Eye, EyeOff } from "lucide-react";
+import { getPasswordChecks, isStrongPassword } from "@/shared/validation/auth";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -22,17 +23,19 @@ function ResetPasswordForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const passwordChecks = getPasswordChecks(password);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden");
+    if (!isStrongPassword(password)) {
+      setError("La contraseña no cumple con los requisitos");
       return;
     }
 
-    if (password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres");
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden");
       return;
     }
 
@@ -111,7 +114,7 @@ function ResetPasswordForm() {
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 8 caracteres"
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -126,6 +129,16 @@ function ResetPasswordForm() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {password.length > 0 && (
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  {passwordChecks.map((v, i) => (
+                    <div key={i} className={`flex items-center text-[11px] font-medium ${v.fulfilled ? "text-green-600" : "text-gray-400"}`}>
+                      <div className={`mr-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full ${v.fulfilled ? "bg-green-600" : "bg-gray-300"}`} />
+                      {v.label}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">

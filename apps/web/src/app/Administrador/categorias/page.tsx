@@ -7,6 +7,8 @@ import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 import { SuccessToast } from "@/components/ui/SuccessToast";
+import { api } from "@/lib/api";
+import { getCookie } from "@/lib/cookies";
 
 type Categoria = {
   id_categoria: number;
@@ -88,13 +90,12 @@ export default function CategoriasAdminPage() {
     e.preventDefault();
     setNotice(null);
     const isEditing = !!editingCategoria;
-    const method    = isEditing ? "PATCH" : "POST";
-    const url       = isEditing ? `${API_URL}/categorias/${editingCategoria!.id_categoria}` : `${API_URL}/categorias`;
     const payload   = { nombre: formData.nombre, slug: formData.slug, tipo: formData.tipo, activo: formData.activo, id_padre: formData.jerarquia === "subcategoria" && formData.id_padre ? parseInt(formData.id_padre) : null };
     try {
-      const res  = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Error al guardar");
+      const token = getCookie("token");
+      if (!token) throw new Error("No autorizado");
+      if (isEditing) await api.categorias.update(token, editingCategoria!.id_categoria, payload);
+      else await api.categorias.create(token, payload);
       setShowModal(false);
       loadCategorias();
       if (isEditing) successToast.mostrarActualizado();
@@ -107,9 +108,9 @@ export default function CategoriasAdminPage() {
   const handleDelete = (id: number, nombre: string) => {
     deleteAlert.abrir(nombre, async () => {
       try {
-        const res  = await fetch(`${API_URL}/categorias/${id}`, { method: "DELETE" });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Error al eliminar");
+        const token = getCookie("token");
+        if (!token) throw new Error("No autorizado");
+        await api.categorias.delete(token, id);
         loadCategorias();
         successToast.mostrar("Categoría eliminada correctamente.");
       } catch (error) {

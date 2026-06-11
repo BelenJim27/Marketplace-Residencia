@@ -318,6 +318,79 @@ export class ProductosService {
     return resultado;
   }
 
+  /**
+   * Alertas de stock calculadas en el servidor (fuente autoritativa).
+   * El productor se resuelve desde el token — nunca se confía en un id externo —
+   * y solo se devuelven productos de sus propias tiendas. Sustituye el cálculo
+   * que antes hacía el frontend para que toda alerta venga verificada del backend.
+   *
+   * Umbral: stock <= stock_minimo del producto (fallback a 10 si no hay mínimo
+   * configurado, conservando el comportamiento histórico).
+   */
+  async getAlertasStock(token?: string) {
+    if (!token) return [];
+
+    const id_usuario = getUserIdFromAccessToken(token);
+    const productor = await this.prisma.productores.findFirst({
+      where: { id_usuario, eliminado_en: null },
+      select: { id_productor: true },
+    });
+    if (!productor) return [];
+
+    const stores = await this.prisma.tiendas.findMany({
+      where: { id_productor: productor.id_productor, eliminado_en: null },
+      select: { id_tienda: true, nombre: true },
+    });
+    if (stores.length === 0) return [];
+
+    const storeMap = new Map(
+      stores.map((s) => [
+        Number(s.id_tienda),
+        s.nombre ?? `Tienda #${Number(s.id_tienda)}`,
+      ]),
+    );
+
+    const productos = await this.prisma.productos.findMany({
+      where: {
+        id_tienda: { in: stores.map((s) => s.id_tienda) },
+        eliminado_en: null,
+      },
+      select: {
+        id_producto: true,
+        nombre: true,
+        id_tienda: true,
+        inventario: { select: { stock: true, stock_minimo: true } },
+      },
+    });
+
+    const alertas = productos
+      .map((p) => {
+        const stock = getProductoStock(p.inventario);
+        const minimo = Number(p.inventario?.[0]?.stock_minimo ?? 0) || 10;
+        if (stock > minimo) return null;
+        const tipo: "sin_existencias" | "stock_bajo" =
+          stock === 0 ? "sin_existencias" : "stock_bajo";
+        return {
+          id: `alert-${Number(p.id_producto)}`,
+          id_producto: Number(p.id_producto),
+          tipo,
+          producto: p.nombre ?? "Producto sin nombre",
+          tienda:
+            storeMap.get(Number(p.id_tienda)) ??
+            `Tienda #${Number(p.id_tienda)}`,
+          stock_actual: stock,
+        };
+      })
+      .filter((a): a is NonNullable<typeof a> => a !== null);
+
+    alertas.sort((a, b) => {
+      if (a.tipo !== b.tipo) return a.tipo === "sin_existencias" ? -1 : 1;
+      return a.producto.localeCompare(b.producto);
+    });
+
+    return alertas;
+  }
+
   async findOne(id: string) {
     const item = await this.prisma.productos.findUnique({
       where: { id_producto: BigInt(id) },

@@ -40,18 +40,6 @@ type DbNotif = {
   creado_en: string;
 };
 
-type ProductItem = {
-  id_producto?: number;
-  id_tienda?: number;
-  nombre?: string;
-  stock?: number | string | null;
-};
-
-type StoreItem = {
-  id_tienda?: number;
-  nombre?: string;
-};
-
 const NOTIF_ICON: Record<string, { Icon: typeof Bell; bgClass: string; textClass: string }> = {
   // Tipos para cualquier usuario
   pago_pendiente_onboarding: { Icon: CreditCard,    bgClass: "bg-amber-100",  textClass: "text-amber-600"  },
@@ -119,7 +107,9 @@ export function Notification({ dark = false }: { dark?: boolean }) {
     });
   }, [isOpen, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Carga alertas de stock solo cuando se abre el dropdown
+  // Carga alertas de stock solo cuando se abre el dropdown.
+  // Las alertas las calcula el BACKEND (GET /productos/alertas-stock); aquí solo
+  // se consumen para no fabricar notificaciones en el cliente.
   useEffect(() => {
     if (!isOpen || !user?.id_usuario) return;
 
@@ -133,38 +123,17 @@ export function Notification({ dark = false }: { dark?: boolean }) {
           return;
         }
 
-        const [productsRes, storesRes] = await Promise.all([
-          api.productos.getByProductor(user.id_productor, token),
-          api.tiendas.getByProductor(user.id_productor, token),
-        ]);
-
+        const res = await api.productos.getAlertasStock(token);
         if (cancelled) return;
 
-        const products = Array.isArray(productsRes) ? (productsRes as ProductItem[]) : [];
-        const stores = Array.isArray(storesRes) ? (storesRes as StoreItem[]) : [];
-        const storeMap = new Map(stores.map((s) => [Number(s.id_tienda), s.nombre || `Tienda #${s.id_tienda}`]));
-
-        const nextAlerts = products
-          .map((product, index) => {
-            const stock = Number(product.stock ?? 99);
-            if (Number.isNaN(stock) || stock > 10) return null;
-            const tiendaNombre = storeMap.get(Number(product.id_tienda)) || `Tienda #${product.id_tienda ?? "-"}`;
-            const tipo: AlertType = stock === 0 ? "sin_existencias" : "stock_bajo";
-            return {
-              id: globalThis.crypto?.randomUUID?.() ?? `alert-${product.id_producto ?? index}-${Date.now()}`,
-              tipo,
-              tienda: tiendaNombre,
-              producto: product.nombre || "Producto sin nombre",
-              stock_actual: stock,
-              fecha: new Date(),
-            } satisfies StockAlert;
-          })
-          .filter(Boolean) as StockAlert[];
-
-        nextAlerts.sort((a, b) => {
-          if (a.tipo !== b.tipo) return a.tipo === "sin_existencias" ? -1 : 1;
-          return a.producto.localeCompare(b.producto);
-        });
+        const nextAlerts = (Array.isArray(res) ? res : []).map((a) => ({
+          id: a.id,
+          tipo: a.tipo as AlertType,
+          tienda: a.tienda,
+          producto: a.producto,
+          stock_actual: a.stock_actual,
+          fecha: new Date(),
+        })) satisfies StockAlert[];
 
         if (!cancelled) setAlerts(nextAlerts);
       } catch {

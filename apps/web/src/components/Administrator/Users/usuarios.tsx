@@ -8,6 +8,7 @@ import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
 import { SuccessToast } from "@/components/ui/SuccessToast";
+import { AlertService } from "@/shared/alerts";
 
 interface Rol { id_rol: number; nombre: string }
 
@@ -389,7 +390,7 @@ export default function UsuariosUI() {
                     <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-[#C5CFB0] bg-[#F4F0E3]"><User size={24} className="text-[#3D6B3F]/50" /></div>
                   )}
                   <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-[#C5CFB0] px-4 py-2 text-sm font-medium text-[#1F3A2E] hover:bg-[#C5CFB0]/20 transition-all duration-200">
-                    <input type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; if (file.size > 500 * 1024) { alert("La imagen debe pesar menos de 500 KB."); e.target.value = ""; return; } setSelectedFotoFile(file); }} className="hidden" />
+                    <input type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; if (file.size > 500 * 1024) { AlertService.showWarning("La imagen debe pesar menos de 500 KB."); e.target.value = ""; return; } setSelectedFotoFile(file); }} className="hidden" />
                     Subir foto
                   </label>
                 </div>

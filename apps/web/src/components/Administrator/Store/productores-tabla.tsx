@@ -40,6 +40,8 @@ export function ProductoresTabla() {
       const data = await api.admin.getProductores(token);
       const transformed = (Array.isArray(data) ? data : []).map((p: any) => ({
         id: p.id_productor as number,
+        id_usuario: p.id_usuario as string,
+        id_region: (p.id_region ?? null) as number | null,
         nombre: p.usuarios?.nombre || "Sin nombre",
         apellido_paterno: p.usuarios?.apellido_paterno || "",
         apellido_materno: p.usuarios?.apellido_materno || "",
@@ -312,8 +314,8 @@ export function ProductoresTabla() {
         productor={selectedProductor}
         onClose={closeModal}
         onError={(message) => setNotice({ type: "error", message })}
-        onSaved={(saved, message) => {
-          setProductores((c) => c.map((p) => (p.id === saved.id ? saved : p)));
+        onSaved={(_saved, message) => {
+          loadProductores();
           successToast.mostrar(message);
         }}
       />
