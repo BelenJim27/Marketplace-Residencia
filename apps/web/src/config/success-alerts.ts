@@ -19,6 +19,8 @@ export interface SuccessAlertConfig {
   registrado: string;
   /** Mensaje que aparece al actualizar un elemento existente */
   actualizado: string;
+  /** Mensaje que aparece al eliminar un elemento (opcional) */
+  eliminado?: string;
 }
 
 export const SUCCESS_ALERT_CONFIG: Record<string, SuccessAlertConfig> = {
@@ -27,6 +29,7 @@ export const SUCCESS_ALERT_CONFIG: Record<string, SuccessAlertConfig> = {
   usuario: {
     registrado: "Usuario registrado correctamente.",
     actualizado: "Usuario actualizado correctamente.",
+    eliminado: "Usuario eliminado correctamente.",
   },
 
   producto: {
@@ -94,5 +97,20 @@ export const SUCCESS_ALERT_CONFIG: Record<string, SuccessAlertConfig> = {
   producto_productor: {
     registrado: "Producto registrado en tu catálogo correctamente.",
     actualizado: "Producto actualizado correctamente.",
+    eliminado: "Producto eliminado de tu catálogo correctamente.",
+  },
+
+  // ── CLIENTE / TIENDA ────────────────────────────────────────────────────
+
+  direccion: {
+    registrado: "Dirección guardada correctamente.",
+    actualizado: "Dirección actualizada correctamente.",
+    eliminado: "Dirección eliminada correctamente.",
+  },
+
+  carrito_item: {
+    registrado: "Producto agregado al carrito.",
+    actualizado: "Carrito actualizado.",
+    eliminado: "Producto eliminado del carrito.",
   },
 };

@@ -86,9 +86,7 @@ export class PedidosService {
     return serializeBigInts(item);
   }
 
-  async getMisVentas(accessToken: string) {
-    const id_productor = await this.resolveProductorId(accessToken);
-
+  async getMisVentas(id_productor: number | null) {
     if (!id_productor) {
       return {
         resumen: { totalVentas: 0, ingresosTotales: 0, pendientes: 0 },
@@ -145,13 +143,8 @@ export class PedidosService {
 
   async getEstadisticas(
     periodoRaw: string,
-    accessToken?: string,
-    fallbackProductorId?: number,
+    id_productor?: number | null,
   ) {
-    const id_productor = await this.resolveProductorId(
-      accessToken,
-      fallbackProductorId,
-    );
     if (!id_productor) {
       const periodo = normalizePeriodo(periodoRaw);
       const { start, bucketSize } = getRangeConfig(periodo);
@@ -238,7 +231,9 @@ export class PedidosService {
       rawRows,
     };
   }
-  async create(dto: CreatePedidoDto) {
+  async create(dto: CreatePedidoDto, id_usuario: string) {
+    // El pedido siempre se crea a nombre del usuario autenticado (del token),
+    // nunca del id_usuario que venga en el body — evita crear pedidos a nombre de otro.
     // Validar que el país destino esté habilitado para ventas en la plataforma.
     // Esto evita crear pedidos a destinos que aún no están operativos (e.g., USA en MVP).
     if (dto.pais_destino_iso2) {
@@ -258,7 +253,7 @@ export class PedidosService {
     // El valor que envía el frontend se ignora; se almacena 0 como placeholder.
     const pedido = await this.prisma.pedidos.create({
       data: {
-        id_usuario: dto.id_usuario,
+        id_usuario,
         estado: dto.estado?.trim() ?? "pendiente",
         total: "0",
         moneda: dto.moneda,
@@ -296,8 +291,62 @@ export class PedidosService {
 
     return { ...serializeBigInts(pedido), numero_orden: numeroOrden };
   }
-  async update(id: string, dto: UpdatePedidoDto) {
+  /**
+   * Verifica que el pedido pertenezca al usuario (o que sea admin). Evita BOLA:
+   * sin esto, cualquier usuario autenticado podía mutar pedidos ajenos por id.
+   */
+  private async assertPedidoOwner(id_pedido: bigint, id_usuario: string, isAdmin: boolean) {
+    if (isAdmin) return;
+    const pedido = await this.prisma.pedidos.findUnique({
+      where: { id_pedido },
+      select: { id_usuario: true },
+    });
+    if (!pedido) throw new NotFoundException('Pedido no encontrado');
+    if (pedido.id_usuario !== id_usuario) {
+      throw new ForbiddenException('No tienes permiso sobre este pedido');
+    }
+  }
+
+  // Transiciones válidas del pedido maestro. Solo se aplican en el endpoint manual
+  // PATCH /pedidos/:id; la automatización interna (pagos/envíos) escribe `estado`
+  // vía prisma.pedidos.update directo y no pasa por aquí.
+  private static readonly TRANSICIONES_PEDIDO: Record<string, string[]> = {
+    pendiente: ['pagado', 'cancelado'],
+    pagado: ['label_purchased', 'enviado', 'cancelado'],
+    label_purchased: ['enviado', 'cancelado'],
+    enviado: ['entregado', 'cancelado'],
+    entregado: [],
+    cancelado: [],
+  };
+
+  async update(id: string, dto: UpdatePedidoDto, id_usuario: string, isAdmin: boolean) {
     const id_pedido = toBigIntId(id);
+
+    // Una sola lectura cubre el owner-check (anti-BOLA) y la validación de
+    // transición de estado. Antes eran 2 round-trips para no-admins que cambian
+    // estado (assertPedidoOwner + lectura de estado).
+    if (!isAdmin || dto.estado) {
+      const actual = await this.prisma.pedidos.findUnique({
+        where: { id_pedido },
+        select: { id_usuario: true, estado: true },
+      });
+      if (!actual) throw new NotFoundException('Pedido no encontrado');
+      if (!isAdmin && actual.id_usuario !== id_usuario) {
+        throw new ForbiddenException('No tienes permiso sobre este pedido');
+      }
+      if (dto.estado) {
+        const nuevoEstado = dto.estado.trim();
+        const estadoActual = actual.estado ?? 'pendiente';
+        if (nuevoEstado !== estadoActual) {
+          const permitidas = PedidosService.TRANSICIONES_PEDIDO[estadoActual] ?? [];
+          if (!permitidas.includes(nuevoEstado)) {
+            throw new BadRequestException(
+              `Transición de estado inválida: ${estadoActual} → ${nuevoEstado}.`,
+            );
+          }
+        }
+      }
+    }
 
     const updated = await this.prisma.pedidos.update({
       where: { id_pedido },
@@ -335,8 +384,9 @@ export class PedidosService {
 
     return serializeBigInts(updated);
   }
-  async remove(id: string) {
+  async remove(id: string, id_usuario: string, isAdmin: boolean) {
     const id_pedido = toBigIntId(id);
+    await this.assertPedidoOwner(id_pedido, id_usuario, isAdmin);
     const removed = await this.prisma.pedidos.update({
       where: { id_pedido },
       data: { eliminado_en: new Date() },
@@ -353,8 +403,9 @@ export class PedidosService {
 
     return serializeBigInts(removed);
   }
-  async addDetalle(id: string, dto: CreateDetallePedidoDto) {
+  async addDetalle(id: string, dto: CreateDetallePedidoDto, id_usuario: string, isAdmin: boolean) {
     const id_pedido = toBigIntId(id);
+    await this.assertPedidoOwner(id_pedido, id_usuario, isAdmin);
     const id_producto = toBigIntId(dto.id_producto);
 
     // Resolver tienda y productor del producto. Preferimos tiendas.id_productor
@@ -392,87 +443,143 @@ export class PedidosService {
 
     const detalle = await this.prisma.$transaction(
       async (tx) => {
-        const createdDetalle = await tx.detalle_pedido.create({
-        data: {
-          id_pedido,
-          id_producto,
-          id_productor,
-          id_tienda,
-          cantidad: dto.cantidad,
-          precio_compra: producto.precio_base,
-          moneda_compra: (dto.moneda_compra?.trim() ?? "MXN") as Moneda,
-          impuesto: dto.impuesto ?? "0",
-        },
-        include: { productos: { include: { lotes: true } } },
-      });
+        const inventario = await tx.inventario.findFirst({
+          where: { id_producto },
+        });
+        if (!inventario) {
+          throw new NotFoundException(
+            `No hay inventario registrado para el producto ${dto.id_producto}`,
+          );
+        }
 
-      const inventario = await tx.inventario.findFirst({
-        where: { id_producto },
-      });
-      if (!inventario) {
-        throw new NotFoundException(
-          `No hay inventario registrado para el producto ${dto.id_producto}`,
-        );
-      }
+        const nuevaCantidad = Number(dto.cantidad);
 
-      const cantidadADecretar = Number(dto.cantidad);
+        // Idempotencia: si el producto ya está en el pedido, ajustamos por delta en
+        // lugar de crear otra línea. Así un doble-click con el mismo payload (delta=0)
+        // no duplica la línea ni vuelve a descontar stock. La unicidad real la garantiza
+        // el @@unique([id_pedido, id_producto]) a nivel de BD (protege concurrencia).
+        const existente = await tx.detalle_pedido.findFirst({
+          where: { id_pedido, id_producto },
+        });
 
-      // Decremento atómico condicional: el WHERE stock >= N y el SET stock = stock - N
-      // ocurren en una sola sentencia SQL, eliminando la race condition de overselling
-      // cuando dos transacciones concurrentes leen el mismo stock antes de actualizarlo.
-      const updateResult = await tx.inventario.updateMany({
-        where: {
-          id_inventario: inventario.id_inventario,
-          stock: { gte: cantidadADecretar },
-        },
-        data: { stock: { decrement: cantidadADecretar } },
-      });
+        let lineaDetalle: any;
 
-      if (updateResult.count === 0) {
-        throw new BadRequestException(
-          `Stock insuficiente para el producto ${dto.id_producto}. Disponible: ${inventario.stock}, solicitado: ${cantidadADecretar}.`,
-        );
-      }
+        if (existente) {
+          const delta = nuevaCantidad - Number(existente.cantidad);
 
-      const stockResultante = inventario.stock - cantidadADecretar;
+          if (delta > 0) {
+            // Decremento atómico condicional sobre el incremento solicitado.
+            const upd = await tx.inventario.updateMany({
+              where: {
+                id_inventario: inventario.id_inventario,
+                stock: { gte: delta },
+              },
+              data: { stock: { decrement: delta } },
+            });
+            if (upd.count === 0) {
+              throw new BadRequestException(
+                `Stock insuficiente para el producto ${dto.id_producto}. Disponible: ${inventario.stock}, incremento solicitado: ${delta}.`,
+              );
+            }
+          } else if (delta < 0) {
+            await tx.inventario.update({
+              where: { id_inventario: inventario.id_inventario },
+              data: { stock: { increment: Math.abs(delta) } },
+            });
+          }
 
-      await tx.movimientos_inventario.create({
-        data: {
-          id_inventario: inventario.id_inventario,
-          id_pedido,
-          tipo: "venta",
-          cantidad: cantidadADecretar,
-          stock_resultante: stockResultante,
-          motivo: `Venta en pedido ${id_pedido}`,
-        },
-      });
+          if (delta !== 0) {
+            await tx.movimientos_inventario.create({
+              data: {
+                id_inventario: inventario.id_inventario,
+                id_pedido,
+                tipo: 'ajuste_pedido',
+                cantidad: Math.abs(delta),
+                stock_resultante: Number(inventario.stock) - delta,
+                motivo: `Ajuste de cantidad en pedido ${id_pedido} (delta: ${delta})`,
+              },
+            });
+          }
 
-      if (id_productor) {
-        await this.upsertPedidoProductorConComision(
-          {
-            id_pedido,
-            id_productor,
-            pais_operacion: producto.tiendas?.pais_operacion ?? null,
-            moneda_pedido: createdDetalle.moneda_compra,
+          lineaDetalle = await tx.detalle_pedido.update({
+            where: { id_detalle: existente.id_detalle },
+            data: {
+              cantidad: nuevaCantidad,
+              precio_compra: producto.precio_base,
+              moneda_compra: (dto.moneda_compra?.trim() ?? 'MXN') as Moneda,
+              impuesto: dto.impuesto ?? '0',
+              id_productor,
+              id_tienda,
+            },
+            include: { productos: { include: { lotes: true } } },
+          });
+        } else {
+          // Camino original: decremento atómico condicional (anti-overselling).
+          const upd = await tx.inventario.updateMany({
+            where: {
+              id_inventario: inventario.id_inventario,
+              stock: { gte: nuevaCantidad },
+            },
+            data: { stock: { decrement: nuevaCantidad } },
+          });
+          if (upd.count === 0) {
+            throw new BadRequestException(
+              `Stock insuficiente para el producto ${dto.id_producto}. Disponible: ${inventario.stock}, solicitado: ${nuevaCantidad}.`,
+            );
+          }
+
+          await tx.movimientos_inventario.create({
+            data: {
+              id_inventario: inventario.id_inventario,
+              id_pedido,
+              tipo: 'venta',
+              cantidad: nuevaCantidad,
+              stock_resultante: Number(inventario.stock) - nuevaCantidad,
+              motivo: `Venta en pedido ${id_pedido}`,
+            },
+          });
+
+          lineaDetalle = await tx.detalle_pedido.create({
+            data: {
+              id_pedido,
+              id_producto,
+              id_productor,
+              id_tienda,
+              cantidad: nuevaCantidad,
+              precio_compra: producto.precio_base,
+              moneda_compra: (dto.moneda_compra?.trim() ?? 'MXN') as Moneda,
+              impuesto: dto.impuesto ?? '0',
+            },
+            include: { productos: { include: { lotes: true } } },
+          });
+        }
+
+        if (id_productor) {
+          await this.upsertPedidoProductorConComision(
+            {
+              id_pedido,
+              id_productor,
+              pais_operacion: producto.tiendas?.pais_operacion ?? null,
+              moneda_pedido: lineaDetalle.moneda_compra,
+            },
+            tx,
+          );
+        }
+
+        await tx.auditoria.create({
+          data: {
+            accion: existente ? 'actualizar_detalle_pedido' : 'crear_detalle_pedido',
+            tabla_afectada: 'detalle_pedido',
+            registro_id: String(lineaDetalle.id_detalle),
+            valor_nuevo: {
+              id_producto: Number(lineaDetalle.id_producto),
+              cantidad: Number(lineaDetalle.cantidad),
+              precio_compra: Number(lineaDetalle.precio_compra),
+            } as any,
           },
-          tx,
-        );
-      }
+        });
 
-      await tx.auditoria.create({
-        data: {
-          accion: 'crear_detalle_pedido',
-          tabla_afectada: 'detalle_pedido',
-          registro_id: String(createdDetalle.id_detalle),
-          valor_nuevo: {
-            id_producto: Number(createdDetalle.id_producto),
-            cantidad: Number(createdDetalle.cantidad),
-            precio_compra: Number(createdDetalle.precio_compra),
-          } as any,
-        },
-      });
-
-        return createdDetalle;
+        return lineaDetalle;
       },
       {
         timeout: 15000, // Aumentar timeout a 15 segundos para operaciones complejas
@@ -699,16 +806,20 @@ export class PedidosService {
       ),
     );
   }
-  async removeDetalle(id_detalle: string) {
+  async removeDetalle(id_detalle: string, id_usuario: string, isAdmin: boolean) {
     const id_detalle_big = toBigIntId(id_detalle);
 
     await this.prisma.$transaction(async (tx) => {
       const detalle = await tx.detalle_pedido.findUnique({
         where: { id_detalle: id_detalle_big },
-        select: { id_producto: true, cantidad: true, id_pedido: true },
+        select: { id_producto: true, cantidad: true, id_pedido: true, pedidos: { select: { id_usuario: true } } },
       });
 
       if (!detalle) throw new NotFoundException('Detalle de pedido no encontrado');
+
+      if (!isAdmin && detalle.pedidos.id_usuario !== id_usuario) {
+        throw new ForbiddenException('No tienes permiso para eliminar este detalle de pedido');
+      }
 
       const inv = await tx.inventario.findFirst({
         where: { id_producto: detalle.id_producto },
@@ -870,7 +981,17 @@ export class PedidosService {
   async getMisCompras(accessToken: string) {
     const user = await this.authService.getMe(accessToken);
     const pedidos = await this.prisma.pedidos.findMany({
-      where: { id_usuario: user.id_usuario, eliminado_en: null },
+      where: {
+        id_usuario: user.id_usuario,
+        eliminado_en: null,
+        // Ocultar abandonos auto-cancelados por el cron expirarPedidosPendientes()
+        // (cancelado y nunca cobrado). Los cancelados CON pago completado/reembolsado
+        // sí se muestran: son el registro de un reembolso real para el cliente.
+        NOT: {
+          estado: 'cancelado',
+          pagos: { none: { estado: { in: ['completado', 'reembolsado'] } } },
+        },
+      },
       include: {
         detalle_pedido: {
           include: {
@@ -1618,12 +1739,21 @@ export class PedidosService {
 
   @Cron('0 */30 * * * *')
   async expirarPedidosPendientes() {
-    const hace2Horas = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    // Ventana de 30 min: si el pago no se confirma, liberamos el stock reservado
+    // rápido en vez de bloquearlo 2 h (hallazgo #13).
+    const hace30Min = new Date(Date.now() - 30 * 60 * 1000);
     const zombies = await this.prisma.pedidos.findMany({
       where: {
         estado: 'pendiente',
-        fecha_creacion: { lt: hace2Horas },
+        fecha_creacion: { lt: hace30Min },
         eliminado_en: null,
+        // Protección contra webhooks perdidos/tardíos: NO cancelar un pedido
+        // que ya tenga un pago cobrado. Si el cobro se realizó pero el webhook
+        // que lo marca como 'pagado' falló o llegó tarde, el pedido sigue
+        // 'pendiente' y antes era cancelado por error (falso positivo).
+        pagos: {
+          none: { estado: { in: ['completado', 'reembolsado'] } },
+        },
       },
       include: {
         detalle_pedido: {
@@ -1639,6 +1769,19 @@ export class PedidosService {
     for (const pedido of zombies) {
       try {
         await this.prisma.$transaction(async (tx) => {
+          // Anti-race: marca cancelado SOLO si sigue 'pendiente'. Si un webhook
+          // de pago corrió entre el findMany y este commit y ya avanzó el pedido
+          // a 'pagado', count=0 y abortamos sin restaurar stock ni cancelar.
+          const marcado = await tx.pedidos.updateMany({
+            where: { id_pedido: pedido.id_pedido, estado: 'pendiente' },
+            data: { estado: 'cancelado' },
+          });
+          if (marcado.count === 0) {
+            this.logger.warn(
+              `[pedidos] Expiración omitida para pedido ${pedido.id_pedido}: estado cambió antes del commit`,
+            );
+            return;
+          }
           for (const detalle of pedido.detalle_pedido) {
             const inv = await tx.inventario.findFirst({
               where: { id_producto: detalle.id_producto },
@@ -1662,16 +1805,12 @@ export class PedidosService {
               });
             }
           }
-          await tx.pedidos.update({
-            where: { id_pedido: pedido.id_pedido },
-            data: { estado: 'cancelado' },
-          });
           await tx.auditoria.create({
             data: {
               accion: 'expirar_pedido_sin_pago',
               tabla_afectada: 'pedidos',
               registro_id: String(pedido.id_pedido),
-              valor_nuevo: { estado: 'cancelado', motivo: 'Sin pago confirmado en 2 horas' } as any,
+              valor_nuevo: { estado: 'cancelado', motivo: 'Sin pago confirmado en 30 minutos' } as any,
             },
           });
         });

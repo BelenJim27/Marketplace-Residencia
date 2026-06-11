@@ -9,13 +9,9 @@ export class PedidosController {
   constructor(private readonly service: PedidosService) {}
   @UseGuards(AuthGuard)
   @Get() findAll(@Query() query: PaginacionQueryDto) { return this.service.findAll(query); }
-  @Get('mis-ventas') getMisVentas(@Headers('authorization') authorization?: string) {
-    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
-    if (!token) {
-      throw new BadRequestException('Token requerido');
-    }
-
-    return this.service.getMisVentas(token);
+  @UseGuards(AuthGuard)
+  @Get('mis-ventas') getMisVentas(@Req() req: any) {
+    return this.service.getMisVentas(req.user.id_productor ?? null);
   }
 
   @UseGuards(AuthGuard)
@@ -34,15 +30,16 @@ export class PedidosController {
     return this.service.getMisPedidosProductor(token);
   }
 
-  @Get('estadisticas') getEstadisticas(@Headers('authorization') authorization?: string, @Query('id_productor') idProductor?: string, @Query('periodo') periodo?: string) {
-    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined;
+  @UseGuards(AuthGuard)
+  @Get('estadisticas') getEstadisticas(@Req() req: any, @Query('id_productor') idProductor?: string, @Query('periodo') periodo?: string) {
     const parsed = idProductor ? Number(idProductor) : undefined;
-
-    if (!token && (parsed == null || Number.isNaN(parsed))) {
-      throw new BadRequestException('id_productor es requerido');
-    }
-
-    return this.service.getEstadisticas(periodo || 'month', token, parsed);
+    // Un productor solo ve sus propias estadísticas; un admin puede consultar las de
+    // cualquier productor pasando ?id_productor= (evita que un productor vea las de otro).
+    const id_productor =
+      isAdmin(req.user) && parsed != null && !Number.isNaN(parsed)
+        ? parsed
+        : (req.user.id_productor ?? null);
+    return this.service.getEstadisticas(periodo || 'month', id_productor);
   }
 
   @UseGuards(AuthGuard)
@@ -103,34 +100,42 @@ export class PedidosController {
     return this.service.cotizarEnvio(id);
   }
 
+  @UseGuards(AuthGuard)
   @Get('test-email')
-  testEmail(@Query('to') to: string) { return this.service.testEmail(to); }
+  testEmail(@Query('to') to: string, @Req() req: any) {
+    if (!isAdmin(req.user)) {
+      throw new ForbiddenException('Solo administradores pueden usar test-email');
+    }
+    return this.service.testEmail(to);
+  }
 
   @UseGuards(AuthGuard)
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req: any) {
     const pedido = await this.service.findOne(id) as any;
     const user = req.user;
-    const isAdmin = user.roles?.some((r: string) => r.toLowerCase() === 'administrador');
     const isOwner = pedido.id_usuario === user.id_usuario;
-    const isProductor = user.id_productor !== null;
-    if (!isAdmin && !isOwner && !isProductor) {
+    // El productor solo puede ver el pedido si tiene al menos un ítem suyo en él.
+    const isOwningProductor =
+      user.id_productor != null &&
+      (pedido.detalle_pedido?.some((d: any) => d.id_productor === user.id_productor) ?? false);
+    if (!isAdmin(user) && !isOwner && !isOwningProductor) {
       throw new ForbiddenException('No tienes acceso a este pedido');
     }
     return pedido;
   }
   @UseGuards(AuthGuard)
-  @Post() create(@Body() dto: CreatePedidoDto) { return this.service.create(dto); }
+  @Post() create(@Body() dto: CreatePedidoDto, @Req() req: any) { return this.service.create(dto, req.user.id_usuario); }
   @UseGuards(AuthGuard)
-  @Patch(':id') update(@Param('id') id: string, @Body() dto: UpdatePedidoDto) { return this.service.update(id, dto); }
+  @Patch(':id') update(@Param('id') id: string, @Body() dto: UpdatePedidoDto, @Req() req: any) { return this.service.update(id, dto, req.user.id_usuario, isAdmin(req.user)); }
   @UseGuards(AuthGuard)
-  @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }
+  @Delete(':id') remove(@Param('id') id: string, @Req() req: any) { return this.service.remove(id, req.user.id_usuario, isAdmin(req.user)); }
   @UseGuards(AuthGuard)
-  @Post(':id/detalles') addDetalle(@Param('id') id: string, @Body() dto: CreateDetallePedidoDto) { return this.service.addDetalle(id, dto); }
+  @Post(':id/detalles') addDetalle(@Param('id') id: string, @Body() dto: CreateDetallePedidoDto, @Req() req: any) { return this.service.addDetalle(id, dto, req.user.id_usuario, isAdmin(req.user)); }
   @UseGuards(AuthGuard)
   @Patch('detalles/:id_detalle') updateDetalle(@Param('id_detalle') id_detalle: string, @Body() dto: UpdateDetallePedidoDto, @Req() req: any) { return this.service.updateDetalle(id_detalle, req.user.id_usuario, dto); }
   @UseGuards(AuthGuard)
-  @Delete('detalles/:id_detalle') removeDetalle(@Param('id_detalle') id_detalle: string) { return this.service.removeDetalle(id_detalle); }
+  @Delete('detalles/:id_detalle') removeDetalle(@Param('id_detalle') id_detalle: string, @Req() req: any) { return this.service.removeDetalle(id_detalle, req.user.id_usuario, isAdmin(req.user)); }
 
   @UseGuards(AuthGuard)
   @Post(':id/facturas') addFactura(@Param('id') id: string, @Body() dto: CreateFacturaDto) { return this.service.addFactura(id, dto); }
@@ -138,4 +143,8 @@ export class PedidosController {
   @Patch('facturas/:id_factura') updateFactura(@Param('id_factura') id_factura: string, @Body() dto: UpdateFacturaDto) { return this.service.updateFactura(id_factura, dto); }
   @UseGuards(AuthGuard)
   @Delete('facturas/:id_factura') removeFactura(@Param('id_factura') id_factura: string) { return this.service.removeFactura(id_factura); }
+}
+
+function isAdmin(user: any): boolean {
+  return user?.roles?.some((r: string) => ['admin', 'administrador'].includes(r.toLowerCase())) ?? false;
 }

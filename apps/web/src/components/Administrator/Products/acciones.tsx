@@ -185,7 +185,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                                                 <img
                                                     src={imagenPreview}
                                                     alt="Preview"
-                                                    className="w-full h-full object-cover"
+                                                    className="w-full h-full object-contain"
                                                 />
                                                 <div className="absolute inset-0 bg-[#1F3A2E]/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                                                     <div className="text-white text-center">
@@ -215,7 +215,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                                     <img
                                         src={imagenPreview}
                                         alt={producto.nombre}
-                                        className="w-full h-28 object-cover rounded-xl border border-[#C5CFB0] transition-all duration-300"
+                                        className="w-full h-28 object-contain rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] transition-all duration-300"
                                     />
                                 ) : (
                                     <div className="w-full h-28 rounded-xl bg-[#F4F0E3] flex items-center justify-center text-[#3D6B3F]/50 transition-all duration-300">

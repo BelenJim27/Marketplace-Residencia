@@ -693,6 +693,8 @@ export function AdminChartsContent() {
         ) : <EmptyState message="Sin datos de ventas" />}
       </ChartCard>
 
+      {/* ── Secundarias: Top Productos + Nuevos Usuarios ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       {/* ── Top Productos ── */}
       <ChartCard title="Top Productos" subtitle="Más vendidos (últimos 30 días)">
         {loading ? <ChartSkeleton /> : data?.productosMasVendidos.length ? (
@@ -761,6 +763,7 @@ export function AdminChartsContent() {
           </ResponsiveContainer>
         ) : <EmptyState message="Sin datos de registros" />}
       </ChartCard>
+      </div>
     </div>
   );
 }

@@ -46,7 +46,7 @@ function ProductoMiniCard({ producto }: { producto: ProductoCard }) {
             alt={producto.nombre}
             fill
             sizes="(max-width: 480px) 45vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
-            className="object-cover"
+            className="object-contain"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-gray-300 text-xs">{useLocale().t("catalog_no_image")}</div>

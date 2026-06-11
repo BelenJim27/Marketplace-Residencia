@@ -1,7 +1,8 @@
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus, UnprocessableEntityException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+import * as crypto from 'crypto';
 import { CotizarEnvioDto } from './dto/envios.dto';
 import { ICarrierService, ShippingQuote, TrackingEvent, ShipmentResult } from './interfaces/carrier.interface';
 
@@ -202,6 +203,8 @@ export class SkydropxService implements ICarrierService {
       price: Math.round(Math.max(Number(dto.valor_declarado_usd) || 50, 1) * 100) / 100,
       weight: dto.peso_kg,
       hs_code: await this.resolveHsCode(dto.hs_code),
+      product_type_code: this.productTypeCode,
+      product_type_name: this.productTypeName,
       country_code: 'MX',
     }];
   }
@@ -286,7 +289,7 @@ export class SkydropxService implements ICarrierService {
       quotation = await this.post<any>('/quotations', { quotation: quotationBody });
     } catch (err: any) {
       const body = (err as any)?.response?.data ?? {};
-      const isHsError = JSON.stringify(body).includes('código harmonizado');
+      const isHsError = this.isHsCodeError(body);
       if (isHsError) {
         const env = this.config.get('SKYDROPX_ENV', 'sandbox');
         this.logger.warn(
@@ -366,6 +369,29 @@ export class SkydropxService implements ICarrierService {
 
   private readonly hsCodeDefault: string;
 
+  // Detecta si una respuesta de error de SkydropX es por un código armonizado (HS) inválido.
+  // Tolera variaciones de idioma del portal SkydropX ("código harmonizado"/"harmonized code").
+  private isHsCodeError(body: any): boolean {
+    const text = JSON.stringify(body ?? {}).toLowerCase();
+    return (
+      text.includes('harmonizado') ||
+      text.includes('harmonized') ||
+      text.includes('hs_code') ||
+      text.includes('hs code')
+    );
+  }
+
+  // Lanza un error tipado e identificable para que el frontend muestre un mensaje claro,
+  // traducido, y ofrezca corregir el código HS y reintentar. El `code` es estable.
+  private throwHsCodeError(hsCode?: string): never {
+    throw new UnprocessableEntityException({
+      code: 'INVALID_HS_CODE',
+      hs_code: hsCode ?? this.hsCodeDefault,
+      message:
+        'El código arancelario (HS) no es válido para este envío internacional. Corrígelo e inténtalo de nuevo.',
+    });
+  }
+
   // Fetches valid HS codes from SkydropX catalog and returns one suitable for mezcal/spirits.
   // Falls back to SKYDROPX_HS_CODE_DEFAULT if the catalog endpoint is unavailable.
   private async resolveHsCode(preferred?: string): Promise<string> {
@@ -396,8 +422,9 @@ export class SkydropxService implements ICarrierService {
     }
 
     if (this.cachedHsCodes.length > 0) {
-      // Prefer spirits/mezcal codes (HS chapter 2208)
-      const spiritsPrefixes = ['2208.907200', '22089005', '22089099', '22089000', '220890', '2208'];
+      // Prefer spirits/mezcal codes (HS chapter 2208). Solo códigos completos: SkydropX
+      // rechaza los de 6 dígitos (p.ej. "220890") con "No existe el código harmonizado".
+      const spiritsPrefixes = ['2208.907200', '22089005', '22089099', '22089000'];
       for (const prefix of spiritsPrefixes) {
         const match = this.cachedHsCodes.find(c => c.replace(/\./g, '').startsWith(prefix.replace(/\./g, '')));
         if (match) return match;
@@ -406,6 +433,31 @@ export class SkydropxService implements ICarrierService {
     }
 
     return this.hsCodeDefault;
+  }
+
+  // SkydropX Pro: customs_payment_payer ∈ {sender, recipient}. Los valores aceptados por cada
+  // tarifa dependen del país de destino y del servicio del carrier, y vienen en la propia
+  // tarifa (rate.customs_payment_payer = lista permitida). Elegimos el preferido configurado
+  // (SKYDROPX_CUSTOMS_PAYER, default 'recipient' → el cliente paga aranceles en destino/DDU)
+  // si está permitido; si no, el primero permitido por la tarifa.
+  // UNSPSC del producto, requerido por SkydropX en productos de envíos internacionales.
+  // Default 50202200 (clase de destilados/spirits, la misma que usamos como consignment_note).
+  private get productTypeCode(): string {
+    return String(this.config.get('SKYDROPX_PRODUCT_TYPE_CODE', '50202200'));
+  }
+  private get productTypeName(): string {
+    return String(this.config.get('SKYDROPX_PRODUCT_TYPE_NAME', 'Mezcal'));
+  }
+
+  private resolveCustomsPayer(rate: any): 'sender' | 'recipient' {
+    const preferred = String(this.config.get('SKYDROPX_CUSTOMS_PAYER', 'recipient')).toLowerCase();
+    const allowed: string[] = Array.isArray(rate?.customs_payment_payer)
+      ? rate.customs_payment_payer.map((v: any) => String(v).toLowerCase())
+      : [];
+    if (allowed.length > 0) {
+      return (allowed.includes(preferred) ? preferred : allowed[0]) as 'sender' | 'recipient';
+    }
+    return preferred === 'sender' ? 'sender' : 'recipient';
   }
 
   // Fetches valid consignment_note class codes from SkydropX catalog. Cached after first call.
@@ -485,17 +537,32 @@ export class SkydropxService implements ICarrierService {
         package_type: '4G',
       },
     };
+    const resolvedHsCode = await this.resolveHsCode((envio as any).codigo_hs);
     if (destPais !== 'MX') {
       shipmentQuotationBody.products = [{
         description_en: 'Artisanal agave distillate mezcal from Oaxaca Mexico',
         quantity: 1,
         price: valorDeclaradoUsd,
         weight: Number(envio.peso_kg ?? 1),
-        hs_code: await this.resolveHsCode((envio as any).codigo_hs),
+        hs_code: resolvedHsCode,
+        // UNSPSC obligatorio para envíos internacionales (SkydropX: "Código de tipo de
+        // producto no puede estar en blanco"). Reutilizamos la clase de destilados/spirits.
+        product_type_code: this.productTypeCode,
+        product_type_name: this.productTypeName,
         country_code: 'MX',
       }];
     }
-    const quotationRaw = await this.post<any>('/quotations', { quotation: shipmentQuotationBody });
+    let quotationRaw: any;
+    try {
+      quotationRaw = await this.post<any>('/quotations', { quotation: shipmentQuotationBody });
+    } catch (err: any) {
+      const body = (err as any)?.response?.data ?? {};
+      if (this.isHsCodeError(body)) {
+        this.logger.warn(`[createShipment] SkydropX rechazó el código HS "${resolvedHsCode}" al cotizar el envío internacional a ${destPais}.`);
+        this.throwHsCodeError(resolvedHsCode);
+      }
+      throw err;
+    }
 
     const quotation = (quotationRaw.is_completed || this.hasSuccessfulRate(quotationRaw))
       ? quotationRaw
@@ -595,15 +662,29 @@ export class SkydropxService implements ICarrierService {
           content_description: (envio as any).contenido_descripcion ?? 'Destilado de agave artesanal',
         } : {}),
         ...(destPais !== 'MX' ? {
-          customs_payment_payer: 'shipper',
-          shipment_purpose: 'commercial',
+          customs_payment_payer: this.resolveCustomsPayer(selectedRate),
+          // SkydropX Pro: valores permitidos `goods`, `documents`, `sample`,
+          // `return_of_goods`, `gift`, `humanitarian_donation` (NO `commercial`).
+          shipment_purpose: this.config.get('SKYDROPX_SHIPMENT_PURPOSE', 'goods'),
           products: shipmentQuotationBody.products,
         } : {}),
       },
     };
     this.logger.debug(`[createShipment] body=${JSON.stringify(shipmentBody)}`);
-    // 2. Crear guía — quotation_id + rate_id ambos requeridos según la API
-    const shipment = await this.post<any>('/shipments', shipmentBody);
+    // 2. Crear guía — quotation_id + rate_id ambos requeridos según la API.
+    // Un HS inválido es rechazado aquí, ANTES de emitir tracking, por lo que no se crea
+    // guía huérfana. Se traduce a un error tipado INVALID_HS_CODE recuperable.
+    let shipment: any;
+    try {
+      shipment = await this.post<any>('/shipments', shipmentBody);
+    } catch (err: any) {
+      const body = (err as any)?.response?.data ?? {};
+      if (this.isHsCodeError(body)) {
+        this.logger.warn(`[createShipment] SkydropX rechazó el código HS "${resolvedHsCode}" al crear el shipment a ${destPais}.`);
+        this.throwHsCodeError(resolvedHsCode);
+      }
+      throw err;
+    }
 
     // 3. SkydropX creates shipments asynchronously — poll until tracking_number + label_url are ready
     const shipmentId: string = shipment?.data?.id ?? shipment?.data?.attributes?.id;
@@ -622,6 +703,10 @@ export class SkydropxService implements ICarrierService {
       this.logger.debug(`[createShipment] poll attempt=${attempt + 1} tracking_status=${pkgA.tracking_status} tracking_number=${pkgA.tracking_number}`);
       if (pkgA.tracking_number && pkgA.label_url) break;
       if (pkgA.tracking_status === 'error') {
+        // Si el error asíncrono es por HS, también lo hacemos recuperable.
+        if (this.isHsCodeError(pkgA) || this.isHsCodeError(resolvedShipment)) {
+          this.throwHsCodeError(resolvedHsCode);
+        }
         throw new HttpException('SkydropX: error al generar la guía', HttpStatus.UNPROCESSABLE_ENTITY);
       }
     }
@@ -650,29 +735,14 @@ export class SkydropxService implements ICarrierService {
       selectedRate.provider ?? '';
 
     // 4. Descargar PDF — la URL es pre-firmada (JWT en el path), no requiere Bearer token
-    let labelBuffer: Buffer | undefined;
-    if (labelUrl) {
-      // Try without auth first (pre-signed URL), then with Bearer as fallback
-      for (const useAuth of [false, true]) {
-        try {
-          const reqConfig: any = { responseType: 'arraybuffer', timeout: 15000 };
-          if (useAuth) {
-            const token = await this.getToken();
-            reqConfig.headers = { Authorization: `Bearer ${token}` };
-          }
-          const pdfRes = await firstValueFrom(this.http.get(labelUrl, reqConfig));
-          const buf = Buffer.from(pdfRes.data as ArrayBuffer);
-          const magic = buf.slice(0, 4).toString('ascii');
-          this.logger.debug(`[createShipment] PDF download useAuth=${useAuth} bytes=${buf.length} magic=${magic}`);
-          if (magic === '%PDF') {
-            labelBuffer = buf;
-            break;
-          }
-          this.logger.warn(`[createShipment] PDF descargado pero no es PDF válido (magic=${magic}), ${useAuth ? 'desistiendo' : 'intentando con auth'}`);
-        } catch (err: any) {
-          this.logger.warn(`[createShipment] PDF download useAuth=${useAuth} failed: ${err?.message}`);
-        }
-      }
+    const labelBuffer = labelUrl ? await this.downloadLabel(labelUrl) : undefined;
+
+    // Si SkydropX aún no generó la etiqueta (estado asíncrono "in_creation"), devolvemos
+    // pending=true en vez de fallar: la guía se persiste "en proceso" y se completa luego
+    // con refrescarGuia. (En sandbox las guías internacionales nunca completan.)
+    const pending = !labelBuffer;
+    if (pending) {
+      this.logger.warn(`[createShipment] etiqueta aún en generación (in_creation) shipmentId=${shipmentId} — se devolverá pending=true`);
     }
 
     return {
@@ -683,8 +753,71 @@ export class SkydropxService implements ICarrierService {
       currency: selectedRate.currency ?? selectedRate.currency_local ?? 'MXN',
       carrierName,
       providerShipmentId: shipmentId,
+      pending,
       tarifa_fallback: !matchedRate,
       tarifa_original_solicitada: matchedRate ? undefined : `${preferred_provider}/${preferred_service}`,
+    };
+  }
+
+  // Descarga el PDF de la etiqueta. La URL es pre-firmada (JWT en el path); intenta sin auth
+  // primero y con Bearer como respaldo. Devuelve undefined si no se obtuvo un PDF válido.
+  private async downloadLabel(labelUrl: string): Promise<Buffer | undefined> {
+    for (const useAuth of [false, true]) {
+      try {
+        const reqConfig: any = { responseType: 'arraybuffer', timeout: 15000 };
+        if (useAuth) {
+          const token = await this.getToken();
+          reqConfig.headers = { Authorization: `Bearer ${token}` };
+        }
+        const pdfRes = await firstValueFrom(this.http.get(labelUrl, reqConfig));
+        const buf = Buffer.from(pdfRes.data as ArrayBuffer);
+        const magic = buf.slice(0, 4).toString('ascii');
+        this.logger.debug(`[downloadLabel] useAuth=${useAuth} bytes=${buf.length} magic=${magic}`);
+        if (magic === '%PDF') return buf;
+        this.logger.warn(`[downloadLabel] descargado pero no es PDF válido (magic=${magic}), ${useAuth ? 'desistiendo' : 'intentando con auth'}`);
+      } catch (err: any) {
+        this.logger.warn(`[downloadLabel] useAuth=${useAuth} failed: ${err?.message}`);
+      }
+    }
+    return undefined;
+  }
+
+  // Re-consulta un shipment asíncrono ya creado. Si la etiqueta está lista, la descarga y la
+  // devuelve; si sigue en "in_creation", regresa pending=true.
+  async obtenerGuiaPendiente(shipmentId: string): Promise<ShipmentResult> {
+    let resolvedShipment = await this.get<any>(`/shipments/${shipmentId}`);
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const pkg = (resolvedShipment?.included ?? []).find(
+        (i: any) => i?.type === 'package' || i?.type === 'packages',
+      );
+      const pkgA = pkg?.attributes ?? {};
+      this.logger.debug(`[obtenerGuiaPendiente] attempt=${attempt + 1} tracking_status=${pkgA.tracking_status} tracking_number=${pkgA.tracking_number}`);
+      if (pkgA.tracking_number && pkgA.label_url) break;
+      if (pkgA.tracking_status === 'error') {
+        throw new HttpException('SkydropX: error al generar la guía', HttpStatus.UNPROCESSABLE_ENTITY);
+      }
+      await this.delay(2000);
+      resolvedShipment = await this.get<any>(`/shipments/${shipmentId}`);
+    }
+
+    const shipAttrs = resolvedShipment?.data?.attributes ?? {};
+    const included: any[] = resolvedShipment?.included ?? [];
+    const pkgIncluded = included.find((i: any) => i?.type === 'package' || i?.type === 'packages');
+    const pkgAttrs = pkgIncluded?.attributes ?? included[0]?.attributes ?? {};
+
+    const labelUrl: string | undefined = pkgAttrs.label_url ?? shipAttrs.label_url;
+    const trackingNumber: string =
+      pkgAttrs.tracking_number ?? shipAttrs.master_tracking_number ?? shipAttrs.tracking_number ?? shipmentId;
+    const carrierName: string = shipAttrs.carrier_name ?? '';
+
+    const labelBuffer = labelUrl ? await this.downloadLabel(labelUrl) : undefined;
+    return {
+      trackingNumber: labelBuffer ? trackingNumber : shipmentId,
+      labelBuffer,
+      labelFormat: 'PDF',
+      carrierName,
+      providerShipmentId: shipmentId,
+      pending: !labelBuffer,
     };
   }
 
@@ -707,29 +840,9 @@ export class SkydropxService implements ICarrierService {
     };
   }
 
-  async getTracking(trackingNumber: string, options?: Record<string, any>): Promise<TrackingEvent[]> {
-    const carrierName = options?.carrierName ?? '';
-    // Tracking API de SkydropX (radar-api) usa el mismo bearer token
-    const token = await this.getToken();
-    try {
-      const res = await firstValueFrom(
-        this.http.post(
-          'https://radar-api.skydropx.com/v1/tracking',
-          { tracking_numbers: [{ carrier: carrierName, tracking_number: trackingNumber }] },
-          { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } },
-        ),
-      );
-      const items: any[] = Array.isArray(res.data) ? res.data : [res.data];
-      const events: any[] = items[0]?.events ?? [];
-      return events.map((e) => ({
-        descripcion: e.description ?? String(e.status ?? ''),
-        estado: String(e.status ?? 'unknown'),
-        fecha: e.date ? new Date(e.date) : new Date(),
-        ubicacion: e.location ?? e.city ?? '',
-      }));
-    } catch (err: any) {
-      this.logger.warn(`SkydropX tracking falló: ${err?.message}`);
-      return [];
-    }
+  async getTracking(_trackingNumber: string, _options?: Record<string, any>): Promise<TrackingEvent[]> {
+    // Tracking vía webhook — SkydropX notifica eventos automáticamente a POST /envios/webhook/skydropx.
+    // La consulta activa a radar-api.skydropx.com requiere una Radar API Key separada (no el OAuth clientSecret).
+    return [];
   }
 }

@@ -78,6 +78,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     if (usuarioId && token) {
       try {
         const data = await api.wishlist.getByUsuario(usuarioId, token);
+        // Si el usuario cambió durante el fetch (login/logout rápido), descartamos
+        // para no mostrar la wishlist de un usuario en la sesión de otro.
+        if (getUsuarioId() !== usuarioId) return;
         const items = Array.isArray(data) ? data : [];
         setItems(items as WishlistItem[]);
       } catch {

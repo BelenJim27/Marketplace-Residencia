@@ -7,6 +7,9 @@ import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
 import { AlertCircle, CheckCircle2, Loader2, MapPin, Trash2, Edit2, Plus } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+import { useFeedback } from "@/hooks/useFeedback";
+import { useDeleteAlert } from "@/hooks/useDeleteAlert";
+import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 
 interface Direccion {
   id_direccion?: number;
@@ -44,9 +47,9 @@ export default function DireccionesPage() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const [eliminando, setEliminando] = useState<number | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [formErrors, setFormErrors] = useState<{ telefono?: string; cp?: string }>({});
+  const fb = useFeedback("direccion");
+  const deleteAlert = useDeleteAlert("direccion");
 
   const [formData, setFormData] = useState<Direccion>({
     nombre_destinatario: "",
@@ -158,14 +161,14 @@ export default function DireccionesPage() {
               ubicacion: { lat, lng, source: "gps" },
             }));
           } catch {
-            setError("No se pudo obtener la dirección desde las coordenadas.");
+            fb.error("No se pudo obtener la dirección desde las coordenadas.");
           }
         },
-        (err) => setError(err.message),
+        (err) => fb.error(err.message),
         { timeout: 10000 }
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al obtener ubicación");
+      fb.error(err, "Error al obtener ubicación");
     }
   };
 
@@ -187,6 +190,7 @@ export default function DireccionesPage() {
       setError(null);
       const token = getCookie("token") || "";
 
+      const fueEdicion = !!editandoId;
       if (editandoId) {
         await api.direcciones.update(token, editandoId.toString(), formData);
       } else {
@@ -195,8 +199,10 @@ export default function DireccionesPage() {
 
       cerrarFormulario();
       await cargarDirecciones();
+      if (fueEdicion) fb.actualizado();
+      else fb.creado();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al guardar dirección");
+      fb.error(err, "Error al guardar dirección");
     } finally {
       setEnviando(false);
     }
@@ -207,23 +213,24 @@ export default function DireccionesPage() {
       const token = getCookie("token") || "";
       await api.direcciones.update(token, id.toString(), { es_predeterminada: true, id_usuario: user?.id_usuario });
       await cargarDirecciones();
+      fb.success("Dirección predeterminada actualizada.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al actualizar dirección");
+      fb.error(err, "Error al actualizar dirección");
     }
   };
 
-  const eliminarDireccion = async (id: number) => {
-    try {
-      setEliminando(id);
-      const token = getCookie("token") || "";
-      await api.direcciones.delete(token, id.toString());
-      setConfirmDelete(null);
-      await cargarDirecciones();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al eliminar dirección");
-    } finally {
-      setEliminando(null);
-    }
+  const solicitarEliminar = (dir: Direccion) => {
+    const etiqueta = dir.nombre_etiqueta || dir.tipo || "Dirección";
+    deleteAlert.abrir(etiqueta, async () => {
+      try {
+        const token = getCookie("token") || "";
+        await api.direcciones.delete(token, String(dir.id_direccion ?? ""));
+        await cargarDirecciones();
+        fb.eliminado();
+      } catch (err) {
+        fb.error(err, "Error al eliminar dirección");
+      }
+    });
   };
 
   if (authLoading || loading) {
@@ -686,37 +693,21 @@ export default function DireccionesPage() {
                   >
                     <Edit2 className="h-5 w-5" aria-hidden="true" />
                   </button>
-                  {confirmDelete === dir.id_direccion ? (
-                    <div className="flex gap-2" role="alertdialog" aria-label="Confirmar eliminación de dirección">
-                      <button
-                        onClick={() => eliminarDireccion(dir.id_direccion || 0)}
-                        disabled={eliminando === dir.id_direccion}
-                        className="rounded bg-red-100 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-200 disabled:opacity-50"
-                      >
-                        {eliminando === dir.id_direccion ? "..." : "Confirmar"}
-                      </button>
-                      <button
-                        onClick={() => setConfirmDelete(null)}
-                        className="rounded px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-1"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmDelete(dir.id_direccion || null)}
-                      aria-label={`Eliminar dirección ${dir.nombre_etiqueta || dir.tipo || "dirección"}`}
-                      className="rounded p-3 text-red-600 hover:bg-red-50 dark:hover:bg-dark-2"
-                    >
-                      <Trash2 className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => solicitarEliminar(dir)}
+                    aria-label={`Eliminar dirección ${dir.nombre_etiqueta || dir.tipo || "dirección"}`}
+                    className="rounded p-3 text-red-600 hover:bg-red-50 dark:hover:bg-dark-2"
+                  >
+                    <Trash2 className="h-5 w-5" aria-hidden="true" />
+                  </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
     </div>
   );
 }

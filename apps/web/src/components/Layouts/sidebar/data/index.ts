@@ -64,19 +64,19 @@ export const ADMIN_NAV_DATA: NavSection[] = [
     items: [
       {
         title: "Dashboard",
-        url: "/Administrador/dashboard",
+        url: "/administrador/dashboard",
         icon: LayoutDashboard,
       },
-      { title: "Usuarios", url: "/Administrador/usuarios", icon: Users },
+      { title: "Usuarios", url: "/administrador/usuarios", icon: Users },
       {
         title: "Auditoría",
-        url: "/Administrador/auditoria",
+        url: "/administrador/auditoria",
         icon: FileBarChart,
       },
-      { title: "Roles y pemisos", url: "/Administrador/roles-permisos", icon: UserCog },
+      { title: "Roles y pemisos", url: "/administrador/roles-permisos", icon: UserCog },
       {
         title: "Productores",
-        url: "/Administrador/tienda/productores",
+        url: "/administrador/tienda/productores",
         icon: Users,
       },
       {
@@ -85,31 +85,31 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         children: [
           {
             title: "Categorías",
-            url: "/Administrador/categorias",
+            url: "/administrador/categorias",
             icon: Layers,
           },
           {
             title: "Productos",
-            url: "/Administrador/productos",
+            url: "/administrador/productos",
             icon: Users,
           },
         ],
       },
-      { title: "Pedidos", url: "/Administrador/pedidos", icon: ShoppingCart },
+      { title: "Pedidos", url: "/administrador/pedidos", icon: ShoppingCart },
 
       {
         title: "Comisiones",
-        url: "/Administrador/comisiones",
+        url: "/administrador/comisiones",
         icon: BadgeDollarSign,
       },
       {
         title: "Payouts",
-        url: "/Administrador/payouts",
+        url: "/administrador/payouts",
         icon: BadgeDollarSign,
       },
       {
         title: "Reembolsos",
-        url: "/Administrador/reembolsos",
+        url: "/administrador/reembolsos",
         icon: RotateCcw,
       },
 
@@ -120,12 +120,12 @@ export const ADMIN_NAV_DATA: NavSection[] = [
       },
       {
         title: "Asociaciones",
-        url: "/Administrador/asociaciones",
+        url: "/administrador/asociaciones",
         icon: Tag,
       },
       {
         title: "Configuración",
-        url: "/Administrador/configuracion",
+        url: "/administrador/configuracion",
         icon: Settings,
       },
     ],

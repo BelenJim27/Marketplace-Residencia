@@ -121,6 +121,7 @@ export default function UsuariosUI() {
         if (!token) throw new Error("No hay sesión activa");
         await api.usuarios.delete(token, usuario.id_usuario);
         fetchUsuarios();
+        successToast.mostrar("Usuario eliminado correctamente.");
       } catch (err) { setError(err instanceof Error ? err.message : "Error al eliminar"); }
     });
   };

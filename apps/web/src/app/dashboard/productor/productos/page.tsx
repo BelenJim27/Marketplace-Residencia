@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useProductos } from "@/hooks/useProductos";
 import { ProductoModal } from "@/components/Producer/Products/acciones/ProductoModal";
+import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 import {
   ProductoHeader,
   ProductoStatCard,
@@ -131,6 +132,8 @@ export default function ProductosPage() {
           error={ctx.error}
         />
       )}
+
+      <DeleteAlertModal estado={ctx.deleteAlert.estado} onClose={ctx.deleteAlert.cerrar} />
 
     </div>
   );

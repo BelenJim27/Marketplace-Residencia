@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, X, Package, User, MapPin, Truck, BarChart3 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useLocale } from "@/context/LocaleContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 
@@ -151,9 +152,10 @@ interface OrderDetail {
     total: number;
     moneda: string;
     direccion_envio_snapshot: any;
+    pais_destino_iso2?: string | null;
   };
   detalles: any[];
-  envio: { id_envio?: number; numero_rastreo?: string; estado?: string; valor_declarado_aduana?: string | null; carrier_name?: string | null; is_alcohol?: boolean } | null;
+  envio: { id_envio?: number; numero_rastreo?: string; estado?: string; valor_declarado_aduana?: string | null; codigo_hs?: string | null; carrier_name?: string | null; is_alcohol?: boolean } | null;
   desglose?: {
     subtotal_bruto: string | null;
     comision_marketplace: string;
@@ -177,6 +179,16 @@ function estadoBadgeCls(estado: string) {
   }
 }
 
+// Código HS de mezcal por defecto (envases ≤4L). SkydropX exige el código armonizado
+// completo; los de <8 dígitos (p.ej. "2208.90" → "220890") los rechaza con
+// "No existe el código harmonizado". Se usa como valor pre-rellenado del modal cuando
+// el envío no tiene aún un código completo guardado.
+const HS_DEFAULT = '2208.907200';
+const hsPrefill = (codigo?: string | null): string => {
+  const digits = (codigo ?? '').replace(/\D/g, '');
+  return digits.length >= 8 ? (codigo as string) : HS_DEFAULT;
+};
+
 function DetalleModal({
   pedidoId,
   idProductor,
@@ -190,13 +202,32 @@ function DetalleModal({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generandoGuia, setGenerandoGuia] = useState(false);
+  // Guía aceptada por el carrier pero con etiqueta aún generándose (in_creation).
+  const [guiaPendiente, setGuiaPendiente] = useState(false);
   const [nuevoEstado, setNuevoEstado] = useState("");
   const [numeroRastreo, setNumeroRastreo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // Modal de código HS — se abre (a) proactivamente al generar una guía internacional para
+  // confirmar el código arancelario antes de llamar a SkydropX, y (b) si SkydropX lo rechaza,
+  // para corregirlo y reintentar. El valor declarado de aduana es 100% automático (lo calcula
+  // el backend desde los precios reales en MXN), por lo que el productor NO captura valor manual.
   const [showInternacionalModal, setShowInternacionalModal] = useState(false);
-  const [internacionalConfig, setInternacionalConfig] = useState({ valor_declarado_aduana: '', codigo_hs: '220890' });
+  const [internacionalConfig, setInternacionalConfig] = useState({ codigo_hs: HS_DEFAULT });
+  // true = modal abierto proactivamente para confirmar el HS antes de generar;
+  // false = abierto por rechazo de SkydropX (INVALID_HS_CODE) para corregir y reintentar.
+  const [hsModalProactivo, setHsModalProactivo] = useState(false);
   const [guardandoConfig, setGuardandoConfig] = useState(false);
+  const { t } = useLocale();
+
+  // Destino internacional → SkydropX exige products[].hs_code; el modal de confirmación
+  // de código arancelario solo aplica a estos envíos (los nacionales no piden HS).
+  const paisDestino = (
+    orden?.pedido?.pais_destino_iso2 ??
+    (orden?.pedido?.direccion_envio_snapshot as any)?.pais ??
+    'MX'
+  ).toUpperCase();
+  const esInternacional = paisDestino !== 'MX';
 
   useEffect(() => {
     const fetchOrden = async () => {
@@ -243,7 +274,7 @@ function DetalleModal({
     }
   };
 
-  const ejecutarGenerarGuia = async () => {
+  const ejecutarGenerarGuia = async (hsOverride?: string) => {
     setGenerandoGuia(true);
     setError(null);
     setSuccess(null);
@@ -264,9 +295,24 @@ function DetalleModal({
 
       if (!envioId) throw new Error("No se pudo obtener el ID de envío");
 
+      // Persist the confirmed/corrected HS code on the envio before quoting, so SkydropX
+      // receives a valid harmonized code (createShipment reads envios.codigo_hs).
+      const hs = hsOverride?.trim();
+      if (hs) {
+        await api.envios.update(token, String(envioId), { codigo_hs: hs });
+      }
+
       // Generate guide via SkydropX for this envio only
       const guia = await api.envios.crearGuia(token, String(envioId));
-      setSuccess(`Guía generada: ${guia.numero_guia}. Ya puedes descargar la etiqueta.`);
+      // El carrier puede crear la guía de forma asíncrona: si quedó "en proceso", mostramos
+      // aviso + botón de refrescar en vez de un éxito con etiqueta inexistente.
+      if ((guia as any)?.pendiente) {
+        setGuiaPendiente(true);
+        setSuccess(t('envio_guia_en_proceso'));
+      } else {
+        setGuiaPendiente(false);
+        setSuccess(`Guía generada: ${guia.numero_guia}. Ya puedes descargar la etiqueta.`);
+      }
 
       // Full reload so the download link and all envio fields are fresh
       const orderRes = await fetch(`/pedidos/productor/${pedidoId}/${idProductor}`, {
@@ -278,45 +324,88 @@ function DetalleModal({
         setNumeroRastreo(updatedOrden?.envio?.numero_rastreo || "");
       }
     } catch (err: any) {
-      setError(err?.details?.message || err?.message || "Error al generar la guía");
+      // HS inválido → mensaje claro y traducido + modal para corregir y reintentar.
+      // El backend NO creó guía huérfana (el rechazo ocurre antes de emitir tracking).
+      if (err?.code === 'INVALID_HS_CODE' || err?.details?.code === 'INVALID_HS_CODE') {
+        const hsActual = hsPrefill(err?.details?.hs_code || (orden?.envio as any)?.codigo_hs);
+        setInternacionalConfig({ codigo_hs: hsActual });
+        setHsModalProactivo(false);
+        setError(t('envio_hs_invalido'));
+        setShowInternacionalModal(true);
+      } else {
+        setError(err?.details?.message || err?.message || t('envio_guia_error'));
+      }
     } finally {
       setGenerandoGuia(false);
     }
   };
 
+  // Internacional: confirmar el código arancelario (HS) pre-rellenado antes de llamar a
+  // SkydropX, para evitar el rechazo 422 "No existe el código harmonizado".
+  // Nacional (MX): el valor declarado es automático y no se pide HS → genera directo.
   const handleGenerarGuia = async () => {
-    const snap = orden?.pedido?.direccion_envio_snapshot as any;
-    const pais = snap?.pais_iso2 ?? snap?.pais ?? 'MX';
-    // Only show international modal when envio already exists so we can update its customs data
-    if (pais !== 'MX' && orden?.envio?.id_envio && !orden.envio?.valor_declarado_aduana) {
+    if (esInternacional) {
+      const hs = hsPrefill((orden?.envio as any)?.codigo_hs);
+      setInternacionalConfig({ codigo_hs: hs });
+      setHsModalProactivo(true);
+      setError(null);
       setShowInternacionalModal(true);
       return;
     }
     await ejecutarGenerarGuia();
   };
 
-  const handleGuardarConfigInternacional = async () => {
+  // Re-consulta una guía que quedó "en proceso" (in_creation). Si ya está lista, recarga la
+  // orden para mostrar el tracking + descarga; si sigue generándose, lo informa sin error.
+  const handleRefrescarGuia = async () => {
     if (!orden?.envio?.id_envio) return;
-    if (!internacionalConfig.valor_declarado_aduana) {
-      setError('El valor declarado en USD es requerido para envíos internacionales.');
+    setGenerandoGuia(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const token = getCookie('token') || '';
+      const res = await api.envios.refrescarGuia(token, String(orden.envio.id_envio));
+      if ((res as any)?.pendiente) {
+        setGuiaPendiente(true);
+        setSuccess(t('envio_guia_sigue_en_proceso'));
+        return;
+      }
+      setGuiaPendiente(false);
+      setSuccess(t('envio_guia_lista'));
+      const orderRes = await fetch(`/pedidos/productor/${pedidoId}/${idProductor}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (orderRes.ok) {
+        const updatedOrden = await orderRes.json();
+        setOrden(updatedOrden);
+        setNumeroRastreo(updatedOrden?.envio?.numero_rastreo || '');
+      }
+    } catch (err: any) {
+      setError(err?.details?.message || err?.message || t('envio_guia_error'));
+    } finally {
+      setGenerandoGuia(false);
+    }
+  };
+
+  // Confirma/corrige el código HS y genera la guía. Sirve tanto para el flujo proactivo
+  // (envío aún sin registro: ejecutarGenerarGuia lo crea y luego persiste el HS) como para
+  // el reintento tras un rechazo de SkydropX.
+  const handleGuardarConfigInternacional = async () => {
+    const hs = internacionalConfig.codigo_hs?.trim();
+    if (!hs) {
+      setError(t('envio_hs_requerido'));
       return;
     }
     setGuardandoConfig(true);
     setError(null);
     try {
-      const token = getCookie('token') || '';
-      await api.envios.update(token, String(orden.envio.id_envio), {
-        valor_declarado_aduana: internacionalConfig.valor_declarado_aduana,
-        moneda_aduana: 'USD',
-        codigo_hs: internacionalConfig.codigo_hs || '220890',
-      });
       setOrden((prev) =>
-        prev ? { ...prev, envio: { ...prev.envio, valor_declarado_aduana: internacionalConfig.valor_declarado_aduana } } : prev
+        prev ? { ...prev, envio: { ...(prev.envio ?? {}), codigo_hs: hs } as any } : prev
       );
       setShowInternacionalModal(false);
-      await ejecutarGenerarGuia();
+      await ejecutarGenerarGuia(hs);
     } catch (err: any) {
-      setError(err?.details?.message || err?.message || 'Error al guardar la configuración aduanal');
+      setError(err?.details?.message || err?.message || t('envio_hs_guardar_error'));
     } finally {
       setGuardandoConfig(false);
     }
@@ -355,35 +444,24 @@ function DetalleModal({
         >
           <div className="w-full max-w-md rounded-2xl border border-[#C5CFB0] bg-[#FDFBF5] p-6 shadow-2xl">
             <h3 className="mb-1 text-base font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
-              Configuración de envío internacional
+              {t(hsModalProactivo ? 'envio_hs_confirmar_titulo' : 'envio_hs_modal_titulo')}
             </h3>
             <p className="mb-4 text-xs text-[#3D6B3F]/70">
-              El carrier y la aduana requieren el valor declarado y el código arancelario
-              de la mercancía para generar la guía de exportación.
+              {t(hsModalProactivo ? 'envio_hs_confirmar_desc' : 'envio_hs_modal_desc')}
             </p>
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-medium text-[#3D6B3F]/70">
-                  Valor declarado (USD) <span className="text-red-500">*</span>
+                  {t('envio_hs_label')} <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number" min="1" step="0.01"
-                  value={internacionalConfig.valor_declarado_aduana}
-                  onChange={(e) => setInternacionalConfig((p) => ({ ...p, valor_declarado_aduana: e.target.value }))}
-                  placeholder="Ej: 50"
-                  className="w-full rounded-lg border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#1F3A2E] focus:outline-none focus:ring-2 focus:ring-[#3D6B3F]/30"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-[#3D6B3F]/70">Código arancelario (HS)</label>
                 <input
                   type="text"
                   value={internacionalConfig.codigo_hs}
                   onChange={(e) => setInternacionalConfig((p) => ({ ...p, codigo_hs: e.target.value }))}
-                  placeholder="220890"
+                  placeholder="2208.907200"
                   className="w-full rounded-lg border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#1F3A2E] focus:outline-none focus:ring-2 focus:ring-[#3D6B3F]/30"
                 />
-                <p className="mt-1 text-xs text-[#3D6B3F]/60">Para mezcal el código estándar es 220890.</p>
+                <p className="mt-1 text-xs text-[#3D6B3F]/60">{t('envio_hs_ayuda')}</p>
               </div>
             </div>
             {error && (
@@ -395,14 +473,16 @@ function DetalleModal({
                 disabled={guardandoConfig}
                 className="flex-1 rounded-lg border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#F4F0E3] disabled:opacity-50"
               >
-                Cancelar
+                {t('envio_hs_cancelar')}
               </button>
               <button
                 onClick={handleGuardarConfigInternacional}
-                disabled={guardandoConfig || !internacionalConfig.valor_declarado_aduana}
+                disabled={guardandoConfig || !internacionalConfig.codigo_hs?.trim()}
                 className="flex-1 rounded-lg bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1F3A2E] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {guardandoConfig ? 'Guardando...' : 'Guardar y generar guía'}
+                {guardandoConfig
+                  ? t('envio_hs_guardando')
+                  : t(hsModalProactivo ? 'envio_hs_confirmar' : 'envio_hs_reintentar')}
               </button>
             </div>
           </div>
@@ -436,6 +516,18 @@ function DetalleModal({
           )}
           {success && (
             <div className="rounded-xl border border-[#A8C26B]/40 bg-[#A8C26B]/10 px-4 py-3 text-sm text-[#3D6B3F]">{success}</div>
+          )}
+          {guiaPendiente && (
+            <div className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+              <span>{t('envio_guia_pendiente_ayuda')}</span>
+              <button
+                onClick={handleRefrescarGuia}
+                disabled={generandoGuia}
+                className="shrink-0 rounded-lg bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1F3A2E] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {generandoGuia ? t('envio_guia_refrescando') : t('envio_guia_refrescar')}
+              </button>
+            </div>
           )}
 
           {loading ? (

@@ -216,7 +216,7 @@ export default function ProductosAdmin() {
                                                 <img
                                                     src={p.imagen_url}
                                                     alt={p.nombre}
-                                                    className="w-10 h-10 rounded-lg object-cover border border-[#C5CFB0] shrink-0"
+                                                    className="w-10 h-10 rounded-lg object-contain bg-[#F4F0E3] border border-[#C5CFB0] shrink-0"
                                                 />
                                             ) : (
                                                 <div className="w-10 h-10 rounded-lg bg-[#C5CFB0]/30 flex items-center justify-center shrink-0">

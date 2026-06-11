@@ -109,6 +109,7 @@ model detalle_pedido {
   productores   productores? @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
   tiendas       tiendas?     @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
 
+  @@unique([id_pedido, id_producto], map: "uq_detalle_pedido_producto")
   @@index([id_pedido], map: "idx_detalle_pedido")
   @@index([id_producto], map: "idx_detalle_producto")
   @@index([id_productor], map: "idx_detalle_productor")
@@ -164,6 +165,9 @@ model envio_cotizaciones {
   transportistas          transportistas?  @relation(fields: [id_transportista], references: [id_transportista], onUpdate: NoAction)
   usuarios                usuarios?        @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
   envio_guias             envio_guias[]
+
+  @@index([id_pedido], map: "idx_envio_cotizaciones_pedido")
+  @@index([id_usuario], map: "idx_envio_cotizaciones_usuario")
 }
 
 model envio_eventos {
@@ -238,6 +242,7 @@ model envios {
 
   @@index([estado], map: "idx_envios_estado")
   @@index([id_pedido], map: "idx_envios_pedido")
+  @@index([id_transportista], map: "idx_envios_transportista")
 }
 
 model facturas {
@@ -413,7 +418,7 @@ model pagos {
   id_pago            BigInt         @id @default(autoincrement())
   id_pedido          BigInt
   proveedor          String?        @db.VarChar(50)
-  payment_intent_id  String?        @db.VarChar(150)
+  payment_intent_id  String?        @unique(map: "uq_pagos_payment_intent_id") @db.VarChar(150)
   estado             String         @default("pendiente") @db.VarChar(50)
   monto              Decimal        @db.Decimal(14, 2)
   monto_reembolsado  Decimal        @default(0) @db.Decimal(14, 2)
@@ -467,6 +472,8 @@ model pedidos {
   @@index([id_usuario], map: "idx_pedidos_usuario")
   @@index([eliminado_en, fecha_creacion(sort: Desc)], map: "idx_pedidos_soft_fecha")
   @@index([eliminado_en, estado, fecha_creacion(sort: Desc)], map: "idx_pedidos_soft_estado_fecha")
+  // Historial de pedidos por usuario: WHERE id_usuario + eliminado_en ORDER BY fecha_creacion DESC.
+  @@index([id_usuario, eliminado_en, fecha_creacion(sort: Desc)], map: "idx_pedidos_usuario_soft_fecha")
 }
 
 model permisos {
@@ -590,6 +597,11 @@ model productos {
   @@index([id_tienda], map: "idx_productos_tienda")
   @@index([traducciones], map: "idx_productos_traducciones", type: Gin)
   @@index([id_tienda, status, eliminado_en], map: "idx_productos_tienda_status")
+  @@index([id_lote], map: "idx_productos_lote")
+  // Trigram GIN para búsqueda de catálogo (WHERE nombre/descripcion ILIKE '%term%').
+  // Evita el full table scan que provoca `contains` sin índice. Requiere pg_trgm.
+  @@index([nombre(ops: raw("gin_trgm_ops"))], map: "idx_productos_nombre_trgm", type: Gin)
+  @@index([descripcion(ops: raw("gin_trgm_ops"))], map: "idx_productos_descripcion_trgm", type: Gin)
 }
 
 model refresh_tokens {
@@ -637,6 +649,7 @@ model resenas {
   @@unique([id_usuario, id_producto])
   @@index([id_producto], map: "idx_resenas_producto")
   @@index([id_producto, eliminado_en], map: "idx_resenas_prod_eliminado")
+  @@index([id_usuario], map: "idx_resenas_usuario")
 }
 
 model rol_permiso {

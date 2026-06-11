@@ -411,7 +411,7 @@ export default function ProductoDetallePage() {
                   <button
                     key={idx}
                     onClick={() => setImagenSeleccionada(idx)}
-                    className="relative h-20 w-20 lg:h-24 lg:w-full flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 hover:opacity-100 duration-150"
+                    className="relative h-20 w-20 lg:h-24 lg:w-full flex-shrink-0 overflow-hidden rounded-lg border-2 bg-gray-50 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 hover:opacity-100 duration-150"
                     style={{
                       borderColor: idx === imagenSeleccionada ? "#306B3F" : "transparent",
                       opacity: idx === imagenSeleccionada ? 1 : 0.6
@@ -425,7 +425,7 @@ export default function ProductoDetallePage() {
                       alt={`${producto.nombre} vista ${idx + 1}`}
                       fill
                       sizes="(max-width: 768px) 80px, 100%"
-                      className="object-cover"
+                      className="object-contain"
                       loading="lazy"
                     />
                   </button>

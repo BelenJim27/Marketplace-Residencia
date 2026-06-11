@@ -40,8 +40,14 @@ export class EnviosController {
       if (!envio) throw new NotFoundException('Envío no encontrado');
 
       const isBuyer = (envio as any).pedidos?.id_usuario === user.id_usuario;
-      const isProductor = user.id_productor !== null;
-      if (!isBuyer && !isProductor) {
+      // El productor solo puede ver el tracking si este envío le pertenece
+      // (existe un pedido_productor con su id_productor ligado a este envío).
+      const isOwningProductor =
+        user.id_productor != null &&
+        (await this.prisma.pedido_productor.count({
+          where: { id_envio: BigInt(id), id_productor: user.id_productor },
+        })) > 0;
+      if (!isBuyer && !isOwningProductor) {
         throw new ForbiddenException('No tienes acceso a este tracking');
       }
     }
@@ -183,6 +189,10 @@ export class EnviosController {
   @UseGuards(AuthGuard)
   crearGuia(@Param('id') id: string) { return this.service.crearGuia(id); }
 
+  @Post(':id/refrescar-guia')
+  @UseGuards(AuthGuard)
+  refrescarGuia(@Param('id') id: string) { return this.service.refrescarGuiaPendiente(id); }
+
   @Get(':id/guia/download')
   @UseGuards(AuthGuard)
   async downloadGuia(@Param('id') id: string, @Res() res: Response) {
@@ -223,14 +233,22 @@ export class EnviosController {
     }
 
     if (hmacHeader) {
-      // SkydropX sends: "HMAC <sha512-hex-digest>" (HMAC-SHA512, not SHA256)
       const rawBody = req.rawBody ?? Buffer.from(JSON.stringify(data));
-      const received = hmacHeader.startsWith('HMAC ') ? hmacHeader.slice(5) : hmacHeader;
-      const digest = crypto.createHmac('sha512', configuredSecret).update(rawBody).digest('hex');
-      const expectedBuf = Buffer.from(digest);
-      const receivedBuf = Buffer.alloc(expectedBuf.length, 0);
-      Buffer.from(received).copy(receivedBuf);
-      if (received.length !== digest.length || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
+      const secret = configuredSecret.trim();
+      const received = hmacHeader.replace(/^(HMAC |sha256=)/i, '').trim();
+
+      // SkydropX firma con HMAC-SHA512 sobre JSON.stringify del body parseado.
+      const jsonBody = JSON.stringify(data);
+      const digest = crypto.createHmac('sha512', secret).update(jsonBody).digest('hex');
+
+      this.logger.debug(
+        `[webhook] HMAC diag — received="${received.slice(0, 16)}..." computed="${digest.slice(0, 16)}..." len=${received.length}`,
+      );
+
+      const valid = received.length === digest.length &&
+        crypto.timingSafeEqual(Buffer.from(received), Buffer.from(digest));
+
+      if (!valid) {
         this.logger.warn('[webhook] SkydropX: firma HMAC inválida');
         throw new UnauthorizedException('Invalid SkydropX HMAC signature');
       }
@@ -250,10 +268,13 @@ export class EnviosController {
       data.tracking_number ??
       data.shipment?.tracking_number ??
       data.data?.tracking_number ??
+      data.data?.attributes?.tracking_number ??
+      data.attributes?.tracking_number ??
+      data.data?.shipment?.tracking_number ??
       '';
 
     if (!trackingNumber) {
-      this.logger.warn('SkydropX webhook: payload sin tracking_number');
+      this.logger.warn(`SkydropX webhook: payload sin tracking_number — keys: ${Object.keys(data).join(', ')}`);
       return { procesados: 0 };
     }
 

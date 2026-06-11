@@ -1882,7 +1882,7 @@ function PagoYResumen({
                     alt={item.nombre}
                     fill
                     sizes="48px"
-                    className="object-cover"
+                    className="object-contain"
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-xs text-gray-400">
@@ -2018,7 +2018,7 @@ function PagoYResumenPaypal({
                   fill
                   sizes="48px"
                   loading="lazy"
-                  className="object-cover"
+                  className="object-contain"
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-xs text-gray-400">

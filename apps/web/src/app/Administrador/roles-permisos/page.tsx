@@ -17,6 +17,7 @@ interface Rol {
   id_rol: number; nombre: string; estado: string; fecha_creacion?: string;
   rol_permiso?: { permisos: Permiso }[];
 }
+
 interface Usuario {
   id_usuario: string; nombre_usuario?: string; nombre: string; foto_url?: string;
   apellido_paterno?: string; apellido_materno?: string; email: string; telefono?: string;
@@ -255,7 +256,7 @@ export default function RolesPermisosPage() {
 
       {/* Tabs */}
       <div className="mb-6 flex gap-1 rounded-xl bg-[#1F3A2E]/8 p-1 border border-[#C5CFB0]">
-        {([["roles","Roles",Shield],["permisos","Permisos",Key],["usuarios","Usuarios",User]] as const).map(([key, label, Icon]) => (
+        {([["roles","Roles",Shield],["permisos","Permisos",Key]/* ,["usuarios","Usuarios",User] */] as const).map(([key, label, Icon]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -377,8 +378,8 @@ export default function RolesPermisosPage() {
         </div>
       )}
 
-      {/* ── USUARIOS TAB ── */}
-      {tab === "usuarios" && (
+      {/* ── USUARIOS TAB (sección comentada/deshabilitada) ── */}
+      {false /* sección de usuarios comentada */ && tab === "usuarios" && (
         <div className="space-y-4">
 
           {/* Header con botón */}

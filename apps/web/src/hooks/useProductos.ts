@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
+import { useFeedback } from "@/hooks/useFeedback";
+import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import {
   type ImagenProductoState,
   EMPTY_IMAGEN_PRODUCTO,
@@ -53,6 +55,8 @@ export const EMPTY_FORM: FormState = {
 export function useProductos() {
   const { user, loading: authLoading } = useAuth();
   const token = getCookie("token") ?? "";
+  const fb = useFeedback("producto_productor");
+  const deleteAlert = useDeleteAlert("producto_productor");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -406,8 +410,11 @@ export function useProductos() {
           });
         }
       }
+      const fueEdicion = mode === "edit" && !!selected;
       closeModal();
       await loadData();
+      if (fueEdicion) fb.actualizado();
+      else fb.creado();
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setError(
@@ -423,16 +430,16 @@ export function useProductos() {
     }
   };
 
-  const handleDelete = async (product: ProductItem) => {
-    if (!confirm(`¿Eliminar ${product.nombre}?`)) return;
-    try {
-      await api.productos.delete(token, String(product.id_producto));
-      await loadData();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "No fue posible eliminar el producto",
-      );
-    }
+  const handleDelete = (product: ProductItem) => {
+    deleteAlert.abrir(product.nombre, async () => {
+      try {
+        await api.productos.delete(token, String(product.id_producto));
+        await loadData();
+        fb.eliminado();
+      } catch (err) {
+        fb.error(err, "No fue posible eliminar el producto");
+      }
+    });
   };
 
   const syncFromLotes = async () => {
@@ -466,23 +473,22 @@ export function useProductos() {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`¿Eliminar ${selectedIds.length} producto(s) seleccionados?`)) return;
-    try {
-      await Promise.all(
-        selectedIds.map((id) => api.productos.delete(token, String(id))),
-      );
-      setSelectedIds([]);
-      setSelectionEnabled(false);
-      await loadData();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "No fue posible eliminar los productos seleccionados",
-      );
-    }
+    const cantidad = selectedIds.length;
+    deleteAlert.abrir(`${cantidad} producto(s)`, async () => {
+      try {
+        await Promise.all(
+          selectedIds.map((id) => api.productos.delete(token, String(id))),
+        );
+        setSelectedIds([]);
+        setSelectionEnabled(false);
+        await loadData();
+        fb.success(`${cantidad} producto(s) eliminado(s) correctamente.`);
+      } catch (err) {
+        fb.error(err, "No fue posible eliminar los productos seleccionados");
+      }
+    });
   };
 
   // ─── Return ───────────────────────────────────────────────────────────────
@@ -527,6 +533,7 @@ export function useProductos() {
     handleSubmit,
     handleDelete,
     handleDeleteSelected,
+    deleteAlert,
     syncing,
     syncMessage,
     syncFromLotes,

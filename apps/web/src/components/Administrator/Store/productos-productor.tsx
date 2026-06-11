@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Eye, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
@@ -93,7 +93,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selected, setSelected] = useState<ProductItem | null>(null);
-  const [mode, setMode] = useState<"view" | "edit" | "create" | null>(null);
+  const [mode, setMode] = useState<"view" | "create" | null>(null);
   const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
   const [page, setPage] = useState(1);
   const deleteAlert = useDeleteAlert("producto_productor");
@@ -143,7 +143,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
     [products, page],
   );
 
-  const openModal = (nextMode: "view" | "edit" | "create", product?: ProductItem) => {
+  const openModal = (nextMode: "view" | "create", product?: ProductItem) => {
     setSelected(product ?? null);
     setMode(nextMode);
     setForm(
@@ -176,31 +176,6 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
         setError(err instanceof Error ? err.message : "No fue posible eliminar el producto.");
       }
     });
-  };
-
-  const handleSave = async () => {
-    if (!selected || !token) { setError("No autorizado para editar productos."); return; }
-    if (!selected.id_tienda) { setError("No se pudo identificar la tienda del producto."); return; }
-    setSaving(true);
-    setError(null);
-    try {
-      const payload = new FormData();
-      payload.append("id_tienda", String(selected.id_tienda));
-      payload.append("nombre", form.nombre);
-      payload.append("descripcion", form.descripcion);
-      payload.append("precio_base", form.precio_base);
-      payload.append("moneda_base", form.moneda_base);
-      payload.append("status", form.status);
-      if (user?.id_usuario) payload.append("actualizado_por", user.id_usuario);
-      await api.productos.update(token, String(selected.id_producto), payload);
-      closeModal();
-      await loadProducts();
-      successToast.mostrarActualizado();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible actualizar el producto.");
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleCreate = async () => {
@@ -318,14 +293,6 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
                         </button>
                         <button
                           type="button"
-                          title="Editar"
-                          onClick={() => openModal("edit", product)}
-                          className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-[#C97A3E]/10 hover:text-[#C97A3E] transition-all duration-200"
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          type="button"
                           title="Eliminar"
                           onClick={() => void handleDelete(product)}
                           className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
@@ -370,11 +337,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
           <div className="w-full max-w-2xl rounded-2xl bg-[#F4F0E3] shadow-[0_24px_48px_rgba(31,58,46,0.25)] border border-[#C5CFB0] overflow-hidden">
             <div className="flex items-center justify-between bg-[#1F3A2E] px-6 py-5">
               <h2 className="text-xl font-bold text-white [font-family:'Playfair_Display',serif]">
-                {mode === "create"
-                  ? "Nuevo Producto"
-                  : mode === "edit"
-                    ? "Editar producto"
-                    : "Detalle de producto"}
+                {mode === "create" ? "Nuevo Producto" : "Detalle de producto"}
               </h2>
               <button
                 type="button"
@@ -448,16 +411,6 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
                 >
                   Cancelar
                 </button>
-                {mode === "edit" && (
-                  <button
-                    type="button"
-                    onClick={() => void handleSave()}
-                    disabled={saving}
-                    className="rounded-xl bg-[#3D6B3F] px-5 py-3 text-sm font-medium text-white hover:bg-[#1F3A2E] transition-all duration-200 disabled:opacity-60"
-                  >
-                    {saving ? "Guardando..." : "Guardar cambios"}
-                  </button>
-                )}
                 {mode === "create" && (
                   <button
                     type="button"
@@ -506,7 +459,7 @@ function ProductThumbnail({ src, alt }: { src: string | null; alt: string }) {
       </div>
     );
   }
-  return <img src={src} alt={alt} className="h-12 w-12 rounded-xl object-cover" />;
+  return <img src={src} alt={alt} className="h-12 w-12 rounded-xl bg-[#F4F0E3] object-contain" />;
 }
 
 function StatusBadge({ status }: { status: string }) {

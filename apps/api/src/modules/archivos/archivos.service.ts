@@ -2,16 +2,16 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
 import { CreateArchivoDto, UpdateArchivoDto } from './dto/archivos.dto';
-import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs';
+import { unlinkSync, existsSync } from 'fs';
+import { writeFile, mkdir } from 'fs/promises';
 import { join, extname } from 'path';
 import { randomUUID } from 'crypto';
 
 const ARCHIVOS_DIR = join(__dirname, '../../..', 'uploads', 'archivos');
 
-function ensureDir() {
-  if (!existsSync(ARCHIVOS_DIR)) {
-    mkdirSync(ARCHIVOS_DIR, { recursive: true });
-  }
+async function ensureDir() {
+  // mkdir recursive es idempotente: no falla si el directorio ya existe.
+  await mkdir(ARCHIVOS_DIR, { recursive: true });
 }
 
 @Injectable()
@@ -20,11 +20,11 @@ export class ArchivosService {
 
   /** Guarda el buffer en disco y devuelve la ruta relativa pública. */
   async uploadToLocal(buffer: Buffer, originalName: string): Promise<string> {
-    ensureDir();
+    await ensureDir();
     const ext = extname(originalName).toLowerCase() || '.bin';
     const fileName = `${randomUUID()}${ext}`;
     const filePath = join(ARCHIVOS_DIR, fileName);
-    writeFileSync(filePath, buffer);
+    await writeFile(filePath, buffer);
     return `/uploads/archivos/${fileName}`;
   }
 

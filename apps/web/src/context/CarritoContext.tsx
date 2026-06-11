@@ -111,6 +111,11 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
         const token = getToken();
         const backendItems: CarritoItem[] = await api.carritoItems.getByUsuario(token, usuarioId);
 
+        // Si el usuario cambió de nuevo mientras se resolvía el fetch (login/logout
+        // rápido), prevUserIdRef ya apunta a otro id: descartamos para no pintar el
+        // carrito de un usuario en la sesión de otro.
+        if (prevUserIdRef.current !== usuarioId) return;
+
         // Merge with any guest items the user may have added before logging in
         const guestKey = getStorageKey("guest");
         const guestStored = getCartStorage("guest").getItem(guestKey);
