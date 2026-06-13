@@ -1,7 +1,13 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { CreateLoteAtributoDto, CreateLoteDto, UpdateLoteAtributoDto, UpdateLoteDto } from './dto/lotes.dto';
 import { LotesService } from './lotes.service';
+import { AuthGuard } from '../auth/guards/auth.guard';
+import { RolesGuard } from '../auth/guards/rbac.guard';
+import { Roles } from '../auth/guards/roles.decorator';
+
+// Las lecturas (GET) son públicas; toda escritura requiere productor o administrador.
+const WRITE_GUARDS = [AuthGuard, RolesGuard] as const;
 
 @Controller('lotes')
 export class LotesController {
@@ -16,6 +22,8 @@ export class LotesController {
 
   //  Estos endpoints deben ir ANTES de :id
   @Post('sincronizar')
+  @UseGuards(...WRITE_GUARDS)
+  @Roles('productor', 'administrador')
   sincronizar(
     @Body() body: { uuid_externo: string; id_productor: number; id_region?: number },
   ) {
@@ -27,6 +35,8 @@ export class LotesController {
   }
 
   @Post('sincronizar-todos')
+  @UseGuards(...WRITE_GUARDS)
+  @Roles('productor', 'administrador')
   sincronizarTodos(@Body() body?: { id_productor?: number }) {
     return this.service.sincronizarTodos(body?.id_productor ? Number(body.id_productor) : undefined);
   }
@@ -37,21 +47,29 @@ export class LotesController {
   }
 
   @Post()
+  @UseGuards(...WRITE_GUARDS)
+  @Roles('productor', 'administrador')
   create(@Body() dto: CreateLoteDto) {
     return this.service.create(dto);
   }
 
   @Patch(':id')
+  @UseGuards(...WRITE_GUARDS)
+  @Roles('productor', 'administrador')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateLoteDto) {
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
+  @UseGuards(...WRITE_GUARDS)
+  @Roles('productor', 'administrador')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);
   }
 
   @Post(':id/stock')
+  @UseGuards(...WRITE_GUARDS)
+  @Roles('productor', 'administrador')
   ajustarStock(
     @Param('id', ParseIntPipe) id: number,
     @Body()
@@ -73,11 +91,15 @@ export class LotesController {
 
   // Forzar re-sincronización de un lote específico con su producto
   @Post(':id/sincronizar-producto')
+  @UseGuards(...WRITE_GUARDS)
+  @Roles('productor', 'administrador')
   sincronizarProducto(@Param('id', ParseIntPipe) id: number) {
     return this.service.sincronizarProductoUnico(id);
   }
 
   @Post(':id/atributos')
+  @UseGuards(...WRITE_GUARDS)
+  @Roles('productor', 'administrador')
   addAtributo(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CreateLoteAtributoDto,
@@ -86,6 +108,8 @@ export class LotesController {
   }
 
   @Patch('atributos/:id_atributo')
+  @UseGuards(...WRITE_GUARDS)
+  @Roles('productor', 'administrador')
   updateAtributo(
     @Param('id_atributo') id_atributo: string,
     @Body() dto: UpdateLoteAtributoDto,
@@ -94,6 +118,8 @@ export class LotesController {
   }
 
   @Delete('atributos/:id_atributo')
+  @UseGuards(...WRITE_GUARDS)
+  @Roles('productor', 'administrador')
   removeAtributo(@Param('id_atributo') id_atributo: string) {
     return this.service.removeAtributo(id_atributo);
   }

@@ -2,11 +2,14 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
   Post,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import {
@@ -16,6 +19,12 @@ import {
   UpdateResenaDto,
 } from './dto/resenas.dto';
 import { ResenasService } from './resenas.service';
+import { AuthGuard } from '../auth/guards/auth.guard';
+
+function hasRole(user: any, ...roles: string[]): boolean {
+  const wanted = roles.map((r) => r.toLowerCase());
+  return (user?.roles ?? []).some((r: string) => wanted.includes(r.toLowerCase()));
+}
 
 @Controller('resenas')
 export class ResenasController {
@@ -72,27 +81,46 @@ export class ResenasController {
   }
 
   @Post()
-  create(@Body() dto: CreateResenaDto) {
-    return this.service.create(dto);
+  @UseGuards(AuthGuard)
+  create(@Body() dto: CreateResenaDto, @Req() req: any) {
+    // Anclar la reseña al usuario del token; el id_usuario del body se ignora
+    // para evitar suplantación.
+    return this.service.create({ ...dto, id_usuario: req.user.id_usuario });
   }
 
   @Patch(':id/moderar')
-  moderar(@Param('id') id: string, @Body() dto: ModerarResenaDto) {
+  @UseGuards(AuthGuard)
+  moderar(@Param('id') id: string, @Body() dto: ModerarResenaDto, @Req() req: any) {
+    if (!hasRole(req.user, 'administrador')) {
+      throw new ForbiddenException('Solo administradores pueden moderar reseñas');
+    }
     return this.service.moderar(id, dto);
   }
 
   @Patch(':id/responder')
-  responder(@Param('id') id: string, @Body() dto: ResponderResenaDto) {
+  @UseGuards(AuthGuard)
+  responder(@Param('id') id: string, @Body() dto: ResponderResenaDto, @Req() req: any) {
+    if (!hasRole(req.user, 'administrador', 'productor')) {
+      throw new ForbiddenException('Solo el vendedor o un administrador puede responder reseñas');
+    }
     return this.service.responder(id, dto);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateResenaDto) {
-    return this.service.update(id, dto);
+  @UseGuards(AuthGuard)
+  update(@Param('id') id: string, @Body() dto: UpdateResenaDto, @Req() req: any) {
+    return this.service.update(id, dto, {
+      id_usuario: req.user.id_usuario,
+      isAdmin: hasRole(req.user, 'administrador'),
+    });
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  @UseGuards(AuthGuard)
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.service.remove(id, {
+      id_usuario: req.user.id_usuario,
+      isAdmin: hasRole(req.user, 'administrador'),
+    });
   }
 }
