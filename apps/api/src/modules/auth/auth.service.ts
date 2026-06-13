@@ -111,7 +111,7 @@ export class AuthService {
       });
 
       try {
-        await this.emailService.sendWelcomeEmail(user.email, user.nombre);
+        await this.emailService.sendWelcomeEmail(user.email, user.nombre, user.idioma_preferido === 'en' ? 'en' : 'es');
       } catch (emailError) {
         this.logger.warn(`Error sending welcome email: ${(emailError as Error)?.message}`);
       }
@@ -248,7 +248,11 @@ export class AuthService {
       PASSWORD_RESET_EXPIRES_IN,
     );
 
-    await this.emailService.sendPasswordResetEmail(email, resetToken);
+    await this.emailService.sendPasswordResetEmail(
+      email,
+      resetToken,
+      user.idioma_preferido === 'en' ? 'en' : 'es',
+    );
 
     await this.logAuthEvent('password_reset_request', user.id_usuario, { email: user.email });
 

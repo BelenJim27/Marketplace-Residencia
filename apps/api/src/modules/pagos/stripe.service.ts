@@ -201,6 +201,28 @@ export class StripeService {
   }
 
   /**
+   * Obtiene la comisión que Stripe cobró (processing fee) de un PaymentIntent
+   * completado, leyendo el balance_transaction del cargo. Devuelve el fee en la
+   * unidad menor (centavos) y la moneda en ISO mayúsculas, o null si no aplica.
+   * Se usa para poblar payment_fees y poder conciliar el margen real.
+   */
+  async getProcessingFee(
+    paymentIntentId: string,
+  ): Promise<{ feeMinor: number; currency: string } | null> {
+    try {
+      const pi: any = await this.stripe.paymentIntents.retrieve(paymentIntentId, {
+        expand: ['latest_charge.balance_transaction'],
+      });
+      const bt: any = pi?.latest_charge?.balance_transaction;
+      if (!bt || typeof bt.fee !== 'number') return null;
+      return { feeMinor: bt.fee, currency: String(bt.currency ?? pi.currency ?? 'mxn').toUpperCase() };
+    } catch (error: any) {
+      this.logger.error(`[stripe] Error obteniendo processing fee de ${paymentIntentId}: ${error?.message}`);
+      return null;
+    }
+  }
+
+  /**
    * Verifica si existe alguna disputa abierta relacionada con un cargo.
    * Retorna true si hay disputas activas (no resueltas), false en caso contrario.
    */

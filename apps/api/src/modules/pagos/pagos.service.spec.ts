@@ -16,6 +16,8 @@ const mockStripe = {
   createTransfer: jest.fn(),
   retrieveAccount: jest.fn(),
   constructWebhookEvent: jest.fn(),
+  getProcessingFee: jest.fn(),
+  countOpenDisputesForPaymentIntent: jest.fn(),
 };
 
 const mockPaypal = {
@@ -82,7 +84,11 @@ const mockPrisma: any = {
     update: jest.fn(),
     updateMany: jest.fn(),
     create: jest.fn(),
+    count: jest.fn(),
   },
+  refunds: { create: jest.fn(), update: jest.fn() },
+  payment_fees: { create: jest.fn() },
+  $queryRaw: jest.fn(),
   $transaction: jest.fn((fn: (tx: any) => any) => fn(mockPrisma)),
 };
 
@@ -111,6 +117,11 @@ describe('PagosService', () => {
     mockComisiones.resolver.mockResolvedValue({ id_comision: 1, porcentaje: 0.10, monto_fijo: null, alcance: 'global' });
     mockComisiones.calcularMonto.mockReturnValue(10);
     mockEnvios.crearEnviosPorProductor.mockResolvedValue([]);
+    // Defaults para registros financieros (refunds/fees) limpiados por clearAllMocks
+    mockPrisma.refunds.create.mockResolvedValue({ id_refund: 1n });
+    mockPrisma.refunds.update.mockResolvedValue({});
+    mockPrisma.payment_fees.create.mockResolvedValue({});
+    mockStripe.getProcessingFee?.mockResolvedValue?.(null);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -429,14 +440,14 @@ describe('PagosService', () => {
       expect(mockPrisma.pedido_productor.updateMany).not.toHaveBeenCalled();
     });
 
-    it('prorates tax and shipping proportionally by producer subtotal share', async () => {
+    it('does NOT prorate tax/shipping; bruto = producer product subtotal (IVA en precio, envío retenido)', async () => {
       mockPrisma.pedidos.findUnique.mockResolvedValue({ tax_amount: '40', shipping_amount: '20' });
       mockPrisma.detalle_pedido.findMany.mockResolvedValue([
         { id_productor: 1, precio_compra: '300', cantidad: 1 }, // 75%
         { id_productor: 2, precio_compra: '100', cantidad: 1 }, // 25%
       ]);
-      // P1: bruto = 300 + (40*0.75) + (20*0.75) = 300 + 30 + 15 = 345
-      // P2: bruto = 100 + (40*0.25) + (20*0.25) = 100 + 10 + 5 = 115
+      // Política nueva: el IVA va dentro del precio y el envío lo retiene la plataforma.
+      // P1: bruto = 300 (sin tax/envío). P2: bruto = 100.
       mockComisiones.calcularMonto.mockReturnValueOnce(34.5).mockReturnValueOnce(11.5);
 
       await callMethod(service, BigInt(1), 'MXN');
@@ -447,11 +458,11 @@ describe('PagosService', () => {
       const p1Call = calls.find((c: any) => c[0].where.id_productor === 1);
       const p2Call = calls.find((c: any) => c[0].where.id_productor === 2);
 
-      expect(p1Call[0].data.subtotal_bruto).toBe('345.00');
+      expect(p1Call[0].data.subtotal_bruto).toBe('300.00');
       expect(p1Call[0].data.comision_marketplace).toBe('34.50');
-      expect(p1Call[0].data.monto_neto_productor).toBe('310.50');
+      expect(p1Call[0].data.monto_neto_productor).toBe('265.50');
 
-      expect(p2Call[0].data.subtotal_bruto).toBe('115.00');
+      expect(p2Call[0].data.subtotal_bruto).toBe('100.00');
     });
 
     it('calls comisionesService.resolver with correct id_productor', async () => {
@@ -504,21 +515,46 @@ describe('PagosService', () => {
       return pago;
     }
 
-    it('throws NotFoundException when payment_intent_id matches no pago', async () => {
+    it('dead-letter: no lanza y no marca pedido cuando el intent no coincide con ningún pago', async () => {
+      // Antes lanzaba NotFoundException, lo que provocaba reintentos infinitos de
+      // Stripe. Ahora registra/alerta y resuelve, evitando el retry storm.
       mockPrisma.pagos.findFirst.mockResolvedValue(null);
-      await expect(service.updatePaymentStatus('pi_unknown', 'completado')).rejects.toThrow(NotFoundException);
+      await expect(service.updatePaymentStatus('pi_unknown', 'completado')).resolves.toBeNull();
+      expect(mockPrisma.pedidos.update).not.toHaveBeenCalled();
     });
 
-    it('updates with atomic guard { notIn: [completado, reembolsado] }', async () => {
+    it('updates with atomic guard { notIn: [completado, reembolsado, cancelado] }', async () => {
       setupCompletedPago();
       await service.updatePaymentStatus('pi_test123', 'completado');
       expect(mockPrisma.pagos.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            estado: { notIn: ['completado', 'reembolsado'] },
+            estado: { notIn: ['completado', 'reembolsado', 'cancelado'] },
           }),
         }),
       );
+    });
+
+    it('C-7: registra payment_fees con el fee real de Stripe al completar el pago', async () => {
+      setupCompletedPago({ proveedor: 'stripe' });
+      mockStripe.getProcessingFee.mockResolvedValue({ feeMinor: 580, currency: 'MXN' });
+
+      await service.updatePaymentStatus('pi_test123', 'completado');
+
+      expect(mockPrisma.payment_fees.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ proveedor: 'stripe', monto_fee: '5.800000', moneda: 'MXN' }),
+        }),
+      );
+    });
+
+    it('C-7: no registra payment_fees si no hay fee disponible', async () => {
+      setupCompletedPago({ proveedor: 'stripe' });
+      mockStripe.getProcessingFee.mockResolvedValue(null);
+
+      await service.updatePaymentStatus('pi_test123', 'completado');
+
+      expect(mockPrisma.payment_fees.create).not.toHaveBeenCalled();
     });
 
     it('is idempotent: returns existing pago when updateMany count=0', async () => {
@@ -709,7 +745,7 @@ describe('PagosService', () => {
       // Should resolve without throwing even when reversal fails
       await expect(service.reembolsarPago('1')).resolves.toBeDefined();
       expect(mockPrisma.pagos.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { estado: 'reembolsado' } }),
+        expect.objectContaining({ data: expect.objectContaining({ estado: 'reembolsado' }) }),
       );
     });
 
@@ -787,7 +823,7 @@ describe('PagosService', () => {
       await service.reembolsarPago('1');
 
       expect(mockPrisma.pagos.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { estado: 'reembolsado' } }),
+        expect.objectContaining({ data: expect.objectContaining({ estado: 'reembolsado' }) }),
       );
       expect(mockPrisma.pedidos.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: { estado: 'cancelado' } }),

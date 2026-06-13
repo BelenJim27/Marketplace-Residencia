@@ -12,6 +12,7 @@ import {
 import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
 import { api } from "@/lib/api";
 import { getCookie, setCookie, removeCookie } from "@/lib/cookies";
+import { getUserIdFromToken } from "@/lib/jwt";
 
 interface Usuario {
   id_usuario?: string;
@@ -83,7 +84,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const userFinal: Usuario = {
         ...storedUser,
-        id_usuario: session.user.id_usuario || session.user.id || storedUser.id_usuario,
+        // El `sub` del access token es el UUID real del backend. Tiene prioridad
+        // sobre session.user.id (que puede ser el sub de Google, no un UUID).
+        id_usuario:
+          getUserIdFromToken(accessToken) ||
+          session.user.id_usuario ||
+          session.user.id ||
+          storedUser.id_usuario,
         sub: session.user.id || storedUser.sub || "",
         email: session.user.email || "",
         nombre: storedUser.nombre || session.user.nombre || session.user.name || "Usuario",
@@ -116,13 +123,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (usuarioStr && (token || refreshToken)) {
       try {
         const usuario = JSON.parse(usuarioStr);
-        setUser({
+        // Sanea el id contra el `sub` del access token (fuente del backend). Si la
+        // cookie tenía un id no-UUID (p. ej. de un login OAuth previo), lo corrige y
+        // reescribe la cookie para que el resto de la app (carrito, etc.) lo lea bien.
+        const tokenSub = getUserIdFromToken(token);
+        const id_usuario = tokenSub || usuario.id_usuario;
+        const normalized = {
           ...usuario,
+          id_usuario,
           roles: Array.isArray(usuario.roles) ? usuario.roles : [],
           permisos: Array.isArray(usuario.permisos) ? usuario.permisos : [],
           id_productor: usuario.id_productor != null ? Number(usuario.id_productor) : undefined,
           biografia: usuario.biografia ?? null,
-        });
+        };
+        if (tokenSub && tokenSub !== usuario.id_usuario) {
+          setCookie("usuario", JSON.stringify(normalized), 30);
+        }
+        setUser(normalized);
       } catch {
         setUser(null);
       }

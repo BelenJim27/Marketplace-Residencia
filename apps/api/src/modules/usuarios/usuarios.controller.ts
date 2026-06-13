@@ -27,6 +27,20 @@ export class UsuariosController {
     return this.service.findAll(query);
   }
 
+  // CCPA: exportar mis datos personales (right to know). Anclado al token.
+  @UseGuards(AuthGuard)
+  @Get('me/export')
+  exportMyData(@Req() req: any) {
+    return this.service.exportData(req.user.id_usuario);
+  }
+
+  // CCPA: solicitar borrado de mi cuenta (right to delete). Anclado al token.
+  @UseGuards(AuthGuard)
+  @Post('me/deletion-request')
+  requestMyDeletion(@Req() req: any) {
+    return this.service.requestDeletion(req.user.id_usuario);
+  }
+
   @UseGuards(AuthGuard)
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {

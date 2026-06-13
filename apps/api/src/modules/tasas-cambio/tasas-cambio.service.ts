@@ -4,12 +4,22 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
 import { CreateTasaCambioDto } from './dto/tasas-cambio.dto';
 
-// Conservative static fallback rates (updated manually if needed).
-// Used when the DB has no active rate (cron hasn't run yet or failed repeatedly).
+// Last-resort static fallback rates. Used ONLY when the DB has no active rate
+// (cron hasn't run yet or failed repeatedly). These pueden quedar obsoletas y
+// distorsionar precios USD, por eso se pueden sobreescribir por entorno
+// (FX_FALLBACK_MXN_USD, FX_FALLBACK_USD_MXN) y se loguea a nivel ERROR cuando se usan.
 const STATIC_FALLBACK_RATES: Record<string, number> = {
-  'MXN:USD': 0.050,  // ~20 MXN/USD (conservative)
-  'USD:MXN': 20.0,
+  'MXN:USD': 0.055,  // ~18.2 MXN/USD (revisar manualmente)
+  'USD:MXN': 18.2,
 };
+
+function resolveFallbackRate(o: string, d: string): number | undefined {
+  const envValue = process.env[`FX_FALLBACK_${o}_${d}`];
+  if (envValue !== undefined && envValue !== '' && !Number.isNaN(Number(envValue))) {
+    return Number(envValue);
+  }
+  return STATIC_FALLBACK_RATES[`${o}:${d}`];
+}
 
 @Injectable()
 export class TasasCambioService {
@@ -44,12 +54,12 @@ export class TasasCambioService {
       orderBy: { vigente_desde: 'desc' },
     });
     if (!tasa) {
-      const fallbackKey = `${o}:${d}`;
-      const fallbackRate = STATIC_FALLBACK_RATES[fallbackKey];
+      const fallbackRate = resolveFallbackRate(o, d);
       if (fallbackRate !== undefined) {
-        this.logger.warn(
-          `[tasas-cambio] Sin tasa vigente ${o}→${d} en BD. Usando fallback estático ${fallbackRate}. ` +
-          `Verifica que el cron de sincronización de ExchangeRate-API esté activo.`,
+        this.logger.error(
+          `[tasas-cambio] ⚠️ Sin tasa vigente ${o}→${d} en BD. Usando fallback ${fallbackRate} ` +
+          `(posiblemente OBSOLETO → distorsiona precios USD). Revisa el cron de ExchangeRate-API ` +
+          `o define FX_FALLBACK_${o}_${d} con la tasa actual.`,
         );
         return { tasa: String(fallbackRate), moneda_origen: o, moneda_destino: d, vigente_desde: fecha };
       }

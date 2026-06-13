@@ -454,6 +454,11 @@ export class ProductosService {
     return serializeBigInts(item);
   }
 
+  /** Valida que las dimensiones de envío sean números > 0 (no solo presentes). */
+  private dimensionesValidas(...vals: (string | null | undefined)[]): boolean {
+    return vals.every((v) => v != null && v !== '' && Number(v) > 0);
+  }
+
   async create(dto: CreateProductoDto) {
     const data: any = {
       id_tienda: dto.id_tienda,
@@ -479,9 +484,9 @@ export class ProductosService {
     // Require shipping dimensions when activating a product (not on borrador/inactivo)
     const targetStatus = (data.status as string) ?? 'activo';
     if (targetStatus !== 'borrador' && targetStatus !== 'inactivo') {
-      if (!dto.peso_kg || !dto.alto_cm || !dto.ancho_cm || !dto.largo_cm) {
+      if (!this.dimensionesValidas(dto.peso_kg, dto.alto_cm, dto.ancho_cm, dto.largo_cm)) {
         throw new BadRequestException(
-          'Para publicar un producto debes especificar peso_kg, alto_cm, ancho_cm y largo_cm. ' +
+          'Para publicar un producto debes especificar peso_kg, alto_cm, ancho_cm y largo_cm mayores a 0. ' +
           'Estos datos son necesarios para calcular el costo de envío. ' +
           'Guarda el producto como "borrador" si aún no tienes esta información.',
         );
@@ -566,9 +571,9 @@ export class ProductosService {
       const altoFinal = dto.alto_cm !== undefined ? dto.alto_cm : (current.alto_cm ? String(current.alto_cm) : null);
       const anchoFinal = dto.ancho_cm !== undefined ? dto.ancho_cm : (current.ancho_cm ? String(current.ancho_cm) : null);
       const largoFinal = dto.largo_cm !== undefined ? dto.largo_cm : (current.largo_cm ? String(current.largo_cm) : null);
-      if (!pesoFinal || !altoFinal || !anchoFinal || !largoFinal) {
+      if (!this.dimensionesValidas(pesoFinal, altoFinal, anchoFinal, largoFinal)) {
         throw new BadRequestException(
-          'Para activar un producto debes especificar peso_kg, alto_cm, ancho_cm y largo_cm.',
+          'Para activar un producto debes especificar peso_kg, alto_cm, ancho_cm y largo_cm mayores a 0.',
         );
       }
     }

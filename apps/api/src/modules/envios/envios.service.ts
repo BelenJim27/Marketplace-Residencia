@@ -649,7 +649,7 @@ export class EnviosService {
           select: {
             id_envio: true,
             id_pedido: true,
-            pedidos: { select: { usuarios: { select: { email: true, nombre: true } } } },
+            pedidos: { select: { moneda: true, usuarios: { select: { email: true, nombre: true, idioma_preferido: true } } } },
           },
         },
       },
@@ -703,7 +703,10 @@ export class EnviosService {
       if (emailCliente) {
         const nombreCliente = usuario?.nombre ?? 'Cliente';
         const pedidoId = String(guia.envios?.id_pedido ?? '');
-        this.emailService.sendTrackingUpdateEmail(emailCliente, nombreCliente, pedidoId, numero_guia, estadoNormalizado)
+        // Idioma: preferencia del usuario, o inglés si el pedido es en USD (destino internacional).
+        const lang: 'es' | 'en' =
+          usuario?.idioma_preferido === 'en' || guia.envios?.pedidos?.moneda === 'USD' ? 'en' : 'es';
+        this.emailService.sendTrackingUpdateEmail(emailCliente, nombreCliente, pedidoId, numero_guia, estadoNormalizado, lang)
           .catch(err => this.logger.warn(`[tracking] Email a ${emailCliente} falló: ${err?.message}`));
       }
     }
