@@ -5,8 +5,11 @@ import { extname } from 'path';
 import { CreateArchivoDto, UpdateArchivoDto } from './dto/archivos.dto';
 import { ArchivosService } from './archivos.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
+import { Throttle } from '@nestjs/throttler';
 
 const FILE_SIZE_LIMIT = 5 * 1024 * 1024; // 5 MB
+// Subida de archivos es costosa (I/O + disco): límite por usuario más estricto que el global.
+const UPLOAD_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
 
 const archivoStorage = memoryStorage();
 
@@ -25,6 +28,7 @@ export class ArchivosController {
   }
 
   @Post('upload')
+  @Throttle(UPLOAD_THROTTLE)
   @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('archivo', { storage: archivoStorage, limits: { fileSize: FILE_SIZE_LIMIT } }))
   async createWithUpload(
@@ -50,6 +54,7 @@ export class ArchivosController {
   }
 
   @Patch(':id/upload')
+  @Throttle(UPLOAD_THROTTLE)
   @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('archivo', { storage: archivoStorage, limits: { fileSize: FILE_SIZE_LIMIT } }))
   updateWithUpload(

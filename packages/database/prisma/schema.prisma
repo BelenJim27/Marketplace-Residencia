@@ -695,6 +695,7 @@ model servicios_envio {
 model tasas_impuesto {
   id_tasa            Int         @id @default(autoincrement())
   pais_iso2          String      @db.Char(2)
+  estado_codigo      String?     @db.VarChar(3)
   id_categoria       Int?
   tipo               String      @db.VarChar(20)
   nombre             String      @db.VarChar(150)
@@ -710,6 +711,7 @@ model tasas_impuesto {
   paises             paises      @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
 
   @@index([id_categoria], map: "idx_tasas_categoria")
+  @@index([pais_iso2, estado_codigo], map: "idx_tasas_pais_estado")
 }
 
 model tiendas {

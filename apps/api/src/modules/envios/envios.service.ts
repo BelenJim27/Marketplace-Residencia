@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, InternalServerErrorException, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { Cron } from "@nestjs/schedule";
 import { Moneda } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
@@ -612,6 +613,88 @@ export class EnviosService {
     );
   }
 
+  // Máximo tiempo que una guía puede permanecer 'in_creation' antes de marcarse
+  // como error y escalarse a admins para recreación manual.
+  private static readonly GUIA_PENDIENTE_MAX_HORAS = 24;
+
+  /**
+   * Completa o sanea las guías que quedaron en 'in_creation'. SkydropX genera las
+   * etiquetas de forma asíncrona (sobre todo internacionales); sin este cron una
+   * guía pendiente quedaría colgada indefinidamente si el frontend no hace polling
+   * (cliente cierra la pestaña, etc.) → el pedido nunca se envía y nadie se entera.
+   * - Dentro de ventana: refrescarGuiaPendiente la completa si la etiqueta ya está lista.
+   * - Pasado GUIA_PENDIENTE_MAX_HORAS: se marca 'error' y se alerta a admins.
+   */
+  @Cron('*/10 * * * *')
+  async completarGuiasPendientes() {
+    const pendientes = await this.prisma.envio_guias.findMany({
+      where: { estado_paqueteria: 'in_creation', eliminado_en: null },
+      select: { id_guia: true, id_envio: true, numero_guia: true, fecha_creacion: true, payload_response: true },
+    });
+    if (pendientes.length === 0) return;
+
+    const limite = new Date(Date.now() - EnviosService.GUIA_PENDIENTE_MAX_HORAS * 60 * 60 * 1000);
+    this.logger.log(`[envios] completarGuiasPendientes: ${pendientes.length} guía(s) in_creation`);
+
+    for (const guia of pendientes) {
+      try {
+        if (guia.fecha_creacion < limite) {
+          // Demasiado tiempo pendiente: marcar error y escalar (revisión/recreación manual).
+          await this.prisma.$transaction(async (tx) => {
+            await tx.envio_guias.update({
+              where: { id_guia: guia.id_guia },
+              data: {
+                estado_paqueteria: 'error',
+                payload_response: {
+                  ...((guia.payload_response as any) ?? {}),
+                  error: `Etiqueta no generada por SkydropX tras ${EnviosService.GUIA_PENDIENTE_MAX_HORAS}h`,
+                  error_en: new Date().toISOString(),
+                } as any,
+              },
+            });
+            await tx.envios.update({
+              where: { id_envio: guia.id_envio },
+              data: { estado: 'error' },
+            });
+          });
+          await this.notificarAdmins(
+            'guia_pendiente_error',
+            'Guía de envío no generada',
+            `La guía del envío ${guia.id_envio} (placeholder ${guia.numero_guia}) lleva más de ${EnviosService.GUIA_PENDIENTE_MAX_HORAS}h sin generarse en SkydropX. Requiere revisión/recreación manual.`,
+          );
+          this.logger.error(`[envios] Guía ${guia.id_guia} (envío ${guia.id_envio}) marcada 'error' tras timeout`);
+          continue;
+        }
+        // Aún dentro de ventana: intentar completar (no lanza si sigue pendiente).
+        await this.refrescarGuiaPendiente(String(guia.id_envio));
+      } catch (err: any) {
+        this.logger.warn(`[envios] completarGuiasPendientes: guía ${guia.id_guia} aún pendiente/error: ${err?.message}`);
+      }
+    }
+  }
+
+  /** Crea notificaciones in-app para todos los administradores activos. Best-effort. */
+  private async notificarAdmins(tipo: string, titulo: string, cuerpo: string) {
+    try {
+      const adminRole = await this.prisma.roles.findFirst({
+        where: { nombre: { in: ['administrador', 'admin', 'ADMIN'] } },
+        select: { id_rol: true },
+      });
+      if (!adminRole) return;
+      const admins = await this.prisma.usuario_rol.findMany({
+        where: { id_rol: adminRole.id_rol, estado: 'activo' },
+        select: { id_usuario: true },
+      });
+      await Promise.all(
+        admins.map(({ id_usuario }) =>
+          this.prisma.notificaciones.create({ data: { id_usuario, tipo, titulo, cuerpo, leido: false } }),
+        ),
+      );
+    } catch (err: any) {
+      this.logger.error(`[envios] notificarAdmins failed: ${err?.message}`);
+    }
+  }
+
   async getGuiaPdf(id_envio: string): Promise<{ numero_guia: string; label_pdf: Buffer }> {
     const envio = await this.prisma.envios.findUnique({
       where: { id_envio: toBigIntId(id_envio) },
@@ -1156,7 +1239,8 @@ export class EnviosService {
 
   private normalizarEstado(estado: string): string | null {
     const STATE_MAP: Record<string, string> = {
-      // FedEx
+      // Estados de tracking genéricos del carrier (devueltos por SkydropX/paquetería).
+      // NOTA: no es integración FedEx — son strings de estado estándar a normalizar.
       delivered: 'entregado',
       in_transit: 'en_transito',
       in_transit_en_ruta: 'en_transito',

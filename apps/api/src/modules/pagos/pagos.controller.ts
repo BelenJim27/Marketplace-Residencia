@@ -9,6 +9,11 @@ import { Request } from 'express';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/guards/roles.decorator';
+import { Throttle } from '@nestjs/throttler';
+
+// Límite para creación de pagos (sensible). Los webhooks NO se limitan: los invoca
+// el proveedor (Stripe/PayPal) y limitarlos podría descartar eventos legítimos.
+const PAGO_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
 
 @Controller('pagos')
 export class PagosController {
@@ -30,6 +35,7 @@ export class PagosController {
     return this.service.getIngresosResumen(id_productor);
   }
 
+  @Throttle(PAGO_THROTTLE)
   @UseGuards(AuthGuard)
   @Post('stripe/intent')
   async createStripeIntent(@Body() dto: CreateStripeIntentDto, @Req() req: Request) {
@@ -75,6 +81,7 @@ export class PagosController {
     return { received: true };
   }
 
+  @Throttle(PAGO_THROTTLE)
   @UseGuards(AuthGuard)
   @Post('paypal/order')
   async createPaypalOrder(@Body() dto: CreatePaypalOrderDto, @Req() req: Request) {
@@ -82,6 +89,7 @@ export class PagosController {
     return this.service.createPaypalOrder(dto);
   }
 
+  @Throttle(PAGO_THROTTLE)
   @UseGuards(AuthGuard)
   @Post('paypal/capture')
   capturePaypalOrder(@Body() dto: CapturePaypalOrderDto) {

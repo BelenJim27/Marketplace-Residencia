@@ -33,6 +33,7 @@ import { TasasCambioModule } from './modules/tasas-cambio/tasas-cambio.module';
 import { ComisionesModule } from './modules/comisiones/comisiones.module';
 import { PayoutsModule } from './modules/payouts/payouts.module';
 import { I18nModule } from './modules/i18n/i18n.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { I18nModule } from './modules/i18n/i18n.module';
     ComisionesModule,
     PayoutsModule,
     I18nModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

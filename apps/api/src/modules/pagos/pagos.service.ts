@@ -169,7 +169,7 @@ export class PagosService {
     const categoriaIds = await this.obtenerCategoriasDelPedido(id_pedido_bi);
     const paisDestino = dto.shipping_address.country;
     this.validarMonedaContraDestino(moneda, paisDestino);
-    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds);
+    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds, dto.shipping_address.state);
 
     const directCharge = await this.resolveDirectCharge(id_pedido_bi, dto.subtotal, dto.shipping_amount ?? 0);
 
@@ -240,7 +240,7 @@ export class PagosService {
     const categoriaIds = await this.obtenerCategoriasDelPedido(id_pedido_bi);
     const paisDestino = dto.shipping_address?.country ?? 'MX';
     this.validarMonedaContraDestino(moneda, paisDestino);
-    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds);
+    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds, dto.shipping_address?.state);
 
     const totalAmount = dto.subtotal + (dto.shipping_amount ?? 0) + taxAmount;
 
@@ -805,8 +805,10 @@ export class PagosService {
     shippingAmount: number,
     paisDestino: string,
     categoriaIds: number[] = [],
+    estadoDestino?: string,
   ): Promise<{ taxAmount: number; taxBreakdown: { tipo: string; nombre: string; tasa: number; monto: number }[] }> {
     const ahora = new Date();
+    const estado = estadoDestino?.trim().toUpperCase();
     const tasas = await this.prisma.tasas_impuesto.findMany({
       where: {
         pais_iso2: paisDestino.toUpperCase(),
@@ -814,12 +816,21 @@ export class PagosService {
         incluido_en_precio: false,
         vigente_desde: { lte: ahora },
         OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: ahora } }],
-        // Incluye tasas globales (sin categoría) Y tasas de las categorías del pedido
         AND: [
+          // Tasas globales (sin categoría) Y tasas de las categorías del pedido.
           {
             OR: [
               { id_categoria: null },
               ...(categoriaIds.length > 0 ? [{ id_categoria: { in: categoriaIds } }] : []),
+            ],
+          },
+          // Sales tax por estado (US): aplica tasas a nivel país (estado_codigo NULL)
+          // Y, si hay estado destino, las específicas de ese estado. Para US el negocio
+          // configura filas por estado con nexo; MX usa estado_codigo NULL (IVA país).
+          {
+            OR: [
+              { estado_codigo: null },
+              ...(estado ? [{ estado_codigo: estado }] : []),
             ],
           },
         ],
