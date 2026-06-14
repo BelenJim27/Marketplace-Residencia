@@ -22,6 +22,24 @@ const nextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
+  async headers() {
+    // Cabeceras de seguridad para todas las respuestas del frontend.
+    // La CSP se mantiene conservadora (frame-ancestors/base-uri/object-src) para
+    // dar protección anti-clickjacking sin romper scripts/estilos inline de Next.
+    const securityHeaders = [
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'X-Frame-Options', value: 'DENY' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      { key: 'X-DNS-Prefetch-Control', value: 'off' },
+      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+      { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+      {
+        key: 'Content-Security-Policy',
+        value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
+      },
+    ];
+    return [{ source: '/:path*', headers: securityHeaders }];
+  },
   async rewrites() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     return {

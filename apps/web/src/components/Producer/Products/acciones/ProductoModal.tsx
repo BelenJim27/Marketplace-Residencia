@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ImagenProducto } from "@/components/Producer/Products/ImagenProducto";
 import type {
   FormState,
@@ -124,6 +125,13 @@ export function ProductoModal({
   const set = (key: keyof FormState) => (value: string) =>
     setForm((c) => ({ ...c, [key]: value }));
 
+  // Sugerencia de precio con IVA: el productor captura el precio base (sin IVA) y el
+  // sistema sugiere el precio final con IVA 16% incluido para colocarlo en el campo.
+  // `ivaAplicado` evita volver a multiplicar el precio una vez aplicada la sugerencia.
+  // En editar/ver el precio cargado ya incluye IVA, así que parte en true (solo informa);
+  // en crear parte en false para sugerir el precio con IVA a partir del base capturado.
+  const [ivaAplicado, setIvaAplicado] = useState(mode !== "create");
+
   const handleLoteChange = (value: string) => {
     if (onLoteChange) {
       onLoteChange(value);
@@ -186,14 +194,71 @@ export function ProductoModal({
               disabled={mode === "view" || lockNombre}
               badge={lockNombre ? "auto" : undefined}
             />
-            <Field
-              label="Precio base"
-              value={form.precio_base}
-              onChange={set("precio_base")}
-              disabled={mode === "view"}
-              inputMode="decimal"
-              placeholder="0.00"
-            />
+            <div>
+              <Field
+                label="Precio"
+                value={form.precio_base}
+                onChange={(v) => {
+                  // Edición manual: invalida la sugerencia aplicada (vuelve a tratarse como base).
+                  setIvaAplicado(false);
+                  set("precio_base")(v);
+                }}
+                disabled={mode === "view"}
+                inputMode="decimal"
+                placeholder="0.00"
+              />
+              {(() => {
+                const IVA = 0.16;
+                const fmt = (n: number) =>
+                  n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const valor = parseFloat((form.precio_base || "").replace(",", "."));
+
+                if (form.moneda_base !== "MXN") return null;
+                if (!isFinite(valor) || valor <= 0) {
+                  return (
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Escribe el precio base; el sistema sugerirá el precio con IVA 16% incluido.
+                    </p>
+                  );
+                }
+
+                // Si ya se aplicó la sugerencia, el valor del campo YA incluye IVA: solo informar.
+                if (ivaAplicado) {
+                  const base = valor / (1 + IVA);
+                  return (
+                    <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+                      ✓ Precio con <span className="font-medium">IVA 16% incluido</span> (${fmt(valor)} MXN)
+                      <span className="block text-[11px] text-gray-400">
+                        base ${fmt(base)} + IVA ${fmt(valor - base)}
+                      </span>
+                    </p>
+                  );
+                }
+
+                // El valor escrito es el precio base (sin IVA): sugerir el final con IVA.
+                const sugerido = Math.round(valor * (1 + IVA) * 100) / 100;
+                return (
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <span>
+                      Precio sugerido con IVA 16%:{" "}
+                      <span className="font-semibold text-dark dark:text-white">${fmt(sugerido)} MXN</span>
+                    </span>
+                    {mode !== "view" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          set("precio_base")(sugerido.toFixed(2));
+                          setIvaAplicado(true);
+                        }}
+                        className="rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-white hover:bg-primary/90"
+                      >
+                        Usar este precio
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
 
           {/* Descripción */}

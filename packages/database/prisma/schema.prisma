@@ -104,16 +104,19 @@ model detalle_pedido {
   impuesto      Decimal      @default(0) @db.Decimal(12, 2)
   id_productor  Int?
   id_tienda     Int?
+  id_inventario BigInt?
   pedidos       pedidos      @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade, onUpdate: NoAction)
   productos     productos    @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
   productores   productores? @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
   tiendas       tiendas?     @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
+  inventario    inventario?  @relation(fields: [id_inventario], references: [id_inventario], onDelete: SetNull, onUpdate: NoAction)
 
   @@unique([id_pedido, id_producto], map: "uq_detalle_pedido_producto")
   @@index([id_pedido], map: "idx_detalle_pedido")
   @@index([id_producto], map: "idx_detalle_producto")
   @@index([id_productor], map: "idx_detalle_productor")
   @@index([id_tienda], map: "idx_detalle_tienda")
+  @@index([id_inventario], map: "idx_detalle_inventario")
 }
 
 model direcciones {
@@ -291,6 +294,7 @@ model inventario {
   actualizado_en         DateTime                 @default(now()) @db.Timestamptz(6)
   productos              productos                @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
   movimientos_inventario movimientos_inventario[]
+  detalle_pedido         detalle_pedido[]
 
   @@index([id_producto], map: "idx_inventario_producto")
   @@index([id_producto, stock], map: "idx_inventario_producto_stock")
@@ -691,6 +695,7 @@ model servicios_envio {
 model tasas_impuesto {
   id_tasa            Int         @id @default(autoincrement())
   pais_iso2          String      @db.Char(2)
+  estado_codigo      String?     @db.VarChar(3)
   id_categoria       Int?
   tipo               String      @db.VarChar(20)
   nombre             String      @db.VarChar(150)
@@ -706,6 +711,7 @@ model tasas_impuesto {
   paises             paises      @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
 
   @@index([id_categoria], map: "idx_tasas_categoria")
+  @@index([pais_iso2, estado_codigo], map: "idx_tasas_pais_estado")
 }
 
 model tiendas {
@@ -773,6 +779,7 @@ model usuarios {
   password_hash                                 String?                  @db.VarChar(255)
   idioma_preferido                              String                   @default("es") @db.VarChar(10)
   moneda_preferida                              Moneda                   @default(MXN)
+  email_opt_out                                 Boolean                  @default(false)
   version_token                                 Int                      @default(1)
   fecha_registro                                DateTime                 @default(now()) @db.Timestamptz(6)
   eliminado_en                                  DateTime?                @db.Timestamptz(6)

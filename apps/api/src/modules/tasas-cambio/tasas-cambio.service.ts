@@ -1,21 +1,39 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { Moneda, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../shared/serialize';
 import { CreateTasaCambioDto } from './dto/tasas-cambio.dto';
 
-// Conservative static fallback rates (updated manually if needed).
-// Used when the DB has no active rate (cron hasn't run yet or failed repeatedly).
+// Last-resort static fallback rates. Used ONLY when the DB has no active rate
+// (cron hasn't run yet or failed repeatedly). These pueden quedar obsoletas y
+// distorsionar precios USD, por eso se pueden sobreescribir por entorno
+// (FX_FALLBACK_MXN_USD, FX_FALLBACK_USD_MXN) y se loguea a nivel ERROR cuando se usan.
 const STATIC_FALLBACK_RATES: Record<string, number> = {
-  'MXN:USD': 0.050,  // ~20 MXN/USD (conservative)
-  'USD:MXN': 20.0,
+  'MXN:USD': 0.055,  // ~18.2 MXN/USD (revisar manualmente)
+  'USD:MXN': 18.2,
 };
+
+function resolveFallbackRate(o: string, d: string): number | undefined {
+  const envValue = process.env[`FX_FALLBACK_${o}_${d}`];
+  if (envValue !== undefined && envValue !== '' && !Number.isNaN(Number(envValue))) {
+    return Number(envValue);
+  }
+  return STATIC_FALLBACK_RATES[`${o}:${d}`];
+}
 
 @Injectable()
 export class TasasCambioService {
   private readonly logger = new Logger(TasasCambioService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  // Edad máxima de una tasa "vigente" antes de considerarla obsoleta (cron caído).
+  // Configurable por entorno; default 24h.
+  private get maxAgeHoras(): number {
+    const v = Number(process.env.FX_MAX_AGE_HORAS);
+    return Number.isFinite(v) && v > 0 ? v : 24;
+  }
 
   async findAll(origen?: string, destino?: string) {
     const where: Prisma.tasas_cambioWhereInput = {};
@@ -32,7 +50,7 @@ export class TasasCambioService {
   async getVigente(origen: string, destino: string, fecha: Date = new Date()) {
     const o = origen.toUpperCase() as Moneda;
     const d = destino.toUpperCase() as Moneda;
-    if (o === d) return { tasa: '1', moneda_origen: o, moneda_destino: d, vigente_desde: fecha };
+    if (o === d) return { tasa: '1', moneda_origen: o, moneda_destino: d, vigente_desde: fecha, stale: false };
 
     const tasa = await this.prisma.tasas_cambio.findFirst({
       where: {
@@ -44,18 +62,78 @@ export class TasasCambioService {
       orderBy: { vigente_desde: 'desc' },
     });
     if (!tasa) {
-      const fallbackKey = `${o}:${d}`;
-      const fallbackRate = STATIC_FALLBACK_RATES[fallbackKey];
+      const fallbackRate = resolveFallbackRate(o, d);
       if (fallbackRate !== undefined) {
-        this.logger.warn(
-          `[tasas-cambio] Sin tasa vigente ${o}→${d} en BD. Usando fallback estático ${fallbackRate}. ` +
-          `Verifica que el cron de sincronización de ExchangeRate-API esté activo.`,
+        this.logger.error(
+          `[tasas-cambio] ⚠️ Sin tasa vigente ${o}→${d} en BD. Usando fallback ${fallbackRate} ` +
+          `(posiblemente OBSOLETO → distorsiona precios USD). Revisa el cron de ExchangeRate-API ` +
+          `o define FX_FALLBACK_${o}_${d} con la tasa actual.`,
         );
-        return { tasa: String(fallbackRate), moneda_origen: o, moneda_destino: d, vigente_desde: fecha };
+        // fallback siempre se marca stale: su frescura es desconocida.
+        return { tasa: String(fallbackRate), moneda_origen: o, moneda_destino: d, vigente_desde: fecha, stale: true };
       }
       throw new NotFoundException(`No hay tasa vigente ${o}→${d} para ${fecha.toISOString()}`);
     }
-    return serializeBigInts(tasa);
+
+    // Una tasa "vigente" pero vieja (cron de sync caído) se usaría en silencio y
+    // distorsionaría precios USD. Detectamos la obsolescencia y la exponemos (stale)
+    // para que el checkout/frontend pueda reaccionar; logueamos a ERROR.
+    const ageMs = Date.now() - new Date(tasa.vigente_desde).getTime();
+    const stale = ageMs > this.maxAgeHoras * 3_600_000;
+    if (stale) {
+      this.logger.error(
+        `[tasas-cambio] Tasa ${o}→${d} OBSOLETA: vigente_desde=${new Date(tasa.vigente_desde).toISOString()} ` +
+        `(> ${this.maxAgeHoras}h). El cron de ExchangeRate-API puede estar caído; precios USD posiblemente incorrectos.`,
+      );
+    }
+    return serializeBigInts({ ...tasa, stale });
+  }
+
+  /**
+   * Alerta a administradores si la tasa MXN→USD está obsoleta o ausente. Evita
+   * cobrar en USD con una tasa vieja sin que nadie se entere. Cada 6 h.
+   */
+  @Cron('0 */6 * * *')
+  async alertarTasaObsoleta() {
+    try {
+      const r: any = await this.getVigente('MXN', 'USD');
+      if (r?.stale) {
+        await this.notificarAdmins(
+          'fx_obsoleta',
+          'Tasa de cambio MXN→USD obsoleta',
+          `La tasa MXN→USD no se actualiza desde ${new Date(r.vigente_desde).toISOString()} (> ${this.maxAgeHoras}h). ` +
+          `Revisa el cron de ExchangeRate-API: los precios en USD pueden ser incorrectos.`,
+        );
+      }
+    } catch (err: any) {
+      await this.notificarAdmins(
+        'fx_obsoleta',
+        'Sin tasa de cambio MXN→USD',
+        `No hay tasa MXN→USD disponible (${err?.message}). El checkout en USD fallará hasta configurarla.`,
+      );
+    }
+  }
+
+  /** Crea notificaciones in-app para todos los administradores activos. Best-effort. */
+  private async notificarAdmins(tipo: string, titulo: string, cuerpo: string) {
+    try {
+      const adminRole = await this.prisma.roles.findFirst({
+        where: { nombre: { in: ['administrador', 'admin', 'ADMIN'] } },
+        select: { id_rol: true },
+      });
+      if (!adminRole) return;
+      const admins = await this.prisma.usuario_rol.findMany({
+        where: { id_rol: adminRole.id_rol, estado: 'activo' },
+        select: { id_usuario: true },
+      });
+      await Promise.all(
+        admins.map(({ id_usuario }) =>
+          this.prisma.notificaciones.create({ data: { id_usuario, tipo, titulo, cuerpo, leido: false } }),
+        ),
+      );
+    } catch (err: any) {
+      this.logger.error(`[tasas-cambio] notificarAdmins failed: ${err?.message}`);
+    }
   }
 
   async convertir(origen: string, destino: string, monto: string, fecha?: Date) {

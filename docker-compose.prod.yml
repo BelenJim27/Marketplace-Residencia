@@ -1,0 +1,48 @@
+# Despliegue reproducible de api + web. Requiere un archivo .env en la raíz con las
+# variables de producción (DATABASE_URL, JWT_*, STRIPE_*, CORS_ORIGINS con dominios
+# https reales, NEXT_PUBLIC_API_URL, etc.).
+#
+#   docker compose -f docker-compose.prod.yml up --build
+#
+# NOTA: api/uploads se monta como volumen para que las subidas locales persistan
+# entre reinicios (en multi-instancia, migrar a almacenamiento externo).
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+    ports:
+      - "3001:3001"
+    volumes:
+      - api_uploads:/app/apps/api/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  api_uploads:

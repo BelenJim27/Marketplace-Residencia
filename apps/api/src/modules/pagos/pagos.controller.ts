@@ -9,6 +9,11 @@ import { Request } from 'express';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/guards/roles.decorator';
+import { Throttle } from '@nestjs/throttler';
+
+// Límite para creación de pagos (sensible). Los webhooks NO se limitan: los invoca
+// el proveedor (Stripe/PayPal) y limitarlos podría descartar eventos legítimos.
+const PAGO_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
 
 @Controller('pagos')
 export class PagosController {
@@ -30,6 +35,7 @@ export class PagosController {
     return this.service.getIngresosResumen(id_productor);
   }
 
+  @Throttle(PAGO_THROTTLE)
   @UseGuards(AuthGuard)
   @Post('stripe/intent')
   async createStripeIntent(@Body() dto: CreateStripeIntentDto, @Req() req: Request) {
@@ -46,28 +52,36 @@ export class PagosController {
     const isNew = await this.service.deduplicateWebhookEvent('stripe', event.id, event.type);
     if (!isNew) return { received: true };
 
-    if (event.type === 'payment_intent.succeeded') {
-      const paymentIntent = event.data.object as any;
-      const isDirectCharge = !!(paymentIntent.transfer_data?.destination);
-      const taxCalculationId = paymentIntent.metadata?.tax_calculation as string | undefined;
-      await this.service.updatePaymentStatus(paymentIntent.id, 'completado', isDirectCharge, taxCalculationId);
-    } else if (event.type === 'payment_intent.payment_failed') {
-      const paymentIntent = event.data.object as any;
-      await this.service.updatePaymentStatus(paymentIntent.id, 'fallido');
-    } else if (event.type === 'account.updated') {
-      // Connect onboarding progress — flip stripe_onboarding_completed when KYC clears.
-      await this.connectService.syncFromAccountUpdated(event.data.object);
-    } else if (event.type === 'charge.dispute.closed') {
-      const dispute = event.data.object as any;
-      const paymentIntentId: string = dispute.payment_intent ?? '';
-      if (paymentIntentId) {
-        await this.service.handleDisputeClosed(paymentIntentId, dispute.status);
+    try {
+      if (event.type === 'payment_intent.succeeded') {
+        const paymentIntent = event.data.object as any;
+        const isDirectCharge = !!(paymentIntent.transfer_data?.destination);
+        const taxCalculationId = paymentIntent.metadata?.tax_calculation as string | undefined;
+        await this.service.updatePaymentStatus(paymentIntent.id, 'completado', isDirectCharge, taxCalculationId);
+      } else if (event.type === 'payment_intent.payment_failed') {
+        const paymentIntent = event.data.object as any;
+        await this.service.updatePaymentStatus(paymentIntent.id, 'fallido');
+      } else if (event.type === 'account.updated') {
+        // Connect onboarding progress — flip stripe_onboarding_completed when KYC clears.
+        await this.connectService.syncFromAccountUpdated(event.data.object);
+      } else if (event.type === 'charge.dispute.closed') {
+        const dispute = event.data.object as any;
+        const paymentIntentId: string = dispute.payment_intent ?? '';
+        if (paymentIntentId) {
+          await this.service.handleDisputeClosed(paymentIntentId, dispute.status);
+        }
       }
+    } catch (err) {
+      // Fallo transitorio: revertimos el dedup para que el reintento de Stripe
+      // reprocese el evento en lugar de descartarse como duplicado y perderse.
+      await this.service.discardWebhookEvent('stripe', event.id);
+      throw err;
     }
 
     return { received: true };
   }
 
+  @Throttle(PAGO_THROTTLE)
   @UseGuards(AuthGuard)
   @Post('paypal/order')
   async createPaypalOrder(@Body() dto: CreatePaypalOrderDto, @Req() req: Request) {
@@ -75,6 +89,7 @@ export class PagosController {
     return this.service.createPaypalOrder(dto);
   }
 
+  @Throttle(PAGO_THROTTLE)
   @UseGuards(AuthGuard)
   @Post('paypal/capture')
   capturePaypalOrder(@Body() dto: CapturePaypalOrderDto) {
@@ -99,18 +114,24 @@ export class PagosController {
       if (!isNew) return { received: true };
     }
 
-    if (eventType === 'PAYMENT.CAPTURE.COMPLETED') {
-      const capture = event.resource as any;
-      const captureId = capture.id;
-      const captureCurrency = (capture.amount?.currency_code ?? '').toUpperCase();
-      if (captureCurrency && captureCurrency !== 'USD') {
-        throw new BadRequestException(`Moneda de capture inesperada: ${captureCurrency}. Solo se acepta USD.`);
+    try {
+      if (eventType === 'PAYMENT.CAPTURE.COMPLETED') {
+        const capture = event.resource as any;
+        const captureId = capture.id;
+        const captureCurrency = (capture.amount?.currency_code ?? '').toUpperCase();
+        if (captureCurrency && captureCurrency !== 'USD') {
+          throw new BadRequestException(`Moneda de capture inesperada: ${captureCurrency}. Solo se acepta USD.`);
+        }
+        await this.service.updatePaymentStatus(captureId, 'completado');
+      } else if (eventType === 'PAYMENT.CAPTURE.DENIED' || eventType === 'PAYMENT.CAPTURE.REFUNDED') {
+        const capture = event.resource as any;
+        const captureId = capture.id;
+        await this.service.updatePaymentStatus(captureId, 'fallido');
       }
-      await this.service.updatePaymentStatus(captureId, 'completado');
-    } else if (eventType === 'PAYMENT.CAPTURE.DENIED' || eventType === 'PAYMENT.CAPTURE.REFUNDED') {
-      const capture = event.resource as any;
-      const captureId = capture.id;
-      await this.service.updatePaymentStatus(captureId, 'fallido');
+    } catch (err) {
+      // Fallo transitorio: revertir el dedup para que PayPal reintente el evento.
+      if (eventId) await this.service.discardWebhookEvent('paypal', eventId);
+      throw err;
     }
 
     return { received: true };
