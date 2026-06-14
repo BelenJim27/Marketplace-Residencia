@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from "@nestjs/common";
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import {
@@ -15,6 +16,12 @@ import {
   UpdateInventarioDto,
 } from "./dto/inventario.dto";
 import { InventarioService } from "./inventario.service";
+import { AuthGuard } from "../auth/guards/auth.guard";
+import { RolesGuard } from "../auth/guards/rbac.guard";
+import { Roles } from "../auth/guards/roles.decorator";
+
+// La escritura de inventario solo puede hacerla productor o administrador.
+const WRITE_GUARDS = [AuthGuard, RolesGuard] as const;
 
 @Controller("inventario")
 export class InventarioController {
@@ -23,7 +30,10 @@ export class InventarioController {
   @Get("movimientos") listMovimientos() {
     return this.service.listMovimientos();
   }
-  @Post("movimientos") createMovimiento(
+  @Post("movimientos")
+  @UseGuards(...WRITE_GUARDS)
+  @Roles("productor", "administrador")
+  createMovimiento(
     @Body() dto: CreateMovimientoInventarioDto,
   ) {
     return this.service.createMovimiento(dto);
@@ -43,16 +53,25 @@ export class InventarioController {
   @Get(":id") getInventario(@Param("id") id: string) {
     return this.service.getInventario(id);
   }
-  @Post() createInventario(@Body() dto: CreateInventarioDto) {
+  @Post()
+  @UseGuards(...WRITE_GUARDS)
+  @Roles("productor", "administrador")
+  createInventario(@Body() dto: CreateInventarioDto) {
     return this.service.createInventario(dto);
   }
-  @Patch(":id") updateInventario(
+  @Patch(":id")
+  @UseGuards(...WRITE_GUARDS)
+  @Roles("productor", "administrador")
+  updateInventario(
     @Param("id") id: string,
     @Body() dto: UpdateInventarioDto,
   ) {
     return this.service.updateInventario(id, dto);
   }
-  @Delete(":id") removeInventario(@Param("id") id: string) {
+  @Delete(":id")
+  @UseGuards(...WRITE_GUARDS)
+  @Roles("productor", "administrador")
+  removeInventario(@Param("id") id: string) {
     return this.service.removeInventario(id);
   }
 }

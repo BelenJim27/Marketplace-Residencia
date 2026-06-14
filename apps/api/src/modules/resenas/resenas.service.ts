@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -84,7 +85,24 @@ export class ResenasService {
     );
   }
 
-  async update(id: string, dto: UpdateResenaDto) {
+  /**
+   * Verifica que la reseña exista y, salvo admin, que pertenezca al usuario actor.
+   * Evita IDOR: un usuario autenticado no puede editar/borrar reseñas ajenas.
+   */
+  private async assertOwnership(id: string, actor?: { id_usuario: string; isAdmin: boolean }) {
+    if (!actor || actor.isAdmin) return;
+    const existente = await this.prisma.resenas.findUnique({
+      where: { id_resena: toBigIntId(id) },
+      select: { id_usuario: true, eliminado_en: true },
+    });
+    if (!existente || existente.eliminado_en) throw new NotFoundException('Resena no encontrada');
+    if (existente.id_usuario !== actor.id_usuario) {
+      throw new ForbiddenException('Solo puedes modificar tus propias reseñas');
+    }
+  }
+
+  async update(id: string, dto: UpdateResenaDto, actor?: { id_usuario: string; isAdmin: boolean }) {
+    await this.assertOwnership(id, actor);
     return serializeBigInts(
       await this.prisma.resenas.update({
         where: { id_resena: toBigIntId(id) },
@@ -92,13 +110,14 @@ export class ResenasService {
           calificacion: dto.calificacion,
           comentario: dto.comentario,
           idioma_comentario: dto.idioma_comentario,
-          respuesta_vendedor: dto.respuesta_vendedor,
+          // respuesta_vendedor solo se gestiona vía /responder (rol vendedor/admin)
         },
       }),
     );
   }
 
-  async remove(id: string) {
+  async remove(id: string, actor?: { id_usuario: string; isAdmin: boolean }) {
+    await this.assertOwnership(id, actor);
     return serializeBigInts(
       await this.prisma.resenas.update({
         where: { id_resena: toBigIntId(id) },

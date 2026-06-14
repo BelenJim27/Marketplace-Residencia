@@ -8,6 +8,8 @@ import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { ActualizarPerfilProductorDto, AdminUpdateProductorDto, CreateProductorDto, CreateRegionDto, RevisarSolicitudDto, SolicitarProductorDto, UpdateProductorDto, UpdateRegionDto } from './dto/productores.dto';
 import { ProductoresService } from './productores.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
+import { RolesGuard } from '../auth/guards/rbac.guard';
+import { Roles } from '../auth/guards/roles.decorator';
 
 const FOTOS_DIR = join(__dirname, '../../..', 'uploads', 'productores');
 mkdirSync(FOTOS_DIR, { recursive: true });
@@ -38,9 +40,18 @@ export class ProductoresController {
     }
   }
 
-  @Post('regiones') createRegion(@Body() dto: CreateRegionDto) { return this.service.createRegion(dto); }
-  @Patch('regiones/:id') updateRegion(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRegionDto) { return this.service.updateRegion(id, dto); }
-  @Delete('regiones/:id') removeRegion(@Param('id', ParseIntPipe) id: number) { return this.service.removeRegion(id); }
+  @Post('regiones')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
+  createRegion(@Body() dto: CreateRegionDto) { return this.service.createRegion(dto); }
+  @Patch('regiones/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
+  updateRegion(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRegionDto) { return this.service.updateRegion(id, dto); }
+  @Delete('regiones/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
+  removeRegion(@Param('id', ParseIntPipe) id: number) { return this.service.removeRegion(id); }
   
   @Post('solicitar')
   @UseGuards(AuthGuard)
