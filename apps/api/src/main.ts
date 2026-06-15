@@ -86,21 +86,20 @@ async function bootstrap() {
 
   const rawOrigins = process.env.CORS_ORIGINS ?? 'http://localhost:3000';
   const allowedOrigins = rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
-  const isProd = process.env.NODE_ENV === 'production';
 
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      // En producción exigimos cabecera Origin: rechaza peticiones sin origin
-      // (curl/scripts), que de otro modo saltarían la verificación de CORS.
-      if (isProd && !origin) {
-        callback(new Error('Origin header required'));
-        return;
-      }
-      // En desarrollo se permite ausencia de origin (Swagger, health checks, etc.).
-      if ((!isProd && !origin) || (origin && allowedOrigins.includes(origin))) {
+      // Sin cabecera Origin (health checks, navegaciones directas, favicon,
+      // peticiones server-to-server): permitir. CORS solo restringe las peticiones
+      // cross-origin del navegador, que SÍ envían Origin; exigirla generaba 500s
+      // espurios en los health checks y no aporta seguridad real.
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
+        // Origen no permitido: no enviamos Access-Control-Allow-Origin. No lanzamos
+        // un Error (evita 500 con stack en el log); el navegador bloquea la respuesta
+        // por su cuenta al faltar la cabecera.
+        callback(null, false);
       }
     },
     credentials: true,
