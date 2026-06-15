@@ -4,11 +4,13 @@ import {
   IsArray,
   IsBoolean,
   IsInt,
+  IsNumber,
   IsNumberString,
   IsObject,
   IsOptional,
   IsString,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class ProductoImagenDto {
@@ -24,13 +26,13 @@ export class CreateProductoDto {
   @IsString() @MaxLength(200) nombre!: string;
   @IsOptional() @IsString() descripcion?: string;
   @IsOptional() @IsObject() traducciones?: Record<string, unknown>;
-  @IsNumberString() precio_base!: string;
+  @Type(() => Number) @IsNumber() @Min(0.01) precio_base!: number;
   @IsOptional() @IsString() @MaxLength(3) moneda_base?: string;
   @IsOptional() @IsObject() metadata?: Record<string, unknown>;
-  @IsOptional() @IsNumberString() peso_kg?: string;
-  @IsOptional() @IsNumberString() alto_cm?: string;
-  @IsOptional() @IsNumberString() ancho_cm?: string;
-  @IsOptional() @IsNumberString() largo_cm?: string;
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(0) peso_kg?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(0) alto_cm?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(0) ancho_cm?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(0) largo_cm?: number;
   @IsOptional() @IsString() @MaxLength(20) status?: string;
   @IsOptional() @IsString() creado_por?: string;
   @IsOptional() @IsString() actualizado_por?: string;
@@ -38,8 +40,8 @@ export class CreateProductoDto {
   @IsOptional() @IsString() @MaxLength(500) imagen_principal_url?: string;
   @IsOptional() @IsArray() @Type(() => Number) categorias?: number[];
   @IsOptional() @IsNumberString() id_categoria?: string;
-  @IsOptional() @IsNumberString() botellas_350ml?: string;
-  @IsOptional() @IsNumberString() botellas_750ml?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) botellas_350ml?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) botellas_750ml?: number;
   @IsOptional() @IsArray() imagenes?: ProductoImagenDto[];
 }
 

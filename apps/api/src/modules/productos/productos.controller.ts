@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import type { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -81,14 +82,15 @@ export class ProductosController {
   @UseInterceptors(FileInterceptor('imagen', { storage: productosStorage }))
   async create(
     @UploadedFile() file: Express.Multer.File | undefined,
-    @Body() dto: CreateProductoDto
+    @Body() dto: CreateProductoDto,
+    @Req() req: Request,
   ) {
     if (file) {
       const imageUrl = `/uploads/productos/${file.filename}`;
       dto.imagen_url = imageUrl;
       dto.imagen_principal_url = imageUrl;
     }
-    return this.service.create(dto);
+    return this.service.create(dto, (req as any).user);
   }
 
   @Patch(':id')
@@ -98,20 +100,21 @@ export class ProductosController {
   async update(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
-    @Body() dto: UpdateProductoDto
+    @Body() dto: UpdateProductoDto,
+    @Req() req: Request,
   ) {
     if (file) {
       const imageUrl = `/uploads/productos/${file.filename}`;
       dto.imagen_url = imageUrl;
       dto.imagen_principal_url = imageUrl;
     }
-    return this.service.update(id, dto);
+    return this.service.update(id, dto, (req as any).user);
   }
 
   @Delete(':id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('productor', 'administrador')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('id') id: string, @Req() req: Request) {
+    return this.service.remove(id, (req as any).user);
   }
 }

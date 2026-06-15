@@ -7,6 +7,7 @@ import { PaypalService } from './paypal.service';
 import { EmailService } from '../email/email.service';
 import { ComisionesService } from '../comisiones/comisiones.service';
 import { EnviosService } from '../envios/envios.service';
+import { TasasCambioService } from '../tasas-cambio/tasas-cambio.service';
 
 const mockStripe = {
   createPaymentIntent: jest.fn(),
@@ -40,6 +41,12 @@ const mockComisiones = {
 
 const mockEnvios = {
   crearEnviosPorProductor: jest.fn().mockResolvedValue([]),
+};
+
+const mockTasasCambio = {
+  // Por defecto: tasa vigente y NO obsoleta (los tests de bloqueo la sobreescriben).
+  getVigente: jest.fn().mockResolvedValue({ tasa: '18.2', stale: false }),
+  convertir: jest.fn(),
 };
 
 const mockPrisma: any = {
@@ -122,6 +129,7 @@ describe('PagosService', () => {
     mockPrisma.refunds.update.mockResolvedValue({});
     mockPrisma.payment_fees.create.mockResolvedValue({});
     mockStripe.getProcessingFee?.mockResolvedValue?.(null);
+    mockTasasCambio.getVigente.mockResolvedValue({ tasa: '18.2', stale: false });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -132,6 +140,7 @@ describe('PagosService', () => {
         { provide: EmailService, useValue: mockEmail },
         { provide: ComisionesService, useValue: mockComisiones },
         { provide: EnviosService, useValue: mockEnvios },
+        { provide: TasasCambioService, useValue: mockTasasCambio },
       ],
     }).compile();
     service = module.get<PagosService>(PagosService);
@@ -410,6 +419,64 @@ describe('PagosService', () => {
       const andFilter = callArg.where.AND[0];
       // Should include OR with id_categoria: { in: [5, 10] }
       expect(JSON.stringify(andFilter)).toContain('[5,10]');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  describe('validarTasaCambioVigente (A-1)', () => {
+    const call = (s: any, pais?: string) => s.validarTasaCambioVigente(pais);
+
+    it('no consulta la tasa ni bloquea para destino MX', async () => {
+      await expect(call(service, 'MX')).resolves.toBeUndefined();
+      expect(mockTasasCambio.getVigente).not.toHaveBeenCalled();
+    });
+
+    it('bloquea cuando la tasa MXN→USD está obsoleta (stale) para destino US', async () => {
+      mockTasasCambio.getVigente.mockResolvedValue({ tasa: '18.2', stale: true });
+      await expect(call(service, 'US')).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('bloquea cuando no hay tasa disponible (getVigente lanza)', async () => {
+      mockTasasCambio.getVigente.mockRejectedValue(new Error('sin tasa'));
+      await expect(call(service, 'US')).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('permite cuando la tasa está vigente y fresca', async () => {
+      mockTasasCambio.getVigente.mockResolvedValue({ tasa: '18.2', stale: false });
+      await expect(call(service, 'US')).resolves.toBeUndefined();
+    });
+  });
+
+  describe('validarNexoFiscal (C-3)', () => {
+    const call = (s: any, pais: string, estado?: string) => s.validarNexoFiscal(pais, estado);
+    const ayer = new Date(Date.now() - 86400000);
+    const manana = new Date(Date.now() + 86400000);
+
+    it('no bloquea cuando no hay nexo declarado para el destino', async () => {
+      mockPrisma.tasas_impuesto.findMany.mockResolvedValue([]);
+      await expect(call(service, 'US', 'TX')).resolves.toBeUndefined();
+    });
+
+    it('bloquea cuando hay nexo declarado pero sin tasa vigente', async () => {
+      mockPrisma.tasas_impuesto.findMany.mockResolvedValue([
+        { estado_codigo: 'TX', activo: true, vigente_desde: ayer, vigente_hasta: ayer, tasa_porcentaje: '0.0825' },
+      ]);
+      await expect(call(service, 'US', 'TX')).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('bloquea cuando hay nexo declarado pero la tasa está inactiva o nula', async () => {
+      mockPrisma.tasas_impuesto.findMany.mockResolvedValue([
+        { estado_codigo: 'TX', activo: false, vigente_desde: ayer, vigente_hasta: manana, tasa_porcentaje: '0.0825' },
+        { estado_codigo: 'TX', activo: true, vigente_desde: ayer, vigente_hasta: manana, tasa_porcentaje: null },
+      ]);
+      await expect(call(service, 'US', 'TX')).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('permite cuando hay nexo declarado con tasa vigente y activa', async () => {
+      mockPrisma.tasas_impuesto.findMany.mockResolvedValue([
+        { estado_codigo: 'TX', activo: true, vigente_desde: ayer, vigente_hasta: manana, tasa_porcentaje: '0.0825' },
+      ]);
+      await expect(call(service, 'US', 'TX')).resolves.toBeUndefined();
     });
   });
 

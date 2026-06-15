@@ -7,6 +7,7 @@ import { EmailService } from '../email/email.service';
 import { EnviosService } from '../envios/envios.service';
 import { calcularEdadEnAnios } from '../productos/edad.helper';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
+import { TasasCambioService } from '../tasas-cambio/tasas-cambio.service';
 import { CreatePagoDto, CreateStripeIntentDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
 import { PaypalService } from './paypal.service';
 import { StripeService } from './stripe.service';
@@ -21,6 +22,7 @@ export class PagosService {
     private readonly paypalService: PaypalService,
     private readonly emailService: EmailService,
     private readonly comisionesService: ComisionesService,
+    private readonly tasasCambioService: TasasCambioService,
     @Optional() private readonly enviosService: EnviosService | null,
   ) {}
   async findAll(filtros?: { estado?: string; proveedor?: string }) {
@@ -169,6 +171,8 @@ export class PagosService {
     const categoriaIds = await this.obtenerCategoriasDelPedido(id_pedido_bi);
     const paisDestino = dto.shipping_address.country;
     this.validarMonedaContraDestino(moneda, paisDestino);
+    await this.validarTasaCambioVigente(paisDestino);
+    await this.validarNexoFiscal(paisDestino, dto.shipping_address.state);
     const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds, dto.shipping_address.state);
 
     const directCharge = await this.resolveDirectCharge(id_pedido_bi, dto.subtotal, dto.shipping_amount ?? 0);
@@ -240,6 +244,8 @@ export class PagosService {
     const categoriaIds = await this.obtenerCategoriasDelPedido(id_pedido_bi);
     const paisDestino = dto.shipping_address?.country ?? 'MX';
     this.validarMonedaContraDestino(moneda, paisDestino);
+    await this.validarTasaCambioVigente(paisDestino);
+    await this.validarNexoFiscal(paisDestino, dto.shipping_address?.state);
     const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds, dto.shipping_address?.state);
 
     const totalAmount = dto.subtotal + (dto.shipping_amount ?? 0) + taxAmount;
@@ -702,15 +708,81 @@ export class PagosService {
    * cualquier otro destino → USD. El enum Moneda solo soporta MXN | USD.
    */
   private validarMonedaContraDestino(moneda: Moneda, paisDestino?: string): void {
-    const pais = (paisDestino ?? '').toUpperCase();
-    if (!pais) return; // sin país no se puede inferir; otras validaciones lo cubren
-    const esperada: Moneda = pais === 'MX' ? 'MXN' : 'USD';
+    // Política de negocio: la plataforma SIEMPRE liquida (cobra) en MXN. La moneda de
+    // visualización —USD para EE.UU.— es solo informativa; el banco del cliente realiza la
+    // conversión. Por eso el cargo debe hacerse en MXN sin importar el país destino.
+    // (Antes esto exigía USD para destinos != MX y rompía el checkout internacional.)
+    const esperada: Moneda = 'MXN';
     if (moneda !== esperada) {
       this.logger.error(
-        `[pagos] Moneda incoherente con destino: moneda=${moneda}, pais=${pais}, esperada=${esperada}`,
+        `[pagos] Moneda de cobro no soportada: moneda=${moneda}, pais=${(paisDestino ?? '—').toUpperCase()}. La plataforma liquida en ${esperada}.`,
       );
       throw new BadRequestException(
-        `La moneda ${moneda} no es válida para envíos a ${pais}. Para ese destino se requiere ${esperada}.`,
+        `La moneda de cobro debe ser ${esperada}. El precio puede mostrarse en otra divisa, pero el cargo se procesa en ${esperada}.`,
+      );
+    }
+  }
+
+  /**
+   * A-1: Bloquea el checkout si la tasa MXN→USD está obsoleta cuando el destino no es MX.
+   * El precio que ve y acepta el cliente internacional se deriva de esta tasa; si el cron
+   * de ExchangeRate-API está caído (tasa stale o solo fallback), no procesamos el pago para
+   * no cobrar/mostrar un monto basado en una tasa incorrecta. Para MX no aplica.
+   */
+  private async validarTasaCambioVigente(paisDestino?: string): Promise<void> {
+    if (!paisDestino || paisDestino.toUpperCase() === 'MX') return;
+    let rate: any;
+    try {
+      rate = await this.tasasCambioService.getVigente('MXN', 'USD');
+    } catch {
+      rate = null;
+    }
+    if (!rate || rate.stale) {
+      this.logger.error(
+        `[pagos] Checkout bloqueado: tasa MXN→USD obsoleta/ausente para destino ${paisDestino.toUpperCase()}.`,
+      );
+      throw new BadRequestException(
+        'No podemos procesar pagos internacionales en este momento porque la tasa de cambio no está actualizada. Intenta de nuevo en unos minutos.',
+      );
+    }
+  }
+
+  /**
+   * C-3: Si el negocio declaró nexo fiscal (obligación de cobrar impuesto) en el país/estado
+   * de destino pero no existe una tasa vigente para calcularlo, bloquea el checkout para no
+   * vender sin cobrar el impuesto donde hay obligación. Si no hay nexo declarado, no bloquea
+   * (se permite el cálculo normal, que puede dar 0).
+   */
+  private async validarNexoFiscal(paisDestino: string, estadoDestino?: string): Promise<void> {
+    const pais = paisDestino.toUpperCase();
+    const estado = estadoDestino?.trim().toUpperCase();
+    const ahora = new Date();
+
+    // ¿Hay nexo declarado para este destino? (país-estado específico, o país completo).
+    const nexoFilas = await this.prisma.tasas_impuesto.findMany({
+      where: {
+        pais_iso2: pais,
+        nexo_activo: true,
+        OR: [{ estado_codigo: null }, ...(estado ? [{ estado_codigo: estado }] : [])],
+      },
+      select: { estado_codigo: true, activo: true, vigente_desde: true, vigente_hasta: true, tasa_porcentaje: true },
+    });
+    if (nexoFilas.length === 0) return; // sin nexo declarado → no se bloquea
+
+    // Con nexo declarado, exigir al menos una tasa VIGENTE y activa para el destino.
+    const tieneTasaVigente = nexoFilas.some(
+      (f) =>
+        f.activo &&
+        f.tasa_porcentaje != null &&
+        new Date(f.vigente_desde) <= ahora &&
+        (f.vigente_hasta == null || new Date(f.vigente_hasta) >= ahora),
+    );
+    if (!tieneTasaVigente) {
+      this.logger.error(
+        `[pagos] Checkout bloqueado: nexo fiscal declarado para ${pais}${estado ? '/' + estado : ''} sin tasa vigente.`,
+      );
+      throw new BadRequestException(
+        `No podemos completar la compra para ${estado ? estado + ', ' : ''}${pais} en este momento porque el impuesto aplicable no está disponible. Intenta más tarde o elige otra dirección.`,
       );
     }
   }

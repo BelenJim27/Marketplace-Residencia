@@ -588,14 +588,14 @@ export default function CheckoutPage() {
                       <div className="space-y-4">
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.green}33`, background: `${COLOR_PALETTE.green}08`, padding: "24px", fontSize: "14px", color: COLOR_PALETTE.green }} role="status" aria-live="polite">
                           <Loader2 size={16} className="animate-spin" aria-label="Cargando" />
-                          Preparando el formulario de pago con Stripe…
+                          {t("Preparando el formulario de pago con Stripe…")}
                         </div>
                         <div style={{ borderRadius: "8px", background: `${COLOR_PALETTE.green}08`, padding: "16px", fontSize: "14px", color: COLOR_PALETTE.green, border: `1px solid ${COLOR_PALETTE.green}33` }}>
                           <div className="flex gap-2">
                             <Lock size={16} className="shrink-0" aria-hidden="true" style={{ color: COLOR_PALETTE.green }} />
                             <div>
-                              <p style={{ fontWeight: 600, margin: 0 }}>Pago protegido por Stripe</p>
-                              <p style={{ marginTop: "4px", fontSize: "12px", lineHeight: 1.4, margin: "4px 0 0" }}>Tu tarjeta nunca se almacena en nuestros servidores. Stripe maneja la encriptación de extremo a extremo.</p>
+                              <p style={{ fontWeight: 600, margin: 0 }}>{t("Pago protegido por Stripe")}</p>
+                              <p style={{ marginTop: "4px", fontSize: "12px", lineHeight: 1.4, margin: "4px 0 0" }}>{t("Tu tarjeta nunca se almacena en nuestros servidores. Stripe maneja la encriptación de extremo a extremo.")}</p>
                             </div>
                           </div>
                         </div>
@@ -606,6 +606,7 @@ export default function CheckoutPage() {
                         stripe={stripePromise}
                         options={{
                           clientSecret,
+                          locale: (locale === "en" ? "en" : "es") as any,
                           appearance: { theme: "stripe", variables: { colorPrimary: "#16a34a" } },
                           fonts: [{
                             family: "text-security-disc",
@@ -656,14 +657,14 @@ export default function CheckoutPage() {
                       <div className="space-y-4">
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.copper}33`, background: `${COLOR_PALETTE.copper}08`, padding: "24px", fontSize: "14px", color: COLOR_PALETTE.copper }} role="status" aria-live="polite">
                           <Loader2 size={16} className="animate-spin" aria-label="Cargando" />
-                          Iniciando sesión con PayPal…
+                          {t("Iniciando sesión con PayPal…")}
                         </div>
                         <div style={{ borderRadius: "8px", background: `${COLOR_PALETTE.copper}08`, padding: "16px", fontSize: "14px", color: COLOR_PALETTE.copper, border: `1px solid ${COLOR_PALETTE.copper}33` }}>
                           <div className="flex gap-2">
                             <Lock size={16} className="shrink-0" aria-hidden="true" style={{ color: COLOR_PALETTE.copper }} />
                             <div>
-                              <p style={{ fontWeight: 600, margin: 0 }}>PayPal maneja tu información bancaria</p>
-                              <p style={{ marginTop: "4px", fontSize: "12px", lineHeight: 1.4, margin: "4px 0 0" }}>Te redirigiremos a PayPal. Nunca vemos tu número de tarjeta ni datos bancarios.</p>
+                              <p style={{ fontWeight: 600, margin: 0 }}>{t("PayPal maneja tu información bancaria")}</p>
+                              <p style={{ marginTop: "4px", fontSize: "12px", lineHeight: 1.4, margin: "4px 0 0" }}>{t("Te redirigiremos a PayPal. Nunca vemos tu número de tarjeta ni datos bancarios.")}</p>
                             </div>
                           </div>
                         </div>
@@ -917,7 +918,9 @@ export default function CheckoutPage() {
       <PayPalScriptProvider
         options={{
           clientId: getPaypalClientId(),
-          currency: displayCurrency,
+          // La plataforma liquida en MXN (el precio puede mostrarse en USD, pero el cargo
+          // —y la orden de PayPal— se procesan en MXN para coincidir con el backend).
+          currency: 'MXN',
           intent: 'capture',
         }}
       >
@@ -946,6 +949,7 @@ function DireccionStep({
   gpsLoading,
   gpsError,
 }: any) {
+  const { t } = useLocale();
   const [formErrors, setFormErrors] = useState<{ nombre_destinatario?: string; telefono?: string; cp?: string }>({});
   const NOMBRE_REGEX_CHECKOUT = /[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s'\-]/g;
 
@@ -953,12 +957,12 @@ function DireccionStep({
     const errors: { nombre_destinatario?: string; telefono?: string; cp?: string } = {};
     const nombre = (nuevaDireccion.nombre_destinatario ?? "").trim();
     if (nombre.length > 0 && nombre.length < 2)
-      errors.nombre_destinatario = "El nombre debe tener al menos 2 letras";
+      errors.nombre_destinatario = t("El nombre debe tener al menos 2 letras");
     const tel = (nuevaDireccion.telefono ?? "").replace(/\D/g, "");
-    if (tel.length > 0 && tel.length !== 10) errors.telefono = "El teléfono debe tener 10 dígitos";
+    if (tel.length > 0 && tel.length !== 10) errors.telefono = t("El teléfono debe tener 10 dígitos");
     const cp = nuevaDireccion.codigo_postal ?? "";
-    if (nuevaDireccion.pais_iso2 === "MX" && cp && !/^\d{5}$/.test(cp)) errors.cp = "El código postal debe tener 5 dígitos";
-    if (nuevaDireccion.pais_iso2 === "US" && cp && !/^\d{5}(-\d{4})?$/.test(cp)) errors.cp = "El ZIP code debe tener 5 dígitos (ej. 90210)";
+    if (nuevaDireccion.pais_iso2 === "MX" && cp && !/^\d{5}$/.test(cp)) errors.cp = t("El código postal debe tener 5 dígitos");
+    if (nuevaDireccion.pais_iso2 === "US" && cp && !/^\d{5}(-\d{4})?$/.test(cp)) errors.cp = t("El ZIP code debe tener 5 dígitos (ej. 90210)");
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
     setFormErrors({});
     guardarNuevaDireccion();
@@ -966,7 +970,7 @@ function DireccionStep({
 
   return (
     <div>
-      <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Dirección de envío</h2>
+      <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{t("Dirección de envío")}</h2>
 
       {direcciones.length > 0 && !mostrarFormDireccion && (
         <div className="mb-6 space-y-3">
@@ -984,8 +988,8 @@ function DireccionStep({
                 onChange={() => setDireccionSeleccionada(dir)}
               />
               <div className="text-sm text-gray-700 dark:text-gray-300">
-                <p className="font-medium capitalize">{dir.nombre_etiqueta || dir.tipo || "Dirección"}</p>
-                {dir.nombre_destinatario && <p className="text-xs text-gray-500">Para: {dir.nombre_destinatario}</p>}
+                <p className="font-medium capitalize">{dir.nombre_etiqueta || dir.tipo || t("Dirección")}</p>
+                {dir.nombre_destinatario && <p className="text-xs text-gray-500">{t("Para")}: {dir.nombre_destinatario}</p>}
                 <p>
                   {dir.es_internacional ? (
                     <>
@@ -1003,7 +1007,7 @@ function DireccionStep({
                   {[dir.ciudad, dir.estado, dir.codigo_postal, dir.pais_iso2].filter(Boolean).join(", ") ||
                     [dir.ubicacion?.ciudad, dir.ubicacion?.estado, dir.ubicacion?.codigo_postal, dir.ubicacion?.pais].filter(Boolean).join(", ")}
                 </p>
-                {dir.es_internacional && <span className="text-xs text-blue-600 dark:text-blue-400">Internacional</span>}
+                {dir.es_internacional && <span className="text-xs text-blue-600 dark:text-blue-400">{t("Internacional")}</span>}
               </div>
             </label>
           ))}
@@ -1011,7 +1015,7 @@ function DireccionStep({
             onClick={() => setMostrarFormDireccion(true)}
             className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors dark:text-green-400 dark:hover:text-green-300"
           >
-            + Agregar otra dirección
+            + {t("Agregar otra dirección")}
           </button>
         </div>
       )}
@@ -1019,7 +1023,7 @@ function DireccionStep({
       {mostrarFormDireccion && (
         <div className="space-y-5">
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">País de envío *</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{t("País de envío")} *</label>
             <select
               value={nuevaDireccion.pais_iso2 || "MX"}
               onChange={(e) =>
@@ -1031,8 +1035,8 @@ function DireccionStep({
               }
               className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none transition-all dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
-              <option value="MX">🇲🇽 México</option>
-              <option value="US">🇺🇸 Estados Unidos</option>
+              <option value="MX">🇲🇽 {t("México")}</option>
+              <option value="US">🇺🇸 {t("Estados Unidos")}</option>
             </select>
           </div>
 
@@ -1041,7 +1045,7 @@ function DireccionStep({
             <>
               {/* USA: Nombre, Teléfono, Línea 1, Línea 2, Ciudad, Estado, ZIP, Predeterminada */}
               <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Nombre completo *</label>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("Nombre completo")} *</label>
                 <input
                   type="text"
                   required
@@ -1058,7 +1062,7 @@ function DireccionStep({
               </div>
 
               <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Teléfono</label>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("Teléfono")}</label>
                 <input
                   type="tel"
                   value={nuevaDireccion.telefono || ""}
@@ -1074,19 +1078,19 @@ function DireccionStep({
                 {formErrors.telefono && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
               </div>
 
-              <Field label="Dirección - Línea 1 *" value={nuevaDireccion.linea_1 || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, linea_1: v }))} placeholder="123 Main Street" />
-              <Field label="Dirección - Línea 2" value={nuevaDireccion.linea_2 || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, linea_2: v }))} placeholder="Apt 4B (opcional)" />
-              <Field label="Ciudad *" value={nuevaDireccion.ciudad || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, ciudad: v }))} placeholder="New York" />
+              <Field label={`${t("Dirección - Línea 1")} *`} value={nuevaDireccion.linea_1 || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, linea_1: v }))} placeholder="123 Main Street" />
+              <Field label={t("Dirección - Línea 2")} value={nuevaDireccion.linea_2 || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, linea_2: v }))} placeholder="Apt 4B (opcional)" />
+              <Field label={`${t("Ciudad")} *`} value={nuevaDireccion.ciudad || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, ciudad: v }))} placeholder="New York" />
 
               {/* Selector de estado USA */}
               <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Estado *</label>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("Estado")} *</label>
                 <select
                   value={nuevaDireccion.estado || ""}
                   onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, estado: e.target.value }))}
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none transition-all dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                 >
-                  <option value="">Selecciona un estado…</option>
+                  <option value="">{t("Selecciona un estado…")}</option>
                   {US_STATES.map((s) => (
                     <option key={s.code} value={s.code}>{s.name}</option>
                   ))}
@@ -1125,7 +1129,7 @@ function DireccionStep({
                   className="accent-green-600"
                 />
                 <label htmlFor="predeterminada" className="text-sm text-gray-700 dark:text-gray-300">
-                  Guardar como dirección predeterminada
+                  {t("Guardar como dirección predeterminada")}
                 </label>
               </div>
             </>
@@ -1173,7 +1177,7 @@ function DireccionStep({
               </div>
 
               <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Teléfono</label>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("Teléfono")}</label>
                 <input
                   type="tel"
                   value={nuevaDireccion.telefono || ""}
@@ -1200,7 +1204,7 @@ function DireccionStep({
                   className="accent-green-600"
                 />
                 <label htmlFor="predeterminada" className="text-sm text-gray-700 dark:text-gray-300">
-                  Guardar como dirección predeterminada
+                  {t("Guardar como dirección predeterminada")}
                 </label>
               </div>
             </>
@@ -1215,7 +1219,7 @@ function DireccionStep({
               className="flex items-center gap-2 rounded-lg border border-green-500 px-4 py-3 text-sm font-medium text-green-600 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-900/20"
             >
               {gpsLoading ? <Loader2 size={15} className="animate-spin" aria-label="Obteniendo ubicación" /> : <MapPin size={15} />}
-              {gpsLoading ? "Obteniendo ubicación..." : "Usar mi ubicación actual"}
+              {gpsLoading ? t("Obteniendo ubicación...") : t("Usar mi ubicación actual")}
             </button>
             {gpsError && <p className="mt-1 text-xs text-red-500">{gpsError}</p>}
           </div>
@@ -1224,14 +1228,14 @@ function DireccionStep({
               onClick={handleGuardar}
               className="rounded-xl bg-green-600 px-6 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-green-700 active:bg-green-800 shadow-sm hover:shadow-md"
             >
-              Guardar dirección
+              {t("Guardar dirección")}
             </button>
             {direcciones.length > 0 && (
               <button
                 onClick={() => setMostrarFormDireccion(false)}
                 className="rounded-xl border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800/50"
               >
-                Usar otra dirección
+                {t("Usar otra dirección")}
               </button>
             )}
           </div>
@@ -1250,6 +1254,7 @@ function DobCaptureForm({
   message: string;
   onSubmit: (fechaISO: string) => Promise<boolean>;
 }) {
+  const { t } = useLocale();
   const [dob, setDob] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -1257,7 +1262,7 @@ function DobCaptureForm({
   const handle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dob) {
-      setLocalError("Ingresa tu fecha de nacimiento.");
+      setLocalError(t("Ingresa tu fecha de nacimiento."));
       return;
     }
     setSubmitting(true);
@@ -1269,7 +1274,7 @@ function DobCaptureForm({
   return (
     <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-800 dark:bg-amber-900/20">
       <p className="mb-2 font-medium text-amber-900 dark:text-amber-200">
-        Confirmar tu edad ({edadRequerida}+)
+        {t("Confirmar tu edad ({n}+)").replace("{n}", String(edadRequerida))}
       </p>
       <p className="mb-3 text-amber-800 dark:text-amber-300">{message}</p>
       <form onSubmit={handle} className="space-y-3">
@@ -1289,7 +1294,7 @@ function DobCaptureForm({
             ${submitting ? "cursor-not-allowed bg-gray-400" : "bg-amber-600 hover:bg-amber-700"}`}
         >
           {submitting ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
-          Confirmar y continuar
+          {t("Confirmar y continuar")}
         </button>
       </form>
     </div>
@@ -1552,21 +1557,21 @@ function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cot
   solicitarProteccion: boolean;
   setSolicitarProteccion: (v: boolean) => void;
 }) {
+  const { t } = useLocale();
   const hayOpciones = opciones && opciones.length > 0;
   const numProductores = grupos?.length ?? 0;
 
   return (
     <div>
-      <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Método de envío</h2>
+      <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{t("Método de envío")}</h2>
 
       {tieneAlcohol && !cotizandoLoading && (
         <div className="mb-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-700/40 dark:bg-amber-900/20">
           <span className="mt-0.5 flex-shrink-0 text-amber-500">⚠️</span>
           <div className="text-sm text-amber-800 dark:text-amber-300">
-            <p className="font-semibold">Tu pedido contiene bebidas alcohólicas</p>
+            <p className="font-semibold">{t("Tu pedido contiene bebidas alcohólicas")}</p>
             <p className="mt-0.5 text-amber-700/80 dark:text-amber-400/80">
-              Solo se muestran paqueterías autorizadas para envío de alcohol (DHL, FedEx, Estafeta).
-              Se requerirá <strong>firma de adulto</strong> al momento de la entrega.
+              {t("Solo se muestran paqueterías autorizadas para envío de alcohol (DHL, FedEx, Estafeta). Se requerirá")} <strong>{t("firma de adulto")}</strong> {t("al momento de la entrega.")}
             </p>
           </div>
         </div>
@@ -1574,7 +1579,7 @@ function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cot
 
       {cotizandoLoading && (
         <div className="flex items-center justify-center rounded-lg border-2 border-gray-200 p-8">
-          <div className="text-center text-gray-500">Obteniendo cotizaciones de envío...</div>
+          <div className="text-center text-gray-500">{t("Obteniendo cotizaciones de envío...")}</div>
         </div>
       )}
 
@@ -1586,7 +1591,7 @@ function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cot
 
       {!cotizandoLoading && !hayOpciones && !cotizandoError && (
         <div className="rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400">
-          No hay opciones de envío a esta dirección. Revisa el código postal o selecciona otra dirección.
+          {t("No hay opciones de envío a esta dirección. Revisa el código postal o selecciona otra dirección.")}
         </div>
       )}
 
@@ -1596,7 +1601,7 @@ function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cot
             <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700">
               <Truck size={14} className="text-green-600 flex-shrink-0" />
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                {numProductores} paquetes desde {numProductores} vendedores
+                {t("{n} paquetes desde {n} vendedores").replace(/\{n\}/g, String(numProductores))}
               </span>
             </div>
           )}
@@ -1625,8 +1630,8 @@ function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cot
                       <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{op.productName}</p>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {op.diasMax} días hábiles
-                      {op.tipo === "internacional" && <span className="ml-1.5 text-blue-600 dark:text-blue-400">· Internacional</span>}
+                      {op.diasMax} {t("días hábiles")}
+                      {op.tipo === "internacional" && <span className="ml-1.5 text-blue-600 dark:text-blue-400">· {t("Internacional")}</span>}
                     </p>
                   </div>
                   <p className="font-bold text-green-600 text-sm flex-shrink-0">
@@ -1654,11 +1659,10 @@ function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cot
           />
           <div className="min-w-0">
             <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Protección del envío · SkydropX
+              {t("Protección del envío")} · SkydropX
             </p>
             <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-              Cubre pérdida o daño hasta el valor declarado del pedido.
-              El costo exacto se confirma al generar la guía.
+              {t("Cubre pérdida o daño hasta el valor declarado del pedido. El costo exacto se confirma al generar la guía.")}
             </p>
           </div>
         </label>
@@ -1702,6 +1706,7 @@ function PagoYResumen({
   token: string | null;
   numeroOrden: number | null;
 }) {
+  const { t } = useLocale();
   const stripe = useStripe();
   const elements = useElements();
   const [confirming, setConfirming] = useState(false);
@@ -1727,12 +1732,12 @@ function PagoYResumen({
 
   const handleConfirm = async () => {
     if (!stripe || !elements) {
-      onError("Stripe aún se está cargando. Inténtalo de nuevo.");
+      onError(t("Stripe aún se está cargando. Inténtalo de nuevo."));
       return;
     }
     const cardElement = elements.getElement(CardNumberElement);
     if (!cardElement) {
-      onError("No se pudo acceder a los datos de la tarjeta.");
+      onError(t("No se pudo acceder a los datos de la tarjeta."));
       return;
     }
     setConfirming(true);
@@ -1753,7 +1758,7 @@ function PagoYResumen({
     });
 
     if (error) {
-      onError(error.message ?? "El pago no se pudo procesar.");
+      onError(error.message ?? t("El pago no se pudo procesar."));
       setConfirming(false);
     } else {
       // Pago confirmado (sin 3DS). Enviar factura directamente antes de redirigir.
@@ -1779,18 +1784,18 @@ function PagoYResumen({
     <>
       {/* Formulario de tarjeta — siempre montado para conservar datos al cambiar de paso */}
       <div className={paso === "pago" ? "" : "hidden"}>
-        <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">Forma de pago</h2>
+        <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">{t("Forma de pago")}</h2>
         {isTestMode() && (
           <div className="mb-4 flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
             <Lock size={12} />
-            Modo de pruebas — usa la tarjeta 4242 4242 4242 4242, cualquier fecha futura y cualquier CVV.
+            {t("Modo de pruebas — usa la tarjeta 4242 4242 4242 4242, cualquier fecha futura y cualquier CVV.")}
           </div>
         )}
 
         <div className="mt-4 space-y-4">
           {/* Número de tarjeta */}
           <div>
-            <label className={labelCls}>Número de tarjeta</label>
+            <label className={labelCls}>{t("Número de tarjeta")}</label>
             <div className={fieldWrapper}>
               <CardNumberElement
                 options={{ ...elementStyle, showIcon: true }}
@@ -1807,7 +1812,7 @@ function PagoYResumen({
           <div className="grid grid-cols-2 gap-4">
             {/* Vencimiento */}
             <div>
-              <label className={labelCls}>Vencimiento</label>
+              <label className={labelCls}>{t("Vencimiento")}</label>
               <div className={fieldWrapper}>
                 <CardExpiryElement
                   options={elementStyle}
@@ -1824,10 +1829,10 @@ function PagoYResumen({
             {/* Código de seguridad */}
             <div>
               <label className={labelCls}>
-                Código de seguridad
+                {t("Código de seguridad")}
                 <span
                   className="ml-1 inline-flex cursor-default items-center align-middle"
-                  title="Los 3 o 4 dígitos al reverso de tu tarjeta."
+                  title={t("Los 3 o 4 dígitos al reverso de tu tarjeta.")}
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className="text-gray-400">
                     <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
@@ -1856,7 +1861,7 @@ function PagoYResumen({
               {fieldErrors.cvc ? (
                 <p aria-live="polite" className="mt-1 text-xs text-red-500">{fieldErrors.cvc}</p>
               ) : (
-                <p className="mt-1 text-xs text-gray-400">3 o 4 dígitos al reverso</p>
+                <p className="mt-1 text-xs text-gray-400">{t("3 o 4 dígitos al reverso")}</p>
               )}
             </div>
           </div>
@@ -1864,14 +1869,14 @@ function PagoYResumen({
           {/* Nota de seguridad */}
           <div className="flex items-center gap-2 rounded-lg border border-green-100 bg-green-50 px-3 py-2.5 text-xs text-green-700 dark:border-green-900/30 dark:bg-green-900/10 dark:text-green-400">
             <Lock size={12} className="shrink-0" aria-hidden="true" />
-            <span>Pago cifrado — los datos de tu tarjeta nunca se almacenan en nuestros servidores</span>
+            <span>{t("Pago cifrado — los datos de tu tarjeta nunca se almacenan en nuestros servidores")}</span>
           </div>
         </div>
       </div>
 
       {/* Paso resumen — revisión del pedido + botón confirmar */}
       <div className={paso === "resumen" ? "" : "hidden"}>
-        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Confirmar pedido</h2>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{t("Confirmar pedido")}</h2>
         <div className="mb-4 space-y-3 border-b border-gray-200 pb-4 dark:border-gray-700">
           {items.map((item) => (
             <div key={item.id_producto} className="flex items-center gap-3">
@@ -1902,7 +1907,7 @@ function PagoYResumen({
         </div>
         {direccionSeleccionada && (
           <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
-            <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">Enviar a:</p>
+            <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">{t("Enviar a:")}</p>
             {direccionSeleccionada.nombre_destinatario && (
               <p className="font-medium text-gray-800 dark:text-gray-200">{direccionSeleccionada.nombre_destinatario}</p>
             )}
@@ -1928,7 +1933,7 @@ function PagoYResumen({
               ].filter(Boolean).join(", ")}
             </p>
             {direccionSeleccionada.es_internacional && (
-              <span className="mt-1 inline-block text-xs text-blue-600 dark:text-blue-400">Envío internacional</span>
+              <span className="mt-1 inline-block text-xs text-blue-600 dark:text-blue-400">{t("Envío internacional")}</span>
             )}
           </div>
         )}
@@ -1967,7 +1972,7 @@ function PagoYResumen({
               : "bg-green-600 text-white hover:bg-green-700 active:bg-green-800 dark:hover:bg-green-700"}`}
         >
           <Lock size={16} aria-hidden="true" />
-          {confirming ? "Procesando..." : "Confirmar pago"}
+          {confirming ? t("Procesando...") : t("Confirmar pago")}
         </button>
       </div>
     </>
@@ -2039,7 +2044,7 @@ function PagoYResumenPaypal({
 
       {direccionSeleccionada && (
         <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
-          <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">Enviar a:</p>
+          <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">{locale === 'en' ? 'Ship to:' : 'Enviar a:'}</p>
           {direccionSeleccionada.nombre_destinatario && (
             <p className="font-medium text-gray-800 dark:text-gray-200">{direccionSeleccionada.nombre_destinatario}</p>
           )}

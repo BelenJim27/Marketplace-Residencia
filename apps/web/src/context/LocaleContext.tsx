@@ -100,6 +100,15 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     if (saved && LOCALE_CONFIG[saved]) setLocaleState(saved);
   }, []);
 
+  // Mantener <html lang> sincronizado con el locale (a11y + SEO internacional).
+  // El layout (server) renderiza 'es' por defecto porque el locale vive en
+  // localStorage; aquí lo corregimos en cliente al cargar y al cambiar idioma.
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = locale;
+    }
+  }, [locale]);
+
   // t() — busca en el JSON del locale actual primero (funciona para claves tipo "catalog_added_success"
   // en todos los idiomas, incluyendo "es"); solo si no hay match, cae al texto original
   const t = useCallback((text: string): string => {

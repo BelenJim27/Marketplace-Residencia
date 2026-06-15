@@ -706,12 +706,17 @@ model tasas_impuesto {
   vigente_hasta      DateTime?   @db.Date
   incluido_en_precio Boolean     @default(false)
   activo             Boolean     @default(true)
+  // Marca que el negocio tiene obligación fiscal (nexo) en este país/estado. Si está
+  // activo pero no hay tasa vigente para el destino, el checkout se bloquea (no vender
+  // sin cobrar el impuesto donde existe obligación).
+  nexo_activo        Boolean     @default(false)
   creado_en          DateTime    @default(now()) @db.Timestamptz(6)
   categorias         categorias? @relation(fields: [id_categoria], references: [id_categoria], onUpdate: NoAction)
   paises             paises      @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
 
   @@index([id_categoria], map: "idx_tasas_categoria")
   @@index([pais_iso2, estado_codigo], map: "idx_tasas_pais_estado")
+  @@index([pais_iso2, estado_codigo, nexo_activo], map: "idx_tasas_nexo")
 }
 
 model tiendas {

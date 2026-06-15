@@ -207,7 +207,7 @@ function SignUpContent() {
               <div className="mb-4">
                 <Image
                   src="/fotos/mezcanea.png"
-                  alt="AGAVEA"
+                  alt="Mezcanea"
                   width={180}
                   height={72}
                   className="object-contain"
