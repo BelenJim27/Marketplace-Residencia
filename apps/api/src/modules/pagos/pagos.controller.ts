@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
-import { CreatePagoDto, CreateStripeIntentDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
+import { CreatePagoDto, CreateStripeIntentDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto, ConfirmStripeDto } from './dto/pagos.dto';
 import { ConnectService } from './connect.service';
 import { PagosService } from './pagos.service';
 import { PaypalService } from './paypal.service';
@@ -41,6 +41,14 @@ export class PagosController {
   async createStripeIntent(@Body() dto: CreateStripeIntentDto, @Req() req: Request) {
     await this.service.validatePedidoOwnership(dto.id_pedido, (req as any).user.id_usuario);
     return this.service.createStripePaymentIntent(dto);
+  }
+
+  // Confirmación síncrona tras un pago con tarjeta exitoso: no depende del webhook.
+  @Throttle(PAGO_THROTTLE)
+  @UseGuards(AuthGuard)
+  @Post('stripe/confirm')
+  async confirmStripe(@Body() dto: ConfirmStripeDto, @Req() req: Request) {
+    return this.service.confirmStripePayment(dto.id_pedido, (req as any).user.id_usuario);
   }
 
   @Post('stripe/webhook')

@@ -155,6 +155,10 @@ export default function CheckoutPage() {
   // USD si locale='en' o país destino ≠ MX; de lo contrario MXN
   const pais_destino = direccionSeleccionada?.pais_iso2 ?? (direccionSeleccionada?.ubicacion as any)?.pais ?? "MX";
   const displayCurrency: 'MXN' | 'USD' = (locale === 'en' || pais_destino !== 'MX') ? 'USD' : 'MXN';
+  // Moneda de COBRO real (la que usa el backend para Stripe/PayPal): por PAÍS destino.
+  // El backend cobra USD a destinos != MX (C-4); la moneda de la orden de PayPal debe
+  // coincidir con la del SDK para que el botón renderice y capture correctamente.
+  const chargeCurrency: 'MXN' | 'USD' = pais_destino !== 'MX' ? 'USD' : 'MXN';
 
   const PASOS = [
     { key: "direccion" as CheckoutStep, label: t('checkout_step_address'), icon: <Truck size={16} />, hint: t('checkout_step_destination') },
@@ -918,9 +922,9 @@ export default function CheckoutPage() {
       <PayPalScriptProvider
         options={{
           clientId: getPaypalClientId(),
-          // La plataforma liquida en MXN (el precio puede mostrarse en USD, pero el cargo
-          // —y la orden de PayPal— se procesan en MXN para coincidir con el backend).
-          currency: 'MXN',
+          // La moneda de la orden la decide el backend por país destino (C-4): USD para
+          // destinos != MX, MXN para México. El SDK debe usar la misma para renderizar/capturar.
+          currency: chargeCurrency,
           intent: 'capture',
         }}
       >
@@ -1761,7 +1765,12 @@ function PagoYResumen({
       onError(error.message ?? t("El pago no se pudo procesar."));
       setConfirming(false);
     } else {
-      // Pago confirmado (sin 3DS). Enviar factura directamente antes de redirigir.
+      // Pago confirmado (sin 3DS). Confirmar en backend para marcar el pedido como pagado
+      // sin depender del webhook (best-effort; el webhook queda de respaldo).
+      if (pedidoId && token) {
+        try { await api.pagos.stripe.confirm(token, String(pedidoId)); } catch { /* webhook de respaldo */ }
+      }
+      // Enviar factura directamente antes de redirigir.
       if (facturaData?.solicitarFactura && pedidoId && token) {
         try {
           const payload: Record<string, string> = { estado: "pendiente" };

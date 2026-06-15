@@ -424,9 +424,14 @@ model pagos {
   proveedor          String?        @db.VarChar(50)
   payment_intent_id  String?        @unique(map: "uq_pagos_payment_intent_id") @db.VarChar(150)
   estado             String         @default("pendiente") @db.VarChar(50)
+  // monto/moneda = cargo REAL al cliente (USD para destinos != MX). Para la contabilidad
+  // y el payout al productor —siempre en MXN— se guardan el equivalente en MXN y la tasa
+  // MXN→USD congelada en el checkout. Ver C-4 (resolverCobro en pagos.service.ts).
   monto              Decimal        @db.Decimal(14, 2)
   monto_reembolsado  Decimal        @default(0) @db.Decimal(14, 2)
   moneda             Moneda
+  monto_mxn          Decimal?       @db.Decimal(14, 2)
+  tasa_cambio        Decimal?       @db.Decimal(18, 8)
   creado_en          DateTime       @default(now()) @db.Timestamptz(6)
   actualizado_en     DateTime       @default(now()) @db.Timestamptz(6)
   pedidos            pedidos        @relation(fields: [id_pedido], references: [id_pedido], onUpdate: NoAction)

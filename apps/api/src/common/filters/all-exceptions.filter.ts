@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 
 /**
  * Forma estandarizada de TODA respuesta de error de la API.
@@ -20,6 +21,7 @@ interface ErrorResponseBody {
   statusCode: number;
   message: string;
   code?: string;
+  requestId?: string;
 }
 
 /**
@@ -40,6 +42,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+    const requestId = (request as any).id as string | undefined;
 
     let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Error interno del servidor';
@@ -63,16 +66,53 @@ export class AllExceptionsFilter implements ExceptionFilter {
         }
         if (typeof body.code === 'string') code = body.code;
       }
-    } else {
-      // Error inesperado: registrar el detalle real, responder genérico.
+    } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      // Errores conocidos de Prisma: mapear a un HTTP claro en lugar de un 500 opaco.
+      // Así una violación de unicidad/FK deja de "colgar" flujos como el checkout con
+      // "Error interno del servidor", y el `code` (PRISMA_Pxxxx) ayuda a diagnosticar.
+      code = `PRISMA_${exception.code}`;
+      switch (exception.code) {
+        case 'P2002': // unique constraint
+          statusCode = HttpStatus.CONFLICT;
+          message = 'El registro ya existe o entra en conflicto con uno existente.';
+          break;
+        case 'P2003': // foreign key constraint
+          statusCode = HttpStatus.UNPROCESSABLE_ENTITY;
+          message = 'Referencia inválida: un dato relacionado no existe.';
+          break;
+        case 'P2025': // record required but not found
+          statusCode = HttpStatus.NOT_FOUND;
+          message = 'El registro solicitado no existe.';
+          break;
+        case 'P2028': // transaction API timeout
+          statusCode = HttpStatus.SERVICE_UNAVAILABLE;
+          message = 'La operación tardó demasiado. Intenta de nuevo.';
+          break;
+        default:
+          statusCode = HttpStatus.BAD_REQUEST;
+          message = 'No se pudo procesar la operación en la base de datos.';
+      }
+    }
+
+    // Log estructurado (JSON) para trazabilidad: correlaciona por requestId. Solo
+    // registramos errores del servidor (5xx) con stack; los 4xx son del cliente y ya
+    // viajan en la respuesta. Errores no-HttpException siempre son 5xx (inesperados).
+    if (statusCode >= 500) {
       this.logger.error(
-        `Unhandled exception on ${request.method} ${request.url}`,
+        JSON.stringify({
+          requestId,
+          method: request.method,
+          url: request.url,
+          statusCode,
+          message,
+        }),
         exception instanceof Error ? exception.stack : String(exception),
       );
     }
 
     const payload: ErrorResponseBody = { success: false, statusCode, message };
     if (code) payload.code = code;
+    if (requestId) payload.requestId = requestId;
 
     response.status(statusCode).json(payload);
   }

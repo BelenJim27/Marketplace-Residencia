@@ -743,6 +743,16 @@ export const api = {
           headers: headers(token),
           body: JSON.stringify(data),
         }),
+      // Confirmación síncrona post-pago: marca el pedido como pagado sin depender del webhook.
+      confirm: (
+        token: string,
+        id_pedido: string,
+      ): Promise<{ estado: string; confirmado: boolean }> =>
+        fetchJson(endpoint("/pagos/stripe/confirm"), {
+          method: "POST",
+          headers: headers(token),
+          body: JSON.stringify({ id_pedido }),
+        }),
     },
     paypal: {
       createOrder: (

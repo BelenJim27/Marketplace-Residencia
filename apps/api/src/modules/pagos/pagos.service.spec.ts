@@ -170,6 +170,49 @@ describe('PagosService', () => {
     });
   });
 
+  describe('confirmStripePayment', () => {
+    it('marca el pago como completado cuando el PaymentIntent está succeeded', async () => {
+      mockPrisma.pedidos.findUnique.mockResolvedValue({ id_pedido: 1n, id_usuario: 'u1', estado: 'pagado' });
+      mockPrisma.pagos.findFirst.mockResolvedValueOnce(makePago({ estado: 'pendiente' }));
+      mockStripe.retrievePaymentIntent.mockResolvedValue({ id: 'pi_test123', status: 'succeeded', transfer_data: null, metadata: {} });
+      const spy = jest.spyOn(service, 'updatePaymentStatus').mockResolvedValue({} as any);
+
+      const res = await service.confirmStripePayment('1', 'u1');
+
+      expect(spy).toHaveBeenCalledWith('pi_test123', 'completado', false, undefined);
+      expect(res).toEqual({ estado: 'pagado', confirmado: true });
+    });
+
+    it('no confirma cuando el PaymentIntent no está succeeded', async () => {
+      mockPrisma.pedidos.findUnique.mockResolvedValue({ id_pedido: 1n, id_usuario: 'u1', estado: 'pendiente' });
+      mockPrisma.pagos.findFirst.mockResolvedValueOnce(makePago({ estado: 'pendiente' }));
+      mockStripe.retrievePaymentIntent.mockResolvedValue({ id: 'pi_test123', status: 'requires_payment_method' });
+      const spy = jest.spyOn(service, 'updatePaymentStatus').mockResolvedValue({} as any);
+
+      const res = await service.confirmStripePayment('1', 'u1');
+
+      expect(spy).not.toHaveBeenCalled();
+      expect(res).toEqual({ estado: 'pendiente', confirmado: false });
+    });
+
+    it('no truena ni consulta Stripe cuando no hay payment_intent', async () => {
+      mockPrisma.pedidos.findUnique.mockResolvedValue({ id_pedido: 1n, id_usuario: 'u1', estado: 'pendiente' });
+      mockPrisma.pagos.findFirst.mockResolvedValueOnce(null);
+      const spy = jest.spyOn(service, 'updatePaymentStatus').mockResolvedValue({} as any);
+
+      const res = await service.confirmStripePayment('1', 'u1');
+
+      expect(mockStripe.retrievePaymentIntent).not.toHaveBeenCalled();
+      expect(spy).not.toHaveBeenCalled();
+      expect(res).toEqual({ estado: 'pendiente', confirmado: false });
+    });
+
+    it('rechaza si el pedido no pertenece al usuario', async () => {
+      mockPrisma.pedidos.findUnique.mockResolvedValue({ id_pedido: 1n, id_usuario: 'otro' });
+      await expect(service.confirmStripePayment('1', 'u1')).rejects.toThrow();
+    });
+  });
+
   // ─────────────────────────────────────────────────────────────────────────
   describe('validarEdadDelComprador (private)', () => {
     const callMethod = (service: any, idPedido: bigint, idUsuario: string) =>
@@ -477,6 +520,29 @@ describe('PagosService', () => {
         { estado_codigo: 'TX', activo: true, vigente_desde: ayer, vigente_hasta: manana, tasa_porcentaje: '0.0825' },
       ]);
       await expect(call(service, 'US', 'TX')).resolves.toBeUndefined();
+    });
+  });
+
+  describe('resolverCobro (C-4)', () => {
+    const call = (s: any, pais: string, m: { subtotal: number; shipping: number; tax: number }) => s.resolverCobro(pais, m);
+
+    it('MX: cobra en MXN sin conversión (tasa 1)', async () => {
+      const r = await call(service, 'MX', { subtotal: 100, shipping: 20, tax: 16 });
+      expect(r.moneda).toBe('MXN');
+      expect(r.tasa).toBe(1);
+      expect(r.total).toBe(136);
+      expect(r.totalMxn).toBe(136);
+    });
+
+    it('US: cobra en USD con tasa congelada y conserva el equivalente MXN', async () => {
+      mockTasasCambio.getVigente.mockResolvedValue({ tasa: '0.05', stale: false });
+      const r = await call(service, 'US', { subtotal: 1000, shipping: 200, tax: 0 });
+      expect(r.moneda).toBe('USD');
+      expect(r.tasa).toBe(0.05);
+      expect(r.subtotal).toBe(50);
+      expect(r.shipping).toBe(10);
+      expect(r.total).toBe(60);
+      expect(r.totalMxn).toBe(1200); // contabilidad/payout siempre en MXN
     });
   });
 
