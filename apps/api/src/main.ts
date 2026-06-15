@@ -1,4 +1,5 @@
 import * as dotenv from 'dotenv';
+import { randomUUID } from 'crypto';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { join, resolve } from 'path';
@@ -54,6 +55,17 @@ async function bootstrap() {
     rawBody: true,
   });
   app.use('/uploads', expressStatic(join(__dirname, '..', 'uploads')));
+
+  // Request ID para trazabilidad: reutiliza X-Request-ID entrante (de un proxy/LB) o
+  // genera uno. Disponible en req.id y devuelto en la respuesta para correlacionar logs
+  // del backend con un reporte del usuario/frontend.
+  app.use((req: any, res: any, next: any) => {
+    const incoming = req.headers['x-request-id'];
+    const id = typeof incoming === 'string' && incoming.trim() ? incoming.trim().slice(0, 128) : randomUUID();
+    req.id = id;
+    res.setHeader('X-Request-ID', id);
+    next();
+  });
 
   // Cabeceras de seguridad (equivalente ligero a helmet, sin dependencia nueva).
   // No se fija CSP estricta aquí para no romper Swagger UI (/api/docs); la CSP de

@@ -47,3 +47,7 @@ export class CreatePaypalOrderDto {
 export class CapturePaypalOrderDto {
   @IsString() paypal_order_id!: string;
 }
+
+export class ConfirmStripeDto {
+  @IsString() id_pedido!: string;
+}

@@ -424,9 +424,14 @@ model pagos {
   proveedor          String?        @db.VarChar(50)
   payment_intent_id  String?        @unique(map: "uq_pagos_payment_intent_id") @db.VarChar(150)
   estado             String         @default("pendiente") @db.VarChar(50)
+  // monto/moneda = cargo REAL al cliente (USD para destinos != MX). Para la contabilidad
+  // y el payout al productor —siempre en MXN— se guardan el equivalente en MXN y la tasa
+  // MXN→USD congelada en el checkout. Ver C-4 (resolverCobro en pagos.service.ts).
   monto              Decimal        @db.Decimal(14, 2)
   monto_reembolsado  Decimal        @default(0) @db.Decimal(14, 2)
   moneda             Moneda
+  monto_mxn          Decimal?       @db.Decimal(14, 2)
+  tasa_cambio        Decimal?       @db.Decimal(18, 8)
   creado_en          DateTime       @default(now()) @db.Timestamptz(6)
   actualizado_en     DateTime       @default(now()) @db.Timestamptz(6)
   pedidos            pedidos        @relation(fields: [id_pedido], references: [id_pedido], onUpdate: NoAction)
@@ -706,12 +711,17 @@ model tasas_impuesto {
   vigente_hasta      DateTime?   @db.Date
   incluido_en_precio Boolean     @default(false)
   activo             Boolean     @default(true)
+  // Marca que el negocio tiene obligación fiscal (nexo) en este país/estado. Si está
+  // activo pero no hay tasa vigente para el destino, el checkout se bloquea (no vender
+  // sin cobrar el impuesto donde existe obligación).
+  nexo_activo        Boolean     @default(false)
   creado_en          DateTime    @default(now()) @db.Timestamptz(6)
   categorias         categorias? @relation(fields: [id_categoria], references: [id_categoria], onUpdate: NoAction)
   paises             paises      @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
 
   @@index([id_categoria], map: "idx_tasas_categoria")
   @@index([pais_iso2, estado_codigo], map: "idx_tasas_pais_estado")
+  @@index([pais_iso2, estado_codigo, nexo_activo], map: "idx_tasas_nexo")
 }
 
 model tiendas {

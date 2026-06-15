@@ -7,6 +7,7 @@ import { EmailService } from '../email/email.service';
 import { EnviosService } from '../envios/envios.service';
 import { calcularEdadEnAnios } from '../productos/edad.helper';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
+import { TasasCambioService } from '../tasas-cambio/tasas-cambio.service';
 import { CreatePagoDto, CreateStripeIntentDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
 import { PaypalService } from './paypal.service';
 import { StripeService } from './stripe.service';
@@ -21,6 +22,7 @@ export class PagosService {
     private readonly paypalService: PaypalService,
     private readonly emailService: EmailService,
     private readonly comisionesService: ComisionesService,
+    private readonly tasasCambioService: TasasCambioService,
     @Optional() private readonly enviosService: EnviosService | null,
   ) {}
   async findAll(filtros?: { estado?: string; proveedor?: string }) {
@@ -156,8 +158,6 @@ export class PagosService {
   }
 
   async createStripePaymentIntent(dto: CreateStripeIntentDto) {
-    const moneda = dto.moneda as Moneda;
-
     const id_pedido_bi = toBigIntId(dto.id_pedido);
     const pedido = await this.prisma.pedidos.findUnique({ where: { id_pedido: id_pedido_bi } });
     if (!pedido) throw new NotFoundException('Pedido no encontrado');
@@ -168,16 +168,21 @@ export class PagosService {
 
     const categoriaIds = await this.obtenerCategoriasDelPedido(id_pedido_bi);
     const paisDestino = dto.shipping_address.country;
-    this.validarMonedaContraDestino(moneda, paisDestino);
-    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds, dto.shipping_address.state);
+    await this.validarTasaCambioVigente(paisDestino);
+    await this.validarNexoFiscal(paisDestino, dto.shipping_address.state);
+    // Impuestos en MXN (canónico); el reparto a productores y la contabilidad van en MXN.
+    const { taxAmount: taxMxn, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds, dto.shipping_address.state);
+
+    // C-4: moneda de cobro al cliente (USD para destino != MX) + conversión congelada.
+    const cobro = await this.resolverCobro(paisDestino, { subtotal: dto.subtotal, shipping: dto.shipping_amount ?? 0, tax: taxMxn });
 
     const directCharge = await this.resolveDirectCharge(id_pedido_bi, dto.subtotal, dto.shipping_amount ?? 0);
 
     const intent = await this.stripeService.createPaymentIntent({
-      subtotal: dto.subtotal,
-      shippingAmount: dto.shipping_amount ?? 0,
-      taxAmount,
-      currency: moneda,
+      subtotal: cobro.subtotal,
+      shippingAmount: cobro.shipping,
+      taxAmount: cobro.tax,
+      currency: cobro.moneda,
       shippingAddress: dto.shipping_address,
       recipientName: dto.recipient_name,
       customerId: dto.customer_id,
@@ -190,18 +195,19 @@ export class PagosService {
       transferGroup: `pedido-${dto.id_pedido}`,
     });
 
+    // pedidos: contabilidad SIEMPRE en MXN (canónico, base de payouts a productores).
     await this.prisma.pedidos.update({
       where: { id_pedido: id_pedido_bi },
       data: {
-        tax_amount: intent.taxAmount.toFixed(2),
-        shipping_amount: intent.shippingAmount.toFixed(2),
-        total: intent.totalAmount.toFixed(2),
-        moneda,
+        tax_amount: taxMxn.toFixed(2),
+        shipping_amount: (dto.shipping_amount ?? 0).toFixed(2),
+        total: cobro.totalMxn.toFixed(2),
+        moneda: 'MXN',
       },
     });
 
-    // Recalcular distribución por productor ahora que tax y shipping son conocidos.
-    await this.recalcularDistribucionPedido(id_pedido_bi, moneda);
+    // Recalcular distribución por productor (siempre en MXN).
+    await this.recalcularDistribucionPedido(id_pedido_bi, 'MXN');
 
     const pago = await this.prisma.pagos.create({
       data: {
@@ -209,8 +215,10 @@ export class PagosService {
         proveedor: 'stripe',
         payment_intent_id: intent.paymentIntentId,
         estado: 'pendiente',
-        monto: intent.totalAmount.toFixed(2),
-        moneda,
+        monto: intent.totalAmount.toFixed(2), // cargo real (USD o MXN)
+        moneda: cobro.moneda,
+        monto_mxn: cobro.totalMxn.toFixed(2),
+        tasa_cambio: cobro.tasa.toFixed(8),
       },
     });
 
@@ -218,17 +226,20 @@ export class PagosService {
       ...pago,
       clientSecret: intent.clientSecret,
       paymentIntentId: intent.paymentIntentId,
-      subtotal: intent.subtotal,
-      taxAmount: intent.taxAmount,
+      // El frontend convierte desde MXN para mostrar; devolvemos los montos canónicos MXN.
+      subtotal: dto.subtotal,
+      taxAmount: taxMxn,
       taxBreakdown,
-      shippingAmount: intent.shippingAmount,
-      totalAmount: intent.totalAmount,
+      shippingAmount: dto.shipping_amount ?? 0,
+      totalAmount: cobro.totalMxn,
+      // Cargo real al cliente (la UI de Stripe ya lo muestra; útil para confirmaciones).
+      monedaCobro: cobro.moneda,
+      totalCobrado: intent.totalAmount,
+      tasaCambio: cobro.tasa,
     });
   }
 
   async createPaypalOrder(dto: CreatePaypalOrderDto) {
-    const moneda = dto.moneda as Moneda;
-
     const id_pedido_bi = toBigIntId(dto.id_pedido);
     const pedido = await this.prisma.pedidos.findUnique({ where: { id_pedido: id_pedido_bi } });
     if (!pedido) throw new NotFoundException('Pedido no encontrado');
@@ -239,30 +250,33 @@ export class PagosService {
 
     const categoriaIds = await this.obtenerCategoriasDelPedido(id_pedido_bi);
     const paisDestino = dto.shipping_address?.country ?? 'MX';
-    this.validarMonedaContraDestino(moneda, paisDestino);
-    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds, dto.shipping_address?.state);
+    await this.validarTasaCambioVigente(paisDestino);
+    await this.validarNexoFiscal(paisDestino, dto.shipping_address?.state);
+    const { taxAmount: taxMxn, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds, dto.shipping_address?.state);
 
-    const totalAmount = dto.subtotal + (dto.shipping_amount ?? 0) + taxAmount;
+    // C-4: moneda de cobro al cliente (USD para destino != MX) + conversión congelada.
+    const cobro = await this.resolverCobro(paisDestino, { subtotal: dto.subtotal, shipping: dto.shipping_amount ?? 0, tax: taxMxn });
 
     const paypalOrder = await this.paypalService.createOrder({
-      totalAmount,
-      currency: moneda,
+      totalAmount: cobro.total,
+      currency: cobro.moneda,
       referenceId: String(id_pedido_bi),
       shippingAddress: dto.shipping_address,
     });
 
+    // pedidos: contabilidad SIEMPRE en MXN (canónico, base de payouts a productores).
     await this.prisma.pedidos.update({
       where: { id_pedido: id_pedido_bi },
       data: {
         shipping_amount: (dto.shipping_amount ?? 0).toFixed(2),
-        tax_amount: taxAmount.toFixed(2),
-        total: totalAmount.toFixed(2),
-        moneda,
+        tax_amount: taxMxn.toFixed(2),
+        total: cobro.totalMxn.toFixed(2),
+        moneda: 'MXN',
       },
     });
 
-    // Recalcular distribución por productor ahora que tax y shipping son conocidos.
-    await this.recalcularDistribucionPedido(id_pedido_bi, moneda);
+    // Recalcular distribución por productor (siempre en MXN).
+    await this.recalcularDistribucionPedido(id_pedido_bi, 'MXN');
 
     const pago = await this.prisma.pagos.create({
       data: {
@@ -270,8 +284,10 @@ export class PagosService {
         proveedor: 'paypal',
         payment_intent_id: paypalOrder.orderId,
         estado: 'pendiente',
-        monto: totalAmount.toFixed(2),
-        moneda,
+        monto: cobro.total.toFixed(2), // cargo real (USD o MXN)
+        moneda: cobro.moneda,
+        monto_mxn: cobro.totalMxn.toFixed(2),
+        tasa_cambio: cobro.tasa.toFixed(8),
       },
     });
 
@@ -279,11 +295,15 @@ export class PagosService {
       ...pago,
       orderId: paypalOrder.orderId,
       approveUrl: paypalOrder.approveUrl,
+      // El frontend convierte desde MXN para mostrar; devolvemos los montos canónicos MXN.
       subtotal: dto.subtotal,
-      taxAmount,
+      taxAmount: taxMxn,
       taxBreakdown,
       shippingAmount: dto.shipping_amount ?? 0,
-      totalAmount,
+      totalAmount: cobro.totalMxn,
+      monedaCobro: cobro.moneda,
+      totalCobrado: cobro.total,
+      tasaCambio: cobro.tasa,
     });
   }
 
@@ -315,6 +335,52 @@ export class PagosService {
     const updated = await this.updatePaymentStatus(captureResult.captureId, 'completado');
 
     return updated;
+  }
+
+  /**
+   * Confirmación SÍNCRONA del pago con tarjeta (Stripe). Se invoca desde el frontend al
+   * volver de `confirmCardPayment` exitoso para no depender del webhook (que en sandbox/local
+   * puede no llegar). Verifica el PaymentIntent contra Stripe y, si está 'succeeded', marca el
+   * pago como 'completado' vía updatePaymentStatus (idempotente; el webhook queda de respaldo).
+   */
+  async confirmStripePayment(id_pedido: string, id_usuario: string) {
+    await this.validatePedidoOwnership(id_pedido, id_usuario);
+
+    const idPedidoBi = toBigIntId(id_pedido);
+    const leerEstado = async () => {
+      const p = await this.prisma.pedidos.findUnique({
+        where: { id_pedido: idPedidoBi },
+        select: { estado: true },
+      });
+      return p?.estado ?? 'pendiente';
+    };
+
+    const pago = await this.prisma.pagos.findFirst({
+      where: { id_pedido: idPedidoBi, proveedor: 'stripe', payment_intent_id: { not: null } },
+      orderBy: { creado_en: 'desc' },
+    });
+
+    if (!pago?.payment_intent_id) {
+      return { estado: await leerEstado(), confirmado: false };
+    }
+
+    let pi: any;
+    try {
+      pi = await this.stripeService.retrievePaymentIntent(pago.payment_intent_id);
+    } catch (err: any) {
+      this.logger.warn(
+        `[pagos] confirmStripePayment: no se pudo recuperar PI ${pago.payment_intent_id}: ${err?.message}`,
+      );
+      return { estado: await leerEstado(), confirmado: false };
+    }
+
+    if (pi?.status === 'succeeded') {
+      const isDirectCharge = !!pi.transfer_data?.destination;
+      const taxCalculationId = pi.metadata?.tax_calculation as string | undefined;
+      await this.updatePaymentStatus(pago.payment_intent_id, 'completado', isDirectCharge, taxCalculationId);
+    }
+
+    return { estado: await leerEstado(), confirmado: pi?.status === 'succeeded' };
   }
 
   async updatePaymentStatus(payment_intent_id: string, estado: string, isDirectCharge = false, taxCalculationId?: string) {
@@ -696,23 +762,106 @@ export class PagosService {
   }
 
   /**
-   * Valida que la moneda del pago sea coherente con el país de destino, evitando
-   * que el frontend cobre USD a un envío nacional (o MXN a uno internacional).
-   * Regla del negocio (memoria fix_checkout_i18n_currency): destino MX → MXN;
-   * cualquier otro destino → USD. El enum Moneda solo soporta MXN | USD.
+   * A-1: Bloquea el checkout si la tasa MXN→USD está obsoleta cuando el destino no es MX.
+   * El precio que ve y acepta el cliente internacional se deriva de esta tasa; si el cron
+   * de ExchangeRate-API está caído (tasa stale o solo fallback), no procesamos el pago para
+   * no cobrar/mostrar un monto basado en una tasa incorrecta. Para MX no aplica.
    */
-  private validarMonedaContraDestino(moneda: Moneda, paisDestino?: string): void {
-    const pais = (paisDestino ?? '').toUpperCase();
-    if (!pais) return; // sin país no se puede inferir; otras validaciones lo cubren
-    const esperada: Moneda = pais === 'MX' ? 'MXN' : 'USD';
-    if (moneda !== esperada) {
+  private async validarTasaCambioVigente(paisDestino?: string): Promise<void> {
+    if (!paisDestino || paisDestino.toUpperCase() === 'MX') return;
+    let rate: any;
+    try {
+      rate = await this.tasasCambioService.getVigente('MXN', 'USD');
+    } catch {
+      rate = null;
+    }
+    if (!rate || rate.stale) {
       this.logger.error(
-        `[pagos] Moneda incoherente con destino: moneda=${moneda}, pais=${pais}, esperada=${esperada}`,
+        `[pagos] Checkout bloqueado: tasa MXN→USD obsoleta/ausente para destino ${paisDestino.toUpperCase()}.`,
       );
       throw new BadRequestException(
-        `La moneda ${moneda} no es válida para envíos a ${pais}. Para ese destino se requiere ${esperada}.`,
+        'No podemos procesar pagos internacionales en este momento porque la tasa de cambio no está actualizada. Intenta de nuevo en unos minutos.',
       );
     }
+  }
+
+  /**
+   * C-3: Si el negocio declaró nexo fiscal (obligación de cobrar impuesto) en el país/estado
+   * de destino pero no existe una tasa vigente para calcularlo, bloquea el checkout para no
+   * vender sin cobrar el impuesto donde hay obligación. Si no hay nexo declarado, no bloquea
+   * (se permite el cálculo normal, que puede dar 0).
+   */
+  private async validarNexoFiscal(paisDestino: string, estadoDestino?: string): Promise<void> {
+    const pais = paisDestino.toUpperCase();
+    const estado = estadoDestino?.trim().toUpperCase();
+    const ahora = new Date();
+
+    // ¿Hay nexo declarado para este destino? (país-estado específico, o país completo).
+    const nexoFilas = await this.prisma.tasas_impuesto.findMany({
+      where: {
+        pais_iso2: pais,
+        nexo_activo: true,
+        OR: [{ estado_codigo: null }, ...(estado ? [{ estado_codigo: estado }] : [])],
+      },
+      select: { estado_codigo: true, activo: true, vigente_desde: true, vigente_hasta: true, tasa_porcentaje: true },
+    });
+    if (nexoFilas.length === 0) return; // sin nexo declarado → no se bloquea
+
+    // Con nexo declarado, exigir al menos una tasa VIGENTE y activa para el destino.
+    const tieneTasaVigente = nexoFilas.some(
+      (f) =>
+        f.activo &&
+        f.tasa_porcentaje != null &&
+        new Date(f.vigente_desde) <= ahora &&
+        (f.vigente_hasta == null || new Date(f.vigente_hasta) >= ahora),
+    );
+    if (!tieneTasaVigente) {
+      this.logger.error(
+        `[pagos] Checkout bloqueado: nexo fiscal declarado para ${pais}${estado ? '/' + estado : ''} sin tasa vigente.`,
+      );
+      throw new BadRequestException(
+        `No podemos completar la compra para ${estado ? estado + ', ' : ''}${pais} en este momento porque el impuesto aplicable no está disponible. Intenta más tarde o elige otra dirección.`,
+      );
+    }
+  }
+
+  /**
+   * C-4: Determina la moneda de COBRO al cliente según el país destino y convierte los
+   * montos canónicos (en MXN) a esa moneda con la tasa congelada de ExchangeRate-API.
+   *   - Destino MX  → MXN (sin conversión, tasa 1).
+   *   - Otro destino → USD (cobro nativo; el cliente paga exactamente lo mostrado, sin
+   *     fee de transacción extranjera).
+   * La contabilidad interna y el payout al productor SIEMPRE quedan en MXN (totalMxn).
+   * La frescura de la tasa ya fue validada por validarTasaCambioVigente.
+   */
+  private async resolverCobro(
+    paisDestino: string,
+    montosMxn: { subtotal: number; shipping: number; tax: number },
+  ): Promise<{
+    moneda: Moneda;
+    tasa: number;
+    subtotal: number;
+    shipping: number;
+    tax: number;
+    total: number;
+    totalMxn: number;
+  }> {
+    const totalMxn = Math.round((montosMxn.subtotal + montosMxn.shipping + montosMxn.tax) * 100) / 100;
+    if ((paisDestino ?? 'MX').toUpperCase() === 'MX') {
+      return { moneda: 'MXN', tasa: 1, ...montosMxn, total: totalMxn, totalMxn };
+    }
+    const r: any = await this.tasasCambioService.getVigente('MXN', 'USD');
+    const tasa = Number(r.tasa);
+    const conv = (n: number) => Math.round(n * tasa * 100) / 100;
+    return {
+      moneda: 'USD',
+      tasa,
+      subtotal: conv(montosMxn.subtotal),
+      shipping: conv(montosMxn.shipping),
+      tax: conv(montosMxn.tax),
+      total: conv(totalMxn),
+      totalMxn,
+    };
   }
 
   /**

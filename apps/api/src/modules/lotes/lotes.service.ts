@@ -561,6 +561,7 @@ export class LotesService {
         botellas_750ml:    bot750,
         nombre_comun:      especieDetalle?.nombre_comun    ?? null,
         nombre_cientifico: especieDetalle?.nombre_cientifico ?? null,
+        fecha_elaboracion: loteDetalle.fecha_elaboracion ? new Date(loteDetalle.fecha_elaboracion) : null,
         estado_lote:       loteDetalle.estado           ?? 'disponible',
         sitio:             loteDetalle.sitio?.nombre    ?? null,
         url_trazabilidad:  loteDetalle.url_trazabilidad ?? null,

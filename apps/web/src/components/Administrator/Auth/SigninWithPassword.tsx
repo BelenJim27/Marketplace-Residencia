@@ -8,6 +8,7 @@ import { Checkbox } from "../../FormElements/checkbox";
 import { api } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLocale } from "@/context/LocaleContext";
 import { Eye, EyeOff } from "lucide-react";
 import { isValidEmail } from "@/shared/validation/auth";
 
@@ -16,6 +17,7 @@ export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: 
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect");
   const { login } = useAuth();
+  const { t } = useLocale();
   const [data, setData] = useState({
     email: "",
     password: "",
@@ -39,11 +41,11 @@ export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: 
     setError(null);
 
     if (!data.email.trim() || !data.password) {
-      setError("Ingresa tu correo y contraseña");
+      setError(t("Ingresa tu correo y contraseña"));
       return;
     }
     if (!isValidEmail(data.email)) {
-      setError("Ingresa un correo electrónico válido");
+      setError(t("Ingresa un correo electrónico válido"));
       return;
     }
 
@@ -95,7 +97,7 @@ export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: 
 
       router.push("/cliente/producto");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al iniciar sesión");
+      setError(err instanceof Error ? err.message : t("Error al iniciar sesión"));
     } finally {
       setLoading(false);
     }
@@ -112,7 +114,7 @@ export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: 
 
       <InputGroup
         type="email"
-        label="Correo electrónico"
+        label={t("Correo electrónico")}
         className="mb-4 [&_input]:py-[15px]"
         placeholder="tu@correo.com"
         name="email"
@@ -123,7 +125,7 @@ export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: 
 
       <div className="mb-5">
         <label className="text-body-sm font-medium text-dark dark:text-white">
-          Contraseña
+          {t("Contraseña")}
         </label>
         <div className="relative mt-3">
           <input
@@ -147,7 +149,7 @@ export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: 
 
       <div className="mb-6 flex items-center justify-between gap-2 py-1">
         <Checkbox
-          label="Recordarme"
+          label={t("Recordarme")}
           name="remember"
           withIcon="check"
           minimal
@@ -163,7 +165,7 @@ export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: 
           href="/auth/forgot-password"
           className="text-sm text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors"
         >
-          ¿Olvidaste tu contraseña?
+          {t("¿Olvidaste tu contraseña?")}
         </Link>
       </div>
 
@@ -175,10 +177,10 @@ export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: 
         {loading ? (
           <>
             <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-t-transparent" />
-            Ingresando...
+            {t("Ingresando...")}
           </>
         ) : (
-          "Ingresar"
+          t("Ingresar")
         )}
       </button>
     </form>

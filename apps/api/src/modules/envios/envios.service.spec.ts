@@ -174,7 +174,8 @@ describe('EnviosService', () => {
     });
 
     it('uses volumetric weight when it exceeds real weight', async () => {
-      // qty=2, peso=0.1 → real=0.2kg; dims 10×20, alto=10×2=20 → vol=(10×20×20)/5000=0.8kg
+      // qty=2, peso=0.1 → real=0.2kg. Piso conservador de paquete: maxLargo=max(30,10)=30,
+      // maxAncho=max(12,20)=20, alturaTotal=10×2=20 → vol=(30×20×20)/5000=2.4kg (gana volumétrico).
       mockPrisma.tasas_cambio.findFirst.mockResolvedValue({ tasa: '17' });
       mockSkydropx.cotizarEnvio.mockResolvedValue([]);
       mockPrisma.productos.findMany.mockResolvedValue([
@@ -184,7 +185,7 @@ describe('EnviosService', () => {
       await service.cotizarCarrito([{ id_producto: 1, cantidad: 2 }], destino);
 
       const callArg = mockSkydropx.cotizarEnvio.mock.calls[0][0];
-      expect(callArg.peso_kg).toBeCloseTo(0.8, 2);
+      expect(callArg.peso_kg).toBeCloseTo(2.4, 2);
     });
 
     it('uses real weight when it exceeds volumetric weight', async () => {
@@ -201,7 +202,7 @@ describe('EnviosService', () => {
       expect(callArg.peso_kg).toBe(5);
     });
 
-    it('applies minimum dimensions 10×10×5 when product fields are null', async () => {
+    it('applies conservative fallback dimensions 30×12×12 when product fields are null', async () => {
       mockPrisma.tasas_cambio.findFirst.mockResolvedValue({ tasa: '17' });
       mockSkydropx.cotizarEnvio.mockResolvedValue([]);
       mockPrisma.productos.findMany.mockResolvedValue([
@@ -211,11 +212,12 @@ describe('EnviosService', () => {
       await service.cotizarCarrito([{ id_producto: 1, cantidad: 1 }], destino);
 
       const callArg = mockSkydropx.cotizarEnvio.mock.calls[0][0];
-      // real = 1kg (default), vol = (10*10*5)/5000 = 0.1 → real wins
+      // Sin dims: fallback conservador 30×12×12 (evita subcotizar). peso real=1kg (default),
+      // vol=(30×12×12)/5000=0.864 → gana el real.
       expect(callArg.peso_kg).toBe(1);
-      expect(callArg.largo_cm).toBe(10);
-      expect(callArg.ancho_cm).toBe(10);
-      expect(callArg.alto_cm).toBe(5);
+      expect(callArg.largo_cm).toBe(30);
+      expect(callArg.ancho_cm).toBe(12);
+      expect(callArg.alto_cm).toBe(12);
     });
 
     it('sets adult_signature=true when any product has requiere_edad_minima >= 18', async () => {
@@ -593,7 +595,9 @@ describe('EnviosService', () => {
       await expect(service.crearGuia('1')).rejects.toThrow(UnprocessableEntityException);
     });
 
-    it('throws UnprocessableEntityException when createShipment returns no labelBuffer', async () => {
+    it('marca la guía in_creation (pendiente) cuando createShipment no devuelve labelBuffer', async () => {
+      // Soporte de etiquetas asíncronas (internacionales/sandbox): sin labelBuffer la guía
+      // se persiste 'in_creation' y se completa luego (cron/refrescarGuiaPendiente), en vez de fallar.
       mockPrisma.envios.findUnique.mockResolvedValue(makeEnvio());
       mockPrisma.detalle_pedido.findMany.mockResolvedValue([{
         productos: { nombre: 'P', requiere_edad_minima: 0, categorias_productos: [] },
@@ -603,12 +607,17 @@ describe('EnviosService', () => {
       mockPrisma.tasas_cambio.findFirst.mockResolvedValue({ tasa: '17.5' });
       mockSkydropx.createShipment.mockResolvedValue({
         trackingNumber: 'TRK1',
+        providerShipmentId: 'SHP1',
         labelBuffer: undefined,
         labelFormat: 'PDF',
       });
+      mockPrisma.envio_guias.create.mockResolvedValue({ id_guia: BigInt(1), numero_guia: 'SHP1', formato_etiqueta: 'PDF', label_pdf: null, estado_paqueteria: 'in_creation' });
+      mockPrisma.envios.update.mockResolvedValue(makeEnvio());
 
-      await expect(service.crearGuia('1')).rejects.toThrow(UnprocessableEntityException);
-      await expect(service.crearGuia('1')).rejects.toThrow('no devolvió el PDF');
+      const result = await service.crearGuia('1');
+
+      expect(result.pendiente).toBe(true);
+      expect(result.tiene_pdf).toBe(false);
     });
 
     it('throws UnprocessableEntityException when labelBuffer does not start with %PDF', async () => {

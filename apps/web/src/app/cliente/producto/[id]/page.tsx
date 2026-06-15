@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap, ChevronDown, ExternalLink, Package } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap, ExternalLink, Package } from "lucide-react";
 import { api } from "@/lib/api";
 import type { ProductItem } from "@/types/producer";
 import { useCarrito } from "@/context/CarritoContext";
@@ -36,10 +36,18 @@ interface LoteData {
   productores?: {
     usuarios?: {
       nombre: string;
+      apellido_paterno?: string;
+      apellido_materno?: string;
     };
     biografia?: string;
     otras_caracteristicas?: string;
   };
+}
+
+// Une nombre + apellidos en un nombre completo (omite los vacíos).
+function nombreCompleto(usuario?: { nombre?: string; apellido_paterno?: string; apellido_materno?: string } | null): string | undefined {
+  if (!usuario?.nombre) return undefined;
+  return [usuario.nombre, usuario.apellido_paterno, usuario.apellido_materno].filter(Boolean).join(" ");
 }
 
 interface Producto extends ProductItem {
@@ -74,6 +82,13 @@ interface Producto extends ProductItem {
     pais_operacion?: string;
     nombre_contacto?: string;
     telefono_contacto?: string;
+    productores?: {
+      usuarios?: {
+        nombre: string;
+        apellido_paterno?: string;
+        apellido_materno?: string;
+      };
+    };
   };
 }
 
@@ -94,7 +109,6 @@ export default function ProductoDetallePage() {
   const [agregado, setAgregado] = useState(false);
   const [forceAgeGate, setForceAgeGate] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const fetchProducto = useCallback(async () => {
     const id = params.id;
@@ -173,14 +187,16 @@ export default function ProductoDetallePage() {
 
   const loteData = producto?.lotes;
   const productor = loteData?.productores;
-  const nombreProductor = producto?.nombre_productor || loteData?.productores?.usuarios?.nombre;
+  const nombreProductor =
+    producto?.nombre_productor ||
+    nombreCompleto(loteData?.productores?.usuarios) ||
+    nombreCompleto(producto?.tiendas?.productores?.usuarios);
   const tiendaData = producto?.tiendas;
   const datosApi: Record<string, any> = loteData?.datos_api || {};
 
   const strFromApi = (v: any): string | undefined =>
     v && typeof v === "object" ? (v.nombre ?? undefined) : (v || undefined);
 
-  const region = strFromApi(datosApi.region) || loteData?.sitio;
   const codigoLote =
     strFromApi(datosApi.codigo_lote) ||
     strFromApi(datosApi.folio) ||
@@ -189,11 +205,16 @@ export default function ProductoDetallePage() {
     null;
   const sitio = strFromApi(datosApi.sitio) || loteData?.sitio;
   const gradoAlcohol = datosApi.grado_alcohol ? Number(datosApi.grado_alcohol) : loteData?.grado_alcohol;
-  const nombreComun = strFromApi(datosApi.nombre_comun) || loteData?.nombre_comun;
-  const nombreCientifico = strFromApi(datosApi.nombre_cientifico) || loteData?.nombre_cientifico;
-  const unidades = loteData?.unidades;
-  const fechaElaboracion = loteData?.fecha_elaboracion
-    ? new Date(loteData.fecha_elaboracion).toLocaleDateString("es-MX")
+  // La API de trazabilidad casi siempre devuelve fecha_elaboracion = null;
+  // caemos a la columna, luego a datos_api y por último a fecha_registro
+  // (fecha en que se registró el lote, el dato de fecha realmente disponible).
+  const fechaElaboracionRaw =
+    loteData?.fecha_elaboracion ??
+    datosApi.fecha_elaboracion ??
+    datosApi.fecha_registro ??
+    null;
+  const fechaElaboracion = fechaElaboracionRaw
+    ? new Date(fechaElaboracionRaw).toLocaleDateString("es-MX")
     : null;
   const estadoLote = loteData?.estado_lote;
   const marcaLote = strFromApi(datosApi.marca) || loteData?.marca;
@@ -202,50 +223,12 @@ export default function ProductoDetallePage() {
     (typeof datosApi.url_trazabilidad === "string" ? datosApi.url_trazabilidad : null) ||
     null;
 
-  // Specs grouping for mezcal domain
-  const specGroups = {
-    "Dónde y Qué": [
-      { label: t("Región de Origen"), value: region, help: t("Estado o región donde se produjo") },
-      { label: t("Tipo de Maguey"), value: producto?.maguey, help: t("La planta base del mezcal") },
-      { label: t("Clasificación"), value: producto?.tipo_mezcal, help: t("Artesanal, ancestral, o industrial") },
-      { label: t("Maestro Productor"), value: producto?.maestro_mezcalero || nombreProductor, help: t("Productor responsable") },
-    ],
-    "Cómo se Hace": [
-      { label: t("Tipo de Horno"), value: producto?.destilacion, help: t("Método de cocción del maguey") },
-      { label: t("Molienda"), value: producto?.molienda, help: t("Cómo se tritura el maguey") },
-      { label: t("Graduación Alcohólica"), value: producto?.abv ? `${producto.abv}%` : gradoAlcohol ? `${gradoAlcohol}%` : null, help: t("Fuerza del mezcal") },
-    ],
-    "Cómo Sabe": [
-      { label: t("Notas de Sabor"), value: producto?.perfil, help: t("Aromas y sabores principales") },
-      { label: t("Nombre Local"), value: nombreComun, help: t("Cómo se conoce la planta localmente") },
-      { label: t("Nombre Científico"), value: nombreCientifico, help: t("Clasificación botánica") },
-    ],
-  };
-
-  // Filter out empty specs, but keep at least one group visible with fallback message
-  const filteredGroups = Object.fromEntries(
-    Object.entries(specGroups).map(([group, specs]) => [
-      group,
-      specs.filter((spec) => spec.value),
-    ])
-  );
-
-  // Show specs section if there's at least ONE value across all groups
-  const hasAnySpec = Object.values(filteredGroups).some((specs) => specs.length > 0);
-
-  // Hero specs (always show if populated)
-  const magueySpec = producto?.maguey;
-  const abvSpec = producto?.abv ? `${producto.abv}%` : gradoAlcohol ? `${gradoAlcohol}%` : null;
-  const categoriaSpec = producto?.tipo_mezcal || (producto?.categorias && producto.categorias.length > 0 ? producto.categorias[0] : null) || null;
-
-  const detalleTecnico = [
-    { label: "Grados de alcohol", value: gradoAlcohol ? `${gradoAlcohol}°GL` : abvSpec },
-    { label: "Tipo de agave", value: magueySpec },
-    { label: "Nombre común", value: nombreComun },
-    { label: "Nombre científico", value: nombreCientifico },
-    { label: "Región de origen", value: region },
-    { label: "Fecha de elaboración", value: fechaElaboracion },
-    { label: "Sitio de elaboración", value: sitio },
+  // Ficha técnica — datos clave en lista plana (sin acordeón)
+  const fichaTecnica = [
+    { label: t("Maestro mezcalero"), value: producto?.maestro_mezcalero || nombreProductor },
+    { label: t("Sitio"), value: sitio },
+    { label: t("Grado alcohólico"), value: gradoAlcohol ? `${gradoAlcohol}°GL` : (producto?.abv ? `${producto.abv}%` : null) },
+    { label: t("Fecha de elaboración"), value: fechaElaboracion },
   ].filter((d) => d.value);
 
   if (loading) {
@@ -488,55 +471,18 @@ export default function ProductoDetallePage() {
             </div>
           )}
 
-          {/* Specifications Accordion - detailed specs - ALWAYS SHOW */}
+          {/* Ficha técnica — lista plana de datos clave */}
           <div className="space-y-3 mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">{t("Detalles Técnicos")}</p>
-            {hasAnySpec ? (
-              Object.entries(filteredGroups).map(([groupName, specs]) =>
-                specs.length > 0 ? (
-                  <div key={groupName} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                    <button
-                      onClick={() => setExpandedGroup(expandedGroup === groupName ? null : groupName)}
-                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-inset"
-                      style={{
-                        backgroundColor: expandedGroup === groupName ? "#F4F0E3" : "transparent",
-                        outlineColor: "#306B3F"
-                      }}
-                      aria-expanded={expandedGroup === groupName}
-                      aria-controls={`specs-${groupName}`}
-                    >
-                      <span className="font-medium text-gray-900 dark:text-white text-left text-sm">{t(groupName)}</span>
-                      <ChevronDown
-                        size={18}
-                        className={`transition-transform flex-shrink-0 ml-2 ${expandedGroup === groupName ? "rotate-180" : ""}`}
-                        style={{ color: "#306B3F" }}
-                        aria-hidden="true"
-                      />
-                    </button>
-                    {expandedGroup === groupName && (
-                      <div
-                        id={`specs-${groupName}`}
-                        className="px-3 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 space-y-3"
-                        role="region"
-                        aria-labelledby={`specs-${groupName}-title`}
-                      >
-                        {specs.map((spec) => (
-                          <div key={spec.label} className="space-y-1">
-                            <div className="flex justify-between items-start gap-4 min-w-0">
-                              <span className="text-sm font-medium text-gray-900 dark:text-white flex-shrink-0">{spec.label}</span>
-                              <span className="text-sm text-gray-700 dark:text-gray-300 text-right break-words">{spec.value || "—"}</span>
-                            </div>
-                            {spec.help && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400">{spec.help}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">{t("Ficha técnica")}</p>
+            {fichaTecnica.length > 0 ? (
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden">
+                {fichaTecnica.map((spec) => (
+                  <div key={spec.label} className="flex justify-between items-start gap-4 px-4 py-3">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white flex-shrink-0">{spec.label}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300 text-right break-words">{spec.value}</span>
                   </div>
-                ) : null
-              )
+                ))}
+              </div>
             ) : (
               <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -571,93 +517,6 @@ export default function ProductoDetallePage() {
             categorias={producto.categorias_full ?? []}
             gradoAlcohol={producto.grado_alcohol ?? producto.lotes?.grado_alcohol ?? null}
           />
-
-          {/* Hero Specs - Key characteristics first */}
-          {(magueySpec || categoriaSpec || abvSpec) && (
-            <div className="space-y-3 rounded-lg p-4 sm:p-5" style={{ backgroundColor: "var(--bio-color-fondo-sec, #f0ebe0)", border: "1px solid #e8dcc8" }}>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--bio-color-precio, #8b6914)" }}>{t("Características")}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {magueySpec && (
-                  <div className="space-y-2">
-                    <span className="block text-xs text-gray-600 dark:text-gray-400">{t("Maguey")}</span>
-                    <p className="font-semibold text-base break-words" style={{ color: "#1F3A2E", fontFamily: "'Playfair Display', Georgia, serif" }}>{magueySpec}</p>
-                  </div>
-                )}
-                {categoriaSpec && (
-                  <div className="space-y-2">
-                    <span className="block text-xs text-gray-600 dark:text-gray-400">{t("Categoría")}</span>
-                    <p className="font-semibold text-base break-words" style={{ color: "#1F3A2E", fontFamily: "'Playfair Display', Georgia, serif" }}>{categoriaSpec}</p>
-                  </div>
-                )}
-                {abvSpec && (
-                  <div className="space-y-2">
-                    <span className="block text-xs text-gray-600 dark:text-gray-400">ABV</span>
-                    <p className="font-semibold text-base break-words" style={{ color: "#1F3A2E", fontFamily: "'Playfair Display', Georgia, serif" }}>{abvSpec}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Producer + Store info - side by side */}
-          <div className="pt-5 pb-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="grid grid-cols-2 gap-6">
-              {/* Maestro Productor */}
-              {(productor || nombreProductor) && (
-                <div className="space-y-2">
-                  <h3
-                    className="text-sm font-semibold"
-                    style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
-                  >
-                    {t("Maestro Productor")}
-                  </h3>
-                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                    <p className="font-medium" style={{ color: "#306B3F" }}>{nombreProductor}</p>
-                    {productor?.biografia && <p className="text-xs text-gray-600 dark:text-gray-400">{productor.biografia}</p>}
-                  </div>
-                </div>
-              )}
-
-              {/* Tienda */}
-              {tiendaData && (
-                <div className="space-y-2">
-                  <h3
-                    className="text-sm font-semibold"
-                    style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
-                  >
-                    {t("Tienda")}
-                  </h3>
-                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                    {producto.id_tienda ? (
-                      <Link
-                        href={`/cliente/tienda/${producto.id_tienda}`}
-                        className="font-medium hover:opacity-70 transition-opacity block"
-                        style={{ color: "#306B3F" }}
-                      >
-                        {tiendaData.nombre} →
-                      </Link>
-                    ) : (
-                      <p className="font-medium">{tiendaData.nombre}</p>
-                    )}
-                    {(tiendaData.ciudad_origen || tiendaData.estado_origen) && (
-                      <p className="flex items-center gap-1 text-xs">
-                        <MapPin size={13} />
-                        {[tiendaData.ciudad_origen, tiendaData.estado_origen].filter(Boolean).join(", ")}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Descripción */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("Descripción")}</h3>
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-[65ch]">
-              {producto.descripcion || t("Sin descripción disponible")}
-            </p>
-          </div>
 
           {/* Cantidad + acciones */}
           <div className="space-y-5 pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -792,6 +651,66 @@ export default function ProductoDetallePage() {
                 </a>
               </div>
             </div>
+          </div>
+
+          {/* Producer + Store info - side by side */}
+          <div className="pt-5 pb-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="grid grid-cols-2 gap-6">
+              {/* Maestro Productor */}
+              {(productor || nombreProductor) && (
+                <div className="space-y-2">
+                  <h3
+                    className="text-sm font-semibold"
+                    style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
+                  >
+                    {t("Maestro Productor")}
+                  </h3>
+                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                    <p className="font-medium" style={{ color: "#306B3F" }}>{nombreProductor}</p>
+                    {productor?.biografia && <p className="text-xs text-gray-600 dark:text-gray-400">{productor.biografia}</p>}
+                  </div>
+                </div>
+              )}
+
+              {/* Tienda */}
+              {tiendaData && (
+                <div className="space-y-2">
+                  <h3
+                    className="text-sm font-semibold"
+                    style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
+                  >
+                    {t("Tienda")}
+                  </h3>
+                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                    {producto.id_tienda ? (
+                      <Link
+                        href={`/cliente/tienda/${producto.id_tienda}`}
+                        className="font-medium hover:opacity-70 transition-opacity block"
+                        style={{ color: "#306B3F" }}
+                      >
+                        {tiendaData.nombre} →
+                      </Link>
+                    ) : (
+                      <p className="font-medium">{tiendaData.nombre}</p>
+                    )}
+                    {(tiendaData.ciudad_origen || tiendaData.estado_origen) && (
+                      <p className="flex items-center gap-1 text-xs">
+                        <MapPin size={13} />
+                        {[tiendaData.ciudad_origen, tiendaData.estado_origen].filter(Boolean).join(", ")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Descripción */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("Descripción")}</h3>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-[65ch]">
+              {producto.descripcion || t("Sin descripción disponible")}
+            </p>
           </div>
 
 

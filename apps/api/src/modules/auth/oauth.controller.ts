@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Logger, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Logger, Post, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { OAuthService } from './oauth.service';
 import { AuthService } from './auth.service';
 
@@ -11,6 +11,12 @@ interface OAuthGoogleDto {
   fotoUrl?: string;
 }
 
+interface GoogleVerifiedIdentity {
+  sub: string;
+  email: string;
+  emailVerified: boolean;
+}
+
 @Controller('auth/oauth')
 export class OAuthController {
   private readonly logger = new Logger(OAuthController.name);
@@ -20,16 +26,59 @@ export class OAuthController {
     private readonly authService: AuthService,
   ) {}
 
+  /**
+   * Verifica el access token contra Google y devuelve la identidad REAL (sub, email).
+   * Sin esto, el endpoint confiaría en el `provider_uid`/`email` del body: un atacante
+   * podría enviar el email de cualquier víctima y, como `upsertOAuthAccount` hace match
+   * por email, recibir sus JWTs (toma de cuenta). Aquí derivamos la identidad del token
+   * verificado y validamos que el token fue emitido para ESTA app (aud === GOOGLE_CLIENT_ID).
+   */
+  private async verifyGoogleAccessToken(accessToken: string): Promise<GoogleVerifiedIdentity> {
+    if (!accessToken) throw new UnauthorizedException('Falta el token de Google');
+
+    let info: any;
+    try {
+      const res = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`,
+      );
+      if (!res.ok) throw new Error(`tokeninfo HTTP ${res.status}`);
+      info = await res.json();
+    } catch (err) {
+      this.logger.warn(`[OAuth] Verificación de token de Google falló: ${(err as Error)?.message}`);
+      throw new UnauthorizedException('No se pudo verificar el token de Google');
+    }
+
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const aud = info.aud ?? info.azp;
+    if (clientId) {
+      if (aud !== clientId) {
+        throw new UnauthorizedException('El token de Google no pertenece a esta aplicación');
+      }
+    } else {
+      this.logger.warn('[OAuth] GOOGLE_CLIENT_ID no configurado: no se valida el aud del token.');
+    }
+
+    if (!info.sub) throw new UnauthorizedException('Token de Google sin identificador de usuario');
+    const emailVerified = info.email_verified === true || info.email_verified === 'true';
+    if (!info.email || !emailVerified) {
+      throw new UnauthorizedException('La cuenta de Google no tiene un correo verificado');
+    }
+
+    return { sub: String(info.sub), email: String(info.email).toLowerCase(), emailVerified };
+  }
+
   @Post('google')
   @HttpCode(200)
   async googleOAuth(@Body() dto: OAuthGoogleDto) {
-    this.logger.debug(`[OAuth] Google login request uid=${dto.provider_uid}`);
+    // La identidad se toma del token VERIFICADO con Google, nunca del body del cliente.
+    const verified = await this.verifyGoogleAccessToken(dto.access_token);
+    this.logger.debug(`[OAuth] Google login verificado sub=${verified.sub}`);
 
     try {
       const idUsuario = await this.oauthService.upsertOAuthAccount({
         provider: 'google',
-        providerUid: dto.provider_uid,
-        email: dto.email || '',
+        providerUid: verified.sub,
+        email: verified.email,
         nombre: dto.nombre || '',
         fotoUrl: dto.fotoUrl || '',
         accesoToken: dto.access_token,

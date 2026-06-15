@@ -20,7 +20,6 @@ export class LotesController {
       : this.service.findAll(query);
   }
 
-  //  Estos endpoints deben ir ANTES de :id
   @Post('sincronizar')
   @UseGuards(...WRITE_GUARDS)
   @Roles('productor', 'administrador')

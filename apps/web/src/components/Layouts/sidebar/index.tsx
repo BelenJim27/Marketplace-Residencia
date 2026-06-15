@@ -80,7 +80,7 @@ export function Sidebar() {
                   src="/fotos/mezcanea.png"
                   width={150}
                   height={60}
-                  alt="AGAVEA"
+                  alt="Mezcanea"
                   className="object-contain brightness-0 invert"
                   priority
                 />
@@ -93,7 +93,7 @@ export function Sidebar() {
                   src="/fotos/mezcanea.png"
                   width={42}
                   height={42}
-                  alt="AGAVEA"
+                  alt="Mezcanea"
                   className="object-contain brightness-0 invert"
                   priority
                 />

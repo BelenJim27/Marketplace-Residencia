@@ -79,6 +79,11 @@ export class PedidosService {
         envios: true,
         facturas: true,
         usuarios: true,
+        pedido_productor: {
+          include: {
+            productores: { select: { nombre_marca: true, razon_social: true } },
+          },
+        },
       },
     });
     if (!item || item.eliminado_en)
@@ -455,7 +460,16 @@ export class PedidosService {
       );
     }
 
-    const detalle = await this.prisma.$transaction(
+    // La idempotencia (findFirst → create/update) no es atómica entre llamadas
+    // concurrentes para el mismo (id_pedido, id_producto): ambas pueden ver `null` en el
+    // findFirst y ambas intentar `create`, y la segunda viola el unique
+    // `uq_detalle_pedido_producto` (Prisma P2002). Esto ocurre típicamente por el doble
+    // disparo de efectos de React StrictMode en dev o por un reintento del cliente, y antes
+    // se propagaba como un 500 que dejaba el checkout colgado. La unicidad real la garantiza
+    // la BD; aquí reintentamos una vez: en el reintento el findFirst SÍ encuentra la fila que
+    // creó la llamada ganadora y tomamos el camino de ajuste por delta (no-op si la cantidad
+    // coincide, como en el checkout).
+    const ejecutarTransaccion = () => this.prisma.$transaction(
       async (tx) => {
         const inventario = await tx.inventario.findFirst({
           where: { id_producto },
@@ -603,6 +617,27 @@ export class PedidosService {
         timeout: 15000, // Aumentar timeout a 15 segundos para operaciones complejas
       }
     );
+
+    let detalle: any;
+    try {
+      detalle = await ejecutarTransaccion();
+    } catch (err) {
+      // P2002 sobre (id_pedido, id_producto): una llamada concurrente ganó la carrera e
+      // insertó la línea entre nuestro findFirst y nuestro create. Reintentar una vez para
+      // converger al camino idempotente de ajuste por delta.
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002' &&
+        (err.meta?.target as string[] | undefined)?.includes('id_producto')
+      ) {
+        this.logger.warn(
+          `[pedidos] Carrera detectada al agregar detalle (pedido ${id_pedido}, producto ${dto.id_producto}); reintentando como ajuste idempotente.`,
+        );
+        detalle = await ejecutarTransaccion();
+      } else {
+        throw err;
+      }
+    }
 
     // Notificar al productor si el stock quedó bajo (fuera de la transacción — best-effort)
     const finalStock = await this.prisma.inventario.findFirst({
