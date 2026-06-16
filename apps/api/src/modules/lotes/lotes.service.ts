@@ -277,8 +277,6 @@ export class LotesService {
       await this.prisma.productos.update({
         where: { id_producto: productoExistente.id_producto },
         data: {
-          nombre:               nombreProducto,
-          descripcion,
           botellas_350ml:       botellas350 > 0 ? botellas350 : productoExistente.botellas_350ml,
           botellas_750ml:       botellas750 > 0 ? botellas750 : productoExistente.botellas_750ml,
           unidad_medida:        tieneBotellas ? 'botella' : undefined,

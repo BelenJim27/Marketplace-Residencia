@@ -473,16 +473,6 @@ export default function CarritoPage() {
                   {t("cart_summary_calculated_later")}
                 </span>
               </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "14px", color: C.muted }}>
-                  {t("cart_summary_tax")}
-                  <Info size={13} style={{ color: C.border }} />
-                </span>
-                <span style={{ fontSize: "13px", color: C.muted, fontStyle: "italic" }}>
-                  {t("cart_summary_calculated_later")}
-                </span>
-              </div>
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>

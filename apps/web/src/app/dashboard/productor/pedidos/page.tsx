@@ -166,17 +166,37 @@ interface OrderDetail {
   };
 }
 
-const ESTADOS = ["todos", "pendiente", "confirmado", "preparando", "enviado", "entregado"];
+const ESTADOS = ["todos", "pendiente", "confirmado", "preparando", "enviado", "entregado", "cancelado"];
 const PAGE_SIZE = 10;
+
+const PRIORIDAD_ESTADO: Record<string, number> = {
+  pagado: 1,
+  label_purchased: 2,
+  pendiente: 3,
+  confirmado: 4,
+  preparando: 5,
+  enviado: 6,
+  entregado: 7,
+  cancelado: 99,
+};
 
 function estadoBadgeCls(estado: string) {
   switch (estado) {
-    case "entregado": return "bg-[#A8C26B]/20 text-[#3D6B3F]";
-    case "enviado": return "bg-blue-100 text-blue-800";
+    case "entregado":  return "bg-[#A8C26B]/20 text-[#3D6B3F]";
+    case "enviado":    return "bg-blue-100 text-blue-800";
     case "preparando": return "bg-amber-100 text-amber-800";
     case "confirmado": return "bg-[#C5CFB0]/40 text-[#1F3A2E]";
-    default: return "bg-[#C97A3E]/15 text-[#C97A3E]";
+    case "cancelado":  return "bg-red-50 text-red-700";
+    default:           return "bg-[#C97A3E]/15 text-[#C97A3E]";
   }
+}
+
+function estadoEfectivo(pedido: PedidoProductor): string {
+  // Si el pedido maestro está cancelado (expirado sin pago o cancelación manual),
+  // mostrarlo como cancelado aunque pedido_productor.estado siga en 'pendiente'
+  // (fix para datos históricos creados antes del parche del cron).
+  if (pedido.estado_pedido === "cancelado") return "cancelado";
+  return pedido.estado_productor;
 }
 
 // Código HS de mezcal por defecto (envases ≤4L). SkydropX exige el código armonizado
@@ -783,7 +803,7 @@ export default function PedidosProductor() {
   const { user, isProductor } = useAuth();
   const [pedidos, setPedidos] = useState<PedidoProductor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [filtroEstado, setFiltroEstado] = useState("pendiente");
   const [currentPage, setCurrentPage] = useState(1);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<number | null>(null);
 
@@ -813,7 +833,15 @@ export default function PedidosProductor() {
   }, [filtroEstado]);
 
   const pedidosFiltrados = useMemo(
-    () => pedidos.filter((p) => filtroEstado === "todos" || p.estado_productor === filtroEstado),
+    () =>
+      pedidos
+        .filter((p) => filtroEstado === "todos" || estadoEfectivo(p) === filtroEstado)
+        .sort((a, b) => {
+          const pa = PRIORIDAD_ESTADO[a.estado_pedido ?? a.estado_productor] ?? 50;
+          const pb = PRIORIDAD_ESTADO[b.estado_pedido ?? b.estado_productor] ?? 50;
+          if (pa !== pb) return pa - pb;
+          return new Date(b.fecha_creacion).getTime() - new Date(a.fecha_creacion).getTime();
+        }),
     [pedidos, filtroEstado],
   );
 
@@ -857,14 +885,24 @@ export default function PedidosProductor() {
             onClick={() => setFiltroEstado(estado)}
             className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
               filtroEstado === estado
-                ? "bg-[#3D6B3F] text-white"
-                : "border border-[#C5CFB0] text-[#1F3A2E] hover:bg-[#C5CFB0]/20"
+                ? estado === "cancelado"
+                  ? "bg-red-600 text-white"
+                  : "bg-[#3D6B3F] text-white"
+                : estado === "cancelado"
+                  ? "border border-red-200 text-red-600 hover:bg-red-50"
+                  : "border border-[#C5CFB0] text-[#1F3A2E] hover:bg-[#C5CFB0]/20"
             }`}
           >
-            {estado.charAt(0).toUpperCase() + estado.slice(1)}
+            {estado === "cancelado" ? "Cancelados (auditoría)" : estado.charAt(0).toUpperCase() + estado.slice(1)}
           </button>
         ))}
       </div>
+
+      {filtroEstado === "cancelado" && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-600">
+          Pedidos cancelados — no se generará guía de envío para ninguno de estos pedidos. Consulta el detalle para ver el historial.
+        </p>
+      )}
 
       {loading ? (
         <div className="flex min-h-[200px] items-center justify-center">
@@ -872,7 +910,11 @@ export default function PedidosProductor() {
         </div>
       ) : pedidosFiltrados.length === 0 ? (
         <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] px-5 py-10 text-center text-[#3D6B3F]/60">
-          {filtroEstado === "todos" ? "No tienes pedidos aún" : `No hay pedidos en estado "${filtroEstado}"`}
+          {filtroEstado === "todos"
+            ? "No tienes pedidos aún"
+            : filtroEstado === "cancelado"
+              ? "No hay pedidos cancelados"
+              : `No hay pedidos en estado "${filtroEstado}"`}
         </div>
       ) : (
         <>
@@ -906,8 +948,8 @@ export default function PedidosProductor() {
                         {pedido.total_parcial.toFixed(2)} {pedido.moneda}
                       </td>
                       <td className="px-5 py-4">
-                        <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${estadoBadgeCls(pedido.estado_productor)}`}>
-                          {pedido.estado_productor}
+                        <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${estadoBadgeCls(estadoEfectivo(pedido))}`}>
+                          {estadoEfectivo(pedido)}
                         </span>
                       </td>
                       <td className="px-5 py-4 text-[#3D6B3F]/60">

@@ -196,7 +196,6 @@ export const PRODUCTOR_NAV_DATA: NavSection[] = [
       },
     ],
   },
-  VISTA_CLIENTE_SECTION,
 ];
 
 
@@ -266,7 +265,6 @@ export function getNavData(isProductor: boolean, isAdmin: boolean = false, tiene
           },
         ],
       },
-      VISTA_CLIENTE_SECTION,
     ];
   }
   return [];

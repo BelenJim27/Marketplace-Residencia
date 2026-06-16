@@ -31,7 +31,7 @@ type StoreItem = {
 };
 
 type SalesResponse = {
-  resumen: { totalVentas: number; ingresosTotales: number; pendientes: number };
+  resumen: { totalVentas: number; ingresosTotales: number };
   ventas: SaleItem[];
 };
 
@@ -52,7 +52,7 @@ export default function VentasPage() {
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [sales, setSales] = useState<SaleItem[]>([]);
   const [summary, setSummary] = useState<SalesResponse["resumen"]>({
-    totalVentas: 0, ingresosTotales: 0, pendientes: 0,
+    totalVentas: 0, ingresosTotales: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,11 +79,11 @@ export default function VentasPage() {
         if (cancelled) return;
         setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);
         setSales(Array.isArray((salesData as SalesResponse).ventas) ? (salesData as SalesResponse).ventas : []);
-        setSummary((salesData as SalesResponse).resumen ?? { totalVentas: 0, ingresosTotales: 0, pendientes: 0 });
+        setSummary((salesData as SalesResponse).resumen ?? { totalVentas: 0, ingresosTotales: 0 });
       } catch (err) {
         if (!cancelled) {
           setStores([]); setSales([]);
-          setSummary({ totalVentas: 0, ingresosTotales: 0, pendientes: 0 });
+          setSummary({ totalVentas: 0, ingresosTotales: 0 });
           setError(err instanceof Error ? err.message : "No fue posible cargar las ventas");
         }
       } finally {
@@ -168,11 +168,10 @@ export default function VentasPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {[
           { label: "Total Ventas", value: summary.totalVentas },
           { label: "Ingresos Totales", value: formatCurrency(summary.ingresosTotales) },
-          { label: "Pendientes", value: summary.pendientes },
         ].map((item) => (
           <Card key={item.label} title={item.label} value={item.value} />
         ))}

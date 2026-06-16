@@ -868,32 +868,25 @@ export default function CheckoutPage() {
                   {nivelKey ? `$${formatPrice(getShippingDisplayAmount() ?? 0, { showCurrency: false })} ${displayCurrency}` : '—'}
                 </span>
               </div>
-              {taxBreakdown.length > 0
-                ? taxBreakdown.map((line, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
-                      <span>{line.nombre} ({(line.tasa * 100).toFixed(0)}%)</span>
-                      <span style={{ fontWeight: 500 }}>
-                        ${formatPrice(convertFromMXN(line.monto), { showCurrency: false })} {displayCurrency}
-                      </span>
-                    </div>
-                  ))
-                : (
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "#9CA3AF", marginBottom: "8px" }}>
-                    <span>{locale === 'en' ? 'Taxes' : 'Impuestos'}</span>
-                    <span style={{ fontSize: "12px" }}>{locale === 'en' ? 'Calculating...' : 'Calculando...'}</span>
+              {/* Impuestos: solo para MX (IVA aplica). Para international los impuestos
+                  se liquidan en aduana; nunca mostrar breakdown fiscal de otro intent. */}
+              {pais_destino === "MX" && taxBreakdown.length > 0 &&
+                taxBreakdown.map((line, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
+                    <span>{line.nombre} ({(line.tasa * 100).toFixed(0)}%)</span>
+                    <span style={{ fontWeight: 500 }}>
+                      ${formatPrice(convertFromMXN(line.monto), { showCurrency: false })} {displayCurrency}
+                    </span>
                   </div>
-                )
-              }
+                ))}
               {/* Nota fiscal */}
               {pais_destino === "MX" ? (
                 <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "4px 0 8px 0" }}>
-                  {locale === 'en' ? 'IEPS included in product price.' : 'IEPS incluido en el precio del productor.'}
+                  {t("checkout_tax_included_note")}
                 </p>
               ) : pais_destino === "US" ? (
                 <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "4px 0 8px 0" }}>
-                  {locale === 'en'
-                    ? 'Import duties settled at customs by the importer.'
-                    : 'Impuestos de importación se liquidan en aduana por el importador.'}
+                  {t("checkout_customs_note")}
                 </p>
               ) : null}
             </div>
@@ -901,11 +894,6 @@ export default function CheckoutPage() {
               <span style={{ fontWeight: 600, color: COLOR_PALETTE.green }}>{t('checkout_summary_total')}</span>
               <span style={{ fontSize: "18px", fontWeight: 700, color: COLOR_PALETTE.copper }}>
                 {`$${formatPrice(convertFromMXN(totalConEnvio + taxAmount), { showCurrency: false })} ${displayCurrency}`}
-                {taxAmount === 0 && (
-                  <span style={{ fontSize: "11px", color: "#9CA3AF", display: "block", fontWeight: 400 }}>
-                    {locale === 'en' ? '+ taxes' : '+ impuestos'}
-                  </span>
-                )}
               </span>
             </div>
             </div>
@@ -954,27 +942,56 @@ function DireccionStep({
   gpsError,
 }: any) {
   const { t } = useLocale();
-  const [formErrors, setFormErrors] = useState<{ nombre_destinatario?: string; telefono?: string; cp?: string }>({});
+  const [formErrors, setFormErrors] = useState<{
+    nombre_destinatario?: string;
+    telefono?: string;
+    cp?: string;
+    linea_1?: string;
+    calle?: string;
+    numero?: string;
+    colonia?: string;
+    ciudad?: string;
+    estado?: string;
+  }>({});
   const NOMBRE_REGEX_CHECKOUT = /[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s'\-]/g;
 
   const handleGuardar = () => {
-    const errors: { nombre_destinatario?: string; telefono?: string; cp?: string } = {};
+    const errors: typeof formErrors = {};
+    const req = t("address_validation_required");
+
+    // Format validations
     const nombre = (nuevaDireccion.nombre_destinatario ?? "").trim();
     if (nombre.length > 0 && nombre.length < 2)
-      errors.nombre_destinatario = t("El nombre debe tener al menos 2 letras");
+      errors.nombre_destinatario = t("address_validation_name");
     const tel = (nuevaDireccion.telefono ?? "").replace(/\D/g, "");
-    if (tel.length > 0 && tel.length !== 10) errors.telefono = t("El teléfono debe tener 10 dígitos");
+    if (tel.length > 0 && tel.length !== 10) errors.telefono = t("address_validation_phone");
     const cp = nuevaDireccion.codigo_postal ?? "";
-    if (nuevaDireccion.pais_iso2 === "MX" && cp && !/^\d{5}$/.test(cp)) errors.cp = t("El código postal debe tener 5 dígitos");
-    if (nuevaDireccion.pais_iso2 === "US" && cp && !/^\d{5}(-\d{4})?$/.test(cp)) errors.cp = t("El ZIP code debe tener 5 dígitos (ej. 90210)");
+    if (nuevaDireccion.pais_iso2 === "MX" && cp && !/^\d{5}$/.test(cp)) errors.cp = t("address_validation_postal_mx");
+    if (nuevaDireccion.pais_iso2 === "US" && cp && !/^\d{5}(-\d{4})?$/.test(cp)) errors.cp = t("address_validation_postal_us");
+
+    // Required field validations
+    if (nuevaDireccion.pais_iso2 === "US") {
+      if (!nuevaDireccion.linea_1?.trim()) errors.linea_1 = req;
+    } else {
+      if (!nuevaDireccion.calle?.trim()) errors.calle = req;
+      if (!nuevaDireccion.numero?.trim()) errors.numero = req;
+      if (!nuevaDireccion.colonia?.trim()) errors.colonia = req;
+    }
+    if (!nuevaDireccion.ciudad?.trim()) errors.ciudad = req;
+    if (!nuevaDireccion.estado?.trim()) errors.estado = req;
+    if (!nuevaDireccion.codigo_postal?.trim() && !errors.cp) errors.cp = req;
+
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
     setFormErrors({});
     guardarNuevaDireccion();
   };
 
+  const inputCls = (err?: string) =>
+    `w-full rounded-xl border px-4 py-3 text-sm focus:ring-2 focus:outline-none transition-all dark:bg-gray-800 dark:text-white ${err ? "border-red-400 focus:border-red-400 focus:ring-red-400/20" : "border-gray-300 focus:border-green-500 focus:ring-green-500/20 dark:border-gray-600"}`;
+
   return (
     <div>
-      <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{t("Dirección de envío")}</h2>
+      <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{t("address_form_title")}</h2>
 
       {direcciones.length > 0 && !mostrarFormDireccion && (
         <div className="mb-6 space-y-3">
@@ -1019,24 +1036,26 @@ function DireccionStep({
             onClick={() => setMostrarFormDireccion(true)}
             className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors dark:text-green-400 dark:hover:text-green-300"
           >
-            + {t("Agregar otra dirección")}
+            {t("address_form_add_another")}
           </button>
         </div>
       )}
 
       {mostrarFormDireccion && (
-        <div className="space-y-5">
+        <div className="space-y-4">
+          {/* País */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{t("País de envío")} *</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{t("address_form_country")}</label>
             <select
               value={nuevaDireccion.pais_iso2 || "MX"}
-              onChange={(e) =>
+              onChange={(e) => {
+                setFormErrors({});
                 setNuevaDireccion((p: any) => ({
                   ...p,
                   pais_iso2: e.target.value,
                   es_internacional: e.target.value !== "MX",
-                }))
-              }
+                }));
+              }}
               className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none transition-all dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
               <option value="MX">🇲🇽 {t("México")}</option>
@@ -1044,104 +1063,151 @@ function DireccionStep({
             </select>
           </div>
 
-          {/* Formulario dinámico por país */}
+          {/* Formulario US — 2 columnas */}
           {nuevaDireccion.pais_iso2 === "US" ? (
             <>
-              {/* USA: Nombre, Teléfono, Línea 1, Línea 2, Ciudad, Estado, ZIP, Predeterminada */}
+              {/* Fila 1: Nombre | Teléfono */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_fullname")}</label>
+                  <input
+                    type="text"
+                    value={nuevaDireccion.nombre_destinatario || ""}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(NOMBRE_REGEX_CHECKOUT, "");
+                      setNuevaDireccion((p: any) => ({ ...p, nombre_destinatario: val }));
+                      setFormErrors((prev) => ({ ...prev, nombre_destinatario: undefined }));
+                    }}
+                    placeholder="John Doe"
+                    className={inputCls(formErrors.nombre_destinatario)}
+                  />
+                  {formErrors.nombre_destinatario && <p aria-live="polite" className="mt-1 text-xs text-red-500">{formErrors.nombre_destinatario}</p>}
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_phone")}</label>
+                  <input
+                    type="tel"
+                    value={nuevaDireccion.telefono || ""}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setNuevaDireccion((p: any) => ({ ...p, telefono: val }));
+                      setFormErrors((prev) => ({ ...prev, telefono: undefined }));
+                    }}
+                    placeholder="10 digits"
+                    maxLength={10}
+                    className={inputCls(formErrors.telefono)}
+                  />
+                  {formErrors.telefono && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
+                </div>
+              </div>
+
+              {/* Fila 2: Línea 1 (full width) */}
               <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("Nombre completo")} *</label>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_line1")}</label>
                 <input
                   type="text"
                   required
-                  value={nuevaDireccion.nombre_destinatario || ""}
+                  value={nuevaDireccion.linea_1 || ""}
                   onChange={(e) => {
-                    const val = e.target.value.replace(NOMBRE_REGEX_CHECKOUT, "");
-                    setNuevaDireccion((p: any) => ({ ...p, nombre_destinatario: val }));
-                    setFormErrors((prev) => ({ ...prev, nombre_destinatario: undefined }));
+                    setNuevaDireccion((p: any) => ({ ...p, linea_1: e.target.value }));
+                    setFormErrors((prev) => ({ ...prev, linea_1: undefined }));
                   }}
-                  placeholder="John Doe"
-                  className={`w-full rounded-xl border px-4 py-3 text-sm focus:ring-2 focus:outline-none transition-all dark:bg-gray-800 dark:text-white ${formErrors.nombre_destinatario ? "border-red-400 focus:border-red-400 focus:ring-red-400/20" : "border-gray-300 focus:border-green-500 focus:ring-green-500/20 dark:border-gray-600"}`}
+                  placeholder="123 Main Street"
+                  className={inputCls(formErrors.linea_1)}
                 />
-                {formErrors.nombre_destinatario && <p aria-live="polite" className="mt-1 text-xs text-red-500">{formErrors.nombre_destinatario}</p>}
+                {formErrors.linea_1 && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.linea_1}</p>}
               </div>
 
+              {/* Fila 3: Línea 2 (full width) */}
               <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("Teléfono")}</label>
-                <input
-                  type="tel"
-                  value={nuevaDireccion.telefono || ""}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                    setNuevaDireccion((p: any) => ({ ...p, telefono: val }));
-                    setFormErrors((prev) => ({ ...prev, telefono: undefined }));
-                  }}
-                  placeholder="10 dígitos"
-                  maxLength={10}
-                  className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.telefono ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
-                />
-                {formErrors.telefono && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
-              </div>
-
-              <Field label={`${t("Dirección - Línea 1")} *`} value={nuevaDireccion.linea_1 || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, linea_1: v }))} placeholder="123 Main Street" />
-              <Field label={t("Dirección - Línea 2")} value={nuevaDireccion.linea_2 || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, linea_2: v }))} placeholder="Apt 4B (opcional)" />
-              <Field label={`${t("Ciudad")} *`} value={nuevaDireccion.ciudad || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, ciudad: v }))} placeholder="New York" />
-
-              {/* Selector de estado USA */}
-              <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("Estado")} *</label>
-                <select
-                  value={nuevaDireccion.estado || ""}
-                  onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, estado: e.target.value }))}
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none transition-all dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                >
-                  <option value="">{t("Selecciona un estado…")}</option>
-                  {US_STATES.map((s) => (
-                    <option key={s.code} value={s.code}>{s.name}</option>
-                  ))}
-                </select>
-                {nuevaDireccion.estado && ALCOHOL_RESTRICTED_STATES.has(nuevaDireccion.estado) && (
-                  <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
-                    ⚠️ {nuevaDireccion.estado} tiene restricciones legales para el envío de bebidas alcohólicas. Algunos productos de mezcal podrían no poder enviarse a este estado.
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">ZIP Code *</label>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_line2")}</label>
                 <input
                   type="text"
-                  required
-                  value={nuevaDireccion.codigo_postal || ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setNuevaDireccion((p: any) => ({ ...p, codigo_postal: val }));
-                    setFormErrors((prev) => ({ ...prev, cp: undefined }));
-                  }}
-                  maxLength={10}
-                  placeholder="90210 o 90210-1234"
-                  className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.cp ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
+                  value={nuevaDireccion.linea_2 || ""}
+                  onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, linea_2: e.target.value }))}
+                  placeholder="Apt 4B"
+                  className={inputCls()}
                 />
-                {formErrors.cp && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.cp}</p>}
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  id="predeterminada"
-                  type="checkbox"
-                  checked={nuevaDireccion.es_predeterminada ?? false}
-                  onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, es_predeterminada: e.target.checked }))}
-                  className="accent-green-600"
-                />
-                <label htmlFor="predeterminada" className="text-sm text-gray-700 dark:text-gray-300">
-                  {t("Guardar como dirección predeterminada")}
-                </label>
+              {/* Fila 4: Ciudad | Estado */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_city")}</label>
+                  <input
+                    type="text"
+                    value={nuevaDireccion.ciudad || ""}
+                    onChange={(e) => {
+                      setNuevaDireccion((p: any) => ({ ...p, ciudad: e.target.value }));
+                      setFormErrors((prev) => ({ ...prev, ciudad: undefined }));
+                    }}
+                    placeholder="New York"
+                    className={inputCls(formErrors.ciudad)}
+                  />
+                  {formErrors.ciudad && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.ciudad}</p>}
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_state")}</label>
+                  <select
+                    value={nuevaDireccion.estado || ""}
+                    onChange={(e) => {
+                      setNuevaDireccion((p: any) => ({ ...p, estado: e.target.value }));
+                      setFormErrors((prev) => ({ ...prev, estado: undefined }));
+                    }}
+                    className={`w-full rounded-xl border px-4 py-3 text-sm focus:ring-2 focus:outline-none transition-all dark:bg-gray-800 dark:text-white ${formErrors.estado ? "border-red-400 focus:border-red-400 focus:ring-red-400/20" : "border-gray-300 focus:border-green-500 focus:ring-green-500/20 dark:border-gray-600"}`}
+                  >
+                    <option value="">{t("address_form_state_select")}</option>
+                    {US_STATES.map((s) => (
+                      <option key={s.code} value={s.code}>{s.name}</option>
+                    ))}
+                  </select>
+                  {formErrors.estado && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.estado}</p>}
+                  {nuevaDireccion.estado && ALCOHOL_RESTRICTED_STATES.has(nuevaDireccion.estado) && (
+                    <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                      ⚠️ {nuevaDireccion.estado} tiene restricciones legales para el envío de bebidas alcohólicas.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Fila 5: ZIP | Checkbox predeterminada */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_zip")}</label>
+                  <input
+                    type="text"
+                    required
+                    value={nuevaDireccion.codigo_postal || ""}
+                    onChange={(e) => {
+                      setNuevaDireccion((p: any) => ({ ...p, codigo_postal: e.target.value }));
+                      setFormErrors((prev) => ({ ...prev, cp: undefined }));
+                    }}
+                    maxLength={10}
+                    placeholder="90210"
+                    className={inputCls(formErrors.cp)}
+                  />
+                  {formErrors.cp && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.cp}</p>}
+                </div>
+                <div className="flex items-end pb-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={nuevaDireccion.es_predeterminada ?? false}
+                      onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, es_predeterminada: e.target.checked }))}
+                      className="accent-green-600"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{t("address_form_save_default")}</span>
+                  </label>
+                </div>
               </div>
             </>
           ) : (
             <>
-              {/* México: Nombre, Calle, Número, Colonia, Ciudad, Estado, CP, Teléfono, Referencias, Predeterminada */}
+              {/* Formulario MX — 2 columnas */}
+
+              {/* Fila 1: Nombre (full width) */}
               <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Nombre completo</label>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_fullname")}</label>
                 <input
                   type="text"
                   value={nuevaDireccion.nombre_destinatario || ""}
@@ -1151,70 +1217,154 @@ function DireccionStep({
                     setFormErrors((prev) => ({ ...prev, nombre_destinatario: undefined }));
                   }}
                   placeholder="Juan Pérez"
-                  className={`w-full rounded-xl border px-4 py-3 text-sm focus:ring-2 focus:outline-none transition-all dark:bg-gray-800 dark:text-white ${formErrors.nombre_destinatario ? "border-red-400 focus:border-red-400 focus:ring-red-400/20" : "border-gray-300 focus:border-green-500 focus:ring-green-500/20 dark:border-gray-600"}`}
+                  className={inputCls(formErrors.nombre_destinatario)}
                 />
                 {formErrors.nombre_destinatario && <p aria-live="polite" className="mt-1 text-xs text-red-500">{formErrors.nombre_destinatario}</p>}
               </div>
 
-              <Field label="Calle *" value={nuevaDireccion.calle || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, calle: v }))} placeholder="Avenida Reforma" />
-              <Field label="Número *" value={nuevaDireccion.numero || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, numero: v }))} placeholder="123 / 123-A" />
-              <Field label="Colonia / Barrio *" value={nuevaDireccion.colonia || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, colonia: v }))} placeholder="Centro" />
-              <Field label="Ciudad *" value={nuevaDireccion.ciudad || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, ciudad: v }))} placeholder="Oaxaca de Juárez" />
-              <Field label="Estado *" value={nuevaDireccion.estado || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, estado: v }))} placeholder="Oaxaca" />
+              {/* Fila 2: Calle | Número */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_street")}</label>
+                  <input
+                    type="text"
+                    value={nuevaDireccion.calle || ""}
+                    onChange={(e) => {
+                      setNuevaDireccion((p: any) => ({ ...p, calle: e.target.value }));
+                      setFormErrors((prev) => ({ ...prev, calle: undefined }));
+                    }}
+                    placeholder="Avenida Reforma"
+                    className={inputCls(formErrors.calle)}
+                  />
+                  {formErrors.calle && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.calle}</p>}
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_number")}</label>
+                  <input
+                    type="text"
+                    value={nuevaDireccion.numero || ""}
+                    onChange={(e) => {
+                      setNuevaDireccion((p: any) => ({ ...p, numero: e.target.value }));
+                      setFormErrors((prev) => ({ ...prev, numero: undefined }));
+                    }}
+                    placeholder="123 / 123-A"
+                    className={inputCls(formErrors.numero)}
+                  />
+                  {formErrors.numero && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.numero}</p>}
+                </div>
+              </div>
 
+              {/* Fila 3: Colonia (full width) */}
               <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">Código Postal *</label>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_neighborhood")}</label>
                 <input
                   type="text"
-                  required
-                  value={nuevaDireccion.codigo_postal || ""}
+                  value={nuevaDireccion.colonia || ""}
                   onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "").slice(0, 5);
-                    setNuevaDireccion((p: any) => ({ ...p, codigo_postal: val }));
-                    setFormErrors((prev) => ({ ...prev, cp: undefined }));
+                    setNuevaDireccion((p: any) => ({ ...p, colonia: e.target.value }));
+                    setFormErrors((prev) => ({ ...prev, colonia: undefined }));
                   }}
-                  placeholder="68000"
-                  maxLength={5}
-                  className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.cp ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
+                  placeholder="Centro"
+                  className={inputCls(formErrors.colonia)}
                 />
-                {formErrors.cp && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.cp}</p>}
+                {formErrors.colonia && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.colonia}</p>}
               </div>
 
+              {/* Fila 4: Ciudad | Estado */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_city")}</label>
+                  <input
+                    type="text"
+                    value={nuevaDireccion.ciudad || ""}
+                    onChange={(e) => {
+                      setNuevaDireccion((p: any) => ({ ...p, ciudad: e.target.value }));
+                      setFormErrors((prev) => ({ ...prev, ciudad: undefined }));
+                    }}
+                    placeholder="Oaxaca de Juárez"
+                    className={inputCls(formErrors.ciudad)}
+                  />
+                  {formErrors.ciudad && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.ciudad}</p>}
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_state")}</label>
+                  <input
+                    type="text"
+                    value={nuevaDireccion.estado || ""}
+                    onChange={(e) => {
+                      setNuevaDireccion((p: any) => ({ ...p, estado: e.target.value }));
+                      setFormErrors((prev) => ({ ...prev, estado: undefined }));
+                    }}
+                    placeholder="Oaxaca"
+                    className={inputCls(formErrors.estado)}
+                  />
+                  {formErrors.estado && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.estado}</p>}
+                </div>
+              </div>
+
+              {/* Fila 5: Código Postal | Teléfono */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_postal")}</label>
+                  <input
+                    type="text"
+                    required
+                    value={nuevaDireccion.codigo_postal || ""}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 5);
+                      setNuevaDireccion((p: any) => ({ ...p, codigo_postal: val }));
+                      setFormErrors((prev) => ({ ...prev, cp: undefined }));
+                    }}
+                    placeholder="68000"
+                    maxLength={5}
+                    className={inputCls(formErrors.cp)}
+                  />
+                  {formErrors.cp && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.cp}</p>}
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_phone")}</label>
+                  <input
+                    type="tel"
+                    value={nuevaDireccion.telefono || ""}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setNuevaDireccion((p: any) => ({ ...p, telefono: val }));
+                      setFormErrors((prev) => ({ ...prev, telefono: undefined }));
+                    }}
+                    placeholder="9511234567"
+                    maxLength={10}
+                    className={inputCls(formErrors.telefono)}
+                  />
+                  {formErrors.telefono && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
+                </div>
+              </div>
+
+              {/* Fila 6: Referencias (full width) */}
               <div>
-                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("Teléfono")}</label>
+                <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("address_form_references")}</label>
                 <input
-                  type="tel"
-                  value={nuevaDireccion.telefono || ""}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                    setNuevaDireccion((p: any) => ({ ...p, telefono: val }));
-                    setFormErrors((prev) => ({ ...prev, telefono: undefined }));
-                  }}
-                  placeholder="10 dígitos, ej. 9511234567"
-                  maxLength={10}
-                  className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none dark:bg-gray-800 dark:text-white ${formErrors.telefono ? "border-red-400" : "border-gray-300 focus:border-green-500 dark:border-gray-600"}`}
+                  type="text"
+                  value={nuevaDireccion.referencia || ""}
+                  onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, referencia: e.target.value }))}
+                  placeholder="Casa color azul, frente al parque"
+                  className={inputCls()}
                 />
-                {formErrors.telefono && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
               </div>
 
-              <Field label="Referencias (opcional)" value={nuevaDireccion.referencia || ""} onChange={(v) => setNuevaDireccion((p: any) => ({ ...p, referencia: v }))} placeholder="Casa color azul, frente al parque" />
-
-              <div className="flex items-center gap-2">
+              {/* Fila 7: Checkbox predeterminada */}
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
-                  id="predeterminada"
                   type="checkbox"
                   checked={nuevaDireccion.es_predeterminada ?? false}
                   onChange={(e) => setNuevaDireccion((p: any) => ({ ...p, es_predeterminada: e.target.checked }))}
                   className="accent-green-600"
                 />
-                <label htmlFor="predeterminada" className="text-sm text-gray-700 dark:text-gray-300">
-                  {t("Guardar como dirección predeterminada")}
-                </label>
-              </div>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t("address_form_save_default")}</span>
+              </label>
             </>
           )}
 
-          {/* GPS button al final */}
+          {/* GPS + botones */}
           <div>
             <button
               type="button"
@@ -1223,7 +1373,7 @@ function DireccionStep({
               className="flex items-center gap-2 rounded-lg border border-green-500 px-4 py-3 text-sm font-medium text-green-600 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-900/20"
             >
               {gpsLoading ? <Loader2 size={15} className="animate-spin" aria-label="Obteniendo ubicación" /> : <MapPin size={15} />}
-              {gpsLoading ? t("Obteniendo ubicación...") : t("Usar mi ubicación actual")}
+              {gpsLoading ? t("address_form_getting_location") : t("address_form_use_location")}
             </button>
             {gpsError && <p className="mt-1 text-xs text-red-500">{gpsError}</p>}
           </div>
@@ -1232,14 +1382,14 @@ function DireccionStep({
               onClick={handleGuardar}
               className="rounded-xl bg-green-600 px-6 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-green-700 active:bg-green-800 shadow-sm hover:shadow-md"
             >
-              {t("Guardar dirección")}
+              {t("address_form_save_button")}
             </button>
             {direcciones.length > 0 && (
               <button
-                onClick={() => setMostrarFormDireccion(false)}
+                onClick={() => { setMostrarFormDireccion(false); setFormErrors({}); }}
                 className="rounded-xl border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800/50"
               >
-                {t("Usar otra dirección")}
+                {t("address_form_use_another")}
               </button>
             )}
           </div>
@@ -1301,21 +1451,6 @@ function DobCaptureForm({
           {t("Confirmar y continuar")}
         </button>
       </form>
-    </div>
-  );
-}
-
-function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{label}</label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none transition-all dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-      />
     </div>
   );
 }
