@@ -25,7 +25,7 @@ export function useCheckout() {
   const router = useRouter();
   const { items, precioTotal, limpiarCarrito } = useCarrito();
   const { user } = useAuth();
-  const { currency } = useLocale();
+  const { currency, locale } = useLocale();
   const { grupos, opcionesAgregadas, nivelKey, setNivel, seleccionados, loading: cotizandoLoading, error: cotizandoError, cotizarPorCarrito, todosSeleccionados, tieneAlcohol } = useShipping();
 
   const [paso, setPaso] = useState<CheckoutStep>("direccion");
@@ -181,6 +181,17 @@ export function useCheckout() {
       telefono: prev.telefono || (user.telefono ?? "") || "",
     }));
   }, [mostrarFormDireccion, user]);
+
+  // En inglés, el comprador suele enviar a EE.UU.: predeterminar el país a US
+  // mientras el formulario aún no se abre (no pisa una elección del usuario).
+  useEffect(() => {
+    if (mostrarFormDireccion) return;
+    setNuevaDireccion((prev) =>
+      locale === "en"
+        ? { ...prev, pais_iso2: "US", es_internacional: true }
+        : prev,
+    );
+  }, [locale, mostrarFormDireccion]);
 
   const guardarNuevaDireccion = useCallback(async () => {
     if (!user?.id_usuario) return;

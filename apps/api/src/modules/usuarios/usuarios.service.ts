@@ -194,6 +194,68 @@ export class UsuariosService {
     return { message: 'Rol removido del usuario' };
   }
 
+  /**
+   * CCPA / "right to know": exporta los datos personales del usuario (perfil,
+   * direcciones y resumen de pedidos). Excluye password_hash.
+   */
+  async exportData(id_usuario: string) {
+    const usuario = await this.prisma.usuarios.findUnique({
+      where: { id_usuario },
+      include: { usuario_rol: { include: { roles: true } } },
+    });
+    if (!usuario || usuario.eliminado_en) throw new NotFoundException('Usuario no encontrado');
+
+    const { password_hash: _omit, ...perfil } = usuario as any;
+
+    const [direcciones, pedidos] = await Promise.all([
+      this.prisma.direcciones.findMany({ where: { id_usuario } }),
+      this.prisma.pedidos.findMany({
+        where: { id_usuario },
+        select: { id_pedido: true, estado: true, total: true, moneda: true },
+      }),
+    ]);
+
+    return serializeBigInts({
+      exportado_en: new Date().toISOString(),
+      perfil,
+      direcciones,
+      pedidos,
+    });
+  }
+
+  /**
+   * CCPA / "right to delete": desactiva la cuenta (soft delete) y revoca sesiones.
+   * Los registros transaccionales (pedidos, pagos) se retienen por obligaciones
+   * fiscales/contables; solo se inhabilita el acceso y el perfil deja de listarse.
+   */
+  async requestDeletion(id_usuario: string) {
+    const current = await this.prisma.usuarios.findUnique({ where: { id_usuario } });
+    if (!current || current.eliminado_en) throw new NotFoundException('Usuario no encontrado');
+
+    await this.prisma.usuarios.update({
+      where: { id_usuario },
+      data: { eliminado_en: new Date(), version_token: { increment: 1 } },
+    });
+    await this.prisma.refresh_tokens.updateMany({
+      where: { id_usuario, revocado_en: null },
+      data: { revocado_en: new Date() },
+    });
+    await this.prisma.auditoria.create({
+      data: {
+        id_usuario,
+        accion: 'solicitud_borrado_ccpa',
+        tabla_afectada: 'usuarios',
+        registro_id: id_usuario,
+        valor_anterior: { email: current.email } as any,
+      },
+    });
+
+    return {
+      message:
+        'Tu cuenta fue desactivada y tus sesiones cerradas. Los registros de pedidos/pagos se conservan por obligaciones legales.',
+    };
+  }
+
   private async ensureUserExists(id_usuario: string) {
     const user = await this.prisma.usuarios.findUnique({ where: { id_usuario } });
     if (!user) throw new NotFoundException('Usuario no encontrado');

@@ -1,0 +1,58 @@
+# Despliegue reproducible de api + web. Requiere un archivo .env en la raíz con las
+# variables de producción (DATABASE_URL, JWT_*, STRIPE_*, CORS_ORIGINS con dominios
+# https reales, NEXT_PUBLIC_API_URL, etc.).
+#
+#   docker compose -f docker-compose.prod.yml up --build
+#
+# IMÁGENES DE PRODUCTOS (uploads): se almacenan en LOCAL por decisión del negocio
+# (no object storage). Para que sobrevivan a recreaciones del contenedor, se montan
+# como BIND MOUNT a una ruta persistente del HOST (no un volumen efímero):
+#   UPLOADS_HOST_PATH en .env → ruta real con respaldo, p.ej. /var/marketplace/uploads
+# (default ./data/uploads para desarrollo). Respaldar con scripts/backup-uploads.sh
+# en un cron diario. Limitación: almacenamiento local = escalado vertical (1 instancia
+# de API). Incompatible con despliegue serverless (FS efímero).
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+    ports:
+      - "3001:3001"
+    volumes:
+      # Bind mount a ruta persistente del host (sobrevive a `docker compose down/up`).
+      - ${UPLOADS_HOST_PATH:-./data/uploads}:/app/apps/api/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+    healthcheck:
+      # Imagen Node (fetch global disponible): evita depender de wget en la imagen web.
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

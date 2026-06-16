@@ -197,7 +197,7 @@ export function TiendaHeader() {
             src="/fotos/mezcanea.png"
             width={scrolled ? 80 : 100}
             height={scrolled ? 30 : 38}
-            alt="AGAVEA"
+            alt="Mezcanea"
             className="object-contain transition-all duration-300"
             style={{ filter: "brightness(0) invert(1)" }}
           />

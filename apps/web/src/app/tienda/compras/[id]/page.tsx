@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
+import { useLocale } from "@/context/LocaleContext";
 
 import {
   ArrowLeft, Package, CheckCircle, Clock, Truck,
@@ -37,6 +38,12 @@ interface Envio {
   transportistas?: { nombre: string };
 }
 
+interface PedidoProductor {
+  id_productor: number;
+  estado?: string;
+  productores?: { nombre_marca?: string | null; razon_social?: string | null };
+}
+
 interface Pedido {
   id?: number;
   id_pedido?: number;
@@ -48,6 +55,7 @@ interface Pedido {
   direccion_envio_snapshot?: Record<string, string>;
   detalle_pedido?: DetallePedido[];
   envios?: Envio[];
+  pedido_productor?: PedidoProductor[];
 }
 
 const C = {
@@ -62,6 +70,13 @@ const C = {
   border: "rgba(61,107,63,0.12)",
 };
 
+// Página de rastreo personalizada (con marca) de SkydropX. Sirve para cualquier
+// paquetería: el cliente pega su número de guía y ve el estado en tiempo real.
+// Configurable por entorno (sandbox vs producción); default = sandbox.
+const SKYDROPX_TRACKING_URL =
+  process.env.NEXT_PUBLIC_SKYDROPX_TRACKING_URL ||
+  "https://sb-tracking.skydropx.com/es-MX/page/Mezcanea";
+
 /* ── Timeline ─────────────────────────────────────────────────────────────── */
 const TIMELINE = [
   { key: "pendiente",  label: "Recibido",  icon: Clock        },
@@ -72,13 +87,29 @@ const TIMELINE = [
 ];
 
 const ESTADO_INDEX: Record<string, number> = {
-  pendiente: 0, pagado: 1, preparando: 2, enviado: 3, entregado: 4, cancelado: 0,
+  pendiente: 0, pagado: 1, preparando: 2, label_purchased: 2, enviado: 3, entregado: 4, cancelado: 0,
 };
+
+// Estado que marca el productor → índice del timeline maestro
+const ESTADO_PRODUCTOR_INDEX: Record<string, number> = {
+  pendiente: 0, confirmado: 1, preparando: 2, enviado: 3, entregado: 4, cancelado: 0,
+};
+
+// Progreso de la paquetería (por envío). Mapea cada estado de carrier a un paso visible.
+const CARRIER_TIMELINE = [
+  { keys: ["label_purchased", "in_creation"], label: "Guía creada",   icon: FileText    },
+  { keys: ["recogido"],                       label: "En paquetería", icon: Package     },
+  { keys: ["en_transito"],                    label: "En camino",     icon: Truck       },
+  { keys: ["en_reparto"],                     label: "Por llegar",    icon: MapPin      },
+  { keys: ["entregado"],                      label: "Entregado",     icon: CheckCircle },
+];
 
 const ESTADO_BADGE: Record<string, { label: string; bg: string; text: string; dot: string; pulse: boolean }> = {
   pendiente:   { label: "Pendiente",           bg: "rgba(201,122,62,0.08)",  text: "#C97A3E", dot: "#C97A3E",  pulse: true  },
   pagado:      { label: "Pagado",              bg: "rgba(61,107,63,0.08)",   text: "#3D6B3F", dot: "#3D6B3F",  pulse: false },
+  confirmado:  { label: "Confirmado",          bg: "rgba(61,107,63,0.08)",   text: "#3D6B3F", dot: "#3D6B3F",  pulse: false },
   preparando:  { label: "Preparando",          bg: "rgba(168,194,107,0.10)", text: "#5E8A2E", dot: "#A8C26B",  pulse: true  },
+  label_purchased: { label: "Preparando",      bg: "rgba(168,194,107,0.10)", text: "#5E8A2E", dot: "#A8C26B",  pulse: true  },
   enviado:     { label: "Enviado",             bg: "rgba(59,130,246,0.08)",  text: "#2563EB", dot: "#3B82F6",  pulse: true  },
   entregado:   { label: "Entregado",           bg: "rgba(61,107,63,0.10)",   text: "#3D6B3F", dot: "#3D6B3F",  pulse: false },
   cancelado:   { label: "Cancelado",           bg: "rgba(100,100,100,0.08)", text: "#666",    dot: "#999",     pulse: false },
@@ -118,6 +149,45 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* ── Mini-timeline de paquetería (por envío) ───────────────────────────────── */
+function CarrierTimeline({ index, t }: { index: number; t: (s: string) => string }) {
+  const total = CARRIER_TIMELINE.length - 1;
+  return (
+    <div style={{ position: "relative", display: "flex", alignItems: "flex-start", padding: "2px 4px 0", marginBottom: "16px" }}>
+      <div style={{ position: "absolute", left: "20px", right: "20px", top: "13px", height: "2px", background: C.border, borderRadius: "2px" }} />
+      <div style={{
+        position: "absolute", left: "20px", top: "13px", height: "2px", borderRadius: "2px",
+        background: `linear-gradient(90deg, ${C.amber}, ${C.green})`,
+        transition: "width 600ms cubic-bezier(.4,0,.2,1)",
+        width: index <= 0 ? "0%" : `${(index / total) * 100}%`,
+      }} />
+      {CARRIER_TIMELINE.map((step, idx) => {
+        const Icon = step.icon;
+        const done = idx <= index;
+        const active = idx === index;
+        return (
+          <div key={step.label} style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "7px" }}>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              height: "26px", width: "26px", borderRadius: "50%",
+              border: `2px solid ${done ? C.green : C.border}`,
+              background: done ? C.green : C.white,
+              color: done ? C.white : C.muted,
+              transform: active ? "scale(1.12)" : "scale(1)",
+              transition: "all 250ms ease",
+            }}>
+              <Icon size={11} />
+            </div>
+            <p className="hidden sm:block" style={{ textAlign: "center", fontSize: "10px", fontWeight: 600, color: active ? C.green : done ? C.greenDark : C.muted, margin: 0, lineHeight: 1.2 }}>
+              {t(step.label)}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── Skeleton ────────────────────────────────────────────────────────────── */
 function Skeleton() {
   return (
@@ -147,6 +217,8 @@ function DetallePedidoContent() {
   const searchParams = useSearchParams();
   const numeroPedido = searchParams.get("n");
   const { token: authToken } = useAuth();
+  const { t, locale, currency } = useLocale();
+  const dateLocale = locale === "en" ? "en-US" : "es-MX";
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -215,18 +287,65 @@ function DetallePedidoContent() {
     }
   };
 
+  // Carga inicial + actualización en tiempo real del estado del pedido.
+  // Polling cada 15s mientras la pestaña esté visible; se detiene al llegar a un
+  // estado terminal (entregado/cancelado) y se pausa al cambiar de pestaña para no
+  // golpear el pooler de Neon innecesariamente.
   useEffect(() => {
     const id = params.id as string;
     if (!id) return;
-    api.pedidos
-      .getOne(id)
-      .then((data) => {
-        setPedido(data as Pedido);
-        const enviosConId = (data as Pedido).envios?.filter(e => e.id_envio) ?? [];
+
+    let cancelado = false;
+    let terminal = false;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const TERMINALES = ["entregado", "cancelado"];
+    const INTERVALO = 15000;
+
+    const cargar = async (primera: boolean) => {
+      try {
+        const data = (await api.pedidos.getOne(id)) as Pedido;
+        if (cancelado) return;
+        setPedido(data);
+        const enviosConId = data.envios?.filter(e => e.id_envio) ?? [];
         enviosConId.forEach(e => e.id_envio && fetchTracking(e.id_envio));
-      })
-      .catch(() => setError("No se pudo cargar el pedido."))
-      .finally(() => setCargando(false));
+        if (TERMINALES.includes(data.estado ?? "")) {
+          terminal = true;
+          detenerPolling();
+        }
+      } catch {
+        if (primera && !cancelado) setError("No se pudo cargar el pedido.");
+      } finally {
+        if (primera && !cancelado) setCargando(false);
+      }
+    };
+
+    const iniciarPolling = () => {
+      if (intervalId || terminal) return;
+      intervalId = setInterval(() => {
+        if (document.visibilityState === "visible") cargar(false);
+      }, INTERVALO);
+    };
+    function detenerPolling() {
+      if (intervalId) { clearInterval(intervalId); intervalId = null; }
+    }
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        if (!terminal) { cargar(false); iniciarPolling(); }
+      } else {
+        detenerPolling();
+      }
+    };
+
+    cargar(true);
+    iniciarPolling();
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelado = true;
+      detenerPolling();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
@@ -289,7 +408,7 @@ function DetallePedidoContent() {
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <FileText size={20} style={{ color: C.white }} />
             <h2 style={{ margin: 0, fontSize: "17px", fontWeight: "700", color: C.white, fontFamily: "var(--font-family-store)" }}>
-              Generar factura
+              {t("Generar factura")}
             </h2>
           </div>
           <button
@@ -310,16 +429,16 @@ function DetallePedidoContent() {
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "13px", fontWeight: "800", color: C.white, flexShrink: 0,
               }}>1</div>
-              <span style={{ fontSize: "15px", fontWeight: "700", color: C.greenDark }}>Datos del ticket</span>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: C.greenDark }}>{t("Datos del ticket")}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div>
-                <label style={labelStyle}>Código de facturación</label>
+                <label style={labelStyle}>{t("Código de facturación")}</label>
                 <input readOnly value={String(params.id)}
                   style={{ ...inputStyle, background: "#f9fafb", color: C.muted, fontFamily: "monospace", cursor: "default" }} />
               </div>
               <div>
-                <label style={labelStyle}>Monto por facturar</label>
+                <label style={labelStyle}>{t("Monto por facturar")}</label>
                 <input readOnly value={pedido ? `$${Number(pedido.total || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"}
                   style={{ ...inputStyle, background: "#f9fafb", color: C.muted, cursor: "default" }} />
               </div>
@@ -334,11 +453,11 @@ function DetallePedidoContent() {
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "13px", fontWeight: "800", color: C.white, flexShrink: 0,
               }}>2</div>
-              <span style={{ fontSize: "15px", fontWeight: "700", color: C.greenDark }}>Datos fiscales</span>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: C.greenDark }}>{t("Datos fiscales")}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div>
-                <label style={labelStyle}>RFC *</label>
+                <label style={labelStyle}>{t("RFC *")}</label>
                 <input
                   type="text" value={facturaRfc} placeholder="XAXX010101000"
                   onChange={(e) => setFacturaRfc(e.target.value.toUpperCase().slice(0, 13))}
@@ -346,7 +465,7 @@ function DetallePedidoContent() {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Persona *</label>
+                <label style={labelStyle}>{t("Persona *")}</label>
                 <div style={{ display: "flex", gap: "20px", marginTop: "4px" }}>
                   {(["fisica", "moral"] as const).map((tipo) => (
                     <label key={tipo} style={{ display: "flex", alignItems: "center", gap: "7px", cursor: "pointer", fontSize: "14px", color: C.text }}>
@@ -356,15 +475,15 @@ function DetallePedidoContent() {
                         onChange={() => setFacturaPersona(tipo)}
                         style={{ accentColor: C.green, width: "16px", height: "16px" }}
                       />
-                      {tipo === "fisica" ? "Física" : "Moral"}
+                      {tipo === "fisica" ? t("Física") : t("Moral")}
                     </label>
                   ))}
                 </div>
               </div>
               <div>
-                <label style={labelStyle}>Régimen fiscal *</label>
+                <label style={labelStyle}>{t("Régimen fiscal *")}</label>
                 <select value={facturaRegimen} onChange={(e) => setFacturaRegimen(e.target.value)} style={selectStyle}>
-                  <option value="">Selecciona régimen fiscal</option>
+                  <option value="">{t("Selecciona régimen fiscal")}</option>
                   <option value="601">601 - General de Ley Personas Morales</option>
                   <option value="603">603 - Personas Morales con Fines no Lucrativos</option>
                   <option value="605">605 - Sueldos y Salarios</option>
@@ -379,9 +498,9 @@ function DetallePedidoContent() {
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Uso de CFDI *</label>
+                <label style={labelStyle}>{t("Uso de CFDI *")}</label>
                 <select value={facturaUsoCfdi} onChange={(e) => setFacturaUsoCfdi(e.target.value)} style={selectStyle}>
-                  <option value="">Selecciona uso de CFDI</option>
+                  <option value="">{t("Selecciona uso de CFDI")}</option>
                   <option value="G01">G01 - Adquisición de mercancias</option>
                   <option value="G02">G02 - Devoluciones, descuentos o bonificaciones</option>
                   <option value="G03">G03 - Gastos en general</option>
@@ -408,37 +527,37 @@ function DetallePedidoContent() {
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "13px", fontWeight: "800", color: C.white, flexShrink: 0,
               }}>3</div>
-              <span style={{ fontSize: "15px", fontWeight: "700", color: C.greenDark }}>Datos personales</span>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: C.greenDark }}>{t("Datos personales")}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {facturaPersona === "fisica" ? (
                 <>
                   <div>
-                    <label style={labelStyle}>Nombre(s) *</label>
-                    <input type="text" value={facturaNombre} placeholder="Nombre(s)" onChange={(e) => setFacturaNombre(e.target.value)} style={inputStyle} />
+                    <label style={labelStyle}>{t("Nombre(s) *")}</label>
+                    <input type="text" value={facturaNombre} placeholder={t("Nombre(s)")} onChange={(e) => setFacturaNombre(e.target.value)} style={inputStyle} />
                   </div>
                   <div>
-                    <label style={labelStyle}>Apellido paterno *</label>
-                    <input type="text" value={facturaApPaterno} placeholder="Apellido paterno" onChange={(e) => setFacturaApPaterno(e.target.value)} style={inputStyle} />
+                    <label style={labelStyle}>{t("Apellido paterno *")}</label>
+                    <input type="text" value={facturaApPaterno} placeholder={t("Apellido paterno")} onChange={(e) => setFacturaApPaterno(e.target.value)} style={inputStyle} />
                   </div>
                   <div>
-                    <label style={labelStyle}>Apellido materno</label>
-                    <input type="text" value={facturaApMaterno} placeholder="Apellido materno" onChange={(e) => setFacturaApMaterno(e.target.value)} style={inputStyle} />
+                    <label style={labelStyle}>{t("Apellido materno")}</label>
+                    <input type="text" value={facturaApMaterno} placeholder={t("Apellido materno")} onChange={(e) => setFacturaApMaterno(e.target.value)} style={inputStyle} />
                   </div>
                 </>
               ) : (
                 <div>
-                  <label style={labelStyle}>Razón social *</label>
-                  <input type="text" value={facturaNombre} placeholder="Razón social" onChange={(e) => setFacturaNombre(e.target.value)} style={inputStyle} />
+                  <label style={labelStyle}>{t("Razón social *")}</label>
+                  <input type="text" value={facturaNombre} placeholder={t("Razón social")} onChange={(e) => setFacturaNombre(e.target.value)} style={inputStyle} />
                 </div>
               )}
               <div>
-                <label style={labelStyle}>C.P. *</label>
-                <input type="text" value={facturaCp} placeholder="Código postal" maxLength={5}
+                <label style={labelStyle}>{t("C.P. *")}</label>
+                <input type="text" value={facturaCp} placeholder={t("Código postal")} maxLength={5}
                   onChange={(e) => setFacturaCp(e.target.value.replace(/\D/g, "").slice(0, 5))} style={inputStyle} />
               </div>
               <div>
-                <label style={labelStyle}>Correo electrónico *</label>
+                <label style={labelStyle}>{t("Correo electrónico *")}</label>
                 <input type="email" value={facturaEmail} placeholder="tu@correo.com" onChange={(e) => setFacturaEmail(e.target.value)} style={inputStyle} />
               </div>
             </div>
@@ -446,7 +565,7 @@ function DetallePedidoContent() {
 
           {facturaEstado === "error" && (
             <p style={{ fontSize: "13px", color: "#DC2626", margin: 0, padding: "10px 14px", borderRadius: "8px", background: "#fef2f2", border: "1px solid #fecaca" }}>
-              {facturaError}
+              {t(facturaError)}
             </p>
           )}
 
@@ -460,7 +579,7 @@ function DetallePedidoContent() {
                 padding: "12px 18px", fontSize: "14px", fontWeight: "600", cursor: "pointer",
               }}
             >
-              Cancelar
+              {t("Cancelar")}
             </button>
             <button
               onClick={handleSolicitarFactura}
@@ -475,8 +594,8 @@ function DetallePedidoContent() {
               }}
             >
               {facturaEnviando
-                ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Enviando…</>
-                : <><FileText size={15} /> Generar factura</>}
+                ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> {t("Enviando…")}</>
+                : <><FileText size={15} /> {t("Generar factura")}</>}
             </button>
           </div>
         </div>
@@ -492,7 +611,7 @@ function DetallePedidoContent() {
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <AlertCircle size={20} style={{ color: "#E74C3C", flexShrink: 0 }} />
             <p style={{ fontSize: "14px", fontWeight: "500", color: C.text, margin: 0 }}>
-              {error || "Pedido no encontrado."}
+              {error ? t(error) : t("Pedido no encontrado.")}
             </p>
           </div>
           <button
@@ -504,7 +623,7 @@ function DetallePedidoContent() {
               cursor: "pointer",
             }}
           >
-            <ArrowLeft size={14} /> Volver
+            <ArrowLeft size={14} /> {t("Volver")}
           </button>
         </Card>
       </main>
@@ -515,8 +634,16 @@ function DetallePedidoContent() {
   const estado = pedido.estado || "pendiente";
   const estadoIndex = ESTADO_INDEX[estado] ?? 0;
   const badge = ESTADO_BADGE[estado] ?? ESTADO_BADGE.pendiente;
+  // El timeline también refleja lo que marca el productor: en multiproductor avanza al paso
+  // del productor MENOS adelantado (conservador para "Enviado/Entregado", pero deja encender
+  // "Preparando" en cuanto el/los productor(es) lo marcan).
+  const productores = pedido.pedido_productor ?? [];
+  const minProdIndex = productores.length
+    ? Math.min(...productores.map(p => ESTADO_PRODUCTOR_INDEX[p.estado ?? "pendiente"] ?? 0))
+    : 0;
+  const effectiveIndex = Math.max(estadoIndex, minProdIndex);
   const fecha = (pedido.fecha_creacion || pedido.creado_en)
-    ? new Date(pedido.fecha_creacion || pedido.creado_en!).toLocaleDateString("es-MX", {
+    ? new Date(pedido.fecha_creacion || pedido.creado_en!).toLocaleDateString(dateLocale, {
         day: "2-digit", month: "long", year: "numeric",
       })
     : "—";
@@ -626,7 +753,7 @@ function DetallePedidoContent() {
         onMouseLeave={(e) => { e.currentTarget.style.color = C.copper; }}
       >
         <ArrowLeft size={14} />
-        Mis Compras
+        {t("Mis Compras")}
       </Link>
 
       {/* ── Header ── */}
@@ -645,7 +772,7 @@ function DetallePedidoContent() {
               fontSize: "clamp(20px, 4vw, 26px)",
               fontWeight: "700", color: C.greenDark, margin: 0,
             }}>
-              Pedido{" "}
+              {t("Pedido")}{" "}
               <span style={{ fontFamily: "monospace", color: C.copper }}>#{numeroPedido ?? id}</span>
             </h1>
             <span style={{
@@ -659,7 +786,7 @@ function DetallePedidoContent() {
                 height: "6px", width: "6px", borderRadius: "50%", background: badge.dot,
                 animation: badge.pulse ? "dotPulse 2s ease infinite" : "none",
               }} />
-              {badge.label}
+              {t(badge.label)}
             </span>
           </div>
           <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: C.muted }}>
@@ -669,7 +796,7 @@ function DetallePedidoContent() {
         </div>
 
         <div style={{ textAlign: "right" }}>
-          <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.copper, margin: "0 0 2px 0" }}>Total</p>
+          <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.copper, margin: "0 0 2px 0" }}>{t("Total")}</p>
           <p style={{ fontFamily: "monospace", fontSize: "26px", fontWeight: "700", color: C.greenDark, margin: 0, lineHeight: 1 }}>
             ${formatPrice(Number(pedido.total || 0), { showCurrency: false })}
             <span style={{ marginLeft: "6px", fontSize: "13px", fontWeight: "400", color: C.muted }}>
@@ -682,7 +809,7 @@ function DetallePedidoContent() {
       {/* ── Timeline ── */}
       <div className="fade" style={{ marginBottom: "20px", animationDelay: "60ms" }}>
         <Card accentColor={C.copper}>
-          <SectionTitle>Estado del pedido</SectionTitle>
+          <SectionTitle>{t("Estado del pedido")}</SectionTitle>
           <div style={{ position: "relative", display: "flex", alignItems: "flex-start", padding: "0 8px" }}>
             {/* Track background */}
             <div style={{
@@ -695,15 +822,15 @@ function DetallePedidoContent() {
               height: "2px", borderRadius: "2px",
               background: `linear-gradient(90deg, ${C.copper}, ${C.amber})`,
               transition: "width 700ms cubic-bezier(.4,0,.2,1)",
-              width: estadoIndex === 0
+              width: effectiveIndex === 0
                 ? "0%"
-                : `calc(${(estadoIndex / timelineTotal) * 100}% - 0px)`,
+                : `calc(${(effectiveIndex / timelineTotal) * 100}% - 0px)`,
             }} />
 
             {TIMELINE.map((step, idx) => {
               const Icon = step.icon;
-              const done   = idx <= estadoIndex;
-              const active = idx === estadoIndex;
+              const done   = idx <= effectiveIndex;
+              const active = idx === effectiveIndex;
               return (
                 <div key={step.key} style={{
                   position: "relative", zIndex: 1, flex: 1,
@@ -729,7 +856,7 @@ function DetallePedidoContent() {
                       margin: 0,
                     }}
                   >
-                    {step.label}
+                    {t(step.label)}
                   </p>
                 </div>
               );
@@ -739,10 +866,10 @@ function DetallePedidoContent() {
       </div>
 
       {/* ── Sección de envío y tracking ── */}
-      {(pedido.estado === "pagado" || pedido.estado === "preparando" || pedido.estado === "enviado" || pedido.estado === "entregado") && (
+      {(pedido.estado === "pagado" || pedido.estado === "preparando" || pedido.estado === "label_purchased" || pedido.estado === "enviado" || pedido.estado === "entregado") && (
         <div className="fade" style={{ marginBottom: "20px", animationDelay: "90ms" }}>
           <Card accentColor={C.amber}>
-            <SectionTitle>Seguimiento de envío</SectionTitle>
+            <SectionTitle>{t("Seguimiento de envío")}</SectionTitle>
 
             {/* Sin ningún envío creado todavía */}
             {(pedido.envios?.length ?? 0) === 0 && (
@@ -752,7 +879,7 @@ function DetallePedidoContent() {
                 marginBottom: "16px",
               }}>
                 <Clock size={14} style={{ color: C.copper, flexShrink: 0 }} />
-                <span style={{ fontSize: "13px", color: C.copper }}>Estamos procesando tu pedido, pronto recibirás el número de guía.</span>
+                <span style={{ fontSize: "13px", color: C.copper }}>{t("Estamos procesando tu pedido, pronto recibirás el número de guía.")}</span>
               </div>
             )}
 
@@ -766,8 +893,8 @@ function DetallePedidoContent() {
                 <Loader2 size={14} style={{ color: C.copper, animation: "spin 1s linear infinite", flexShrink: 0 }} />
                 <span style={{ fontSize: "13px", color: C.copper }}>
                   {enviosConGuia.length > 0
-                    ? `Preparando ${enviosSinGuia.length} paquete${enviosSinGuia.length > 1 ? "s" : ""} adicional${enviosSinGuia.length > 1 ? "es" : ""}...`
-                    : "Preparando tu envío..."}
+                    ? `${t("Preparando")} ${enviosSinGuia.length} ${enviosSinGuia.length > 1 ? t("paquetes adicionales...") : t("paquete adicional...")}`
+                    : t("Preparando tu envío...")}
                 </span>
               </div>
             )}
@@ -778,6 +905,8 @@ function DetallePedidoContent() {
               const trk = trackingMap[id];
               const isLoading = trackingLoadingIds.has(id);
               const isCopied = copiedId === id;
+              const carrierEstado = (trk?.estado_actual ?? envio.estado ?? "").toLowerCase();
+              const carrierIndex = CARRIER_TIMELINE.findIndex(s => s.keys.includes(carrierEstado));
               return (
                 <div key={id} style={{ marginBottom: envioIdx < enviosConGuia.length - 1 ? "20px" : "0" }}>
                   {/* Separador entre paquetes */}
@@ -786,7 +915,7 @@ function DetallePedidoContent() {
                   )}
                   {enviosConGuia.length > 1 && (
                     <p style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px", color: C.muted, margin: "0 0 10px 0" }}>
-                      Paquete {envioIdx + 1}
+                      {t("Paquete")} {envioIdx + 1}
                     </p>
                   )}
 
@@ -801,14 +930,14 @@ function DetallePedidoContent() {
                       <Truck size={16} style={{ color: C.amber }} />
                     </div>
                     <div>
-                      <p style={{ fontSize: "12px", color: C.muted, margin: 0 }}>Número de guía</p>
+                      <p style={{ fontSize: "12px", color: C.muted, margin: 0 }}>{t("Número de guía")}</p>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <p style={{ fontSize: "14px", fontWeight: "700", fontFamily: "monospace", color: C.text, margin: 0 }}>
                           {envio.numero_rastreo}
                         </p>
                         <button
                           onClick={() => copiarTracking(envio.numero_rastreo!, id)}
-                          title="Copiar número de rastreo"
+                          title={t("Copiar número de rastreo")}
                           style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: isCopied ? C.green : C.muted }}
                         >
                           {isCopied ? <CheckCircle size={13} /> : <Copy size={13} />}
@@ -829,12 +958,37 @@ function DetallePedidoContent() {
                               background: badge.dot, flexShrink: 0,
                               animation: badge.pulse ? "pulse 1.5s ease-in-out infinite" : "none",
                             }} />
-                            {badge.label}
+                            {t(badge.label)}
                           </span>
                         );
                       })()}
                     </div>
                   </div>
+
+                  {/* Rastreo externo: página de SkydropX (acción primaria) */}
+                  <div style={{ marginBottom: "16px" }}>
+                    <a
+                      href={SKYDROPX_TRACKING_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: "8px",
+                        borderRadius: "10px", padding: "10px 16px",
+                        fontSize: "13px", fontWeight: "700", textDecoration: "none",
+                        color: C.white, background: `linear-gradient(135deg, ${C.green}, ${C.greenDark})`,
+                        boxShadow: "0 2px 8px rgba(61,107,63,0.25)",
+                      }}
+                    >
+                      <MapPin size={14} />
+                      {t("Rastrear mi paquete")}
+                    </a>
+                    <p style={{ fontSize: "12px", color: C.muted, margin: "8px 0 0 0", lineHeight: 1.4 }}>
+                      {t("Copia tu número de guía y pégalo en la página de rastreo para ver el estado en tiempo real.")}
+                    </p>
+                  </div>
+
+                  {/* Mini-timeline de paquetería */}
+                  {carrierIndex >= 0 && <CarrierTimeline index={carrierIndex} t={t} />}
 
                   {/* Botón refrescar */}
                   <button
@@ -848,14 +1002,14 @@ function DetallePedidoContent() {
                     }}
                   >
                     <RefreshCw size={12} style={{ animation: isLoading ? "spin 1s linear infinite" : "none" }} />
-                    {isLoading ? "Actualizando..." : "Actualizar seguimiento"}
+                    {isLoading ? t("Actualizando...") : t("Actualizar seguimiento")}
                   </button>
 
                   {/* Timeline de eventos */}
                   {trk?.eventos && trk.eventos.length > 0 && (
                     <div>
                       <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase", color: C.muted, margin: "0 0 12px 0" }}>
-                        Historial de eventos
+                        {t("Historial de eventos")}
                       </p>
                       <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
                         {(trk.eventos as Array<{ descripcion: string; estado: string; fecha: string; ubicacion?: string }>).map((evento, idx) => {
@@ -884,7 +1038,7 @@ function DetallePedidoContent() {
                                     </span>
                                   )}
                                   <span style={{ fontSize: "11px", color: C.muted }}>
-                                    {new Date(evento.fecha).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
+                                    {new Date(evento.fecha).toLocaleString(dateLocale, { dateStyle: "short", timeStyle: "short" })}
                                   </span>
                                 </div>
                               </div>
@@ -904,7 +1058,7 @@ function DetallePedidoContent() {
                     }}>
                       <CheckCircle size={14} style={{ color: C.green, flexShrink: 0 }} />
                       <span style={{ fontSize: "13px", color: C.greenDark }}>
-                        Entrega estimada: <strong>{new Date(trk.fecha_entrega_estimada).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}</strong>
+                        {t("Entrega estimada:")} <strong>{new Date(trk.fecha_entrega_estimada).toLocaleDateString(dateLocale, { weekday: "long", day: "numeric", month: "long" })}</strong>
                       </span>
                     </div>
                   )}
@@ -927,7 +1081,7 @@ function DetallePedidoContent() {
         <div style={{ padding: "22px", borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
             <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.6px", textTransform: "uppercase", color: C.copper, margin: 0 }}>
-              Productos
+              {t("Productos")}
             </p>
             {pedido.detalle_pedido && pedido.detalle_pedido.length > 0 && (
               <span style={{
@@ -945,7 +1099,7 @@ function DetallePedidoContent() {
                 const imgUrl = item.productos?.producto_imagenes?.[0]?.url
                   || item.productos?.imagen_principal_url
                   || null;
-                const nombre = item.productos?.nombre || `Producto #${item.id_producto}`;
+                const nombre = item.productos?.nombre || `${t("Producto")} #${item.id_producto}`;
                 const lineTotal = Number(item.precio_compra) * item.cantidad;
                 return (
                   <div key={idx} style={{
@@ -984,7 +1138,7 @@ function DetallePedidoContent() {
             </div>
           ) : (
             <p style={{ padding: "16px 0", textAlign: "center", fontSize: "14px", color: C.muted, margin: 0 }}>
-              Sin información de productos.
+              {t("Sin información de productos.")}
             </p>
           )}
         </div>
@@ -1008,34 +1162,34 @@ function DetallePedidoContent() {
           return (
             <div style={{ padding: "22px", borderBottom: `1px solid ${C.border}` }}>
               <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.6px", textTransform: "uppercase", color: C.copper, margin: "0 0 16px 0" }}>
-                Resumen de costos
+                {t("Resumen de costos")}
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <div style={rowStyle}>
-                  <span style={labelStyle}>Subtotal</span>
+                  <span style={labelStyle}>{t("Subtotal")}</span>
                   <span style={valueStyle}>${formatPrice(subtotal, { showCurrency: false })}</span>
                 </div>
                 {descuento > 0 && (
                   <div style={rowStyle}>
-                    <span style={labelStyle}>Descuento</span>
+                    <span style={labelStyle}>{t("Descuento")}</span>
                     <span style={{ ...valueStyle, color: C.green }}>−${formatPrice(descuento, { showCurrency: false })}</span>
                   </div>
                 )}
                 {impuestos > 0 && (
                   <div style={rowStyle}>
-                    <span style={labelStyle}>Impuestos</span>
+                    <span style={labelStyle}>{t("Impuestos")}</span>
                     <span style={valueStyle}>${formatPrice(impuestos, { showCurrency: false })}</span>
                   </div>
                 )}
                 <div style={rowStyle}>
-                  <span style={labelStyle}>Envío</span>
+                  <span style={labelStyle}>{t("Envío")}</span>
                   <span style={{ ...valueStyle, color: costoEnvio === 0 ? C.green : C.text }}>
-                    {costoEnvio === 0 ? "Gratis" : `$${formatPrice(costoEnvio, { showCurrency: false })}`}
+                    {costoEnvio === 0 ? t("Gratis") : `$${formatPrice(costoEnvio, { showCurrency: false })}`}
                   </span>
                 </div>
                 <div style={{ height: "1px", background: C.border, margin: "4px 0" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <span style={{ fontSize: "15px", fontWeight: "700", color: C.text }}>Total</span>
+                  <span style={{ fontSize: "15px", fontWeight: "700", color: C.text }}>{t("Total")}</span>
                   <span style={{ fontFamily: "monospace", fontSize: "20px", fontWeight: "700", color: C.copper }}>
                     ${formatPrice(total, { showCurrency: false })}
                     <span style={{ marginLeft: "4px", fontSize: "12px", fontWeight: "400", color: C.muted }}>{moneda}</span>
@@ -1044,9 +1198,14 @@ function DetallePedidoContent() {
                 <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                   <ShieldCheck size={13} style={{ color: C.border, flexShrink: 0 }} />
                   <span style={{ fontSize: "12px", color: C.muted }}>
-                    {impuestos > 0 ? "Pago protegido" : "Pago protegido · IVA incluido"}
+                    {impuestos > 0 ? t("Pago protegido") : t("Pago protegido · IVA incluido")}
                   </span>
                 </div>
+                {currency !== moneda && (
+                  <div style={{ fontSize: "11px", color: C.muted, marginTop: "2px" }}>
+                    {t("Cobrado en")} {moneda}
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -1056,7 +1215,7 @@ function DetallePedidoContent() {
         {direccion && (
           <div style={{ padding: "22px", borderBottom: `1px solid ${C.border}` }}>
             <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.6px", textTransform: "uppercase", color: C.copper, margin: "0 0 16px 0" }}>
-              Dirección de envío
+              {t("Dirección de envío")}
             </p>
             <div style={{ display: "flex", gap: "12px" }}>
               <div style={{
@@ -1086,7 +1245,7 @@ function DetallePedidoContent() {
         {/* Facturación */}
         <div style={{ padding: "22px" }}>
           <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.6px", textTransform: "uppercase", color: C.copper, margin: "0 0 16px 0" }}>
-            Facturación
+            {t("Facturación")}
           </p>
           {facturaEstado === "ok" ? (
             <div style={{
@@ -1096,7 +1255,7 @@ function DetallePedidoContent() {
               border: "1px solid rgba(61,107,63,0.2)", padding: "12px 14px",
             }}>
               <CheckCircle size={15} />
-              Solicitud enviada. Revisa tu correo{facturaEmail && <strong> {facturaEmail}</strong>} (también en spam).
+              {t("Solicitud enviada. Revisa tu correo")}{facturaEmail && <strong> {facturaEmail}</strong>} {t("(también en spam).")}
             </div>
           ) : (
             <button
@@ -1112,7 +1271,7 @@ function DetallePedidoContent() {
               onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
             >
               <FileText size={15} />
-              Solicitar factura (CFDI)
+              {t("Solicitar factura (CFDI)")}
             </button>
           )}
         </div>
@@ -1349,7 +1508,7 @@ function DetallePedidoContent() {
         whiteSpace: "nowrap",
       }}>
         <CheckCircle size={18} />
-        ¡Factura enviada! Revisa tu correo{facturaEmail ? ` (${facturaEmail})` : ""}.
+        {t("¡Factura enviada! Revisa tu correo")}{facturaEmail ? ` (${facturaEmail})` : ""}.
         <button
           onClick={() => setToastFactura(false)}
           style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "6px", cursor: "pointer", padding: "2px 8px", color: C.white, marginLeft: "6px", fontSize: "13px" }}

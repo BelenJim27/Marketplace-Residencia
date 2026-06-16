@@ -111,7 +111,7 @@ export class AuthService {
       });
 
       try {
-        await this.emailService.sendWelcomeEmail(user.email, user.nombre);
+        await this.emailService.sendWelcomeEmail(user.email, user.nombre, user.idioma_preferido === 'en' ? 'en' : 'es');
       } catch (emailError) {
         this.logger.warn(`Error sending welcome email: ${(emailError as Error)?.message}`);
       }
@@ -191,6 +191,11 @@ export class AuthService {
 
     const user = await this.prisma.usuarios.findUnique({
       where: { id_usuario: payload.sub },
+      // Select explícito: un findUnique sin select pide TODAS las columnas del
+      // schema y revienta si alguna (recién añadida) aún no existe en la BD
+      // (drift de migración). issueTokens sólo necesita id_usuario; aquí
+      // validamos eliminado_en y version_token.
+      select: { id_usuario: true, eliminado_en: true, version_token: true },
     });
 
     if (!user || user.eliminado_en) {
@@ -248,7 +253,11 @@ export class AuthService {
       PASSWORD_RESET_EXPIRES_IN,
     );
 
-    await this.emailService.sendPasswordResetEmail(email, resetToken);
+    await this.emailService.sendPasswordResetEmail(
+      email,
+      resetToken,
+      user.idioma_preferido === 'en' ? 'en' : 'es',
+    );
 
     await this.logAuthEvent('password_reset_request', user.id_usuario, { email: user.email });
 
@@ -341,9 +350,26 @@ export class AuthService {
   }
 
   // ✅ Usa UsuarioPayload en lugar de usuarios importado directamente
-  private async issueTokens(user: UsuarioPayload): Promise<AuthResponseDto> {
+  private async issueTokens(user: Pick<UsuarioPayload, 'id_usuario'>): Promise<AuthResponseDto> {
     const freshUser = await this.prisma.usuarios.findUnique({
       where: { id_usuario: user.id_usuario },
+      // Select explícito de los campos que arma la respuesta: sin select Prisma
+      // pide todas las columnas del schema y rompe si una (recién añadida) aún
+      // no existe en la BD.
+      select: {
+        id_usuario: true,
+        nombre: true,
+        email: true,
+        apellido_paterno: true,
+        apellido_materno: true,
+        telefono: true,
+        foto_url: true,
+        idioma_preferido: true,
+        moneda_preferida: true,
+        version_token: true,
+        fecha_registro: true,
+        eliminado_en: true,
+      },
     });
 
     if (!freshUser || freshUser.eliminado_en) {
@@ -384,7 +410,8 @@ export class AuthService {
       },
     });
 
-    const biografia = (freshUser as UsuarioPayload & { biografia?: string | null }).biografia ?? null;
+    // biografia no es columna de usuarios (vive en productores); se mantiene null.
+    const biografia: string | null = null;
 
     return {
       user: {

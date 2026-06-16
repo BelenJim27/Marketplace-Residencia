@@ -230,6 +230,9 @@ export class AdminService {
           stock,
           categoria: cats[0] ?? null,
           categorias: cats,
+          categorias_full: (item.categorias_productos ?? [])
+            .map((cp: any) => ({ id_categoria: Number(cp.categorias?.id_categoria), nombre: cp.categorias?.nombre }))
+            .filter((c: any) => c.id_categoria && !isNaN(c.id_categoria)),
           id_tienda: item.id_tienda,
           id_lote: item.id_lote,
         };

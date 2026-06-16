@@ -1,4 +1,5 @@
 import * as dotenv from 'dotenv';
+import { randomUUID } from 'crypto';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { join, resolve } from 'path';
@@ -15,7 +16,39 @@ dotenv.config({ path: resolve(process.cwd(), '.env'), override: false });
   return Number(this);
 };
  
+/**
+ * Valida configuración crítica antes de levantar el servidor. En producción
+ * abortamos si faltan secretos o las URLs públicas no usan HTTPS; así un
+ * despliegue mal configurado falla en el arranque y no en la primera request.
+ */
+function assertProductionConfig() {
+  const isProd = process.env.NODE_ENV === 'production';
+
+  // Secretos JWT obligatorios en todo entorno; el webhook de Stripe solo en prod.
+  const requiredSecrets = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
+  if (isProd) requiredSecrets.push('STRIPE_WEBHOOK_SECRET');
+  const missing = requiredSecrets.filter((k) => !process.env[k]);
+  if (missing.length) {
+    throw new Error(`[config] Faltan variables de entorno requeridas: ${missing.join(', ')}`);
+  }
+
+  if (isProd) {
+    const httpsVars = ['FRONTEND_URL', 'GOOGLE_REDIRECT_URI'];
+    const notHttps = httpsVars.filter((k) => {
+      const v = process.env[k];
+      return v && !v.startsWith('https://');
+    });
+    if (notHttps.length) {
+      throw new Error(`[config] En producción estas URLs deben usar HTTPS: ${notHttps.join(', ')}`);
+    }
+    if (!process.env.CORS_ORIGINS) {
+      throw new Error('[config] CORS_ORIGINS es obligatorio en producción (no se permite el default localhost).');
+    }
+  }
+}
+
 async function bootstrap() {
+  assertProductionConfig();
   const { AppModule } = await import('./app.module');
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
@@ -23,19 +56,50 @@ async function bootstrap() {
   });
   app.use('/uploads', expressStatic(join(__dirname, '..', 'uploads')));
 
+  // Request ID para trazabilidad: reutiliza X-Request-ID entrante (de un proxy/LB) o
+  // genera uno. Disponible en req.id y devuelto en la respuesta para correlacionar logs
+  // del backend con un reporte del usuario/frontend.
+  app.use((req: any, res: any, next: any) => {
+    const incoming = req.headers['x-request-id'];
+    const id = typeof incoming === 'string' && incoming.trim() ? incoming.trim().slice(0, 128) : randomUUID();
+    req.id = id;
+    res.setHeader('X-Request-ID', id);
+    next();
+  });
+
+  // Cabeceras de seguridad (equivalente ligero a helmet, sin dependencia nueva).
+  // No se fija CSP estricta aquí para no romper Swagger UI (/api/docs); la CSP de
+  // cara al navegador se aplica en el frontend (next.config). CORP se omite para
+  // que /uploads sea embebible desde el front en otro origen.
+  const isProdHeaders = process.env.NODE_ENV === 'production';
+  app.use((_req: any, res: any, next: any) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-DNS-Prefetch-Control', 'off');
+    res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+    if (isProdHeaders) {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+  });
+
   const rawOrigins = process.env.CORS_ORIGINS ?? 'http://localhost:3000';
   const allowedOrigins = rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
-  const isProd = process.env.NODE_ENV === 'production';
+
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      if (isProd && !origin) {
-        callback(new Error('Origin header required'));
-        return;
-      }
+      // Sin cabecera Origin (health checks, navegaciones directas, favicon,
+      // peticiones server-to-server): permitir. CORS solo restringe las peticiones
+      // cross-origin del navegador, que SÍ envían Origin; exigirla generaba 500s
+      // espurios en los health checks y no aporta seguridad real.
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
+        // Origen no permitido: no enviamos Access-Control-Allow-Origin. No lanzamos
+        // un Error (evita 500 con stack en el log); el navegador bloquea la respuesta
+        // por su cuenta al faltar la cabecera.
+        callback(null, false);
       }
     },
     credentials: true,

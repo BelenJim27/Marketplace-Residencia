@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { CheckCircle, ShoppingBag, Package, FileText, Loader2, Truck } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
+import { useLocale } from "@/context/LocaleContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 
@@ -25,6 +26,7 @@ function PagoExitosoContent() {
   const pedidoId = searchParams.get("pedido");
   const numeroOrden = searchParams.get("num");
   const { limpiarCarrito } = useCarrito();
+  const { t } = useLocale();
 
   const [numeroRastreo, setNumeroRastreo] = useState<string | null>(null);
   const [estadoEnvio, setEstadoEnvio] = useState<string | null>(null);
@@ -170,17 +172,17 @@ function PagoExitosoContent() {
         </div>
 
         <h1 style={{ fontFamily: "var(--font-family-store)", fontSize: "30px", fontWeight: "700", color: C.text, margin: "0 0 8px 0" }}>
-          ¡Pago exitoso!
+          {t("¡Pago exitoso!")}
         </h1>
 
         {pedidoId && (
           <p style={{ fontSize: "14px", fontWeight: "700", color: C.copper, fontFamily: "monospace", margin: "0 0 12px 0" }}>
-            Pedido #{numeroOrden ?? pedidoId}
+            {t("Pedido")} #{numeroOrden ?? pedidoId}
           </p>
         )}
 
         <p style={{ color: C.muted, fontSize: "14px", lineHeight: "1.65", margin: "0 0 24px 0" }}>
-          Tu pedido está siendo procesado. Recibirás una confirmación en tu correo electrónico.
+          {t("Tu pedido está siendo procesado. Recibirás una confirmación en tu correo electrónico.")}
         </p>
 
         <div style={{ height: "1px", background: C.border, margin: "0 0 20px 0" }} />
@@ -195,7 +197,7 @@ function PagoExitosoContent() {
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
               <Truck size={15} style={{ color: C.green, flexShrink: 0 }} />
               <span style={{ fontSize: "12px", fontWeight: "700", color: C.green, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                Tu envío
+                {t("Tu envío")}
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
@@ -206,12 +208,12 @@ function PagoExitosoContent() {
                 onClick={() => navigator.clipboard.writeText(numeroRastreo)}
                 style={{ fontSize: "11px", color: C.green, background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}
               >
-                Copiar
+                {t("Copiar")}
               </button>
             </div>
             {estadoEnvio && (
               <div style={{ fontSize: "12px", color: C.muted, marginTop: "4px" }}>
-                Estado: {estadoEnvio}
+                {t("Estado:")} {estadoEnvio}
               </div>
             )}
           </div>
@@ -226,7 +228,7 @@ function PagoExitosoContent() {
             display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
           }}>
             <CheckCircle size={15} />
-            Solicitud de factura enviada. Revisa tu correo {email && <strong>{email}</strong>} (también en spam).
+            {t("Solicitud de factura enviada. Revisa tu correo")} {email && <strong>{email}</strong>} {t("(también en spam).")}
           </div>
         ) : (
           <div style={{ marginBottom: "20px", textAlign: "left" }}>
@@ -241,18 +243,18 @@ function PagoExitosoContent() {
                 }}
               >
                 <FileText size={15} />
-                Solicitar factura (CFDI)
+                {t("Solicitar factura (CFDI)")}
               </button>
             ) : (
               <div style={{ border: `1px solid ${C.copper}33`, borderRadius: "12px", padding: "16px", background: `${C.copper}05` }}>
                 <p style={{ fontSize: "13px", fontWeight: "700", color: C.copper, margin: "0 0 12px 0" }}>
-                  Datos para factura
+                  {t("Datos para factura")}
                 </p>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   <div>
                     <label style={{ fontSize: "11px", fontWeight: "600", color: C.muted, display: "block", marginBottom: "4px" }}>
-                      CORREO PARA RECIBIR LA FACTURA *
+                      {t("CORREO PARA RECIBIR LA FACTURA *")}
                     </label>
                     <input
                       type="email"
@@ -265,7 +267,7 @@ function PagoExitosoContent() {
 
                   <div>
                     <label style={{ fontSize: "11px", fontWeight: "600", color: C.muted, display: "block", marginBottom: "4px" }}>
-                      RFC
+                      {t("RFC")}
                     </label>
                     <input
                       type="text"
@@ -278,20 +280,20 @@ function PagoExitosoContent() {
 
                   <div>
                     <label style={{ fontSize: "11px", fontWeight: "600", color: C.muted, display: "block", marginBottom: "4px" }}>
-                      NOMBRE / RAZÓN SOCIAL
+                      {t("NOMBRE / RAZÓN SOCIAL")}
                     </label>
                     <input
                       type="text"
                       value={nombre}
                       onChange={e => setNombre(e.target.value)}
-                      placeholder="Nombre completo o razón social"
+                      placeholder={t("Nombre completo o razón social")}
                       style={{ width: "100%", borderRadius: "8px", border: `1px solid ${C.border}`, padding: "9px 12px", fontSize: "13px", boxSizing: "border-box" }}
                     />
                   </div>
 
                   <div>
                     <label style={{ fontSize: "11px", fontWeight: "600", color: C.muted, display: "block", marginBottom: "4px" }}>
-                      USO CFDI
+                      {t("USO CFDI")}
                     </label>
                     <select
                       value={usoCfdi}
@@ -308,7 +310,7 @@ function PagoExitosoContent() {
 
                   {facturaEstado === "error" && (
                     <p style={{ fontSize: "12px", color: "#DC2626", margin: 0 }}>
-                      {facturaError || "Error al enviar. Inténtalo de nuevo."}
+                      {facturaError ? t(facturaError) : t("Error al enviar. Inténtalo de nuevo.")}
                     </p>
                   )}
 
@@ -323,7 +325,7 @@ function PagoExitosoContent() {
                       display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
                     }}
                   >
-                    {enviando ? <><Loader2 size={14} className="animate-spin" /> Enviando…</> : "Enviar solicitud de factura"}
+                    {enviando ? <><Loader2 size={14} className="animate-spin" /> {t("Enviando…")}</> : t("Enviar solicitud de factura")}
                   </button>
                 </div>
               </div>
@@ -343,7 +345,7 @@ function PagoExitosoContent() {
             }}
           >
             <Package size={18} />
-            Ver detalle del pedido
+            {t("Ver detalle del pedido")}
           </Link>
           <Link
             href="/tienda/compras"
@@ -356,7 +358,7 @@ function PagoExitosoContent() {
             }}
           >
             <Package size={17} />
-            Ver mis compras
+            {t("Ver mis compras")}
           </Link>
           <Link
             href="/cliente/producto"
@@ -369,7 +371,7 @@ function PagoExitosoContent() {
             }}
           >
             <ShoppingBag size={17} />
-            Seguir comprando
+            {t("Seguir comprando")}
           </Link>
         </div>
       </div>

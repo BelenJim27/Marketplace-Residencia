@@ -132,14 +132,15 @@ async function seedTasasCambio() {
 const MEZCAL_CATEGORIA_SLUG = 'mezcal';
 
 const TASAS_IMPUESTO = [
-  // IVA México 16% — precios son netos, se calcula y muestra en checkout
+  // IVA México 16% — INCLUIDO en el precio del producto (el productor captura
+  // el precio con IVA dentro). No se suma como cargo separado en checkout.
   {
     pais_iso2: 'MX',
     id_categoria_slug: null,
     tipo: 'IVA',
-    nombre: 'IVA México 16%',
+    nombre: 'IVA México 16% (incluido en precio)',
     tasa_porcentaje: '0.1600',
-    incluido_en_precio: false,
+    incluido_en_precio: true,
     activo: true,
     vigente_desde: new Date('2024-01-01'),
   },
@@ -202,7 +203,17 @@ async function seedTasasImpuesto() {
     });
 
     if (existing) {
-      console.log(`  ✓ Already exists: ${t.tipo} ${t.pais_iso2}${id_categoria ? `/cat:${id_categoria}` : ''} → ${(Number(t.tasa_porcentaje) * 100).toFixed(2)}%`);
+      // Re-correr el seed sincroniza incluido_en_precio / nombre con la definición
+      // actual (p. ej. migrar IVA MX a incluido_en_precio = true en filas ya creadas).
+      if (existing.incluido_en_precio !== t.incluido_en_precio || existing.nombre !== t.nombre) {
+        await prisma.tasas_impuesto.update({
+          where: { id_tasa: existing.id_tasa },
+          data: { incluido_en_precio: t.incluido_en_precio, nombre: t.nombre },
+        });
+        console.log(`  ↻ Updated: ${t.tipo} ${t.pais_iso2}${id_categoria ? `/cat:${id_categoria}` : ''} → incluido_en_precio=${t.incluido_en_precio}`);
+      } else {
+        console.log(`  ✓ Already exists: ${t.tipo} ${t.pais_iso2}${id_categoria ? `/cat:${id_categoria}` : ''} → ${(Number(t.tasa_porcentaje) * 100).toFixed(2)}%`);
+      }
     } else {
       await prisma.tasas_impuesto.create({
         data: {

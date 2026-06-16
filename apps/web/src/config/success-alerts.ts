@@ -35,6 +35,7 @@ export const SUCCESS_ALERT_CONFIG: Record<string, SuccessAlertConfig> = {
   producto: {
     registrado: "Producto registrado correctamente.",
     actualizado: "Producto actualizado correctamente.",
+    eliminado: "Producto eliminado correctamente.",
   },
 
   productor: {

@@ -49,7 +49,10 @@ export class PayoutsService {
    * la transferencia y marca como 'procesado'; para otros, deja como 'pendiente'.
    * Persiste id_payout en cada pedido_productor incluido.
    */
-  async generar(dto: GenerarPayoutsDto) {
+  async generar(dto: GenerarPayoutsDto, aprobadoPor?: string) {
+    // Sólo guardar aprobado_por si es un UUID válido (la columna es @db.Uuid).
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const aprobado_por = aprobadoPor && UUID_RE.test(aprobadoPor) ? aprobadoPor : null;
     const desde = new Date(dto.desde);
     const hasta = new Date(dto.hasta);
     if (isNaN(desde.getTime()) || isNaN(hasta.getTime())) {
@@ -88,36 +91,64 @@ export class PayoutsService {
       for (const grupo of grupos.values()) {
         const id_productor = grupo[0].id_productor;
         const moneda = grupo[0].moneda!;
-        const monto_bruto = grupo.reduce((s, pp) => s + Number(pp.subtotal_bruto), 0);
-        const monto_comision = grupo.reduce((s, pp) => s + Number(pp.comision_marketplace), 0);
-        const monto_neto = grupo.reduce((s, pp) => s + Number(pp.monto_neto_productor), 0);
 
+        // Crear el payout primero (montos provisionales) y luego RECLAMAR atómicamente
+        // sólo las filas que aún tengan id_payout = null. Esto evita doble pago si el
+        // flujo automático (triggerPayoutForProductor al entregar) reclamó alguna fila
+        // entre el SELECT de elegibles y este UPDATE.
         const payout = await tx.payouts.create({
           data: {
             id_productor,
             moneda,
-            monto_bruto: monto_bruto.toFixed(2),
-            monto_comision: monto_comision.toFixed(2),
-            monto_neto: monto_neto.toFixed(2),
+            monto_bruto: '0',
+            monto_comision: '0',
+            monto_neto: '0',
             estado: 'pendiente',
             proveedor: dto.proveedor?.trim(),
             periodo_desde: desde,
             periodo_hasta: hasta,
+            aprobado_por,
+            aprobado_en: aprobado_por ? new Date() : null,
           },
         });
 
-        await tx.pedido_productor.updateMany({
+        const claim = await tx.pedido_productor.updateMany({
           where: {
+            id_payout: null,
             OR: grupo.map((pp) => ({ id_pedido: pp.id_pedido, id_productor: pp.id_productor })),
           },
           data: { id_payout: payout.id_payout },
+        });
+
+        if (claim.count === 0) {
+          // Todas las filas del grupo fueron reclamadas por otro proceso: descartar payout.
+          await tx.payouts.delete({ where: { id_payout: payout.id_payout } });
+          continue;
+        }
+
+        // Recalcular montos SÓLO con las filas efectivamente reclamadas por este payout.
+        const claimed = await tx.pedido_productor.findMany({
+          where: { id_payout: payout.id_payout },
+          select: { subtotal_bruto: true, comision_marketplace: true, monto_neto_productor: true },
+        });
+        const monto_bruto = claimed.reduce((s, pp) => s + Number(pp.subtotal_bruto), 0);
+        const monto_comision = claimed.reduce((s, pp) => s + Number(pp.comision_marketplace), 0);
+        const monto_neto = claimed.reduce((s, pp) => s + Number(pp.monto_neto_productor), 0);
+
+        await tx.payouts.update({
+          where: { id_payout: payout.id_payout },
+          data: {
+            monto_bruto: monto_bruto.toFixed(2),
+            monto_comision: monto_comision.toFixed(2),
+            monto_neto: monto_neto.toFixed(2),
+          },
         });
 
         result.push({
           id_payout: payout.id_payout.toString(),
           id_productor,
           moneda,
-          cuenta: grupo.length,
+          cuenta: claim.count,
         });
       }
       return result;

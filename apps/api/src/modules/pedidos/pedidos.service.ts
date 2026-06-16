@@ -79,6 +79,11 @@ export class PedidosService {
         envios: true,
         facturas: true,
         usuarios: true,
+        pedido_productor: {
+          include: {
+            productores: { select: { nombre_marca: true, razon_social: true } },
+          },
+        },
       },
     });
     if (!item || item.eliminado_en)
@@ -344,6 +349,20 @@ export class PedidosService {
               `Transición de estado inválida: ${estadoActual} → ${nuevoEstado}.`,
             );
           }
+          // Anti-fraude: un pedido sólo puede marcarse 'pagado' si existe un pago
+          // realmente completado. El camino legítimo es el webhook de Stripe/PayPal;
+          // ni siquiera un admin debe poder marcar pagado sin cobro real.
+          if (nuevoEstado === 'pagado') {
+            const pagoOk = await this.prisma.pagos.findFirst({
+              where: { id_pedido, estado: 'completado' },
+              select: { id_pago: true },
+            });
+            if (!pagoOk) {
+              throw new BadRequestException(
+                'No se puede marcar el pedido como pagado: no existe un pago completado asociado.',
+              );
+            }
+          }
         }
       }
     }
@@ -441,7 +460,16 @@ export class PedidosService {
       );
     }
 
-    const detalle = await this.prisma.$transaction(
+    // La idempotencia (findFirst → create/update) no es atómica entre llamadas
+    // concurrentes para el mismo (id_pedido, id_producto): ambas pueden ver `null` en el
+    // findFirst y ambas intentar `create`, y la segunda viola el unique
+    // `uq_detalle_pedido_producto` (Prisma P2002). Esto ocurre típicamente por el doble
+    // disparo de efectos de React StrictMode en dev o por un reintento del cliente, y antes
+    // se propagaba como un 500 que dejaba el checkout colgado. La unicidad real la garantiza
+    // la BD; aquí reintentamos una vez: en el reintento el findFirst SÍ encuentra la fila que
+    // creó la llamada ganadora y tomamos el camino de ajuste por delta (no-op si la cantidad
+    // coincide, como en el checkout).
+    const ejecutarTransaccion = () => this.prisma.$transaction(
       async (tx) => {
         const inventario = await tx.inventario.findFirst({
           where: { id_producto },
@@ -510,6 +538,8 @@ export class PedidosService {
               impuesto: dto.impuesto ?? '0',
               id_productor,
               id_tienda,
+              // Lote del que se descontó: permite restaurar al MISMO lote al cancelar.
+              id_inventario: inventario.id_inventario,
             },
             include: { productos: { include: { lotes: true } } },
           });
@@ -549,6 +579,8 @@ export class PedidosService {
               precio_compra: producto.precio_base,
               moneda_compra: (dto.moneda_compra?.trim() ?? 'MXN') as Moneda,
               impuesto: dto.impuesto ?? '0',
+              // Lote del que se descontó: permite restaurar al MISMO lote al cancelar.
+              id_inventario: inventario.id_inventario,
             },
             include: { productos: { include: { lotes: true } } },
           });
@@ -585,6 +617,27 @@ export class PedidosService {
         timeout: 15000, // Aumentar timeout a 15 segundos para operaciones complejas
       }
     );
+
+    let detalle: any;
+    try {
+      detalle = await ejecutarTransaccion();
+    } catch (err) {
+      // P2002 sobre (id_pedido, id_producto): una llamada concurrente ganó la carrera e
+      // insertó la línea entre nuestro findFirst y nuestro create. Reintentar una vez para
+      // converger al camino idempotente de ajuste por delta.
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002' &&
+        (err.meta?.target as string[] | undefined)?.includes('id_producto')
+      ) {
+        this.logger.warn(
+          `[pedidos] Carrera detectada al agregar detalle (pedido ${id_pedido}, producto ${dto.id_producto}); reintentando como ajuste idempotente.`,
+        );
+        detalle = await ejecutarTransaccion();
+      } else {
+        throw err;
+      }
+    }
 
     // Notificar al productor si el stock quedó bajo (fuera de la transacción — best-effort)
     const finalStock = await this.prisma.inventario.findFirst({
@@ -667,20 +720,14 @@ export class PedidosService {
       0,
     );
 
-    // Calcular porcentaje del productor
-    const porcentaje_productor =
-      subtotal_total_pedido > 0
-        ? subtotal_items_productor / subtotal_total_pedido
-        : 0;
-
-    // Prorratear tax y shipping
-    const tax_prorrateado = Number(pedido.tax_amount) * porcentaje_productor;
-    const envio_prorrateado = Number(pedido.shipping_amount) * porcentaje_productor;
-
-    // Subtotal bruto INCLUYE items + tax prorrateado + envío prorrateado
-    const subtotal_bruto = Number(
-      (subtotal_items_productor + tax_prorrateado + envio_prorrateado).toFixed(2),
-    );
+    // Política de reparto (ver memoria feedback_iva_incluido_envio_plataforma):
+    // - IVA: incluido en el precio del producto → ya está dentro de subtotal_items_productor.
+    //   No se prorratea pedido.tax_amount al productor (evita doble conteo / abonarle IVA recaudado).
+    // - Envío: la plataforma compra las guías; el costo de envío se RETIENE en plataforma
+    //   y NO se abona al productor. No se prorratea pedido.shipping_amount.
+    // El neto del productor = subtotal de SUS productos (IVA dentro) − comisión.
+    void subtotal_total_pedido; // se conserva la lectura para futura trazabilidad/auditoría
+    const subtotal_bruto = Number(subtotal_items_productor.toFixed(2));
 
     let id_comision_aplicada: number | null = null;
     let comision_marketplace = 0;
@@ -812,7 +859,7 @@ export class PedidosService {
     await this.prisma.$transaction(async (tx) => {
       const detalle = await tx.detalle_pedido.findUnique({
         where: { id_detalle: id_detalle_big },
-        select: { id_producto: true, cantidad: true, id_pedido: true, pedidos: { select: { id_usuario: true } } },
+        select: { id_producto: true, cantidad: true, id_pedido: true, id_inventario: true, pedidos: { select: { id_usuario: true } } },
       });
 
       if (!detalle) throw new NotFoundException('Detalle de pedido no encontrado');
@@ -821,10 +868,14 @@ export class PedidosService {
         throw new ForbiddenException('No tienes permiso para eliminar este detalle de pedido');
       }
 
-      const inv = await tx.inventario.findFirst({
-        where: { id_producto: detalle.id_producto },
-        orderBy: { stock: 'asc' },
-      });
+      // Restaurar al MISMO lote del que se descontó. Fallback (pedidos previos a la
+      // columna id_inventario): el de menor stock del producto.
+      const inv = detalle.id_inventario
+        ? await tx.inventario.findUnique({ where: { id_inventario: detalle.id_inventario } })
+        : await tx.inventario.findFirst({
+            where: { id_producto: detalle.id_producto },
+            orderBy: { stock: 'asc' },
+          });
 
       if (inv) {
         await tx.inventario.update({
@@ -1286,6 +1337,54 @@ export class PedidosService {
     return serializeBigInts(updated);
   }
 
+  /**
+   * Reserva atómicamente el payout de un pedido_productor ANTES de mover dinero.
+   * Crea un payout placeholder (estado 'procesando') y marca pedido_productor.id_payout
+   * sólo si aún era NULL. El updateMany condicional (where id_payout: null) actúa como
+   * lock a nivel de fila en Postgres: si dos procesos compiten (entrega + batch admin,
+   * doble webhook de entrega), únicamente uno gana la reserva. Devuelve el id_payout
+   * reservado, o null si otro proceso ya lo reclamó (en cuyo caso NO se transfiere).
+   */
+  private async reservarPayout(args: {
+    id_pedido: bigint;
+    id_productor: number;
+    moneda: Moneda;
+    subtotal_bruto: any;
+    comision_marketplace: any;
+    monto_neto: number;
+    proveedor: 'stripe' | 'paypal';
+  }): Promise<bigint | null> {
+    const today = new Date();
+    const placeholder = await this.prisma.payouts.create({
+      data: {
+        id_productor: args.id_productor,
+        moneda: args.moneda,
+        monto_bruto: args.subtotal_bruto ?? args.monto_neto ?? 0,
+        monto_comision: args.comision_marketplace,
+        monto_neto: args.monto_neto ?? 0,
+        estado: 'procesando',
+        proveedor: args.proveedor,
+        periodo_desde: today,
+        periodo_hasta: today,
+      },
+    });
+
+    const claim = await this.prisma.pedido_productor.updateMany({
+      where: { id_pedido: args.id_pedido, id_productor: args.id_productor, id_payout: null },
+      data: { id_payout: placeholder.id_payout },
+    });
+
+    if (claim.count === 0) {
+      // Otro proceso ya reservó el payout de este pedido_productor: revertir placeholder.
+      await this.prisma.payouts
+        .delete({ where: { id_payout: placeholder.id_payout } })
+        .catch(() => undefined);
+      return null;
+    }
+
+    return placeholder.id_payout;
+  }
+
   private async triggerPayoutForProductor(id_pedido: bigint, id_productor: number, moneda: Moneda) {
     const pp = (await this.prisma.pedido_productor.findUnique({
       where: {
@@ -1299,7 +1398,7 @@ export class PedidosService {
 
     if (!pp) return;
 
-    // Si ya hay un payout (transfer completado), no hacer nada
+    // Fast-path: si ya hay un payout, no hacer nada (la garantía real es la reserva atómica).
     if (pp.id_payout) {
       this.logger.debug(`[pedidos] Payout ya existe para productor ${id_productor} pedido ${id_pedido}: ${pp.id_payout}`);
       return;
@@ -1335,6 +1434,21 @@ export class PedidosService {
         return;
       }
 
+      // Reserva atómica ANTES de transferir: si otro proceso ya reclamó, abortar sin pagar.
+      const reservaId = await this.reservarPayout({
+        id_pedido,
+        id_productor,
+        moneda,
+        subtotal_bruto: pp.subtotal_bruto,
+        comision_marketplace: pp.comision_marketplace,
+        monto_neto,
+        proveedor: 'paypal',
+      });
+      if (reservaId === null) {
+        this.logger.debug(`[pedidos] Payout ya reclamado (PayPal) para productor ${id_productor} pedido ${id_pedido}. Abortando para evitar doble transferencia.`);
+        return;
+      }
+
       try {
         // Convert to USD for PayPal
         let amountUSD = monto_neto;
@@ -1361,59 +1475,37 @@ export class PedidosService {
           paypalEmail: pp.productores.paypal_email,
           amountUSD,
           referenceId: `pedido-${id_pedido}-prod-${id_productor}`,
+          // senderBatchId determinista por (pedido,productor): PayPal deduplica si un
+          // reintento (cron) reenvía el mismo batch tras un crash a mitad de transferencia.
+          senderBatchId: `payout-pp-${id_pedido}-prod-${id_productor}`,
         });
 
-        const today = new Date();
-        const payout = await this.prisma.payouts.create({
+        await this.prisma.payouts.update({
+          where: { id_payout: reservaId },
           data: {
-            id_productor,
-            moneda,
-            monto_bruto: pp.subtotal_bruto ?? monto_neto ?? 0,
-            monto_comision: pp.comision_marketplace,
-            monto_neto: monto_neto ?? 0,
             estado: 'procesado',
-            proveedor: 'paypal',
             referencia_externa: payoutResult.batchId,
-            periodo_desde: today,
-            periodo_hasta: today,
+            procesado_en: new Date(),
+            ultimo_error: null,
           },
-        });
-
-        await this.prisma.pedido_productor.update({
-          where: { id_pedido_id_productor: { id_pedido, id_productor } },
-          data: { id_payout: payout.id_payout },
         });
 
         this.logger.log(`[pedidos] PayPal Payout creado al confirmar entrega. Productor ${id_productor}, Batch: ${payoutResult.batchId}`);
       } catch (error: any) {
         this.logger.error(`[pedidos] Error al crear PayPal payout post-entrega para productor ${id_productor}: ${error?.message}`);
-        const today = new Date();
-        const payoutFallido = await this.prisma.payouts.create({
+        await this.prisma.payouts.update({
+          where: { id_payout: reservaId },
           data: {
-            id_productor,
-            moneda,
-            monto_bruto: pp.subtotal_bruto ?? monto_neto ?? 0,
-            monto_comision: pp.comision_marketplace,
-            monto_neto: monto_neto ?? 0,
             estado: 'fallido',
-            proveedor: 'paypal',
-            periodo_desde: today,
-            periodo_hasta: today,
             intentos: 1,
             ultimo_error: error?.message?.slice(0, 500),
             proximo_reintento: new Date(Date.now() + 15 * 60 * 1000),
           },
         });
-
-        await this.prisma.pedido_productor.update({
-          where: { id_pedido_id_productor: { id_pedido, id_productor } },
-          data: { id_payout: payoutFallido.id_payout },
-        });
-
         throw error;
       }
     } else {
-      // Stripe Connect flow (unchanged)
+      // Stripe Connect flow
       if (!pp.productores?.stripe_account_id || !pp.productores.stripe_onboarding_completed) {
         this.logger.warn(`[pedidos] Productor ${id_productor} sin onboarding Stripe. Dinero retenido en plataforma hasta completar configuración.`);
         try {
@@ -1453,6 +1545,21 @@ export class PedidosService {
         return;
       }
 
+      // Reserva atómica ANTES de transferir: si otro proceso ya reclamó, abortar sin pagar.
+      const reservaId = await this.reservarPayout({
+        id_pedido,
+        id_productor,
+        moneda,
+        subtotal_bruto: pp.subtotal_bruto,
+        comision_marketplace: pp.comision_marketplace,
+        monto_neto,
+        proveedor: 'stripe',
+      });
+      if (reservaId === null) {
+        this.logger.debug(`[pedidos] Payout ya reclamado (Stripe) para productor ${id_productor} pedido ${id_pedido}. Abortando para evitar doble transferencia.`);
+        return;
+      }
+
       try {
         const transfer = await this.stripeService.createTransfer({
           amountCents: montoNetoCents,
@@ -1466,53 +1573,28 @@ export class PedidosService {
           },
         });
 
-        const today = new Date();
-        const payout = await this.prisma.payouts.create({
+        await this.prisma.payouts.update({
+          where: { id_payout: reservaId },
           data: {
-            id_productor,
-            moneda,
-            monto_bruto: pp.subtotal_bruto ?? monto_neto ?? 0,
-            monto_comision: pp.comision_marketplace,
-            monto_neto: monto_neto ?? 0,
             estado: 'procesado',
-            proveedor: 'stripe',
             referencia_externa: transfer.id,
-            periodo_desde: today,
-            periodo_hasta: today,
+            procesado_en: new Date(),
+            ultimo_error: null,
           },
-        });
-
-        await this.prisma.pedido_productor.update({
-          where: { id_pedido_id_productor: { id_pedido, id_productor } },
-          data: { id_payout: payout.id_payout },
         });
 
         this.logger.log(`[pedidos] Payout creado al confirmar entrega. Productor ${id_productor}, Transfer: ${transfer.id}`);
       } catch (error: any) {
         this.logger.error(`[pedidos] Error al crear transfer post-entrega para productor ${id_productor}: ${error?.message}`);
-        const today = new Date();
-        const payoutFallido = await this.prisma.payouts.create({
+        await this.prisma.payouts.update({
+          where: { id_payout: reservaId },
           data: {
-            id_productor,
-            moneda,
-            monto_bruto: pp.subtotal_bruto ?? monto_neto ?? 0,
-            monto_comision: pp.comision_marketplace,
-            monto_neto: monto_neto ?? 0,
             estado: 'fallido',
-            proveedor: 'stripe',
-            periodo_desde: today,
-            periodo_hasta: today,
             intentos: 1,
             ultimo_error: error?.message?.slice(0, 500),
             proximo_reintento: new Date(Date.now() + 15 * 60 * 1000),
           },
         });
-
-        await this.prisma.pedido_productor.update({
-          where: { id_pedido_id_productor: { id_pedido, id_productor } },
-          data: { id_payout: payoutFallido.id_payout },
-        });
-
         throw error;
       }
     }
@@ -1757,7 +1839,7 @@ export class PedidosService {
       },
       include: {
         detalle_pedido: {
-          select: { id_producto: true, cantidad: true, id_detalle: true },
+          select: { id_producto: true, cantidad: true, id_detalle: true, id_inventario: true },
         },
       },
     });
@@ -1783,10 +1865,16 @@ export class PedidosService {
             return;
           }
           for (const detalle of pedido.detalle_pedido) {
-            const inv = await tx.inventario.findFirst({
-              where: { id_producto: detalle.id_producto },
-              select: { id_inventario: true, stock: true },
-            });
+            // Restaurar al MISMO lote descontado; fallback para pedidos antiguos.
+            const inv = detalle.id_inventario
+              ? await tx.inventario.findUnique({
+                  where: { id_inventario: detalle.id_inventario },
+                  select: { id_inventario: true, stock: true },
+                })
+              : await tx.inventario.findFirst({
+                  where: { id_producto: detalle.id_producto },
+                  select: { id_inventario: true, stock: true },
+                });
             if (inv) {
               const restaurar = Number(detalle.cantidad);
               await tx.inventario.update({

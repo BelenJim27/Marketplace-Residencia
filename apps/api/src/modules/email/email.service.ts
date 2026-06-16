@@ -14,6 +14,8 @@ interface SendEmailOptions {
   subject: string;
   html: string;
   attachments?: { filename: string; content: Buffer; type: string }[];
+  // 'transactional' (default) siempre se envía. 'marketing' respeta email_opt_out (CAN-SPAM).
+  category?: 'transactional' | 'marketing';
 }
 
 @Injectable()
@@ -46,10 +48,29 @@ export class EmailService {
     }
   }
 
-  async sendWelcomeEmail(email: string, name: string): Promise<void> {
+  async sendWelcomeEmail(email: string, name: string, lang: 'es' | 'en' = 'es'): Promise<void> {
+    const en = lang === 'en';
+    const t = en
+      ? {
+          subject: 'Welcome to Marketplace!',
+          title: 'Welcome to Marketplace!',
+          hi: `Hi ${name},`,
+          body: 'Your account has been created successfully. We are excited to have you on our platform.',
+          hereYouCan: 'Here you can:',
+          li: ['Explore products from multiple producers', 'Make secure purchases', 'Track your orders'],
+        }
+      : {
+          subject: '¡Bienvenido a Marketplace!',
+          title: '¡Bienvenido a Marketplace!',
+          hi: `Hola ${name},`,
+          body: 'Tu cuenta ha sido creada exitosamente. Estamos emocionados de tenerte en nuestra plataforma.',
+          hereYouCan: 'Aquí puedes:',
+          li: ['Explorar productos de múltiples productores', 'Realizar compras seguras', 'Rastrear tus órdenes'],
+        };
+
     const html = `
       <!DOCTYPE html>
-      <html>
+      <html lang="${lang}">
       <head>
         <meta charset="utf-8">
         <style>
@@ -63,14 +84,12 @@ export class EmailService {
       <body>
         <div class="container">
           <div class="card">
-            <h2>¡Bienvenido a Marketplace!</h2>
-            <p>Hola ${name},</p>
-            <p>Tu cuenta ha sido creada exitosamente. Estamos emocionados de tenerte en nuestra plataforma.</p>
-            <p>Aquí puedes:</p>
+            <h2>${t.title}</h2>
+            <p>${t.hi}</p>
+            <p>${t.body}</p>
+            <p>${t.hereYouCan}</p>
             <ul>
-              <li>Explorar productos de múltiples productores</li>
-              <li>Realizar compras seguras</li>
-              <li>Rastrear tus órdenes</li>
+              ${t.li.map((x) => `<li>${x}</li>`).join('\n              ')}
             </ul>
             <div class="footer">
               <p>© ${new Date().getFullYear()} Marketplace</p>
@@ -81,19 +100,33 @@ export class EmailService {
       </html>
     `;
 
-    await this.sendEmail({
-      to: email,
-      subject: '¡Bienvenido a Marketplace!',
-      html,
-    });
+    await this.sendEmail({ to: email, subject: t.subject, html });
   }
 
-  async sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
+  async sendPasswordResetEmail(email: string, resetToken: string, lang: 'es' | 'en' = 'es'): Promise<void> {
     const resetUrl = `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}`;
-    
+    const en = lang === 'en';
+    const t = en
+      ? {
+          subject: 'Reset your password',
+          title: 'Reset your password',
+          body: 'You requested to reset your password. Click the button below to create a new one:',
+          button: 'Reset password',
+          expires: 'This link expires in 30 minutes.',
+          ignore: 'If you did not request this change, you can ignore this email.',
+        }
+      : {
+          subject: 'Recuperar tu contraseña',
+          title: 'Recuperar contraseña',
+          body: 'Has solicitado recuperar tu contraseña. Haz clic en el botón abajo para crear una nueva:',
+          button: 'Restablecer contraseña',
+          expires: 'Este enlace caduca en 30 minutos.',
+          ignore: 'Si no solicitaste este cambio, puedes ignorar este correo.',
+        };
+
     const html = `
       <!DOCTYPE html>
-      <html>
+      <html lang="${lang}">
       <head>
         <meta charset="utf-8">
         <style>
@@ -107,11 +140,11 @@ export class EmailService {
       <body>
         <div class="container">
           <div class="card">
-            <h2>Recuperar contraseña</h2>
-            <p>Has solicitado recuperar tu contraseña. Haz clic en el botón abajo para crear una nueva:</p>
-            <a href="${resetUrl}" class="button">Restablecer contraseña</a>
-            <p>Este enlace caduca en 30 minutos.</p>
-            <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
+            <h2>${t.title}</h2>
+            <p>${t.body}</p>
+            <a href="${resetUrl}" class="button">${t.button}</a>
+            <p>${t.expires}</p>
+            <p>${t.ignore}</p>
           </div>
           <div class="footer">
             <p>© ${new Date().getFullYear()} Marketplace</p>
@@ -121,11 +154,7 @@ export class EmailService {
       </html>
     `;
 
-    await this.sendEmail({
-      to: email,
-      subject: 'Recuperar tu contraseña',
-      html,
-    });
+    await this.sendEmail({ to: email, subject: t.subject, html });
   }
 
   async sendOrderConfirmationEmail(
@@ -159,6 +188,114 @@ export class EmailService {
     const subtotal = options?.subtotal ?? totalAmount;
     const shipping = options?.shipping ?? 0;
     const tax = options?.tax ?? 0;
+
+    // ===== Versión en inglés (clientes de EE.UU. / locale en) =====
+    // Recibo limpio SIN andamiaje fiscal mexicano (RFC, CFDI, IVA 16%): los precios
+    // en USD no son IVA-incluido y no aplica CFDI a ventas en EE.UU.
+    if (options?.lang === 'en') {
+      const frontendUrlEn = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const fechaEn = new Date(fechaISO).toLocaleString('en-US', {
+        year: 'numeric', month: 'short', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: true,
+      });
+      const itemsRowsEn = (options?.items ?? []).map((item) => {
+        const importe = Number(item.precio_unitario) * item.cantidad;
+        return `
+        <tr>
+          <td style="padding:8px 6px; border:1px solid #ddd; text-align:center; font-size:12px; color:#333;">${item.cantidad}</td>
+          <td style="padding:8px 6px; border:1px solid #ddd; font-size:12px; color:#333;">${item.nombre}</td>
+          <td style="padding:8px 6px; border:1px solid #ddd; text-align:right; font-size:12px; color:#333;">$${Number(item.precio_unitario).toFixed(2)}</td>
+          <td style="padding:8px 6px; border:1px solid #ddd; text-align:right; font-size:12px; font-weight:600; color:#1a1a1a;">$${importe.toFixed(2)}</td>
+        </tr>`;
+      }).join('');
+      const alcoholBlockEn = incluyeAlcohol
+        ? `<tr><td colspan="2" style="padding:12px 16px; background:#fffbeb; border-top:2px solid #b45309;">
+            <p style="margin:0 0 6px; font-size:11px; color:#78350f; font-weight:bold; text-transform:uppercase;">Government Warning</p>
+            <p style="margin:0; font-size:11px; color:#78350f; line-height:1.5;">
+              <strong>(1)</strong> According to the Surgeon General, women should not drink alcoholic beverages during pregnancy.<br>
+              <strong>(2)</strong> Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery.
+            </p>
+          </td></tr>`
+        : '';
+
+      const htmlEn = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmation #${orderNumber}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f0ece0; font-family:Arial, Helvetica, sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0ece0">
+  <tr><td align="center" style="padding:20px 10px;">
+    <table width="620" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff; border:1px solid #c8bfa8; max-width:620px;">
+      <tr><td height="5" style="background:linear-gradient(90deg,#2E4A33,#C97A3E,#C89B4A,#C97A3E,#2E4A33); font-size:1px; line-height:1px;">&nbsp;</td></tr>
+      <tr>
+        <td style="padding:16px;">
+          <table cellpadding="0" cellspacing="0" border="0"><tr>
+            <td style="background:#2E4A33; color:#F4F0E3; font-size:22px; font-weight:bold; padding:6px 12px; border-radius:4px; letter-spacing:2px;">&#127807; MEZCAL</td>
+          </tr></table>
+          <p style="margin:10px 0 2px; font-size:13px; font-weight:bold; color:#1a1a1a;">Oaxacan Mezcal Marketplace</p>
+          <p style="margin:0; font-size:11px; color:#555;">Oaxaca de Juárez, Oaxaca, Mexico</p>
+        </td>
+      </tr>
+      <tr><td style="padding:0 16px 8px;">
+        <h2 style="margin:6px 0; font-size:18px; color:#2E4A33;">Thank you for your order, ${nombreCliente}!</h2>
+        <p style="margin:0; font-size:13px; color:#444;">Order <strong>#${orderNumber}</strong> &middot; ${fechaEn} &middot; <span style="color:#16a34a; font-weight:bold;">&#10003; PAID</span></p>
+        <p style="margin:4px 0 0; font-size:12px; color:#555;">Confirmation sent to ${email}</p>
+      </td></tr>
+      ${options?.items?.length ? `
+      <tr><td style="padding:8px 16px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#ddd; font-size:12px;">
+          <tr bgcolor="#f7f3ec">
+            <th style="padding:8px 6px; border:1px solid #c8bfa8; text-align:center; color:#2E4A33; width:40px;">Qty</th>
+            <th style="padding:8px 6px; border:1px solid #c8bfa8; text-align:left; color:#2E4A33;">Description</th>
+            <th style="padding:8px 6px; border:1px solid #c8bfa8; text-align:right; color:#2E4A33; width:90px;">Unit Price</th>
+            <th style="padding:8px 6px; border:1px solid #c8bfa8; text-align:right; color:#2E4A33; width:90px;">Amount</th>
+          </tr>
+          ${itemsRowsEn}
+        </table>
+      </td></tr>` : ''}
+      <tr><td style="padding:14px 16px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+          <td width="52%" valign="top" style="font-size:12px; color:#444;">
+            <p style="margin:0 0 4px;"><strong>Payment method:</strong> ${metodoPago}</p>
+            <p style="margin:0;"><strong>Currency:</strong> ${moneda}</p>
+          </td>
+          <td width="48%" valign="top">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:12px;">
+              <tr><td style="padding:3px 0; color:#555;">Subtotal</td><td style="padding:3px 0; text-align:right; color:#333;">$${subtotal.toFixed(2)}</td></tr>
+              ${shipping > 0 ? `<tr><td style="padding:3px 0; color:#555;">Shipping</td><td style="padding:3px 0; text-align:right; color:#333;">$${shipping.toFixed(2)}</td></tr>` : ''}
+              ${tax > 0 ? `<tr><td style="padding:3px 0; color:#555;">Sales Tax</td><td style="padding:3px 0; text-align:right; color:#333;">$${tax.toFixed(2)}</td></tr>` : ''}
+              <tr style="border-top:2px solid #C97A3E;"><td style="padding:6px 0 2px; font-weight:bold; font-size:14px; color:#2E4A33;">Total</td><td style="padding:6px 0 2px; text-align:right; font-weight:bold; font-size:15px; color:#C97A3E;">$${totalAmount.toFixed(2)}&nbsp;${moneda}</td></tr>
+            </table>
+          </td>
+        </tr>
+        ${alcoholBlockEn}
+        </table>
+      </td></tr>
+      <tr><td style="padding:8px 16px 20px; text-align:center; border-top:1px solid #c8bfa8;">
+        <a href="${frontendUrlEn}/tienda/compras" style="display:inline-block; background:#2E4A33; color:#ffffff; text-decoration:none; padding:11px 28px; border-radius:6px; font-size:13px; font-weight:bold;">View my orders</a>
+      </td></tr>
+      <tr><td bgcolor="#2E4A33" style="padding:10px 16px;">
+        <p style="margin:0; font-size:11px; color:#a8c4a2; text-align:center;">This is an online purchase confirmation.</p>
+      </td></tr>
+      <tr><td style="padding:8px 16px 12px;">
+        <p style="margin:0; font-size:10px; color:#aaa; text-align:center;">© ${new Date().getFullYear()} Mezcal Marketplace · Oaxaca, Mexico</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+
+      await this.sendEmail({
+        to: email,
+        subject: `Order confirmation #${orderNumber} - Mezcal Marketplace`,
+        html: htmlEn,
+      });
+      return;
+    }
 
     // Calcular IVA por ítem (16% incluido en precio)
     const itemsRows = (options?.items ?? []).map((item) => {
@@ -444,7 +581,36 @@ export class EmailService {
     }
   }
 
+  /**
+   * Cabeceras de baja (CAN-SPAM): ofrecen un mecanismo de unsubscribe por mailto
+   * (siempre funcional) y por URL, además de one-click. Se aplican a todos los
+   * envíos para cumplir con el correo comercial en EE.UU.
+   */
+  private unsubscribeHeaders(to: string): Record<string, string> {
+    const base = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const url = `${base}/unsubscribe?email=${encodeURIComponent(to)}`;
+    const mail = process.env.EMAIL_FROM || this.fromEmail;
+    return {
+      'List-Unsubscribe': `<mailto:${mail}?subject=unsubscribe>, <${url}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    };
+  }
+
   private async sendEmail(options: SendEmailOptions): Promise<void> {
+    // CAN-SPAM: los correos de marketing respetan la baja del usuario; los
+    // transaccionales (default) siempre se envían.
+    if (options.category === 'marketing') {
+      const dest = await this.prisma.usuarios.findFirst({
+        where: { email: options.to.trim().toLowerCase() },
+        select: { email_opt_out: true },
+      });
+      if (dest?.email_opt_out) {
+        this.logger.log(`[email] Omitido (marketing, opt-out): ${redactEmail(options.to)} — "${options.subject}"`);
+        return;
+      }
+    }
+
+    const unsubHeaders = this.unsubscribeHeaders(options.to);
     // Prioridad 1: Gmail SMTP (más confiable para desarrollo)
     if (this.gmailTransport) {
       await this.gmailTransport.sendMail({
@@ -452,6 +618,7 @@ export class EmailService {
         to: options.to,
         subject: options.subject,
         html: options.html,
+        headers: unsubHeaders,
         attachments: options.attachments?.map(a => ({
           filename: a.filename,
           content: a.content,
@@ -483,6 +650,7 @@ export class EmailService {
             from: { email: this.fromEmail },
             subject: options.subject,
             content: [{ type: 'text/html', value: options.html }],
+            headers: unsubHeaders,
             ...(sgAttachments?.length ? { attachments: sgAttachments } : {}),
           }),
         });
@@ -1091,11 +1259,14 @@ export class EmailService {
     pedidoId: string,
     numeroGuia: string,
     estado: string,
+    lang: 'es' | 'en' = 'es',
   ): Promise<void> {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const year = new Date().getFullYear();
+    const en = lang === 'en';
 
-    const ESTADOS: Record<string, { asunto: string; titulo: string; icono: string; mensaje: string; color: string }> = {
+    type EstadoInfo = { asunto: string; titulo: string; icono: string; mensaje: string; color: string };
+    const ESTADOS_ES: Record<string, EstadoInfo> = {
       en_transito: {
         asunto: `Tu pedido #${pedidoId} está en camino`,
         titulo: 'Tu pedido está en camino',
@@ -1118,17 +1289,53 @@ export class EmailService {
         color: '#2E4A33',
       },
     };
-
-    const info = ESTADOS[estado] ?? {
-      asunto: `Actualización de tu pedido #${pedidoId}`,
-      titulo: 'Actualización de envío',
-      icono: '📬',
-      mensaje: `El estado de tu envío cambió a: ${estado}.`,
-      color: '#2E4A33',
+    const ESTADOS_EN: Record<string, EstadoInfo> = {
+      en_transito: {
+        asunto: `Your order #${pedidoId} is on its way`,
+        titulo: 'Your order is on its way',
+        icono: '🚚',
+        mensaje: 'Your package has been picked up and is now in transit to your address.',
+        color: '#2563eb',
+      },
+      en_reparto: {
+        asunto: `Your order #${pedidoId} is almost there`,
+        titulo: 'Your order is out for delivery',
+        icono: '📦',
+        mensaje: 'Your package is out for local delivery and will arrive today.',
+        color: '#C97A3E',
+      },
+      entregado: {
+        asunto: `Your order #${pedidoId} was delivered`,
+        titulo: 'Your order has arrived!',
+        icono: '✅',
+        mensaje: 'Your package was delivered successfully. If you have any issues, contact us.',
+        color: '#2E4A33',
+      },
     };
 
+    const estados = en ? ESTADOS_EN : ESTADOS_ES;
+    const info = estados[estado] ?? (en
+      ? {
+          asunto: `Update on your order #${pedidoId}`,
+          titulo: 'Shipping update',
+          icono: '📬',
+          mensaje: `Your shipment status changed to: ${estado}.`,
+          color: '#2E4A33',
+        }
+      : {
+          asunto: `Actualización de tu pedido #${pedidoId}`,
+          titulo: 'Actualización de envío',
+          icono: '📬',
+          mensaje: `El estado de tu envío cambió a: ${estado}.`,
+          color: '#2E4A33',
+        });
+
+    const L = en
+      ? { hi: 'Hi', order: 'Order', tracking: 'Tracking number', status: 'Status', button: 'View order details', footer: 'Automatic shipping notification' }
+      : { hi: 'Hola', order: 'Pedido', tracking: 'Número de guía', status: 'Estado', button: 'Ver detalles del pedido', footer: 'Notificación automática de envío' };
+
     const html = `<!DOCTYPE html>
-<html lang="es">
+<html lang="${lang}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1149,7 +1356,7 @@ export class EmailService {
 
     <!-- Cuerpo -->
     <tr><td style="padding:24px 32px;">
-      <p style="margin:0 0 16px;font-size:14px;color:#333;line-height:1.7;">Hola <strong>${nombreCliente}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#333;line-height:1.7;">${L.hi} <strong>${nombreCliente}</strong>,</p>
       <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.7;">${info.mensaje}</p>
 
       <!-- Tarjeta de info -->
@@ -1158,15 +1365,15 @@ export class EmailService {
           <td style="padding:16px 20px;">
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="padding:4px 0;font-size:12px;color:#888;width:40%;">Pedido</td>
+                <td style="padding:4px 0;font-size:12px;color:#888;width:40%;">${L.order}</td>
                 <td style="padding:4px 0;font-size:13px;color:#1a1a1a;font-weight:bold;">#${pedidoId}</td>
               </tr>
               <tr>
-                <td style="padding:4px 0;font-size:12px;color:#888;">Número de guía</td>
+                <td style="padding:4px 0;font-size:12px;color:#888;">${L.tracking}</td>
                 <td style="padding:4px 0;font-size:13px;color:#1a1a1a;font-family:monospace;">${numeroGuia}</td>
               </tr>
               <tr>
-                <td style="padding:4px 0;font-size:12px;color:#888;">Estado</td>
+                <td style="padding:4px 0;font-size:12px;color:#888;">${L.status}</td>
                 <td style="padding:4px 0;">
                   <span style="display:inline-block;background:${info.color};color:#fff;font-size:11px;font-weight:bold;padding:3px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:0.5px;">${estado.replace(/_/g, ' ')}</span>
                 </td>
@@ -1181,7 +1388,7 @@ export class EmailService {
     <tr><td style="padding:0 32px 28px;text-align:center;">
       <a href="${frontendUrl}/tienda/compras"
          style="display:inline-block;background:#2E4A33;color:#fff;text-decoration:none;padding:12px 32px;border-radius:6px;font-size:13px;font-weight:bold;letter-spacing:0.3px;">
-        Ver detalles del pedido &rarr;
+        ${L.button} &rarr;
       </a>
     </td></tr>
 
@@ -1190,7 +1397,7 @@ export class EmailService {
       <p style="margin:0;font-size:11px;color:#a8c4a2;text-align:center;">MEZCANEA · OAXACA, MÉXICO</p>
     </td></tr>
     <tr><td style="padding:8px 16px 12px;border-top:1px solid #c8bfa8;">
-      <p style="margin:0;font-size:10px;color:#aaa;text-align:center;">© ${year} Marketplace de Mezcal · Notificación automática de envío</p>
+      <p style="margin:0;font-size:10px;color:#aaa;text-align:center;">© ${year} Marketplace de Mezcal · ${L.footer}</p>
     </td></tr>
 
   </table>
@@ -1200,6 +1407,36 @@ export class EmailService {
 </html>`;
 
     await this.sendEmail({ to: email, subject: info.asunto, html });
+  }
+
+  /**
+   * Registra y PERSISTE una baja de correos (CAN-SPAM): marca usuarios.email_opt_out=true
+   * para el email dado, de modo que los envíos de marketing se omitan. Los correos
+   * transaccionales no se ven afectados. El header List-Unsubscribe (mailto) y la
+   * página /unsubscribe apuntan aquí.
+   */
+  async recordUnsubscribeRequest(email: string): Promise<{ ok: true }> {
+    const clean = (email || '').trim().toLowerCase();
+    this.logger.log(`[unsubscribe] Solicitud de baja recibida: ${redactEmail(clean)}`);
+
+    try {
+      const result = await this.prisma.usuarios.updateMany({
+        where: { email: clean },
+        data: { email_opt_out: true },
+      });
+      // Si no hay usuario con ese email (suscriptor anónimo), igual avisamos al admin.
+      if (result.count === 0) {
+        await this.sendAdminAlert(
+          'Solicitud de baja de correos (sin usuario)',
+          `El email ${clean} solicitó baja pero no corresponde a una cuenta registrada. ` +
+            `Agrégalo a la lista de supresión si envías a esa dirección.`,
+        );
+      }
+    } catch (err: any) {
+      this.logger.warn(`[unsubscribe] No se pudo persistir/alertar la baja: ${err?.message ?? err}`);
+    }
+
+    return { ok: true };
   }
 
   async sendAdminAlert(subject: string, body: string): Promise<void> {

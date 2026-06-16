@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { formatPrice } from "@/lib/format-number";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
+import { SUCCESS_ALERT_CONFIG } from "@/config/success-alerts";
 import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { SuccessToast } from "@/components/ui/SuccessToast";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
@@ -51,7 +52,7 @@ export default function ProductosAdmin() {
                 estado: p.status || p.estado || "activo",
                 categoria: p.categoria || p.category || p.nombre_categoria || p.categoria_nombre || null,
                 imagen_url: p.imagen_url || p.image_url || p.imagen || p.foto || null,
-                categorias: p.categorias || [],
+                categorias: (p.categorias_full || []).map((c: any) => Number(c.id_categoria)).filter(Boolean),
             }));
             setProductos(formatted);
             setLoading(false);
@@ -79,8 +80,10 @@ export default function ProductosAdmin() {
 
     const handleEliminarClick = (p: Producto) => {
         deleteAlert.abrir(p.nombre, async () => {
-            const res = await fetch(`/productos/${p.id_producto}`, { method: "DELETE" });
-            if (res.ok) fetchProductos();
+            const token = getCookie("token") ?? "";
+            await api.productos.delete(token, String(p.id_producto));
+            successToast.mostrar(SUCCESS_ALERT_CONFIG.producto.eliminado!);
+            fetchProductos();
         });
     };
 

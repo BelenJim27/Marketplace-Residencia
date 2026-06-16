@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import type { Request } from 'express';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/guards/roles.decorator';
@@ -36,8 +37,9 @@ export class PayoutsController {
 
   @Post('generar')
   @Roles('administrador')
-  generar(@Body() dto: GenerarPayoutsDto) {
-    return this.service.generar(dto);
+  generar(@Body() dto: GenerarPayoutsDto, @Req() req: Request) {
+    // C-5: registrar qué admin autorizó la generación de payouts (trazabilidad).
+    return this.service.generar(dto, (req as any).user?.id_usuario);
   }
 
   @Patch(':id/estado')

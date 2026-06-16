@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Eye, Pencil, Trash2, Loader2, Package, ChevronLeft, ChevronRight, Search, X, FilterX } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
@@ -24,15 +24,28 @@ interface DetallePedido {
   id_detalle: number;
   id_productor: number | null;
   productores?: Productor | null;
+  cantidad?: number;
+  precio_compra?: string | number;
+  moneda_compra?: string;
+  productos?: { nombre: string; imagen_principal_url?: string | null } | null;
+}
+
+interface Envio {
+  id_envio: number;
+  estado: string;
+  numero_rastreo?: string | null;
+  transportistas?: { nombre: string } | null;
 }
 
 interface Pedido {
   id_pedido: number;
   estado: string;
   total: string | number;
+  moneda?: string;
   fecha_creacion: string;
   usuarios?: { nombre: string; email: string };
   detalle_pedido?: DetallePedido[];
+  envios?: Envio[];
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -79,249 +92,6 @@ function productorLabel(p: Productor): string {
   return marca ? `${marca}${nombre ? ` (${nombre})` : ""}` : nombre || `Productor #${p.id_productor}`;
 }
 
-// ── Modal de detalle ──────────────────────────────────────────────────────────
-function ViewModal({ pedido, productoresMap, onClose }: {
-  pedido: Pedido;
-  productoresMap: Map<number, Productor>;
-  onClose: () => void;
-}) {
-  const productoresEnPedido = [
-    ...new Set(
-      (pedido.detalle_pedido ?? [])
-        .map((d) => d.id_productor)
-        .filter((id): id is number => id != null),
-    ),
-  ]
-    .map((id) => productoresMap.get(id))
-    .filter((p): p is Productor => p !== undefined);
-
-  return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl w-full max-w-md shadow-[0_24px_48px_rgba(31,58,46,0.25)] overflow-hidden border border-[#C5CFB0]"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 bg-[#1F3A2E]">
-          <div>
-            <h2 className="text-xl font-extrabold text-white [font-family:'Playfair_Display',serif]">
-              Detalles del Pedido
-            </h2>
-            <p className="text-xs text-white/60">ID: #{pedido.id_pedido}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-full transition-all duration-200"
-          >
-            <X className="w-5 h-5 text-white/70" />
-          </button>
-        </div>
-
-        {/* Contenido */}
-        <div className="p-6 space-y-4">
-          {/* Cliente */}
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-[#1F3A2E]">Cliente</label>
-            <input
-              type="text"
-              value={pedido.usuarios?.nombre || "—"}
-              disabled
-              className="w-full px-4 py-2 text-sm bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl text-[#1F3A2E] opacity-70"
-            />
-          </div>
-
-          {/* Email */}
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-[#1F3A2E]">Email</label>
-            <input
-              type="text"
-              value={pedido.usuarios?.email || "—"}
-              disabled
-              className="w-full px-4 py-2 text-sm bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl text-[#1F3A2E] opacity-70"
-            />
-          </div>
-
-          {/* Fecha + Total */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="block text-sm font-medium text-[#1F3A2E]">Fecha</label>
-              <input
-                type="text"
-                value={pedido.fecha_creacion ? formatDate(pedido.fecha_creacion) : "—"}
-                disabled
-                className="w-full px-4 py-2 text-sm bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl text-[#1F3A2E] opacity-70"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-sm font-medium text-[#1F3A2E]">Total</label>
-              <input
-                type="text"
-                value={formatTotal(pedido.total)}
-                disabled
-                className="w-full px-4 py-2 text-sm bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl text-[#1F3A2E] opacity-70 font-semibold"
-              />
-            </div>
-          </div>
-
-          {/* Estado */}
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-[#1F3A2E]">Estado</label>
-            <div className="flex items-center px-4 py-2 bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl">
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase ${STATUS_STYLES[pedido.estado] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
-                {pedido.estado}
-              </span>
-            </div>
-          </div>
-
-          {/* Productores */}
-          {productoresEnPedido.length > 0 && (
-            <div className="space-y-1">
-              <label className="block text-sm font-medium text-[#1F3A2E]">Productor(es)</label>
-              <div className="flex flex-wrap gap-1.5 px-4 py-2.5 bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl min-h-[38px]">
-                {productoresEnPedido.map((pr) => (
-                  <span
-                    key={pr.id_productor}
-                    className="inline-flex rounded-full bg-[#3D6B3F]/10 px-2.5 py-0.5 text-xs font-medium text-[#3D6B3F]"
-                  >
-                    {productorLabel(pr)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Footer */}
-          <div className="flex gap-3 pt-4 border-t border-[#C5CFB0]">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2.5 bg-[#F4F0E3] text-[#1F3A2E] text-sm font-medium rounded-xl border border-[#C5CFB0] hover:bg-[#C5CFB0]/30 transition-all duration-200"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Modal de edición ──────────────────────────────────────────────────────────
-function EditModal({ pedido, token, onClose, onSaved }: {
-  pedido: Pedido;
-  token: string;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [estado, setEstado] = useState(pedido.estado);
-  const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState<string | null>(null);
-
-  const handleSave = async () => {
-    if (estado === pedido.estado) { onClose(); return; }
-    try {
-      setSaving(true);
-      setErr(null);
-      await api.pedidos.update(token, String(pedido.id_pedido), { estado });
-      onSaved();
-      onClose();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Error al actualizar");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl w-full max-w-md shadow-[0_24px_48px_rgba(31,58,46,0.25)] overflow-hidden border border-[#C5CFB0]"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 bg-[#1F3A2E]">
-          <div>
-            <h2 className="text-xl font-extrabold text-white [font-family:'Playfair_Display',serif]">
-              Editar Pedido
-            </h2>
-            <p className="text-xs text-white/60">ID: #{pedido.id_pedido}</p>
-          </div>
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="p-2 hover:bg-white/10 rounded-full transition-all duration-200 disabled:opacity-50"
-          >
-            <X className="w-5 h-5 text-white/70" />
-          </button>
-        </div>
-
-        {/* Contenido */}
-        <div className="p-6 space-y-4">
-          {/* Cliente (solo lectura) */}
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-[#1F3A2E]">Cliente</label>
-            <input
-              type="text"
-              value={pedido.usuarios?.nombre || "—"}
-              disabled
-              className="w-full px-4 py-2 text-sm bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl text-[#1F3A2E] opacity-60"
-            />
-          </div>
-
-          {/* Estado (editable) */}
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-[#1F3A2E]">Estado del pedido</label>
-            <select
-              value={estado}
-              onChange={(e) => setEstado(e.target.value)}
-              className="w-full px-4 py-3 text-base bg-[#F4F0E3] border border-[#C5CFB0] rounded-xl text-[#1F3A2E] outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent transition-all"
-            >
-              {ESTADOS.map((s) => (
-                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-
-          {err && (
-            <p className="text-sm text-red-600">{err}</p>
-          )}
-
-          {/* Footer */}
-          <div className="flex gap-3 pt-4 border-t border-[#C5CFB0]">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="flex-1 py-3 bg-[#F4F0E3] text-[#1F3A2E] text-sm font-medium rounded-xl border border-[#C5CFB0] hover:bg-[#C5CFB0]/30 transition-all duration-200 disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 py-3 bg-[#3D6B3F] text-white text-sm font-medium rounded-xl hover:bg-[#1F3A2E] disabled:opacity-50 transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              {saving && <Loader2 size={15} className="animate-spin" />}
-              {saving ? "Guardando..." : "Guardar"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function Pedidos() {
   const token = getCookie("token") ?? "";
@@ -333,8 +103,8 @@ export default function Pedidos() {
   const [searchTerm, setSearchTerm]         = useState("");
   const [productorFilter, setProductorFilter] = useState<string>("");
   const [page, setPage]                     = useState(1);
-  const [viewPedido, setViewPedido]         = useState<Pedido | null>(null);
-  const [editPedido, setEditPedido]         = useState<Pedido | null>(null);
+  const [detalleModal, setDetalleModal]     = useState<Pedido | null>(null);
+  const [editModal, setEditModal]           = useState<Pedido | null>(null);
 
   const deleteAlert  = useDeleteAlert("pedido");
   const successToast = useSuccessToast("pedido");
@@ -422,10 +192,17 @@ export default function Pedidos() {
   const handleDelete = (pedido: Pedido) => {
     const nombre = `#${pedido.id_pedido}${pedido.usuarios?.nombre ? ` — ${pedido.usuarios.nombre}` : ""}`;
     deleteAlert.abrir(nombre, async () => {
-      await api.pedidos.delete(token ?? "", String(pedido.id_pedido));
+      const token = getCookie("token") || "";
+      await api.pedidos.delete(token, String(pedido.id_pedido));
       await fetchPedidos();
       successToast.mostrar("Pedido eliminado correctamente.");
     });
+  };
+
+  const handleEstadoActualizado = async () => {
+    setEditModal(null);
+    await fetchPedidos();
+    successToast.mostrar("Estado actualizado correctamente.");
   };
 
   const handleExportCSV = () => {
@@ -618,18 +395,10 @@ export default function Pedidos() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end items-center gap-1">
-                          <button
-                            onClick={() => setViewPedido(pedido)}
-                            title="Ver detalle"
-                            className="p-1.5 text-[#3D6B3F]/50 hover:text-[#3D6B3F] hover:bg-[#A8C26B]/20 rounded-lg transition-all duration-200"
-                          >
+                          <button onClick={() => setDetalleModal(pedido)} title="Ver detalles" className="p-1.5 text-[#3D6B3F]/50 hover:text-[#3D6B3F] hover:bg-[#A8C26B]/20 rounded-lg transition-all duration-200">
                             <Eye size={16} />
                           </button>
-                          <button
-                            onClick={() => setEditPedido(pedido)}
-                            title="Editar estado"
-                            className="p-1.5 text-[#3D6B3F]/50 hover:text-[#C97A3E] hover:bg-[#C97A3E]/10 rounded-lg transition-all duration-200"
-                          >
+                          <button onClick={() => setEditModal(pedido)} title="Editar estado" className="p-1.5 text-[#3D6B3F]/50 hover:text-[#C97A3E] hover:bg-[#C97A3E]/10 rounded-lg transition-all duration-200">
                             <Pencil size={16} />
                           </button>
                           <button
@@ -681,24 +450,255 @@ export default function Pedidos() {
       </div>
 
       {/* Modales */}
-      {viewPedido && (
-        <ViewModal
-          pedido={viewPedido}
+      <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
+      <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
+
+      {detalleModal && (
+        <DetallePedidoModal
+          pedido={detalleModal}
           productoresMap={productoresMap}
-          onClose={() => setViewPedido(null)}
-        />
-      )}
-      {editPedido && (
-        <EditModal
-          pedido={editPedido}
-          token={token}
-          onClose={() => setEditPedido(null)}
-          onSaved={fetchPedidos}
+          onClose={() => setDetalleModal(null)}
         />
       )}
 
-      <DeleteAlertModal estado={deleteAlert.estado} onClose={deleteAlert.cerrar} />
-      <SuccessToast toast={successToast.estado} onClose={successToast.cerrar} />
+      {editModal && (
+        <EditarEstadoPedidoModal
+          pedido={editModal}
+          onClose={() => setEditModal(null)}
+          onSaved={handleEstadoActualizado}
+        />
+      )}
     </div>
+  );
+}
+
+function ModalShell({
+  title,
+  onClose,
+  children,
+  footer,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden border border-[#C5CFB0]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#C5CFB0] bg-[#F4F0E3]">
+          <h2 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">{title}</h2>
+          <button onClick={onClose} className="p-1 text-[#3D6B3F]/60 hover:text-[#1F3A2E] rounded-lg transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="px-5 py-4 overflow-y-auto">{children}</div>
+        {footer && <div className="px-5 py-4 border-t border-[#C5CFB0] bg-[#F4F0E3]/60 flex justify-end gap-2">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+function EstadoBadge({ estado }: { estado: string }) {
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase ${STATUS_STYLES[estado] ?? "bg-[#C5CFB0]/30 text-[#3D6B3F]/70 border-[#C5CFB0]"}`}>
+      {estado}
+    </span>
+  );
+}
+
+function DetallePedidoModal({
+  pedido,
+  productoresMap,
+  onClose,
+}: {
+  pedido: Pedido;
+  productoresMap: Map<number, Productor>;
+  onClose: () => void;
+}) {
+  const [data, setData]       = useState<Pedido | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelado = false;
+    const fetchDetalle = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = getCookie("token") || "";
+        const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+        const res = await fetch(`${base}/pedidos/${pedido.id_pedido}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        const json = await res.json();
+        if (!cancelado) setData(json as Pedido);
+      } catch (err) {
+        if (!cancelado) setError(err instanceof Error ? err.message : "No se pudo cargar el pedido.");
+      } finally {
+        if (!cancelado) setLoading(false);
+      }
+    };
+    fetchDetalle();
+    return () => { cancelado = true; };
+  }, [pedido.id_pedido]);
+
+  const moneda = data?.moneda ?? pedido.moneda ?? "MXN";
+  const envio  = data?.envios?.[0];
+
+  return (
+    <ModalShell title={`Pedido #${pedido.id_pedido}`} onClose={onClose}>
+      {loading ? (
+        <div className="flex items-center justify-center py-10">
+          <Loader2 className="w-7 h-7 animate-spin text-[#3D6B3F]" />
+        </div>
+      ) : error ? (
+        <p className="text-red-600 text-sm py-4">{error}</p>
+      ) : data ? (
+        <div className="space-y-4 text-sm">
+          {/* Resumen */}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-semibold text-[#1F3A2E]">{data.usuarios?.nombre || "—"}</p>
+              {data.usuarios?.email && <p className="text-[#3D6B3F]/70">{data.usuarios.email}</p>}
+              <p className="text-[#3D6B3F]/70 mt-1">
+                {data.fecha_creacion ? formatDate(data.fecha_creacion) : "—"}
+              </p>
+            </div>
+            <EstadoBadge estado={data.estado} />
+          </div>
+
+          <div className="flex justify-between border-y border-[#C5CFB0]/40 py-2">
+            <span className="text-[#3D6B3F]/70">Total</span>
+            <span className="font-bold text-[#1F3A2E]">{formatTotal(data.total)}</span>
+          </div>
+
+          {/* Productos */}
+          <div>
+            <p className="font-semibold text-[#1F3A2E] mb-2">Productos</p>
+            <ul className="space-y-2">
+              {(data.detalle_pedido ?? []).map((d) => {
+                const pr = d.id_productor != null ? productoresMap.get(d.id_productor) : undefined;
+                const subtotal =
+                  d.precio_compra != null && d.cantidad != null
+                    ? Number(d.precio_compra) * d.cantidad
+                    : null;
+                return (
+                  <li key={d.id_detalle} className="flex items-start justify-between gap-3 bg-[#F4F0E3]/50 rounded-xl px-3 py-2">
+                    <div>
+                      <p className="font-medium text-[#1F3A2E]">{d.productos?.nombre ?? `Producto #${d.id_detalle}`}</p>
+                      <p className="text-[#3D6B3F]/70 text-xs">
+                        {pr ? productorLabel(pr) : "—"}
+                        {d.cantidad != null && ` · ${d.cantidad} u.`}
+                      </p>
+                    </div>
+                    {subtotal != null && (
+                      <span className="font-semibold text-[#1F3A2E] whitespace-nowrap">{formatTotal(subtotal)}</span>
+                    )}
+                  </li>
+                );
+              })}
+              {(data.detalle_pedido ?? []).length === 0 && (
+                <li className="text-[#3D6B3F]/60">Sin productos en este pedido.</li>
+              )}
+            </ul>
+          </div>
+
+          {/* Envío */}
+          <div>
+            <p className="font-semibold text-[#1F3A2E] mb-1">Envío</p>
+            {!envio ? (
+              <p className="text-[#3D6B3F]/60">Aún no hay envío registrado.</p>
+            ) : (
+              <div className="text-[#3D6B3F]/80 space-y-0.5">
+                <p>Estado: <span className="font-medium text-[#1F3A2E]">{envio.estado}</span></p>
+                {envio.transportistas?.nombre && (
+                  <p>Transportista: <span className="font-medium text-[#1F3A2E]">{envio.transportistas.nombre}</span></p>
+                )}
+                {envio.numero_rastreo && (
+                  <p>Rastreo: <span className="font-mono font-medium text-[#1F3A2E]">{envio.numero_rastreo}</span></p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <p className="text-[10px] text-[#3D6B3F]/50">Moneda: {moneda}</p>
+        </div>
+      ) : null}
+    </ModalShell>
+  );
+}
+
+const STATUS_OPTIONS = Object.keys(STATUS_STYLES);
+
+function EditarEstadoPedidoModal({
+  pedido,
+  onClose,
+  onSaved,
+}: {
+  pedido: Pedido;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [estado, setEstado]   = useState(pedido.estado);
+  const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const token = getCookie("token") || "";
+      await api.pedidos.update(token, String(pedido.id_pedido), { estado });
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo actualizar el estado.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalShell
+      title={`Editar estado · Pedido #${pedido.id_pedido}`}
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="px-4 py-2 rounded-xl text-sm font-medium text-[#3D6B3F] border border-[#C5CFB0] hover:bg-[#C5CFB0]/30 disabled:opacity-50 transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || estado === pedido.estado}
+            className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[#3D6B3F] hover:bg-[#1F3A2E] disabled:opacity-50 transition-all inline-flex items-center gap-2"
+          >
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            Guardar
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-3 text-sm">
+        <label className="block font-medium text-[#1F3A2E]">Estado del pedido</label>
+        <select
+          value={estado}
+          onChange={(e) => setEstado(e.target.value)}
+          className="w-full border border-[#C5CFB0] bg-white px-4 py-2.5 rounded-xl text-[#1F3A2E] outline-none focus:ring-2 focus:ring-[#3D6B3F] transition-all capitalize"
+        >
+          {STATUS_OPTIONS.map((e) => (
+            <option key={e} value={e}>{e}</option>
+          ))}
+        </select>
+        {error && <p className="text-red-600">{error}</p>}
+      </div>
+    </ModalShell>
   );
 }

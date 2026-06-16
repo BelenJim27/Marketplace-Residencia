@@ -2,6 +2,8 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { X, ImagePlus } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
 
 interface Categoria {
     id_categoria: number;
@@ -35,6 +37,7 @@ const noSpinClass = "[appearance:textfield] [&::-webkit-outer-spin-button]:appea
 
 export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefresh, onSuccess }: ModalProps) {
     const formRef = useRef<HTMLFormElement>(null);
+    const { token } = useAuth();
     const esEdicion = modo === 'editar';
     const [categorias, setCategorias] = useState<Categoria[]>([]);
     const [selectedCategorias, setSelectedCategorias] = useState<number[]>([]);
@@ -91,54 +94,39 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
 
         if (imagenFile) {
             formData.append("imagen", imagenFile);
-            formData.append("precio_base", formData.get("precio")?.toString() || "");
-            formData.append("status", formData.get("estado")?.toString() || "");
-            formData.append("categorias", JSON.stringify(selectedCategorias));
+            const precioStr = formData.get("precio")?.toString() ?? "";
+            if (parseFloat(precioStr) > 0) formData.append("precio_base", precioStr);
+            formData.append("status", formData.get("estado")?.toString() || "activo");
+            selectedCategorias.forEach(id => formData.append("categorias", String(id)));
 
             try {
-                const res = await fetch(`/productos/${producto.id_producto}`, {
-                    method: 'PATCH',
-                    body: formData,
-                });
-                const respuestaServidor = await res.json();
-                if (res.ok) {
-                    await onRefresh();
-                    onClose();
-                    onSuccess?.();
-                } else {
-                    console.error("Error al actualizar producto:", respuestaServidor.message);
-                }
-            } catch (error) {
-                console.error("Error de conexión:", error);
+                await api.productos.update(token!, String(producto.id_producto), formData);
+                await onRefresh();
+                onClose();
+                onSuccess?.();
+            } catch (error: any) {
+                console.error("Error al actualizar producto:", error?.message ?? error);
             } finally {
                 setLoading(false);
             }
             return;
         }
 
-        const datosParaEnviar = {
+        const precioVal = parseFloat(formData.get("precio")?.toString() ?? "0");
+        const datosParaEnviar: Record<string, any> = {
             nombre: formData.get("nombre")?.toString(),
-            precio_base: String(formData.get("precio")),
             status: formData.get("estado")?.toString(),
             categorias: selectedCategorias,
         };
+        if (precioVal > 0) datosParaEnviar.precio_base = String(precioVal);
 
         try {
-            const res = await fetch(`/productos/${producto.id_producto}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(datosParaEnviar),
-            });
-            const respuestaServidor = await res.json();
-            if (res.ok) {
-                await onRefresh();
-                onClose();
-                onSuccess?.();
-            } else {
-                console.error("Error al actualizar producto:", respuestaServidor.message);
-            }
-        } catch (error) {
-            console.error("Error de conexión:", error);
+            await api.productos.update(token!, String(producto.id_producto), datosParaEnviar);
+            await onRefresh();
+            onClose();
+            onSuccess?.();
+        } catch (error: any) {
+            console.error("Error al actualizar producto:", error?.message ?? error);
         } finally {
             setLoading(false);
         }

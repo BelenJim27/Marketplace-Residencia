@@ -104,16 +104,19 @@ model detalle_pedido {
   impuesto      Decimal      @default(0) @db.Decimal(12, 2)
   id_productor  Int?
   id_tienda     Int?
+  id_inventario BigInt?
   pedidos       pedidos      @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade, onUpdate: NoAction)
   productos     productos    @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
   productores   productores? @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
   tiendas       tiendas?     @relation(fields: [id_tienda], references: [id_tienda], onUpdate: NoAction)
+  inventario    inventario?  @relation(fields: [id_inventario], references: [id_inventario], onDelete: SetNull, onUpdate: NoAction)
 
   @@unique([id_pedido, id_producto], map: "uq_detalle_pedido_producto")
   @@index([id_pedido], map: "idx_detalle_pedido")
   @@index([id_producto], map: "idx_detalle_producto")
   @@index([id_productor], map: "idx_detalle_productor")
   @@index([id_tienda], map: "idx_detalle_tienda")
+  @@index([id_inventario], map: "idx_detalle_inventario")
 }
 
 model direcciones {
@@ -291,6 +294,7 @@ model inventario {
   actualizado_en         DateTime                 @default(now()) @db.Timestamptz(6)
   productos              productos                @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
   movimientos_inventario movimientos_inventario[]
+  detalle_pedido         detalle_pedido[]
 
   @@index([id_producto], map: "idx_inventario_producto")
   @@index([id_producto, stock], map: "idx_inventario_producto_stock")
@@ -420,9 +424,14 @@ model pagos {
   proveedor          String?        @db.VarChar(50)
   payment_intent_id  String?        @unique(map: "uq_pagos_payment_intent_id") @db.VarChar(150)
   estado             String         @default("pendiente") @db.VarChar(50)
+  // monto/moneda = cargo REAL al cliente (USD para destinos != MX). Para la contabilidad
+  // y el payout al productor —siempre en MXN— se guardan el equivalente en MXN y la tasa
+  // MXN→USD congelada en el checkout. Ver C-4 (resolverCobro en pagos.service.ts).
   monto              Decimal        @db.Decimal(14, 2)
   monto_reembolsado  Decimal        @default(0) @db.Decimal(14, 2)
   moneda             Moneda
+  monto_mxn          Decimal?       @db.Decimal(14, 2)
+  tasa_cambio        Decimal?       @db.Decimal(18, 8)
   creado_en          DateTime       @default(now()) @db.Timestamptz(6)
   actualizado_en     DateTime       @default(now()) @db.Timestamptz(6)
   pedidos            pedidos        @relation(fields: [id_pedido], references: [id_pedido], onUpdate: NoAction)
@@ -691,6 +700,7 @@ model servicios_envio {
 model tasas_impuesto {
   id_tasa            Int         @id @default(autoincrement())
   pais_iso2          String      @db.Char(2)
+  estado_codigo      String?     @db.VarChar(3)
   id_categoria       Int?
   tipo               String      @db.VarChar(20)
   nombre             String      @db.VarChar(150)
@@ -701,11 +711,17 @@ model tasas_impuesto {
   vigente_hasta      DateTime?   @db.Date
   incluido_en_precio Boolean     @default(false)
   activo             Boolean     @default(true)
+  // Marca que el negocio tiene obligación fiscal (nexo) en este país/estado. Si está
+  // activo pero no hay tasa vigente para el destino, el checkout se bloquea (no vender
+  // sin cobrar el impuesto donde existe obligación).
+  nexo_activo        Boolean     @default(false)
   creado_en          DateTime    @default(now()) @db.Timestamptz(6)
   categorias         categorias? @relation(fields: [id_categoria], references: [id_categoria], onUpdate: NoAction)
   paises             paises      @relation(fields: [pais_iso2], references: [iso2], onUpdate: NoAction)
 
   @@index([id_categoria], map: "idx_tasas_categoria")
+  @@index([pais_iso2, estado_codigo], map: "idx_tasas_pais_estado")
+  @@index([pais_iso2, estado_codigo, nexo_activo], map: "idx_tasas_nexo")
 }
 
 model tiendas {
@@ -773,6 +789,7 @@ model usuarios {
   password_hash                                 String?                  @db.VarChar(255)
   idioma_preferido                              String                   @default("es") @db.VarChar(10)
   moneda_preferida                              Moneda                   @default(MXN)
+  email_opt_out                                 Boolean                  @default(false)
   version_token                                 Int                      @default(1)
   fecha_registro                                DateTime                 @default(now()) @db.Timestamptz(6)
   eliminado_en                                  DateTime?                @db.Timestamptz(6)

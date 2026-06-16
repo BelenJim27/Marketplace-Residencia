@@ -1,9 +1,7 @@
 import { getCookie, setCookie } from "@/lib/cookies";
 import type { InventarioItem, ProductItem } from "@/types/producer";
 
-// En el browser usamos URLs relativas para que Next.js las proxee al API
-// (evita CORS sin tocar la configuración del servidor de producción).
-// En el servidor (SSR / NextAuth callbacks) usamos la URL directa.
+
 const API_BASE = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 ).replace(/\/$/, "");
@@ -744,6 +742,16 @@ export const api = {
           method: "POST",
           headers: headers(token),
           body: JSON.stringify(data),
+        }),
+      // Confirmación síncrona post-pago: marca el pedido como pagado sin depender del webhook.
+      confirm: (
+        token: string,
+        id_pedido: string,
+      ): Promise<{ estado: string; confirmado: boolean }> =>
+        fetchJson(endpoint("/pagos/stripe/confirm"), {
+          method: "POST",
+          headers: headers(token),
+          body: JSON.stringify({ id_pedido }),
         }),
     },
     paypal: {

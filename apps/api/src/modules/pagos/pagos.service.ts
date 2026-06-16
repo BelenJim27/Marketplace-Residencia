@@ -7,6 +7,7 @@ import { EmailService } from '../email/email.service';
 import { EnviosService } from '../envios/envios.service';
 import { calcularEdadEnAnios } from '../productos/edad.helper';
 import { serializeBigInts, toBigIntId } from '../shared/serialize';
+import { TasasCambioService } from '../tasas-cambio/tasas-cambio.service';
 import { CreatePagoDto, CreateStripeIntentDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
 import { PaypalService } from './paypal.service';
 import { StripeService } from './stripe.service';
@@ -21,6 +22,7 @@ export class PagosService {
     private readonly paypalService: PaypalService,
     private readonly emailService: EmailService,
     private readonly comisionesService: ComisionesService,
+    private readonly tasasCambioService: TasasCambioService,
     @Optional() private readonly enviosService: EnviosService | null,
   ) {}
   async findAll(filtros?: { estado?: string; proveedor?: string }) {
@@ -62,6 +64,16 @@ export class PagosService {
       }
       throw err;
     }
+  }
+
+  /**
+   * Revierte el registro de dedup de un webhook. Se usa cuando el procesamiento
+   * falla por un error transitorio: al borrar el registro, el reintento del
+   * proveedor (Stripe/PayPal) volverá a procesarse en lugar de descartarse como
+   * "duplicado" y perderse silenciosamente.
+   */
+  async discardWebhookEvent(provider: string, event_id: string): Promise<void> {
+    await this.prisma.webhook_events_log.deleteMany({ where: { provider, event_id } });
   }
 
   async resolverManual(id_pago: string, notas?: string) {
@@ -146,8 +158,6 @@ export class PagosService {
   }
 
   async createStripePaymentIntent(dto: CreateStripeIntentDto) {
-    const moneda = dto.moneda as Moneda;
-
     const id_pedido_bi = toBigIntId(dto.id_pedido);
     const pedido = await this.prisma.pedidos.findUnique({ where: { id_pedido: id_pedido_bi } });
     if (!pedido) throw new NotFoundException('Pedido no encontrado');
@@ -158,15 +168,21 @@ export class PagosService {
 
     const categoriaIds = await this.obtenerCategoriasDelPedido(id_pedido_bi);
     const paisDestino = dto.shipping_address.country;
-    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds);
+    await this.validarTasaCambioVigente(paisDestino);
+    await this.validarNexoFiscal(paisDestino, dto.shipping_address.state);
+    // Impuestos en MXN (canónico); el reparto a productores y la contabilidad van en MXN.
+    const { taxAmount: taxMxn, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds, dto.shipping_address.state);
+
+    // C-4: moneda de cobro al cliente (USD para destino != MX) + conversión congelada.
+    const cobro = await this.resolverCobro(paisDestino, { subtotal: dto.subtotal, shipping: dto.shipping_amount ?? 0, tax: taxMxn });
 
     const directCharge = await this.resolveDirectCharge(id_pedido_bi, dto.subtotal, dto.shipping_amount ?? 0);
 
     const intent = await this.stripeService.createPaymentIntent({
-      subtotal: dto.subtotal,
-      shippingAmount: dto.shipping_amount ?? 0,
-      taxAmount,
-      currency: moneda,
+      subtotal: cobro.subtotal,
+      shippingAmount: cobro.shipping,
+      taxAmount: cobro.tax,
+      currency: cobro.moneda,
       shippingAddress: dto.shipping_address,
       recipientName: dto.recipient_name,
       customerId: dto.customer_id,
@@ -179,18 +195,19 @@ export class PagosService {
       transferGroup: `pedido-${dto.id_pedido}`,
     });
 
+    // pedidos: contabilidad SIEMPRE en MXN (canónico, base de payouts a productores).
     await this.prisma.pedidos.update({
       where: { id_pedido: id_pedido_bi },
       data: {
-        tax_amount: intent.taxAmount.toFixed(2),
-        shipping_amount: intent.shippingAmount.toFixed(2),
-        total: intent.totalAmount.toFixed(2),
-        moneda,
+        tax_amount: taxMxn.toFixed(2),
+        shipping_amount: (dto.shipping_amount ?? 0).toFixed(2),
+        total: cobro.totalMxn.toFixed(2),
+        moneda: 'MXN',
       },
     });
 
-    // Recalcular distribución por productor ahora que tax y shipping son conocidos.
-    await this.recalcularDistribucionPedido(id_pedido_bi, moneda);
+    // Recalcular distribución por productor (siempre en MXN).
+    await this.recalcularDistribucionPedido(id_pedido_bi, 'MXN');
 
     const pago = await this.prisma.pagos.create({
       data: {
@@ -198,8 +215,10 @@ export class PagosService {
         proveedor: 'stripe',
         payment_intent_id: intent.paymentIntentId,
         estado: 'pendiente',
-        monto: intent.totalAmount.toFixed(2),
-        moneda,
+        monto: intent.totalAmount.toFixed(2), // cargo real (USD o MXN)
+        moneda: cobro.moneda,
+        monto_mxn: cobro.totalMxn.toFixed(2),
+        tasa_cambio: cobro.tasa.toFixed(8),
       },
     });
 
@@ -207,17 +226,20 @@ export class PagosService {
       ...pago,
       clientSecret: intent.clientSecret,
       paymentIntentId: intent.paymentIntentId,
-      subtotal: intent.subtotal,
-      taxAmount: intent.taxAmount,
+      // El frontend convierte desde MXN para mostrar; devolvemos los montos canónicos MXN.
+      subtotal: dto.subtotal,
+      taxAmount: taxMxn,
       taxBreakdown,
-      shippingAmount: intent.shippingAmount,
-      totalAmount: intent.totalAmount,
+      shippingAmount: dto.shipping_amount ?? 0,
+      totalAmount: cobro.totalMxn,
+      // Cargo real al cliente (la UI de Stripe ya lo muestra; útil para confirmaciones).
+      monedaCobro: cobro.moneda,
+      totalCobrado: intent.totalAmount,
+      tasaCambio: cobro.tasa,
     });
   }
 
   async createPaypalOrder(dto: CreatePaypalOrderDto) {
-    const moneda = dto.moneda as Moneda;
-
     const id_pedido_bi = toBigIntId(dto.id_pedido);
     const pedido = await this.prisma.pedidos.findUnique({ where: { id_pedido: id_pedido_bi } });
     if (!pedido) throw new NotFoundException('Pedido no encontrado');
@@ -228,29 +250,33 @@ export class PagosService {
 
     const categoriaIds = await this.obtenerCategoriasDelPedido(id_pedido_bi);
     const paisDestino = dto.shipping_address?.country ?? 'MX';
-    const { taxAmount, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds);
+    await this.validarTasaCambioVigente(paisDestino);
+    await this.validarNexoFiscal(paisDestino, dto.shipping_address?.state);
+    const { taxAmount: taxMxn, taxBreakdown } = await this.calcularImpuestos(dto.subtotal, dto.shipping_amount ?? 0, paisDestino, categoriaIds, dto.shipping_address?.state);
 
-    const totalAmount = dto.subtotal + (dto.shipping_amount ?? 0) + taxAmount;
+    // C-4: moneda de cobro al cliente (USD para destino != MX) + conversión congelada.
+    const cobro = await this.resolverCobro(paisDestino, { subtotal: dto.subtotal, shipping: dto.shipping_amount ?? 0, tax: taxMxn });
 
     const paypalOrder = await this.paypalService.createOrder({
-      totalAmount,
-      currency: moneda,
+      totalAmount: cobro.total,
+      currency: cobro.moneda,
       referenceId: String(id_pedido_bi),
       shippingAddress: dto.shipping_address,
     });
 
+    // pedidos: contabilidad SIEMPRE en MXN (canónico, base de payouts a productores).
     await this.prisma.pedidos.update({
       where: { id_pedido: id_pedido_bi },
       data: {
         shipping_amount: (dto.shipping_amount ?? 0).toFixed(2),
-        tax_amount: taxAmount.toFixed(2),
-        total: totalAmount.toFixed(2),
-        moneda,
+        tax_amount: taxMxn.toFixed(2),
+        total: cobro.totalMxn.toFixed(2),
+        moneda: 'MXN',
       },
     });
 
-    // Recalcular distribución por productor ahora que tax y shipping son conocidos.
-    await this.recalcularDistribucionPedido(id_pedido_bi, moneda);
+    // Recalcular distribución por productor (siempre en MXN).
+    await this.recalcularDistribucionPedido(id_pedido_bi, 'MXN');
 
     const pago = await this.prisma.pagos.create({
       data: {
@@ -258,8 +284,10 @@ export class PagosService {
         proveedor: 'paypal',
         payment_intent_id: paypalOrder.orderId,
         estado: 'pendiente',
-        monto: totalAmount.toFixed(2),
-        moneda,
+        monto: cobro.total.toFixed(2), // cargo real (USD o MXN)
+        moneda: cobro.moneda,
+        monto_mxn: cobro.totalMxn.toFixed(2),
+        tasa_cambio: cobro.tasa.toFixed(8),
       },
     });
 
@@ -267,11 +295,15 @@ export class PagosService {
       ...pago,
       orderId: paypalOrder.orderId,
       approveUrl: paypalOrder.approveUrl,
+      // El frontend convierte desde MXN para mostrar; devolvemos los montos canónicos MXN.
       subtotal: dto.subtotal,
-      taxAmount,
+      taxAmount: taxMxn,
       taxBreakdown,
       shippingAmount: dto.shipping_amount ?? 0,
-      totalAmount,
+      totalAmount: cobro.totalMxn,
+      monedaCobro: cobro.moneda,
+      totalCobrado: cobro.total,
+      tasaCambio: cobro.tasa,
     });
   }
 
@@ -305,6 +337,52 @@ export class PagosService {
     return updated;
   }
 
+  /**
+   * Confirmación SÍNCRONA del pago con tarjeta (Stripe). Se invoca desde el frontend al
+   * volver de `confirmCardPayment` exitoso para no depender del webhook (que en sandbox/local
+   * puede no llegar). Verifica el PaymentIntent contra Stripe y, si está 'succeeded', marca el
+   * pago como 'completado' vía updatePaymentStatus (idempotente; el webhook queda de respaldo).
+   */
+  async confirmStripePayment(id_pedido: string, id_usuario: string) {
+    await this.validatePedidoOwnership(id_pedido, id_usuario);
+
+    const idPedidoBi = toBigIntId(id_pedido);
+    const leerEstado = async () => {
+      const p = await this.prisma.pedidos.findUnique({
+        where: { id_pedido: idPedidoBi },
+        select: { estado: true },
+      });
+      return p?.estado ?? 'pendiente';
+    };
+
+    const pago = await this.prisma.pagos.findFirst({
+      where: { id_pedido: idPedidoBi, proveedor: 'stripe', payment_intent_id: { not: null } },
+      orderBy: { creado_en: 'desc' },
+    });
+
+    if (!pago?.payment_intent_id) {
+      return { estado: await leerEstado(), confirmado: false };
+    }
+
+    let pi: any;
+    try {
+      pi = await this.stripeService.retrievePaymentIntent(pago.payment_intent_id);
+    } catch (err: any) {
+      this.logger.warn(
+        `[pagos] confirmStripePayment: no se pudo recuperar PI ${pago.payment_intent_id}: ${err?.message}`,
+      );
+      return { estado: await leerEstado(), confirmado: false };
+    }
+
+    if (pi?.status === 'succeeded') {
+      const isDirectCharge = !!pi.transfer_data?.destination;
+      const taxCalculationId = pi.metadata?.tax_calculation as string | undefined;
+      await this.updatePaymentStatus(pago.payment_intent_id, 'completado', isDirectCharge, taxCalculationId);
+    }
+
+    return { estado: await leerEstado(), confirmado: pi?.status === 'succeeded' };
+  }
+
   async updatePaymentStatus(payment_intent_id: string, estado: string, isDirectCharge = false, taxCalculationId?: string) {
     // Lookup para obtener id_pago y datos de usuario (necesarios después)
     const pago = await this.prisma.pagos.findFirst({
@@ -313,7 +391,19 @@ export class PagosService {
     });
 
     if (!pago) {
-      throw new NotFoundException('Pago no encontrado');
+      // Dead-letter: el intent no coincide con ningún pago (p.ej. evento de otra
+      // cuenta/sistema, o un pago borrado). NO relanzamos: si lo hiciéramos, Stripe
+      // reintentaría indefinidamente un evento que nunca podrá resolverse. Lo
+      // registramos y alertamos a admins para revisión manual.
+      this.logger.error(
+        `[pagos] Webhook sin pago coincidente: payment_intent_id=${payment_intent_id}, evento=${estado}`,
+      );
+      await this.notificarAdmins(
+        'pago_sin_coincidencia',
+        'Webhook de pago sin pago asociado',
+        `Se recibió un webhook (estado="${estado}") para payment_intent_id=${payment_intent_id} pero no existe un pago con ese intent. Requiere revisión manual.`,
+      );
+      return null;
     }
 
     // Update atómico: solo actualiza si el estado actual NO es final.
@@ -348,6 +438,28 @@ export class PagosService {
         where: { id_pedido: pago.id_pedido },
         data: { estado: 'confirmado' },
       });
+
+      // C-7: registrar la comisión real de Stripe en payment_fees para conciliación de
+      // margen. Corre una sola vez (el updateMany de arriba garantiza count===1 por pago).
+      // No bloquea el flujo del webhook si la lectura del fee falla.
+      if ((pago.proveedor ?? 'stripe') === 'stripe') {
+        try {
+          const fee = await this.stripeService.getProcessingFee(payment_intent_id);
+          if (fee && (fee.currency === 'MXN' || fee.currency === 'USD')) {
+            await this.prisma.payment_fees.create({
+              data: {
+                id_pago: pago.id_pago,
+                proveedor: 'stripe',
+                monto_fee: (fee.feeMinor / 100).toFixed(6),
+                moneda: fee.currency as Moneda,
+                descripcion: 'Stripe processing fee',
+              },
+            });
+          }
+        } catch (err: any) {
+          this.logger.error(`[pagos] No se pudo registrar payment_fee para pago ${pago.id_pago}: ${err?.message}`);
+        }
+      }
 
       // Transfers now occur when order is marked as 'entregado' in updateOrderStatusForProductor
       // NOT here. Money is retained in platform account for escrow period until delivery confirmed.
@@ -390,6 +502,12 @@ export class PagosService {
 
           const nombreCliente = [buyer.nombre, buyer.apellido_paterno].filter(Boolean).join(' ');
 
+          // Idioma: inglés si el pedido es en USD (destino internacional), o si el
+          // usuario tiene idioma_preferido = 'en'.
+          const monedaPedido = pedidoCompleto?.moneda ?? 'MXN';
+          const lang: 'es' | 'en' =
+            monedaPedido === 'USD' || buyer.idioma_preferido === 'en' ? 'en' : 'es';
+
           await this.emailService.sendOrderConfirmationEmail(
             buyer.email,
             String(pago.id_pedido),
@@ -400,10 +518,11 @@ export class PagosService {
               subtotal: subtotalCalculado,
               shipping: pedidoCompleto ? Number(pedidoCompleto.shipping_amount) : 0,
               tax: pedidoCompleto ? Number(pedidoCompleto.tax_amount) : 0,
-              moneda: pedidoCompleto?.moneda ?? 'MXN',
+              moneda: monedaPedido,
               nombreCliente,
               fecha: new Date().toISOString(),
               metodoPago: pago.proveedor === 'paypal' ? 'PayPal' : 'Tarjeta de crédito/débito',
+              lang,
             },
           );
         } catch (err: any) {
@@ -643,6 +762,109 @@ export class PagosService {
   }
 
   /**
+   * A-1: Bloquea el checkout si la tasa MXN→USD está obsoleta cuando el destino no es MX.
+   * El precio que ve y acepta el cliente internacional se deriva de esta tasa; si el cron
+   * de ExchangeRate-API está caído (tasa stale o solo fallback), no procesamos el pago para
+   * no cobrar/mostrar un monto basado en una tasa incorrecta. Para MX no aplica.
+   */
+  private async validarTasaCambioVigente(paisDestino?: string): Promise<void> {
+    if (!paisDestino || paisDestino.toUpperCase() === 'MX') return;
+    let rate: any;
+    try {
+      rate = await this.tasasCambioService.getVigente('MXN', 'USD');
+    } catch {
+      rate = null;
+    }
+    if (!rate || rate.stale) {
+      this.logger.error(
+        `[pagos] Checkout bloqueado: tasa MXN→USD obsoleta/ausente para destino ${paisDestino.toUpperCase()}.`,
+      );
+      throw new BadRequestException(
+        'No podemos procesar pagos internacionales en este momento porque la tasa de cambio no está actualizada. Intenta de nuevo en unos minutos.',
+      );
+    }
+  }
+
+  /**
+   * C-3: Si el negocio declaró nexo fiscal (obligación de cobrar impuesto) en el país/estado
+   * de destino pero no existe una tasa vigente para calcularlo, bloquea el checkout para no
+   * vender sin cobrar el impuesto donde hay obligación. Si no hay nexo declarado, no bloquea
+   * (se permite el cálculo normal, que puede dar 0).
+   */
+  private async validarNexoFiscal(paisDestino: string, estadoDestino?: string): Promise<void> {
+    const pais = paisDestino.toUpperCase();
+    const estado = estadoDestino?.trim().toUpperCase();
+    const ahora = new Date();
+
+    // ¿Hay nexo declarado para este destino? (país-estado específico, o país completo).
+    const nexoFilas = await this.prisma.tasas_impuesto.findMany({
+      where: {
+        pais_iso2: pais,
+        nexo_activo: true,
+        OR: [{ estado_codigo: null }, ...(estado ? [{ estado_codigo: estado }] : [])],
+      },
+      select: { estado_codigo: true, activo: true, vigente_desde: true, vigente_hasta: true, tasa_porcentaje: true },
+    });
+    if (nexoFilas.length === 0) return; // sin nexo declarado → no se bloquea
+
+    // Con nexo declarado, exigir al menos una tasa VIGENTE y activa para el destino.
+    const tieneTasaVigente = nexoFilas.some(
+      (f) =>
+        f.activo &&
+        f.tasa_porcentaje != null &&
+        new Date(f.vigente_desde) <= ahora &&
+        (f.vigente_hasta == null || new Date(f.vigente_hasta) >= ahora),
+    );
+    if (!tieneTasaVigente) {
+      this.logger.error(
+        `[pagos] Checkout bloqueado: nexo fiscal declarado para ${pais}${estado ? '/' + estado : ''} sin tasa vigente.`,
+      );
+      throw new BadRequestException(
+        `No podemos completar la compra para ${estado ? estado + ', ' : ''}${pais} en este momento porque el impuesto aplicable no está disponible. Intenta más tarde o elige otra dirección.`,
+      );
+    }
+  }
+
+  /**
+   * C-4: Determina la moneda de COBRO al cliente según el país destino y convierte los
+   * montos canónicos (en MXN) a esa moneda con la tasa congelada de ExchangeRate-API.
+   *   - Destino MX  → MXN (sin conversión, tasa 1).
+   *   - Otro destino → USD (cobro nativo; el cliente paga exactamente lo mostrado, sin
+   *     fee de transacción extranjera).
+   * La contabilidad interna y el payout al productor SIEMPRE quedan en MXN (totalMxn).
+   * La frescura de la tasa ya fue validada por validarTasaCambioVigente.
+   */
+  private async resolverCobro(
+    paisDestino: string,
+    montosMxn: { subtotal: number; shipping: number; tax: number },
+  ): Promise<{
+    moneda: Moneda;
+    tasa: number;
+    subtotal: number;
+    shipping: number;
+    tax: number;
+    total: number;
+    totalMxn: number;
+  }> {
+    const totalMxn = Math.round((montosMxn.subtotal + montosMxn.shipping + montosMxn.tax) * 100) / 100;
+    if ((paisDestino ?? 'MX').toUpperCase() === 'MX') {
+      return { moneda: 'MXN', tasa: 1, ...montosMxn, total: totalMxn, totalMxn };
+    }
+    const r: any = await this.tasasCambioService.getVigente('MXN', 'USD');
+    const tasa = Number(r.tasa);
+    const conv = (n: number) => Math.round(n * tasa * 100) / 100;
+    return {
+      moneda: 'USD',
+      tasa,
+      subtotal: conv(montosMxn.subtotal),
+      shipping: conv(montosMxn.shipping),
+      tax: conv(montosMxn.tax),
+      total: conv(totalMxn),
+      totalMxn,
+    };
+  }
+
+  /**
    * Recalcula pedido_productor (subtotal_bruto, comision, monto_neto) para todos los
    * productores del pedido usando los valores reales de tax_amount y shipping_amount
    * que acaban de ser guardados en pedidos. Llamar DESPUÉS de actualizar pedidos.
@@ -677,10 +899,11 @@ export class PagosService {
           (s, d) => s + Number(d.precio_compra) * Number(d.cantidad),
           0,
         );
-        const pct = subtotalProd / subtotalTotal;
-        const taxProrrateado = Number(pedido.tax_amount ?? 0) * pct;
-        const envioProrrateado = Number(pedido.shipping_amount ?? 0) * pct;
-        const subtotalBruto = Number((subtotalProd + taxProrrateado + envioProrrateado).toFixed(2));
+        // Política de reparto (memoria feedback_iva_incluido_envio_plataforma):
+        // IVA va incluido en el precio del producto (ya dentro de subtotalProd) y el
+        // costo de envío lo retiene la plataforma (compra las guías). Por eso el bruto
+        // del productor = subtotal de SUS productos, sin prorratear tax ni envío.
+        const subtotalBruto = Number(subtotalProd.toFixed(2));
 
         const comision = await this.comisionesService.resolver({ id_productor });
         const comisionMonto = this.comisionesService.calcularMonto(subtotalBruto, comision);
@@ -731,8 +954,10 @@ export class PagosService {
     shippingAmount: number,
     paisDestino: string,
     categoriaIds: number[] = [],
+    estadoDestino?: string,
   ): Promise<{ taxAmount: number; taxBreakdown: { tipo: string; nombre: string; tasa: number; monto: number }[] }> {
     const ahora = new Date();
+    const estado = estadoDestino?.trim().toUpperCase();
     const tasas = await this.prisma.tasas_impuesto.findMany({
       where: {
         pais_iso2: paisDestino.toUpperCase(),
@@ -740,12 +965,21 @@ export class PagosService {
         incluido_en_precio: false,
         vigente_desde: { lte: ahora },
         OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: ahora } }],
-        // Incluye tasas globales (sin categoría) Y tasas de las categorías del pedido
         AND: [
+          // Tasas globales (sin categoría) Y tasas de las categorías del pedido.
           {
             OR: [
               { id_categoria: null },
               ...(categoriaIds.length > 0 ? [{ id_categoria: { in: categoriaIds } }] : []),
+            ],
+          },
+          // Sales tax por estado (US): aplica tasas a nivel país (estado_codigo NULL)
+          // Y, si hay estado destino, las específicas de ese estado. Para US el negocio
+          // configura filas por estado con nexo; MX usa estado_codigo NULL (IVA país).
+          {
+            OR: [
+              { estado_codigo: null },
+              ...(estado ? [{ estado_codigo: estado }] : []),
             ],
           },
         ],
@@ -988,6 +1222,22 @@ export class PagosService {
     if (pago.estado !== 'completado') throw new BadRequestException('Solo se pueden reembolsar pagos completados');
     if (!pago.payment_intent_id) throw new BadRequestException('Sin payment_intent_id');
 
+    // C-4: registrar el reembolso en `refunds` para trazabilidad/conciliación.
+    // Se crea en estado 'pendiente' y se marca 'procesado'/'fallido' según el resultado
+    // del reembolso al comprador (la reversión de transfers a productores se rastrea aparte).
+    const refund = await this.prisma.refunds.create({
+      data: {
+        id_pago: pago.id_pago,
+        id_pedido: pago.id_pedido,
+        monto: pago.monto,
+        moneda: pago.moneda,
+        motivo: 'Reembolso total solicitado',
+        estado: 'pendiente',
+        tipo: 'total',
+        proveedor_ref_id: pago.payment_intent_id,
+      },
+    });
+
     // Branch by provider
     if (pago.proveedor === 'paypal') {
       // PayPal refund: payment_intent_id holds the capture ID
@@ -995,6 +1245,9 @@ export class PagosService {
         await this.paypalService.createRefund(pago.payment_intent_id);
       } catch (err: any) {
         this.logger.error('[pagos] PayPal refund failed:', err?.message);
+        await this.prisma.refunds
+          .update({ where: { id_refund: refund.id_refund }, data: { estado: 'fallido' } })
+          .catch(() => undefined);
         throw new BadRequestException(`PayPal refund failed: ${err?.message}`);
       }
 
@@ -1017,9 +1270,13 @@ export class PagosService {
       }
 
       if (reversalErrors.length > 0) {
+        // El comprador SÍ fue reembolsado (createRefund ok); sólo falló revertir transfers.
+        await this.prisma.refunds
+          .update({ where: { id_refund: refund.id_refund }, data: { estado: 'procesado', procesado_en: new Date() } })
+          .catch(() => undefined);
         await this.prisma.pagos.update({
           where: { id_pago: pago.id_pago },
-          data: { estado: 'reembolso_pendiente_manual' },
+          data: { estado: 'reembolso_pendiente_manual', monto_reembolsado: pago.monto },
         });
         throw new UnprocessableEntityException(
           `PayPal reembolsado pero ${reversalErrors.length} transfer(s) no pudo revertirse. Requiere reconciliación manual: ${reversalErrors.join('; ')}`,
@@ -1073,6 +1330,12 @@ export class PagosService {
       }
     }
 
+    // En este punto el comprador fue reembolsado (las rutas que fallan lanzan antes).
+    // Marcar el refund como procesado (cubre Stripe y PayPal sin errores de reversión).
+    await this.prisma.refunds
+      .update({ where: { id_refund: refund.id_refund }, data: { estado: 'procesado', procesado_en: new Date() } })
+      .catch(() => undefined);
+
     // Restore stock for each order item before marking as cancelled
     const detalles = await this.prisma.detalle_pedido.findMany({
       where: { id_pedido: pago.id_pedido },
@@ -1104,7 +1367,7 @@ export class PagosService {
     // Update payment and order status
     await this.prisma.pagos.update({
       where: { id_pago: pago.id_pago },
-      data: { estado: 'reembolsado' },
+      data: { estado: 'reembolsado', monto_reembolsado: pago.monto },
     });
     await this.prisma.pedidos.update({
       where: { id_pedido: pago.id_pedido },
@@ -1123,9 +1386,18 @@ export class PagosService {
     try {
       failed = await this.prisma.payouts.findMany({
         where: {
-          estado: 'fallido',
           intentos: { lt: MAX_INTENTOS },
-          OR: [{ proximo_reintento: null }, { proximo_reintento: { lte: new Date() } }],
+          OR: [
+            // Fallidos cuyo backoff ya venció (o nunca se programó).
+            {
+              estado: 'fallido',
+              OR: [{ proximo_reintento: null }, { proximo_reintento: { lte: new Date() } }],
+            },
+            // Recuperación de crash: payouts 'procesando' colgados >10min (la reserva
+            // se hizo pero el transfer no llegó a confirmarse). Reintentar es seguro:
+            // los idempotency keys (Stripe) y senderBatchId (PayPal) son deterministas.
+            { estado: 'procesando', creado_en: { lt: new Date(Date.now() - 10 * 60 * 1000) } },
+          ],
         },
         include: {
           pedido_productor: {
@@ -1210,7 +1482,8 @@ export class PagosService {
             paypalEmail: pp.productores.paypal_email,
             amountUSD,
             referenceId: `pedido-${pp.id_pedido}-prod-${pp.id_productor}`,
-            senderBatchId: `retry-${payout.id_payout}`,
+            // senderBatchId determinista (igual que en la entrega): PayPal deduplica el reenvío.
+            senderBatchId: `payout-pp-${pp.id_pedido}-prod-${pp.id_productor}`,
           });
 
           await this.prisma.payouts.update({
@@ -1262,6 +1535,152 @@ export class PagosService {
           await markFailed(error?.message ?? 'Unknown error');
         }
       }
+    }
+  }
+
+  /**
+   * C-7: conciliación financiera diaria. Corre los chequeos de integridad del módulo
+   * de pagos (los mismos del informe de auditoría) y alerta al admin ante discrepancias:
+   * pedidos pagados sin pago, doble payout, payouts sin evidencia y descuadres bruto/neto.
+   */
+  @Cron('0 6 * * *')
+  async conciliacionFinanciera() {
+    try {
+      const problemas: string[] = [];
+
+      const pagadosSinPago = await this.prisma.$queryRaw<Array<{ n: bigint }>>`
+        SELECT COUNT(*)::bigint AS n FROM pedidos pe
+        WHERE pe.estado = 'pagado'
+          AND NOT EXISTS (SELECT 1 FROM pagos p WHERE p.id_pedido = pe.id_pedido AND p.estado = 'completado')`;
+      if (Number(pagadosSinPago[0]?.n ?? 0) > 0)
+        problemas.push(`${pagadosSinPago[0].n} pedido(s) marcados 'pagado' sin pago completado`);
+
+      const doblePayout = await this.prisma.$queryRaw<Array<{ n: bigint }>>`
+        SELECT COUNT(*)::bigint AS n FROM (
+          SELECT pp.id_pedido, pp.id_productor
+          FROM pedido_productor pp JOIN payouts po ON po.id_payout = pp.id_payout
+          WHERE po.estado = 'procesado'
+          GROUP BY pp.id_pedido, pp.id_productor HAVING COUNT(*) > 1
+        ) t`;
+      if (Number(doblePayout[0]?.n ?? 0) > 0)
+        problemas.push(`${doblePayout[0].n} (pedido,productor) con doble payout 'procesado' (posible doble transferencia)`);
+
+      const sinRef = await this.prisma.payouts.count({
+        where: { estado: 'procesado', OR: [{ referencia_externa: null }, { referencia_externa: '' }] },
+      });
+      if (sinRef > 0) problemas.push(`${sinRef} payout(s) 'procesado' sin referencia_externa (sin evidencia)`);
+
+      const descuadre = await this.prisma.$queryRaw<Array<{ n: bigint }>>`
+        SELECT COUNT(*)::bigint AS n FROM payouts
+        WHERE estado IN ('procesado', 'pendiente')
+          AND ROUND(monto_neto + monto_comision, 2) <> ROUND(monto_bruto, 2)`;
+      if (Number(descuadre[0]?.n ?? 0) > 0)
+        problemas.push(`${descuadre[0].n} payout(s) con descuadre neto+comisión≠bruto`);
+
+      if (problemas.length > 0) {
+        this.logger.error(`[pagos] Conciliación detectó ${problemas.length} problema(s): ${problemas.join(' | ')}`);
+        await this.emailService
+          .sendAdminAlert(
+            `Conciliación financiera: ${problemas.length} discrepancia(s)`,
+            `La conciliación diaria detectó:\n\n- ${problemas.join('\n- ')}\n\nRevisar en el panel admin.`,
+          )
+          .catch(() => undefined);
+      } else {
+        this.logger.log('[pagos] Conciliación financiera OK: sin discrepancias');
+      }
+    } catch (err: any) {
+      this.logger.error(`[pagos] Error en conciliación financiera: ${err?.message}`);
+    }
+  }
+
+  /**
+   * Fase 3: alerta de fondos retenidos. Detecta pedido_productor ENTREGADOS con neto
+   * positivo y sin payout (id_payout null) por más de 7 días — típicamente productores
+   * que aún no completan onboarding de Stripe/PayPal — y notifica al admin para gestionarlo.
+   */
+  /**
+   * C-3: reconciliación de pagos PayPal. Si el cliente capturó la orden pero la
+   * confirmación al backend se perdió (red caída tras capturePaypalOrder), el pago
+   * queda 'pendiente' aunque PayPal ya cobró. Este cron consulta PayPal y finaliza
+   * los pagos cuya orden está COMPLETED, evitando dinero cobrado sin pedido confirmado.
+   */
+  @Cron('*/30 * * * *')
+  async reconciliarPagosPaypal() {
+    const desde = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    const hasta = new Date(Date.now() - 10 * 60 * 1000); // dar margen al webhook normal
+    let pendientes: Array<{ id_pago: bigint; payment_intent_id: string | null }>;
+    try {
+      pendientes = await this.prisma.pagos.findMany({
+        where: {
+          proveedor: 'paypal',
+          estado: 'pendiente',
+          creado_en: { gte: desde, lte: hasta },
+          payment_intent_id: { not: null },
+        },
+        select: { id_pago: true, payment_intent_id: true },
+        take: 50,
+      });
+    } catch (dbErr: any) {
+      this.logger.warn(`[pagos] reconciliarPagosPaypal: DB no disponible. ${dbErr?.message}`);
+      return;
+    }
+
+    if (pendientes.length === 0) return;
+
+    for (const p of pendientes) {
+      if (!p.payment_intent_id) continue;
+      try {
+        const order = await this.paypalService.getOrderDetails(p.payment_intent_id);
+        if (order.status !== 'COMPLETED') continue; // APPROVED sin capturar: no cobrar aquí
+
+        const captureId = order.purchase_units?.[0]?.payments?.captures?.[0]?.id;
+        if (!captureId) continue;
+
+        // Persistir captureId y finalizar como el flujo normal de captura.
+        await this.prisma.pagos.update({
+          where: { id_pago: p.id_pago },
+          data: { payment_intent_id: captureId },
+        });
+        await this.updatePaymentStatus(captureId, 'completado');
+        this.logger.warn(`[pagos] Reconciliación PayPal: pago ${p.id_pago} finalizado fuera de banda (capture ${captureId})`);
+      } catch (err: any) {
+        this.logger.error(`[pagos] reconciliarPagosPaypal error en pago ${p.id_pago}: ${err?.message}`);
+      }
+    }
+  }
+
+  @Cron('0 7 * * *')
+  async alertarFondosRetenidos() {
+    try {
+      const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const retenidos = await this.prisma.pedido_productor.findMany({
+        where: {
+          estado: 'entregado',
+          id_payout: null,
+          monto_neto_productor: { gt: 0 },
+          actualizado_en: { lt: cutoff },
+        },
+        select: { id_pedido: true, id_productor: true, monto_neto_productor: true, moneda: true },
+        take: 200,
+      });
+
+      if (retenidos.length === 0) {
+        this.logger.debug('[pagos] Sin fondos retenidos >7d');
+        return;
+      }
+
+      const total = retenidos.reduce((s, r) => s + Number(r.monto_neto_productor ?? 0), 0);
+      const productores = new Set(retenidos.map((r) => r.id_productor)).size;
+      this.logger.warn(`[pagos] ${retenidos.length} pago(s) retenidos >7d (${productores} productor(es), total ~${total.toFixed(2)})`);
+
+      await this.notificarAdmins(
+        'fondos_retenidos',
+        `Fondos retenidos: ${retenidos.length} pago(s) sin transferir`,
+        `Hay ${retenidos.length} pago(s) entregados hace más de 7 días sin transferir (≈${total.toFixed(2)}), de ${productores} productor(es). Suele deberse a onboarding de pagos incompleto. Revisar en el panel de payouts.`,
+        '/dashboard/admin/payouts',
+      );
+    } catch (err: any) {
+      this.logger.error(`[pagos] Error en alertarFondosRetenidos: ${err?.message}`);
     }
   }
 
