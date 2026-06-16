@@ -229,6 +229,8 @@
   "Copiar número de rastreo": "Copy tracking number",
   "Rastrear mi paquete": "Track my package",
   "Copia tu número de guía y pégalo en la página de rastreo para ver el estado en tiempo real.": "Copy your tracking number and paste it on the tracking page to see real-time status.",
+  "Copiamos tu número de guía y abrimos la página de rastreo; solo pégalo para ver el estado.": "We copied your tracking number and opened the tracking page; just paste it to see the status.",
+  "Número copiado. Pégalo en el buscador de la página de rastreo.": "Number copied. Paste it into the tracking page's search box.",
   "Actualizando...": "Updating...",
   "Actualizar seguimiento": "Refresh tracking",
   "Historial de eventos": "Event history",
@@ -363,5 +365,14 @@
   "Error al enviar la solicitud": "Error submitting request",
   "categoría": "category",
   "categorías": "categories",
-  "o arrastra aquí": "or drag here"
+  "o arrastra aquí": "or drag here",
+  "address_form_number": "Number *",
+  "address_form_line1": "Address - Line 1 *",
+  "address_form_line2": "Address - Line 2 (optional)",
+  "address_form_zip": "ZIP Code *",
+  "address_form_state_select": "Select a state…",
+  "checkout_tax_included_note": "Prices include VAT",
+  "checkout_customs_note": "Import duties are settled at customs by the importer.",
+  "address_error_form_open": "Save your address before continuing.",
+  "address_validation_required": "Required field"
 }

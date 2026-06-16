@@ -5,8 +5,7 @@ import { MenuIcon, CloseIcon } from "./icons";
 import { Notification } from "./notification";
 import { UserInfo } from "./user-info";
 import { useNotificationPoller } from "@/hooks/useNotificationPoller";
-import Link from "next/link";
-import { Home, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 
 function useDateLabel() {
@@ -58,15 +57,6 @@ export function Header() {
             <span>{dateLabel}</span>
           </div>
         )}
-
-        {/* Tienda */}
-        <Link
-          href="/cliente/producto"
-          title="Ver tienda"
-          className="rounded-xl border border-white/20 bg-white/10 p-2 text-white hover:bg-white/20 transition-all duration-200"
-        >
-          <Home className="h-5 w-5" />
-        </Link>
 
         <Notification dark />
 

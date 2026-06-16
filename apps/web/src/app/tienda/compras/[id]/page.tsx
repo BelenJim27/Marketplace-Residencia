@@ -18,6 +18,7 @@ import { getCookie } from "@/lib/cookies";
 
 interface DetallePedido {
   id_producto: number;
+  id_productor?: number;
   cantidad: number;
   precio_compra: string;
   moneda_compra?: string;
@@ -40,6 +41,7 @@ interface Envio {
 
 interface PedidoProductor {
   id_productor: number;
+  id_envio?: number;
   estado?: string;
   productores?: { nombre_marca?: string | null; razon_social?: string | null };
 }
@@ -372,6 +374,16 @@ function DetallePedidoContent() {
     navigator.clipboard.writeText(numero);
     setCopiedId(idEnvio);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  // Copia el número de guía y abre la página de rastreo de SkydropX en otra pestaña,
+  // así el cliente solo pega (Ctrl+V) en el buscador. (La página es una SPA sin
+  // parámetro de URL para precargar el número, por eso copiamos + abrimos.)
+  const rastrearEnSkydropx = (numero: string, idEnvio: number) => {
+    navigator.clipboard.writeText(numero).catch(() => {});
+    setCopiedId(idEnvio);
+    setTimeout(() => setCopiedId(null), 2500);
+    window.open(SKYDROPX_TRACKING_URL, "_blank", "noopener,noreferrer");
   };
 
   if (cargando) return <Skeleton />;
@@ -907,6 +919,15 @@ function DetallePedidoContent() {
               const isCopied = copiedId === id;
               const carrierEstado = (trk?.estado_actual ?? envio.estado ?? "").toLowerCase();
               const carrierIndex = CARRIER_TIMELINE.findIndex(s => s.keys.includes(carrierEstado));
+              // Productos de este paquete: envío → productor (vía pedido_productor.id_envio) → sus líneas.
+              const pkgProductor = (pedido.pedido_productor ?? []).find(pp => pp.id_envio === id);
+              const pkgMarca = pkgProductor?.productores?.nombre_marca || pkgProductor?.productores?.razon_social || null;
+              const pkgProductos = pkgProductor
+                ? (pedido.detalle_pedido ?? [])
+                    .filter(d => d.id_productor === pkgProductor.id_productor)
+                    .map(d => d.productos?.nombre)
+                    .filter(Boolean)
+                : [];
               return (
                 <div key={id} style={{ marginBottom: envioIdx < enviosConGuia.length - 1 ? "20px" : "0" }}>
                   {/* Separador entre paquetes */}
@@ -917,6 +938,25 @@ function DetallePedidoContent() {
                     <p style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px", color: C.muted, margin: "0 0 10px 0" }}>
                       {t("Paquete")} {envioIdx + 1}
                     </p>
+                  )}
+
+                  {/* Contenido del paquete: producto(s) + marca, para diferenciar paquetes */}
+                  {pkgProductos.length > 0 && (
+                    <div style={{
+                      display: "flex", alignItems: "flex-start", gap: "8px",
+                      padding: "10px 12px", marginBottom: "12px", borderRadius: "8px",
+                      background: "rgba(168,194,107,0.08)", border: `1px solid ${C.border}`,
+                    }}>
+                      <Package size={14} style={{ color: C.green, flexShrink: 0, marginTop: "2px" }} />
+                      <div>
+                        <p style={{ fontSize: "13px", fontWeight: "600", color: C.greenDark, margin: 0, lineHeight: 1.35 }}>
+                          {pkgProductos.join(", ")}
+                        </p>
+                        {pkgMarca && (
+                          <p style={{ fontSize: "11px", color: C.muted, margin: "2px 0 0 0" }}>{pkgMarca}</p>
+                        )}
+                      </div>
+                    </div>
                   )}
 
                   {/* Número de guía + estado */}
@@ -965,25 +1005,25 @@ function DetallePedidoContent() {
                     </div>
                   </div>
 
-                  {/* Rastreo externo: página de SkydropX (acción primaria) */}
+                  {/* Rastreo externo: copia el número y abre la página de SkydropX (acción primaria) */}
                   <div style={{ marginBottom: "16px" }}>
-                    <a
-                      href={SKYDROPX_TRACKING_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => rastrearEnSkydropx(envio.numero_rastreo!, id)}
                       style={{
                         display: "inline-flex", alignItems: "center", gap: "8px",
-                        borderRadius: "10px", padding: "10px 16px",
-                        fontSize: "13px", fontWeight: "700", textDecoration: "none",
+                        borderRadius: "10px", padding: "10px 16px", border: "none",
+                        fontSize: "13px", fontWeight: "700", cursor: "pointer",
                         color: C.white, background: `linear-gradient(135deg, ${C.green}, ${C.greenDark})`,
                         boxShadow: "0 2px 8px rgba(61,107,63,0.25)",
                       }}
                     >
-                      <MapPin size={14} />
+                      {isCopied ? <CheckCircle size={14} /> : <MapPin size={14} />}
                       {t("Rastrear mi paquete")}
-                    </a>
+                    </button>
                     <p style={{ fontSize: "12px", color: C.muted, margin: "8px 0 0 0", lineHeight: 1.4 }}>
-                      {t("Copia tu número de guía y pégalo en la página de rastreo para ver el estado en tiempo real.")}
+                      {isCopied
+                        ? t("Número copiado. Pégalo en el buscador de la página de rastreo.")
+                        : t("Copiamos tu número de guía y abrimos la página de rastreo; solo pégalo para ver el estado.")}
                     </p>
                   </div>
 

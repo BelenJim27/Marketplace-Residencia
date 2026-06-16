@@ -94,12 +94,18 @@ export class PedidosService {
   async getMisVentas(id_productor: number | null) {
     if (!id_productor) {
       return {
-        resumen: { totalVentas: 0, ingresosTotales: 0, pendientes: 0 },
+        resumen: { totalVentas: 0, ingresosTotales: 0 },
         ventas: [],
       };
     }
 
     const pedidos = await this.findPedidosByProductor(id_productor);
+    // El resumen solo considera ventas efectivamente pagadas; la lista `ventas`
+    // (tabla detallada) se mantiene completa para que el productor siga viendo
+    // pedidos pendientes/cancelados con su estado en el frontend.
+    const pedidosPagados = pedidos.filter((pedido) =>
+      esVentaPagada(pedido.estado),
+    );
     const ventas = pedidos.flatMap((pedido) =>
       pedido.detalle_pedido
         .filter((d) => {
@@ -130,17 +136,14 @@ export class PedidosService {
         })),
     );
 
+    const ventasPagadas = ventas.filter((v) => esVentaPagada(v.status));
+
     return serializeBigInts({
       resumen: {
-        totalVentas: pedidos.length,
+        totalVentas: pedidosPagados.length,
         ingresosTotales: Number(
-          pedidos
-            .reduce((sum, pedido) => sum + Number(pedido.total), 0)
-            .toFixed(2),
+          ventasPagadas.reduce((sum, v) => sum + v.total, 0).toFixed(2),
         ),
-        pendientes: pedidos.filter(
-          (pedido) => normalizeEstado(pedido.estado) === "pendiente",
-        ).length,
       },
       ventas,
     });
@@ -176,18 +179,31 @@ export class PedidosService {
       "asc",
     );
 
-    const rawRows = pedidos.flatMap((pedido) =>
-      pedido.detalle_pedido.map((detalle) => {
-        const amount = Number(detalle.precio_compra) * Number(detalle.cantidad);
-        return {
-          fecha: pedido.fecha_creacion,
-          producto: detalle.productos.nombre,
-          cantidad: Number(detalle.cantidad),
-          monto: amount,
-          tienda: detalle.productos.tiendas?.nombre ?? "Sin tienda",
-          status: pedido.estado,
-        };
-      }),
+    // Solo ventas efectivamente pagadas alimentan métricas, gráfica y top de productos.
+    const pedidosPagados = pedidos.filter((pedido) =>
+      esVentaPagada(pedido.estado),
+    );
+
+    const rawRows = pedidosPagados.flatMap((pedido) =>
+      pedido.detalle_pedido
+        .filter((d) => {
+          const prod = d.productos;
+          return (
+            prod?.tiendas?.id_productor === id_productor ||
+            prod?.lotes?.id_productor === id_productor
+          );
+        })
+        .map((detalle) => {
+          const amount = Number(detalle.precio_compra) * Number(detalle.cantidad);
+          return {
+            fecha: pedido.fecha_creacion,
+            producto: detalle.productos.nombre,
+            cantidad: Number(detalle.cantidad),
+            monto: amount,
+            tienda: detalle.productos.tiendas?.nombre ?? "Sin tienda",
+            status: pedido.estado,
+          };
+        }),
     );
 
     const ventasMap = new Map<string, number>();
@@ -225,7 +241,7 @@ export class PedidosService {
     return {
       periodo,
       resumen: {
-        pedidos: pedidos.length,
+        pedidos: pedidosPagados.length,
         productosVendidos: rawRows.reduce((sum, row) => sum + row.cantidad, 0),
         ingresos: Number(
           rawRows.reduce((sum, row) => sum + row.monto, 0).toFixed(2),
@@ -1112,15 +1128,32 @@ export class PedidosService {
   async getOrdersByProductor(id_productor: number) {
     const pedidosProductor = await this.prisma.pedido_productor.findMany({
       where: { id_productor },
-      include: {
+      select: {
+        id_pedido: true,
+        estado: true,
+        creado_en: true,
+        id_envio: true,
+        subtotal_bruto: true,
+        moneda: true,
         pedidos: {
-          include: {
+          select: {
+            estado: true,
+            moneda: true,
+            usuarios: { select: { nombre: true, email: true } },
             detalle_pedido: {
-              include: {
-                productos: { include: { lotes: true, tiendas: true } },
+              select: {
+                id_detalle: true,
+                cantidad: true,
+                precio_compra: true,
+                productos: {
+                  select: {
+                    nombre: true,
+                    lotes: { select: { id_productor: true } },
+                    tiendas: { select: { id_productor: true } },
+                  },
+                },
               },
             },
-            usuarios: true,
           },
         },
       },
@@ -1132,22 +1165,23 @@ export class PedidosService {
       d.productos?.tiendas?.id_productor === id_productor;
 
     return serializeBigInts(
-      pedidosProductor.map((pp) => ({
-        id_pedido: pp.id_pedido,
-        estado_productor: pp.estado,
-        estado_pedido: pp.pedidos.estado,
-        cliente: pp.pedidos.usuarios,
-        detalles: pp.pedidos.detalle_pedido.filter(belongsToProductor),
-        fecha_creacion: pp.creado_en,
-        id_envio: pp.id_envio,
-        total_parcial: pp.pedidos.detalle_pedido
-          .filter(belongsToProductor)
-          .reduce(
+      pedidosProductor.map((pp) => {
+        const misDetalles = pp.pedidos.detalle_pedido.filter(belongsToProductor);
+        return {
+          id_pedido: pp.id_pedido,
+          estado_productor: pp.estado,
+          estado_pedido: pp.pedidos.estado,
+          cliente: pp.pedidos.usuarios,
+          detalles: misDetalles,
+          fecha_creacion: pp.creado_en,
+          id_envio: pp.id_envio,
+          total_parcial: misDetalles.reduce(
             (sum, d) => sum + Number(d.precio_compra) * Number(d.cantidad),
             0,
           ),
-        moneda: pp.pedidos.moneda,
-      })),
+          moneda: pp.pedidos.moneda ?? pp.moneda,
+        };
+      }),
     );
   }
 
@@ -1864,6 +1898,12 @@ export class PedidosService {
             );
             return;
           }
+          // Sincronizar pedido_productor para que el productor vea el pedido
+          // expirado como cancelado en su panel, no como pendiente.
+          await tx.pedido_productor.updateMany({
+            where: { id_pedido: pedido.id_pedido },
+            data: { estado: 'cancelado' },
+          });
           for (const detalle of pedido.detalle_pedido) {
             // Restaurar al MISMO lote descontado; fallback para pedidos antiguos.
             const inv = detalle.id_inventario
@@ -1984,4 +2024,13 @@ function formatMonthBucket(date: Date) {
 
 function normalizeEstado(estado: string) {
   return estado.trim().toLowerCase();
+}
+
+// Estados que representan una venta efectivamente pagada (lista blanca).
+// Excluye automáticamente pendiente, cancelado y cualquier otro estado que
+// no represente una venta completada.
+const ESTADOS_VENTA_PAGADA = ['pagado', 'label_purchased', 'enviado', 'entregado'];
+
+function esVentaPagada(estado: string) {
+  return ESTADOS_VENTA_PAGADA.includes(normalizeEstado(estado));
 }

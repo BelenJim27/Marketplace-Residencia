@@ -110,14 +110,10 @@ export function ProductoModal({
   const loteSeleccionado = lotes.find((l) => String(l.id_lote) === form.id_lote) ?? null;
   const tieneLote = !!form.id_lote;
 
-  // Campos que vienen del lote y no deben editarse manualmente
-  const loteNombreComun = (loteSeleccionado as any)?.nombre_comun;
   const loteUnidades    = (loteSeleccionado as any)?.unidades;
   const loteBot350      = (loteSeleccionado as any)?.botellas_350ml;
   const loteBot750      = (loteSeleccionado as any)?.botellas_750ml;
 
-  const lockNombre    = mode !== "view" && tieneLote && !!loteNombreComun;
-  const lockDesc      = mode !== "view" && tieneLote;
   const lockStock     = mode !== "view" && tieneLote && loteUnidades != null;
   const lockBot350    = mode !== "view" && tieneLote && loteBot350 != null;
   const lockBot750    = mode !== "view" && tieneLote && loteBot750 != null;
@@ -174,7 +170,7 @@ export function ProductoModal({
                 />
                 {tieneLote && loteSeleccionado && (
                   <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                    Los campos marcados con <span className="font-semibold text-green-600 dark:text-green-400">auto</span> se rellenaron desde este lote y <span className="font-medium">no se pueden editar directamente</span>. Cambia el lote para actualizarlos.
+                    Los campos marcados con <span className="font-semibold text-amber-600 dark:text-amber-400">sugerido</span> fueron pre-rellenados desde el lote. Puedes editarlos libremente. Los campos de <span className="font-medium">inventario</span> están sincronizados con el lote.
                   </p>
                 )}
               </>
@@ -191,8 +187,8 @@ export function ProductoModal({
               label="Nombre"
               value={form.nombre}
               onChange={set("nombre")}
-              disabled={mode === "view" || lockNombre}
-              badge={lockNombre ? "auto" : undefined}
+              disabled={mode === "view"}
+              badge={tieneLote && form.nombre ? "sugerido" : undefined}
             />
             <div>
               <Field
@@ -266,9 +262,9 @@ export function ProductoModal({
             label="Descripción"
             value={form.descripcion}
             onChange={set("descripcion")}
-            disabled={mode === "view" || lockDesc}
+            disabled={mode === "view"}
             textarea
-            badge={lockDesc ? "auto" : undefined}
+            badge={tieneLote && form.descripcion ? "sugerido" : undefined}
           />
 
           {/* Imagen */}

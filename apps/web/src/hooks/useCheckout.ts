@@ -133,6 +133,10 @@ export function useCheckout() {
   }, []);
 
   useEffect(() => {
+    // Al cambiar dirección, limpiar datos fiscales del intent anterior para evitar mostrar
+    // IVA mexicano en el sidebar cuando el destino cambia a internacional (o viceversa).
+    setTaxAmount(0);
+    setTaxBreakdown([]);
     if (!direccionSeleccionada) {
       setDireccionIncompleta(false);
       return;
@@ -246,6 +250,11 @@ export function useCheckout() {
   const avanzarPaso = useCallback(async () => {
     setErrorMensaje(null);
     if (paso === "direccion") {
+      if (mostrarFormDireccion) {
+        setErrorMensaje("Guarda la dirección antes de continuar.");
+        return;
+      }
+
       const tieneCalleNacional = direccionSeleccionada?.calle || direccionSeleccionada?.numero || direccionSeleccionada?.colonia;
       const tieneLineaInternacional = direccionSeleccionada?.linea_1;
 
@@ -294,7 +303,7 @@ export function useCheckout() {
     } else if (paso === "pago") {
       setPaso("resumen");
     }
-  }, [paso, direccionSeleccionada, direccionIncompleta, todosSeleccionados, items]);
+  }, [paso, mostrarFormDireccion, direccionSeleccionada, direccionIncompleta, todosSeleccionados, items]);
 
   const retrocederPaso = useCallback(() => {
     setErrorMensaje(null);

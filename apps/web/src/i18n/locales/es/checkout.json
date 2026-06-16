@@ -117,5 +117,14 @@
   "compras_sign_in_prompt": "Inicia sesión para ver tu historial de compras.",
   "compras_sign_in_button": "Iniciar sesión",
   "compras_empty_state": "Aún no tienes compras.",
-  "compras_explore_button": "Explorar mezcales"
+  "compras_explore_button": "Explorar mezcales",
+  "address_form_number": "Número *",
+  "address_form_line1": "Dirección - Línea 1 *",
+  "address_form_line2": "Dirección - Línea 2 (opcional)",
+  "address_form_zip": "ZIP Code *",
+  "address_form_state_select": "Selecciona un estado…",
+  "checkout_tax_included_note": "Precios con IVA incluido",
+  "checkout_customs_note": "Impuestos de importación se liquidan en aduana por el importador.",
+  "address_error_form_open": "Guarda la dirección antes de continuar.",
+  "address_validation_required": "Campo requerido"
 }

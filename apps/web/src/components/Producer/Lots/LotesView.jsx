@@ -326,12 +326,6 @@ export default function LotesView() {
             <RefreshCw className={`h-4 w-4 ${sincronizando ? "animate-spin" : ""}`} />
             Sincronizar
           </button>
-          <button
-            onClick={() => { setForm(initialForm); setIsModalOpen(true); }}
-            className="rounded-xl bg-[#3D6B3F] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1F3A2E]"
-          >
-            + Nuevo Lote
-          </button>
         </div>
       </div>
 
@@ -404,11 +398,7 @@ export default function LotesView() {
                       <LotesAcciones
                         lote={item}
                         onVer={abrirVer}
-                        onEditar={abrirEditar}
                         onEliminar={abrirEliminar}
-                        onGestionarStock={abrirStock}
-                        onSincronizarProducto={sincronizarProductoLote}
-                        sincronizandoProducto={sincronizandoProductoIds.has(item.id_lote)}
                       />
                     </td>
                   </tr>
