@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useProductos } from "@/hooks/useProductos";
+import { getCookie } from "@/lib/cookies";
 import { ProductoModal } from "@/components/Producer/Products/acciones/ProductoModal";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 import {
@@ -130,6 +131,9 @@ export default function ProductosPage() {
           onClose={ctx.closeModal}
           onLoteChange={ctx.handleLoteChange}
           error={ctx.error}
+          token={getCookie("token") ?? ""}
+          imagenesNuevas={ctx.imagenesNuevas}
+          onImagenesNuevasChange={ctx.setImagenesNuevas}
         />
       )}
 

@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, Req, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import type { Request } from 'express';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { mkdirSync, unlinkSync } from 'fs';
@@ -39,13 +39,14 @@ export class ProductosController {
     @Query('destilacion') destilacion?: string,
     @Query('molienda') molienda?: string,
     @Query('maestro_mezcalero') maestroMezcalero?: string,
+    @Query('categorias') categorias?: string,
     @Query('limit') limit?: string,
   ) {
     const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined;
     return this.service.findAll(
       token,
       idProductor ? Number(idProductor) : undefined,
-      { busqueda, tipoMezcal, maguey, precioMin, precioMax, destilacion, molienda, maestroMezcalero },
+      { busqueda, tipoMezcal, maguey, precioMin, precioMax, destilacion, molienda, maestroMezcalero, categorias },
       limit ? Number(limit) : 200,
     );
   }
@@ -116,5 +117,28 @@ export class ProductosController {
   @Roles('productor', 'administrador')
   remove(@Param('id') id: string, @Req() req: Request) {
     return this.service.remove(id, (req as any).user);
+  }
+
+  @Post(':id/imagenes')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('productor', 'administrador')
+  @UseInterceptors(FilesInterceptor('imagenes', 10, { storage: productosStorage }))
+  addImagenes(
+    @Param('id') id: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Req() req: Request,
+  ) {
+    return this.service.addImagenes(id, files ?? [], (req as any).user);
+  }
+
+  @Delete(':id/imagenes/:id_imagen')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('productor', 'administrador')
+  removeImagen(
+    @Param('id') id: string,
+    @Param('id_imagen') id_imagen: string,
+    @Req() req: Request,
+  ) {
+    return this.service.removeImagen(id, id_imagen, (req as any).user);
   }
 }

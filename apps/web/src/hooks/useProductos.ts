@@ -79,6 +79,7 @@ export function useProductos() {
   const [selected, setSelected] = useState<ProductItem | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [imagen, setImagen] = useState<ImagenProductoState>(EMPTY_IMAGEN_PRODUCTO);
+  const [imagenesNuevas, setImagenesNuevas] = useState<File[]>([]);
 
   const [selectionEnabled, setSelectionEnabled] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -242,6 +243,10 @@ export function useProductos() {
         product.imagen_url ?? product.imagen_principal_url ?? null,
       ),
     );
+    const categoriaId =
+      (product as any).categorias_full?.[0]?.id_categoria ??
+      (product as any).id_categoria ??
+      "";
     setForm({
       nombre: product.nombre,
       descripcion: product.descripcion ?? "",
@@ -249,7 +254,7 @@ export function useProductos() {
       precio_base: String(product.precio_base ?? ""),
       moneda_base: product.moneda_base ?? "MXN",
       status: product.status ?? "activo",
-      id_categoria: String(product.id_categoria ?? ""),
+      id_categoria: categoriaId ? String(categoriaId) : "",
       peso_kg: String(product.peso_kg ?? ""),
       alto_cm: String(product.alto_cm ?? ""),
       ancho_cm: String(product.ancho_cm ?? ""),
@@ -296,6 +301,7 @@ export function useProductos() {
     setModalOpen(false);
     setError(null);
     setImagen(resetImagenProductoState(imagen));
+    setImagenesNuevas([]);
   };
 
   // ─── Lote auto-fill ───────────────────────────────────────────────────────
@@ -401,13 +407,24 @@ export function useProductos() {
             });
           }
         }
+        if (imagenesNuevas.length > 0) {
+          const fd = new FormData();
+          for (const file of imagenesNuevas) fd.append("imagenes", file);
+          await api.productos.addImagenes(token, String(selected.id_producto), fd);
+        }
       } else {
         const created = await api.productos.create(token, payload);
-        if (form.stock_inicial && created?.id_producto) {
+        const idCreado = created?.id_producto;
+        if (form.stock_inicial && idCreado) {
           await api.inventario.create(token, {
-            id_producto: Number(created.id_producto),
+            id_producto: Number(idCreado),
             stock: Number(form.stock_inicial),
           });
+        }
+        if (imagenesNuevas.length > 0 && idCreado) {
+          const fd = new FormData();
+          for (const file of imagenesNuevas) fd.append("imagenes", file);
+          await api.productos.addImagenes(token, String(idCreado), fd);
         }
       }
       const fueEdicion = mode === "edit" && !!selected;
@@ -502,6 +519,7 @@ export function useProductos() {
     stores,
     categorias,
     lotes,
+    reloadData: loadData,
     query, setQuery,
     statusFilter, setStatusFilter,
     storeFilter, setStoreFilter,
@@ -525,6 +543,7 @@ export function useProductos() {
     selected,
     form, setForm,
     imagen, setImagen,
+    imagenesNuevas, setImagenesNuevas,
     openCreate,
     openEdit,
     openView,

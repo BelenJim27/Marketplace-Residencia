@@ -1,5 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { join } from "path";
+import { unlinkSync } from "fs";
 import { PrismaService } from "../../prisma/prisma.service";
 import { serializeBigInts } from "../shared/serialize";
 import { CreateProductoDto, UpdateProductoDto } from "./dto/productos.dto";
@@ -25,6 +27,7 @@ export interface FiltrosProducto {
   destilacion?: string;
   molienda?: string;
   maestroMezcalero?: string;
+  categorias?: string;
 }
 
 type UsuarioNombre = {
@@ -170,6 +173,7 @@ export class ProductosService {
       destilacion?: string;
       molienda?: string;
       maestroMezcalero?: string;
+      categorias?: string;
     },
     limit = 200,
   ) {
@@ -201,6 +205,12 @@ export class ProductosService {
           (where.precio_base as any).gte = new Prisma.Decimal(filtros.precioMin);
         if (filtros.precioMax)
           (where.precio_base as any).lte = new Prisma.Decimal(filtros.precioMax);
+      }
+      if (filtros.categorias) {
+        const ids = filtros.categorias.split(',').map(Number).filter(Boolean);
+        if (ids.length > 0) {
+          where.categorias_productos = { some: { id_categoria: { in: ids } } };
+        }
       }
     }
 
@@ -274,7 +284,8 @@ export class ProductosService {
       !filtros?.precioMax &&
       !filtros?.destilacion &&
       !filtros?.molienda &&
-      !filtros?.maestroMezcalero;
+      !filtros?.maestroMezcalero &&
+      !filtros?.categorias;
     const cacheable = sinFiltros && limit >= 200;
 
     if (
@@ -463,7 +474,7 @@ export class ProductosService {
       throw new NotFoundException('Producto no encontrado');
     }
 
-    return serializeBigInts(item);
+    return serializeBigInts(mapProductoResponse(item));
   }
 
   /** Valida que las dimensiones de envío sean números > 0 (no solo presentes). */
@@ -823,6 +834,69 @@ export class ProductosService {
       total: asignados + skipped,
     };
   }
+
+  async addImagenes(id: string, files: Express.Multer.File[], user?: RequestUser) {
+    const current = await this.prisma.productos.findUnique({
+      where: { id_producto: BigInt(id) },
+      include: {
+        tiendas: { select: { id_productor: true } },
+        lotes: { select: { id_productor: true } },
+      },
+    });
+    if (!current || current.eliminado_en) throw new NotFoundException('Producto no encontrado');
+    this.ensureCanManage(current.tiendas?.id_productor ?? current.lotes?.id_productor, user);
+
+    const last = await this.prisma.producto_imagenes.findFirst({
+      where: { id_producto: BigInt(id) },
+      orderBy: { orden: 'desc' },
+    });
+    const maxOrden = last?.orden ?? 0;
+
+    const imagenes = await Promise.all(
+      files.map((file, index) =>
+        this.prisma.producto_imagenes.create({
+          data: {
+            id_producto: BigInt(id),
+            url: `/uploads/productos/${file.filename}`,
+            orden: maxOrden + index + 1,
+            es_principal: false,
+          },
+        }),
+      ),
+    );
+
+    this.invalidatePublicCatalogCache();
+    return serializeBigInts(imagenes);
+  }
+
+  async removeImagen(id: string, id_imagen: string, user?: RequestUser) {
+    const current = await this.prisma.productos.findUnique({
+      where: { id_producto: BigInt(id) },
+      include: {
+        tiendas: { select: { id_productor: true } },
+        lotes: { select: { id_productor: true } },
+      },
+    });
+    if (!current || current.eliminado_en) throw new NotFoundException('Producto no encontrado');
+    this.ensureCanManage(current.tiendas?.id_productor ?? current.lotes?.id_productor, user);
+
+    const imagen = await this.prisma.producto_imagenes.findFirst({
+      where: { id_imagen: BigInt(id_imagen), id_producto: BigInt(id) },
+    });
+    if (!imagen) throw new NotFoundException('Imagen no encontrada');
+
+    await this.prisma.producto_imagenes.delete({ where: { id_imagen: BigInt(id_imagen) } });
+
+    const filename = imagen.url.split('/uploads/productos/').pop();
+    if (filename) {
+      try {
+        unlinkSync(join(__dirname, '../../..', 'uploads', 'productos', filename));
+      } catch {}
+    }
+
+    this.invalidatePublicCatalogCache();
+    return { ok: true };
+  }
 }
 
 const productoInclude = {
@@ -834,6 +908,7 @@ const productoInclude = {
   },
   producto_imagenes: {
     select: {
+      id_imagen: true,
       url: true,
       orden: true,
       es_principal: true,
@@ -922,6 +997,7 @@ const productoListInclude = {
   },
   producto_imagenes: {
     select: {
+      id_imagen: true,
       url: true,
       orden: true,
       es_principal: true,
