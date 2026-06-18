@@ -306,99 +306,25 @@ export default function ProductoDetallePage() {
         {t("Volver a productos")}
       </button>
 
-      {/* Breadcrumb de categorías */}
-      {producto.categorias && producto.categorias.length > 0 && (
-        <nav aria-label="Categorías de producto" className="mb-10">
-          <div className="flex flex-wrap gap-2">
-            {producto.categorias.map((cat, idx) => (
-              <Link
-                key={cat}
-                href={`/categoria/${encodeURIComponent(cat)}`}
-                className="text-xs font-medium rounded-full px-3 py-2 hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[32px] flex items-center"
-                style={{ backgroundColor: "#e5eedc", color: "#306B3F", border: "1px solid #ddd8c4" }}
-              >
-                {cat}
-              </Link>
-            ))}
-          </div>
-        </nav>
-      )}
-
       {/* ── Grid principal ─────────────────────────────────────────────────── */}
       <div className="grid gap-8 lg:gap-10 lg:grid-cols-2">
 
-        {/* Columna izquierda — Imágenes con galería flexible */}
+        {/* Columna izquierda — Galería de imágenes */}
         <div className="space-y-6">
-          {/* Contenedor principal — Flexible, se adapta a cualquier tamaño de imagen */}
-          <div className="relative bg-gray-100 dark:bg-gray-900 rounded-lg overflow-hidden shadow-sm w-full" style={{ aspectRatio: "auto", minHeight: "400px", maxHeight: "500px" }}>
-            {todasImagenes[imagenSeleccionada] ? (
-              <Image
-                src={todasImagenes[imagenSeleccionada]}
-                alt={producto.nombre}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 70vw, 50vw"
-                className="object-contain"
-                priority={imagenSeleccionada === 0}
-                loading={imagenSeleccionada === 0 ? "eager" : "lazy"}
-                quality={90}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-600 p-8">
-                <div className="text-5xl mb-3">📦</div>
-                <p className="text-sm text-center">Sin imagen disponible</p>
-              </div>
-            )}
+          {/* Galería: miniaturas a la izquierda + imagen principal a la derecha */}
+          <div className="flex gap-3">
 
-            {/* Contador e indicadores de progreso — flotante arriba a la derecha */}
+            {/* Tira de miniaturas — vertical a la izquierda cuando hay varias imágenes */}
             {todasImagenes.length > 1 && (
-              <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-2 rounded-lg text-xs font-semibold">
-                {imagenSeleccionada + 1} / {todasImagenes.length}
-              </div>
-            )}
-
-            {/* Botones de navegación — visible solo en múltiples imágenes */}
-            {todasImagenes.length > 1 && (
-              <>
-                <button
-                  onClick={() => setImagenSeleccionada((prev) => (prev === 0 ? todasImagenes.length - 1 : prev - 1))}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-700 rounded-full p-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 z-10"
-                  style={{ outlineColor: "var(--bio-color-precio, #8b6914)" }}
-                  aria-label="Imagen anterior"
-                  title="Imagen anterior"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => setImagenSeleccionada((prev) => (prev === todasImagenes.length - 1 ? 0 : prev + 1))}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-700 rounded-full p-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 z-10"
-                  style={{ outlineColor: "var(--bio-color-precio, #8b6914)" }}
-                  aria-label="Imagen siguiente"
-                  title="Imagen siguiente"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Galería de miniaturas — lateral en desktop, horizontal en móvil */}
-          {todasImagenes.length > 1 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Vistas ({todasImagenes.length})</p>
-              <div className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-x-visible">
+              <div className="flex flex-col gap-2 flex-shrink-0" style={{ width: "76px" }}>
                 {todasImagenes.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setImagenSeleccionada(idx)}
-                    className="relative h-20 w-20 lg:h-24 lg:w-full flex-shrink-0 overflow-hidden rounded-lg border-2 bg-gray-50 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 hover:opacity-100 duration-150"
+                    className="relative h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-lg border-2 bg-gray-50 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 hover:opacity-100 duration-150"
                     style={{
                       borderColor: idx === imagenSeleccionada ? "#306B3F" : "transparent",
-                      opacity: idx === imagenSeleccionada ? 1 : 0.6
-
+                      opacity: idx === imagenSeleccionada ? 1 : 0.55,
                     }}
                     aria-label={`Ver imagen ${idx + 1} de ${todasImagenes.length}`}
                     aria-current={idx === imagenSeleccionada ? "true" : "false"}
@@ -407,15 +333,72 @@ export default function ProductoDetallePage() {
                       src={img}
                       alt={`${producto.nombre} vista ${idx + 1}`}
                       fill
-                      sizes="(max-width: 768px) 80px, 100%"
+                      sizes="72px"
                       className="object-contain"
                       loading="lazy"
                     />
                   </button>
                 ))}
               </div>
+            )}
+
+            {/* Imagen principal */}
+            <div
+              className="relative flex-1 bg-gray-100 dark:bg-gray-900 rounded-lg overflow-hidden shadow-sm"
+              style={{ minHeight: "380px", maxHeight: "500px" }}
+            >
+              {todasImagenes[imagenSeleccionada] ? (
+                <Image
+                  src={todasImagenes[imagenSeleccionada]}
+                  alt={producto.nombre}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 60vw, 45vw"
+                  className="object-contain"
+                  priority={imagenSeleccionada === 0}
+                  loading={imagenSeleccionada === 0 ? "eager" : "lazy"}
+                  quality={90}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-600 p-8">
+                  <div className="text-5xl mb-3">📦</div>
+                  <p className="text-sm text-center">Sin imagen disponible</p>
+                </div>
+              )}
+
+              {/* Contador flotante */}
+              {todasImagenes.length > 1 && (
+                <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm text-white px-2 py-1 rounded-md text-xs font-semibold">
+                  {imagenSeleccionada + 1} / {todasImagenes.length}
+                </div>
+              )}
+
+              {/* Flechas de navegación */}
+              {todasImagenes.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setImagenSeleccionada((prev) => (prev === 0 ? todasImagenes.length - 1 : prev - 1))}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-700 rounded-full p-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 z-10"
+                    style={{ outlineColor: "var(--bio-color-precio, #8b6914)" }}
+                    aria-label="Imagen anterior"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setImagenSeleccionada((prev) => (prev === todasImagenes.length - 1 ? 0 : prev + 1))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-700 rounded-full p-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 z-10"
+                    style={{ outlineColor: "var(--bio-color-precio, #8b6914)" }}
+                    aria-label="Imagen siguiente"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Trazabilidad QR */}
           {loteData && (
@@ -510,6 +493,21 @@ export default function ProductoDetallePage() {
             >
               {convertPrice(Number(producto.precio_base || 0))}
             </p>
+
+            {/* Categorías a las que pertenece el producto */}
+            {producto.categorias && producto.categorias.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {producto.categorias.map((cat) => (
+                  <span
+                    key={cat}
+                    className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium cursor-default"
+                    style={{ backgroundColor: "#e5eedc", color: "#306B3F", border: "1px solid #c8ddb8" }}
+                  >
+                    {cat}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Disclaimer regulatorio */}

@@ -21,6 +21,9 @@ interface SidebarFiltersProps {
   onPrecioMaxChange: (value: string) => void;
   onAplicarPrecio: () => void;
   TIPOS_MAGUEY: string[];
+  categorias?: Array<{ id_categoria: number; nombre: string }>;
+  selectedCategorias?: string[];
+  onCategoriasChange?: (ids: string[]) => void;
 }
 
 function FilterCheckbox({
@@ -219,8 +222,19 @@ export function SidebarFiltersComponent({
   onPrecioMaxChange,
   onAplicarPrecio,
   TIPOS_MAGUEY,
+  categorias = [],
+  selectedCategorias = [],
+  onCategoriasChange,
 }: SidebarFiltersProps) {
   const { t } = useLocale();
+
+  const handleCategoriaToggle = (id: string) => {
+    if (!onCategoriasChange) return;
+    const next = selectedCategorias.includes(id)
+      ? selectedCategorias.filter((v) => v !== id)
+      : [...selectedCategorias, id];
+    onCategoriasChange(next);
+  };
 
   return (
     <div className="space-y-4">
@@ -231,6 +245,21 @@ export function SidebarFiltersComponent({
         searchFocus={searchFocus}
         onSearchFocus={onSearchFocus}
       />
+
+      {categorias.length > 0 && (
+        <FilterSection title="Categoría" defaultOpen={false}>
+          <div className="space-y-0.5 px-1">
+            {categorias.map((cat) => (
+              <FilterCheckbox
+                key={cat.id_categoria}
+                label={cat.nombre}
+                active={selectedCategorias.includes(String(cat.id_categoria))}
+                onClick={() => handleCategoriaToggle(String(cat.id_categoria))}
+              />
+            ))}
+          </div>
+        </FilterSection>
+      )}
 
       <FilterSection
         title={t("filters_title")}
@@ -247,7 +276,6 @@ export function SidebarFiltersComponent({
           ))}
         </div>
       </FilterSection>
-
 
       <FilterSection
         title={t("filters_price_range")}

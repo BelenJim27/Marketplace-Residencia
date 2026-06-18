@@ -50,6 +50,7 @@ interface Filtros {
   maguey: string[];
   precio_min: string;
   precio_max: string;
+  categorias: string[];
 }
 
 interface Toast {
@@ -64,6 +65,7 @@ const FILTROS_VACIOS: Filtros = {
   maguey: [],
   precio_min: "",
   precio_max: "",
+  categorias: [],
 };
 
 const TIPOS_MEZCAL = ["Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueño", "Cuishe", "Coyote", "Litrea", "Garabatillo", "Anejo"];
@@ -673,6 +675,7 @@ export default function ProductCatalogEnhanced() {
 
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_VACIOS);
   const [filtrosPendientes, setFiltrosPendientes] = useState<Filtros>(FILTROS_VACIOS);
+  const [categoriasDisponibles, setCategoriasDisponibles] = useState<Array<{ id_categoria: number; nombre: string }>>([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [ordenar, setOrdenar] = useState<"popular" | "precio_asc" | "precio_desc" | "nombre_az">("popular");
   const [precioMinLocal, setPrecioMinLocal] = useState("");
@@ -689,12 +692,15 @@ export default function ProductCatalogEnhanced() {
     const precio_min = searchParams.get('precio_min') || '';
     const precio_max = searchParams.get('precio_max') || '';
 
+    const categorias = searchParams.getAll('categorias');
+
     setFiltros({
       busqueda,
       maguey,
       precio_min,
       precio_max,
       tipo_mezcal: searchParams.getAll('tipo_mezcal'),
+      categorias,
     });
 
     setFiltrosPendientes({
@@ -703,12 +709,25 @@ export default function ProductCatalogEnhanced() {
       precio_min,
       precio_max,
       tipo_mezcal: searchParams.getAll('tipo_mezcal'),
+      categorias,
     });
 
     setPrecioMinLocal(precio_min);
     setPrecioMaxLocal(precio_max);
     setIsInitialized(true);
   }, [searchParams, isInitialized]);
+
+  // Cargar lista de categorías disponibles una sola vez al montar
+  useEffect(() => {
+    api.categorias.getAll().then((data: any) => {
+      const cats = Array.isArray(data) ? data : [];
+      setCategoriasDisponibles(
+        cats
+          .filter((c: any) => c.id_categoria && c.nombre)
+          .map((c: any) => ({ id_categoria: Number(c.id_categoria), nombre: c.nombre as string }))
+      );
+    }).catch(() => {});
+  }, []);
 
   const fetchProductos = useCallback(async (f: Filtros) => {
     setLoading(true);
@@ -720,6 +739,7 @@ export default function ProductCatalogEnhanced() {
       if (f.maguey.length > 0) params.maguey = f.maguey.join(',');
       if (f.precio_min) params.precio_min = f.precio_min;
       if (f.precio_max) params.precio_max = f.precio_max;
+      if (f.categorias.length > 0) params.categorias = f.categorias.join(',');
 
       const data = await api.productos.getAll(params);
       setProductos(data as unknown as Producto[]);
@@ -738,6 +758,7 @@ export default function ProductCatalogEnhanced() {
     f.maguey.forEach(v => params.append('maguey', v));
     if (f.precio_min) params.set('precio_min', f.precio_min);
     if (f.precio_max) params.set('precio_max', f.precio_max);
+    f.categorias.forEach(v => params.append('categorias', v));
 
     const query = params.toString();
     const url = query ? `?${query}` : '';
@@ -764,7 +785,7 @@ export default function ProductCatalogEnhanced() {
     return () => clearTimeout(timer);
   }, [filtrosPendientes.busqueda, filtros.busqueda, isInitialized]);
 
-  // Sincronizar filtros de maguey y precio automáticamente en desktop
+  // Sincronizar filtros de maguey, precio y categorías automáticamente en desktop
   useEffect(() => {
     if (!isInitialized) return;
 
@@ -772,7 +793,8 @@ export default function ProductCatalogEnhanced() {
       const changed =
         JSON.stringify(filtrosPendientes.maguey) !== JSON.stringify(filtros.maguey) ||
         filtrosPendientes.precio_min !== filtros.precio_min ||
-        filtrosPendientes.precio_max !== filtros.precio_max;
+        filtrosPendientes.precio_max !== filtros.precio_max ||
+        JSON.stringify(filtrosPendientes.categorias) !== JSON.stringify(filtros.categorias);
 
       if (changed) {
         setFiltros((prev) => ({
@@ -780,12 +802,13 @@ export default function ProductCatalogEnhanced() {
           maguey: filtrosPendientes.maguey,
           precio_min: filtrosPendientes.precio_min,
           precio_max: filtrosPendientes.precio_max,
+          categorias: filtrosPendientes.categorias,
         }));
       }
     }, 500); // Debounce de 500ms para filtros más lentos
 
     return () => clearTimeout(timer);
-  }, [filtrosPendientes.maguey, filtrosPendientes.precio_min, filtrosPendientes.precio_max, filtros, isInitialized]);
+  }, [filtrosPendientes.maguey, filtrosPendientes.precio_min, filtrosPendientes.precio_max, filtrosPendientes.categorias, filtros, isInitialized]);
 
   // P1: Preview count when filtrosPendientes change (debounced, silent fetch)
   useEffect(() => {
@@ -803,6 +826,7 @@ export default function ProductCatalogEnhanced() {
         if (filtrosPendientes.maguey.length > 0) params.maguey = filtrosPendientes.maguey.join(',');
         if (filtrosPendientes.precio_min) params.precio_min = filtrosPendientes.precio_min;
         if (filtrosPendientes.precio_max) params.precio_max = filtrosPendientes.precio_max;
+        if (filtrosPendientes.categorias.length > 0) params.categorias = filtrosPendientes.categorias.join(',');
 
         const data = await api.productos.getAll(params);
         setPreviewCount((data as unknown as Producto[]).length);
@@ -851,6 +875,7 @@ export default function ProductCatalogEnhanced() {
       maguey: filtrosPendientes.maguey,
       precio_min: filtrosPendientes.precio_min,
       precio_max: filtrosPendientes.precio_max,
+      categorias: filtrosPendientes.categorias,
     });
 
     // Close modal
@@ -1009,6 +1034,9 @@ export default function ProductCatalogEnhanced() {
                 onPrecioMaxChange={setPrecioMaxLocal}
                 onAplicarPrecio={handleAplicarPrecio}
                 TIPOS_MAGUEY={TIPOS_MAGUEY}
+                categorias={categoriasDisponibles}
+                selectedCategorias={filtrosPendientes.categorias}
+                onCategoriasChange={(ids) => setFiltrosPendientes((prev) => ({ ...prev, categorias: ids }))}
               />
             </div>
           </aside>
@@ -1321,6 +1349,9 @@ export default function ProductCatalogEnhanced() {
                 onPrecioMaxChange={setPrecioMaxLocal}
                 onAplicarPrecio={handleAplicarPrecio}
                 TIPOS_MAGUEY={TIPOS_MAGUEY}
+                categorias={categoriasDisponibles}
+                selectedCategorias={filtrosPendientes.categorias}
+                onCategoriasChange={(ids) => setFiltrosPendientes((prev) => ({ ...prev, categorias: ids }))}
               />
             </div>
 

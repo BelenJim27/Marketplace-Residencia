@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ImagenProducto } from "@/components/Producer/Products/ImagenProducto";
+import { ImagenesProducto } from "@/components/Producer/Products/ImagenesProducto";
 import type {
   FormState,
   ModalMode,
@@ -88,6 +89,9 @@ type ProductoModalProps = {
   onLoteChange?: (value: string) => void;
   categoriaProductorId?: number;
   error?: string | null;
+  token?: string;
+  imagenesNuevas?: File[];
+  onImagenesNuevasChange?: (files: File[]) => void;
 };
 
 // ─── Componente ───────────────────────────────────────────────────────────────
@@ -96,6 +100,7 @@ export function ProductoModal({
   mode, form, setForm, imagen, setImagen, selected,
   stores, categorias, lotes, saving, onSubmit, onClose,
   onLoteChange, categoriaProductorId, error,
+  token, imagenesNuevas = [], onImagenesNuevasChange,
 }: ProductoModalProps) {
   const title = mode === "create" ? "Nuevo producto" : mode === "edit" ? "Editar producto" : "Detalle de producto";
 
@@ -267,14 +272,34 @@ export function ProductoModal({
             badge={tieneLote && form.descripcion ? "sugerido" : undefined}
           />
 
-          {/* Imagen */}
+          {/* Imagen principal */}
           <ImagenProducto
-            label="Imagen"
+            label="Imagen principal"
             disabled={mode === "view"}
             imagen={imagen}
             fallbackPreview={selected?.imagen_url ?? selected?.imagen_principal_url ?? null}
             onChange={setImagen}
           />
+
+          {/* Imágenes adicionales — en edición muestra las existentes; en creación
+              solo muestra el selector. Las nuevas se suben al hacer Guardar. */}
+          {mode !== "view" && (
+            <ImagenesProducto
+              id_producto={selected ? Number(selected.id_producto) : 0}
+              imagenesExistentes={
+                mode === "edit" && selected
+                  ? ((selected as any).producto_imagenes ?? []).map((img: any) => ({
+                      id_imagen: Number(img.id_imagen),
+                      url: img.url,
+                      orden: img.orden,
+                    }))
+                  : []
+              }
+              token={token ?? ""}
+              archivosSeleccionados={imagenesNuevas}
+              onFilesChange={onImagenesNuevasChange ?? (() => {})}
+            />
+          )}
 
           {/* Tienda / Moneda / Status */}
           <div className="grid gap-4 md:grid-cols-3">
@@ -290,20 +315,18 @@ export function ProductoModal({
               ]} />
           </div>
 
-          {/* ── Tipo de mezcal (solo para bebidas) ────────────────────────────── */}
-          {esProductorBebidas && (
-            <SelectField
-              label="Tipo de mezcal"
-              value={form.id_categoria}
-              onChange={set("id_categoria")}
-              disabled={mode === "view"}
-              placeholder="Selecciona el tipo"
-              options={subcategoriasMezcal.map((c) => ({
-                label: c.nombre,
-                value: String(c.id_categoria),
-              }))}
-            />
-          )}
+          {/* ── Categoría ─────────────────────────────────────────────────────── */}
+          <SelectField
+            label={esProductorBebidas ? "Tipo de mezcal" : "Categoría"}
+            value={form.id_categoria}
+            onChange={set("id_categoria")}
+            disabled={mode === "view"}
+            placeholder="Sin categoría"
+            options={(esProductorBebidas ? subcategoriasMezcal : categorias).map((c) => ({
+              label: c.nombre,
+              value: String(c.id_categoria),
+            }))}
+          />
 
           {/* ── Stock y botellas (auto desde lote) ───────────────────────────── */}
           <div>

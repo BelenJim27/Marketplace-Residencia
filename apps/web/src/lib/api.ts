@@ -252,6 +252,7 @@ export const api = {
       destilacion?: string;
       molienda?: string;
       maestro_mezcalero?: string;
+      categorias?: string;
     }) => {
       const params = new URLSearchParams();
       if (filtros) {
@@ -266,6 +267,7 @@ export const api = {
         if (filtros.molienda) params.append("molienda", filtros.molienda);
         if (filtros.maestro_mezcalero)
           params.append("maestro_mezcalero", filtros.maestro_mezcalero);
+        if (filtros.categorias) params.append("categorias", filtros.categorias);
       }
       const query = params.toString();
       // Cache unfiltered product lists for 30 minutes
@@ -323,6 +325,17 @@ export const api = {
       }),
     delete: (token: string, id: string) =>
       fetchJson(endpoint(`/productos/${id}`), {
+        method: "DELETE",
+        headers: headers(token),
+      }),
+    addImagenes: (token: string, id: string, formData: FormData) =>
+      fetchJson(endpoint(`/productos/${id}/imagenes`), {
+        method: "POST",
+        headers: headers(token, true),
+        body: formData,
+      }),
+    removeImagen: (token: string, id: string, id_imagen: string) =>
+      fetchJson(endpoint(`/productos/${id}/imagenes/${id_imagen}`), {
         method: "DELETE",
         headers: headers(token),
       }),
