@@ -85,7 +85,7 @@ async function fetchJson<T>(
   }
 
   if (response.status === 401) {
-    console.warn("🔐 401 detectado, intentando refresh de token...");
+    console.warn(" 401 detectado, intentando refresh de token...");
 
     // Paso 1: refrescar el token. Solo un fallo AQUÍ significa sesión expirada.
     let newAccessToken: string;
@@ -96,10 +96,10 @@ async function fetchJson<T>(
         });
       }
       newAccessToken = await pendingRefresh;
-      console.warn("✅ Token refrescado, reintentando request...");
+      console.warn(" Token refrescado, reintentando request...");
     } catch (refreshErr) {
       // Limpiar cookies
-      console.warn("❌ Refresh falló, limpiando cookies...");
+      console.warn(" Refresh falló, limpiando cookies...");
       const cookies = document.cookie.split(";");
       cookies.forEach((cookie) => {
         const name = cookie.split("=")[0].trim();

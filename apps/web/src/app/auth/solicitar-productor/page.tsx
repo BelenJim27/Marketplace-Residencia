@@ -59,7 +59,7 @@ export default function SolicitarProductorPage() {
         <div>
           <label className="block text-sm font-medium">RFC *</label>
           <input value={rfc} onChange={(e) => setRfc(e.target.value.toUpperCase())} className="mt-1 w-full border rounded px-3 py-2" placeholder="XAXX010101000" />
-        </div>
+        </div> 
 
         <div>
           <label className="block text-sm font-medium">Región (ID)</label>
