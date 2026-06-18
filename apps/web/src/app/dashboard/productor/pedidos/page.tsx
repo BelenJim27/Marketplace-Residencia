@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, X, Package, User, MapPin, Truck, BarChart3 }
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
 import { api } from "@/lib/api";
+import { formatMXN } from "@/lib/format-number";
 import { getCookie } from "@/lib/cookies";
 
 // ─── Instrucciones de empaque por paquetería ─────────────────────────────────
@@ -625,9 +626,9 @@ function DetalleModal({
                         <tr key={detalle.id_detalle} className="border-b border-[#C5CFB0]/30 last:border-0">
                           <td className="py-2 text-[#1F3A2E]">{detalle.productos?.nombre}</td>
                           <td className="py-2 text-center text-[#3D6B3F]">{detalle.cantidad}</td>
-                          <td className="py-2 text-right text-[#1F3A2E]">${Number(detalle.precio_compra).toFixed(2)}</td>
+                          <td className="py-2 text-right text-[#1F3A2E]">{formatMXN(detalle.precio_compra)}</td>
                           <td className="py-2 text-right font-medium text-[#1F3A2E]">
-                            ${(Number(detalle.precio_compra) * detalle.cantidad).toFixed(2)}
+                            {formatMXN(Number(detalle.precio_compra) * detalle.cantidad)}
                           </td>
                         </tr>
                       ))}
@@ -647,7 +648,7 @@ function DetalleModal({
                       <span className="text-[#3D6B3F]/70">Subtotal bruto</span>
                       <span className="font-medium text-[#1F3A2E]">
                         {orden.desglose.subtotal_bruto
-                          ? `$${Number(orden.desglose.subtotal_bruto).toFixed(2)} ${orden.desglose.moneda ?? ""}`
+                          ? formatMXN(orden.desglose.subtotal_bruto)
                           : "—"}
                       </span>
                     </div>
@@ -661,14 +662,14 @@ function DetalleModal({
                         )}
                       </span>
                       <span className="text-red-600">
-                        − ${Number(orden.desglose.comision_marketplace).toFixed(2)} {orden.desglose.moneda ?? ""}
+                        − {formatMXN(orden.desglose.comision_marketplace)}
                       </span>
                     </div>
                     <div className="flex justify-between text-base font-semibold text-[#3D6B3F]">
                       <span>Neto a recibir</span>
                       <span>
                         {orden.desglose.monto_neto_productor
-                          ? `$${Number(orden.desglose.monto_neto_productor).toFixed(2)} ${orden.desglose.moneda ?? ""}`
+                          ? formatMXN(orden.desglose.monto_neto_productor)
                           : "—"}
                       </span>
                     </div>
@@ -945,7 +946,7 @@ export default function PedidosProductor() {
                         {pedido.detalles.length} producto{pedido.detalles.length !== 1 ? "s" : ""}
                       </td>
                       <td className="px-5 py-4 font-medium text-[#1F3A2E]">
-                        {pedido.total_parcial.toFixed(2)} {pedido.moneda}
+                        {formatMXN(pedido.total_parcial)}
                       </td>
                       <td className="px-5 py-4">
                         <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${estadoBadgeCls(estadoEfectivo(pedido))}`}>

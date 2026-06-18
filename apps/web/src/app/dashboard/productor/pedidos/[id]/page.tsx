@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
+import { formatMXN } from "@/lib/format-number";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
 interface OrderDetail {
@@ -237,9 +238,9 @@ export default function DetalleOrdenProductor() {
                   <tr key={detalle.id_detalle}>
                     <td className="border border-gray-300 px-4 py-2">{detalle.productos?.nombre}</td>
                     <td className="border border-gray-300 px-4 py-2">{detalle.cantidad}</td>
-                    <td className="border border-gray-300 px-4 py-2">{detalle.precio_compra}</td>
+                    <td className="border border-gray-300 px-4 py-2">{formatMXN(detalle.precio_compra)}</td>
                     <td className="border border-gray-300 px-4 py-2">
-                      {(Number(detalle.precio_compra) * detalle.cantidad).toFixed(2)}
+                      {formatMXN(Number(detalle.precio_compra) * detalle.cantidad)}
                     </td>
                   </tr>
                 ))}
@@ -257,7 +258,7 @@ export default function DetalleOrdenProductor() {
                 <span>Subtotal bruto</span>
                 <span className="font-medium">
                   {orden.desglose.subtotal_bruto
-                    ? `${Number(orden.desglose.subtotal_bruto).toFixed(2)} ${orden.desglose.moneda ?? ""}`
+                    ? formatMXN(orden.desglose.subtotal_bruto)
                     : "—"}
                 </span>
               </div>
@@ -270,13 +271,13 @@ export default function DetalleOrdenProductor() {
                     </span>
                   )}
                 </span>
-                <span>− {Number(orden.desglose.comision_marketplace).toFixed(2)} {orden.desglose.moneda ?? ""}</span>
+                <span>− {formatMXN(orden.desglose.comision_marketplace)}</span>
               </div>
               <div className="flex justify-between text-base font-semibold text-green-700">
                 <span>Neto a recibir</span>
                 <span>
                   {orden.desglose.monto_neto_productor
-                    ? `${Number(orden.desglose.monto_neto_productor).toFixed(2)} ${orden.desglose.moneda ?? ""}`
+                    ? formatMXN(orden.desglose.monto_neto_productor)
                     : "—"}
                 </span>
               </div>

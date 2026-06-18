@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Edit2, X, Loader2, AlertCircle, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { api, type Comision, type ComisionInput } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
+import { formatMXN } from "@/lib/format-number";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
@@ -236,7 +237,7 @@ export default function ComisionesAdminPage() {
               </div>
               {resolverResult.monto_fijo !== null && (
                 <div>
-                  <strong>monto fijo:</strong> {resolverResult.monto_fijo}
+                  <strong>monto fijo:</strong> {formatMXN(resolverResult.monto_fijo)}
                 </div>
               )}
             </div>
@@ -287,7 +288,7 @@ export default function ComisionesAdminPage() {
                   </td>
                   <td className="px-3 py-2 text-right">{(Number(c.porcentaje) * 100).toFixed(2)}%</td>
                   <td className="px-3 py-2 text-right">
-                    {c.monto_fijo ? `${c.monto_fijo} ${c.moneda_monto_fijo ?? ""}` : "—"}
+                    {c.monto_fijo ? formatMXN(c.monto_fijo) : "—"}
                   </td>
                   <td className="px-3 py-2 text-right">{c.prioridad}</td>
                   <td className="px-3 py-2">

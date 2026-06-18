@@ -44,7 +44,10 @@ export class PedidosController {
 
   @UseGuards(AuthGuard)
   @Get('productor/:id_productor')
-  getOrdersByProductor(@Param('id_productor', ParseIntPipe) id_productor: number) {
+  getOrdersByProductor(@Param('id_productor', ParseIntPipe) id_productor: number, @Req() req: any) {
+    if (!isAdmin(req.user) && req.user?.id_productor !== id_productor) {
+      throw new ForbiddenException('Solo puedes ver tus propios pedidos');
+    }
     return this.service.getOrdersByProductor(id_productor);
   }
 
@@ -89,6 +92,7 @@ export class PedidosController {
     return this.service.updateTrackingForProducer(id_pedido, id_productor, numero_rastreo);
   }
 
+  @UseGuards(AuthGuard)
   @Post('validar-envio')
   validarEnvio(@Body() dto: ValidarEnvioDto) {
     return this.service.validarEnvio(dto);
@@ -138,11 +142,11 @@ export class PedidosController {
   @Delete('detalles/:id_detalle') removeDetalle(@Param('id_detalle') id_detalle: string, @Req() req: any) { return this.service.removeDetalle(id_detalle, req.user.id_usuario, isAdmin(req.user)); }
 
   @UseGuards(AuthGuard)
-  @Post(':id/facturas') addFactura(@Param('id') id: string, @Body() dto: CreateFacturaDto) { return this.service.addFactura(id, dto); }
+  @Post(':id/facturas') addFactura(@Param('id') id: string, @Body() dto: CreateFacturaDto, @Req() req: any) { return this.service.addFactura(id, dto, req.user.id_usuario, isAdmin(req.user)); }
   @UseGuards(AuthGuard)
-  @Patch('facturas/:id_factura') updateFactura(@Param('id_factura') id_factura: string, @Body() dto: UpdateFacturaDto) { return this.service.updateFactura(id_factura, dto); }
+  @Patch('facturas/:id_factura') updateFactura(@Param('id_factura') id_factura: string, @Body() dto: UpdateFacturaDto, @Req() req: any) { return this.service.updateFactura(id_factura, dto, req.user.id_usuario, isAdmin(req.user)); }
   @UseGuards(AuthGuard)
-  @Delete('facturas/:id_factura') removeFactura(@Param('id_factura') id_factura: string) { return this.service.removeFactura(id_factura); }
+  @Delete('facturas/:id_factura') removeFactura(@Param('id_factura') id_factura: string, @Req() req: any) { return this.service.removeFactura(id_factura, req.user.id_usuario, isAdmin(req.user)); }
 }
 
 function isAdmin(user: any): boolean {

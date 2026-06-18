@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -440,6 +441,7 @@ model pagos {
 
   @@index([estado], map: "idx_pagos_estado")
   @@index([id_pedido], map: "idx_pagos_pedido")
+  @@index([id_pedido, estado], map: "idx_pagos_pedido_estado")
   @@index([proveedor], map: "idx_pagos_proveedor")
 }
 

@@ -5,6 +5,7 @@ import type { FormEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { api } from "../../../lib/api";
 import { getCookie } from "../../../lib/cookies";
+import { AlertService } from "../../../shared/alerts/alert.service";
 
 export type ProductorAdmin = {
   id: number;
@@ -293,7 +294,7 @@ export function ProductoresForm({
                     const file = event.target.files?.[0];
                     if (!file) return;
                     if (file.size > 500 * 1024) {
-                      alert("La imagen debe pesar menos de 500 KB.");
+                      AlertService.showWarning("La imagen debe pesar menos de 500 KB.");
                       event.target.value = "";
                       return;
                     }

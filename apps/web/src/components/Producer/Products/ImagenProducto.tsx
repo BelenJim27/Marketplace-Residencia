@@ -1,5 +1,7 @@
 "use client";
 
+import { AlertService } from "@/shared/alerts/alert.service";
+
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "");
 
 export type ImagenProductoState = {
@@ -88,7 +90,7 @@ export function ImagenProducto({
             onChange={(event) => {
               const file = event.target.files?.[0] ?? null;
               if (file && file.size > 500 * 1024) {
-                alert("La imagen debe pesar menos de 500 KB.");
+                AlertService.showWarning("La imagen debe pesar menos de 500 KB.");
                 event.target.value = "";
                 return;
               }

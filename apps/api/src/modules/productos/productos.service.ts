@@ -467,6 +467,7 @@ export class ProductosService {
         categorias_productos: { include: { categorias: true } },
         producto_imagenes: true,
         resenas: true,
+        inventario: { select: { stock: true, stock_minimo: true } },
       },
     });
 

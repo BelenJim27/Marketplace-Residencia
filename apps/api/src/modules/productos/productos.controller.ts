@@ -52,6 +52,8 @@ export class ProductosController {
   }
 
   @Get('sin-lote/check')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
   findSinLote() {
     return this.service.findSinLote();
   }

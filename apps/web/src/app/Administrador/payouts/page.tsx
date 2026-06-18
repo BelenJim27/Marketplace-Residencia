@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, AlertCircle, CheckCircle2, X, Search, Play, Eye, Undo2, ChevronLeft, ChevronRight } from "lucide-react";
 import { api, type Payout, type PayoutDetalle } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
-import { formatPrice } from "@/lib/format-number";
+import { formatMXN, formatPrice } from "@/lib/format-number";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+import { AlertService } from "@/shared/alerts/alert.service";
 
 type Notice = { type: "success" | "error"; message: string };
 const ESTADOS = ["pendiente", "en_proceso", "procesado", "pagado", "fallido", "agotado", "cancelado"] as const;
@@ -147,9 +148,12 @@ export default function PayoutsAdminPage() {
   }
 
   async function handleReembolsar(p: Payout) {
-    if (!confirm(`¿Estás seguro de que deseas reembolsar el payout #${p.id_payout}? Esta acción no se puede deshacer.`)) {
-      return;
-    }
+    const confirmed = await AlertService.showConfirm({
+      title: "Confirmar reembolso",
+      text: `¿Estás seguro de que deseas reembolsar el payout #${p.id_payout}? Esta acción no se puede deshacer.`,
+      variant: "danger",
+    });
+    if (!confirmed) return;
     setReembolsando(p.id_payout);
     try {
       const token = getCookie("token") ?? "";
@@ -334,9 +338,9 @@ export default function PayoutsAdminPage() {
                       )}
                       <td className="px-3 py-2">{moneda.moneda}</td>
                       <td className="px-3 py-2 text-center">{moneda.pedidos_pendientes}</td>
-                      <td className="px-3 py-2 text-right">{moneda.monto_bruto_total}</td>
-                      <td className="px-3 py-2 text-right text-orange-600">{moneda.comision_total}</td>
-                      <td className="px-3 py-2 text-right font-medium">{moneda.monto_neto_total}</td>
+                      <td className="px-3 py-2 text-right">{formatMXN(moneda.monto_bruto_total)}</td>
+                      <td className="px-3 py-2 text-right text-orange-600">{formatMXN(moneda.comision_total)}</td>
+                      <td className="px-3 py-2 text-right font-medium">{formatMXN(moneda.monto_neto_total)}</td>
                       <td className="px-3 py-2">
                         <div className="flex gap-1">
                           {productor.metodos_disponibles.stripe && (
@@ -483,9 +487,9 @@ export default function PayoutsAdminPage() {
                       {new Date(p.periodo_desde).toLocaleDateString()} →{" "}
                       {new Date(p.periodo_hasta).toLocaleDateString()}
                     </td>
-                    <td className="px-3 py-2 text-right">{Number(p.monto_bruto).toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right">{Number(p.monto_comision).toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right font-medium">{Number(p.monto_neto).toFixed(2)}</td>
+                    <td className="px-3 py-2 text-right">{formatMXN(p.monto_bruto)}</td>
+                    <td className="px-3 py-2 text-right">{formatMXN(p.monto_comision)}</td>
+                    <td className="px-3 py-2 text-right font-medium">{formatMXN(p.monto_neto)}</td>
                     <td className="px-3 py-2">{p.moneda}</td>
                     <td className="px-3 py-2">
                       <span
@@ -640,14 +644,14 @@ export default function PayoutsAdminPage() {
                 <span className="text-[#3D6B3F]/70">Moneda:</span> {detalleModal.moneda}
               </div>
               <div>
-                <span className="text-[#3D6B3F]/70">Bruto:</span> {Number(detalleModal.monto_bruto).toFixed(2)}
+                <span className="text-[#3D6B3F]/70">Bruto:</span> {formatMXN(detalleModal.monto_bruto)}
               </div>
               <div>
-                <span className="text-[#3D6B3F]/70">Comisión:</span> {Number(detalleModal.monto_comision).toFixed(2)}
+                <span className="text-[#3D6B3F]/70">Comisión:</span> {formatMXN(detalleModal.monto_comision)}
               </div>
               <div>
                 <span className="text-[#3D6B3F]/70">Neto:</span>{" "}
-                <strong>{Number(detalleModal.monto_neto).toFixed(2)}</strong>
+                <strong>{formatMXN(detalleModal.monto_neto)}</strong>
               </div>
               <div>
                 <span className="text-[#3D6B3F]/70">Estado:</span>{" "}
@@ -712,9 +716,9 @@ export default function PayoutsAdminPage() {
                   <tr key={`${pp.id_pedido}-${pp.id_productor}`}>
                     <td className="px-3 py-2">#{pp.id_pedido}</td>
                     <td className="px-3 py-2">{pp.estado}</td>
-                    <td className="px-3 py-2 text-right font-medium">{pp.subtotal_bruto ?? "—"}</td>
-                    <td className="px-3 py-2 text-right">{pp.comision_marketplace}</td>
-                    <td className="px-3 py-2 text-right font-medium">{pp.monto_neto_productor ?? "—"}</td>
+                    <td className="px-3 py-2 text-right font-medium">{pp.subtotal_bruto ? formatMXN(pp.subtotal_bruto) : "—"}</td>
+                    <td className="px-3 py-2 text-right">{pp.comision_marketplace ? formatMXN(pp.comision_marketplace) : "—"}</td>
+                    <td className="px-3 py-2 text-right font-medium">{pp.monto_neto_productor ? formatMXN(pp.monto_neto_productor) : "—"}</td>
                   </tr>
                 ))}
               </tbody>

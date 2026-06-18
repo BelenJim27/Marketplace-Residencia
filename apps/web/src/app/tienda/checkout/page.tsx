@@ -677,8 +677,8 @@ export default function CheckoutPage() {
                     {isPaypalConfigured() && !dobRequired && paypalOrderId && paso === "pago" && (
                       <div className="space-y-4">
                         <div style={{ borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.copper}33`, background: `${COLOR_PALETTE.copper}08`, padding: "16px", fontSize: "14px", color: COLOR_PALETTE.copper }}>
-                          <p style={{ marginBottom: "8px", fontWeight: 600, margin: 0 }}>Completa tu pago en PayPal</p>
-                          <p style={{ fontSize: "12px", marginTop: "4px", lineHeight: 1.4 }}>Haz clic en el botón abajo. Te redirigiremos a PayPal de forma segura para que confirmes tu pago.</p>
+                          <p style={{ marginBottom: "8px", fontWeight: 600, margin: 0 }}>{t("Completa tu pago en PayPal")}</p>
+                          <p style={{ fontSize: "12px", marginTop: "4px", lineHeight: 1.4 }}>{t("Haz clic en el botón abajo. Te redirigiremos a PayPal de forma segura para que confirmes tu pago.")}</p>
                         </div>
                         <PaypalCheckoutButton
                           orderId={paypalOrderId}
@@ -698,8 +698,8 @@ export default function CheckoutPage() {
                         <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
                           <CheckCircle size={20} className="shrink-0" />
                           <div>
-                            <p className="font-medium">¡Pago con PayPal confirmado!</p>
-                            <p className="text-xs">Tu pago ha sido procesado exitosamente.</p>
+                            <p className="font-medium">{t("¡Pago con PayPal confirmado!")}</p>
+                            <p className="text-xs">{t("Tu pago ha sido procesado exitosamente.")}</p>
                           </div>
                         </div>
                         <PagoYResumenPaypal
@@ -774,10 +774,11 @@ export default function CheckoutPage() {
                 <button
                   onClick={avanzarPaso}
                   disabled={
-                    paso === "pago" && (
+                    cargando ||
+                    (paso === "pago" && (
                       (metodoPago === 'stripe' && !clientSecret) ||
                       (metodoPago === 'paypal' && !paypalOrderId)
-                    )
+                    ))
                   }
                   style={{
                     display: "flex",
@@ -793,39 +794,39 @@ export default function CheckoutPage() {
                     transition: "all 200ms ease",
                     border: "none",
                     cursor:
-                      paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))
+                      cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))
                         ? "not-allowed"
                         : "pointer",
                     background:
-                      paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))
+                      cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))
                         ? "#D1D5DB"
                         : COLOR_PALETTE.green,
                     color:
-                      paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))
+                      cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))
                         ? "#6B7280"
                         : COLOR_PALETTE.white,
                     boxShadow:
-                      paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))
+                      cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))
                         ? "none"
                         : "0 1px 2px rgba(0,0,0,0.05)",
                   }}
                   onMouseEnter={(e) => {
-                    if (!(paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))) {
+                    if (!(cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))))) {
                       e.currentTarget.style.background = COLOR_PALETTE.green;
                       e.currentTarget.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
                       e.currentTarget.style.opacity = "0.9";
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (!(paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))) {
+                    if (!(cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))))) {
                       e.currentTarget.style.background = COLOR_PALETTE.green;
                       e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
                       e.currentTarget.style.opacity = "1";
                     }
                   }}
                 >
-                  {t('checkout_button_continue')}
-                  <ChevronRight size={18} />
+                  {cargando ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={18} />}
+                  {cargando ? t('checkout_processing') : t('checkout_button_continue')}
                 </button>
               )}
             </div>
@@ -1164,7 +1165,7 @@ function DireccionStep({
                   {formErrors.estado && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.estado}</p>}
                   {nuevaDireccion.estado && ALCOHOL_RESTRICTED_STATES.has(nuevaDireccion.estado) && (
                     <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
-                      ⚠️ {nuevaDireccion.estado} tiene restricciones legales para el envío de bebidas alcohólicas.
+                      ⚠️ {nuevaDireccion.estado} {t("tiene restricciones legales para el envío de bebidas alcohólicas.")}
                     </p>
                   )}
                 </div>

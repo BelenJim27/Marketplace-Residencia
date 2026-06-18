@@ -342,6 +342,7 @@ export class PedidosService {
 
   async update(id: string, dto: UpdatePedidoDto, id_usuario: string, isAdmin: boolean) {
     const id_pedido = toBigIntId(id);
+    let estadoActual: string | null = null;
 
     // Una sola lectura cubre el owner-check (anti-BOLA) y la validación de
     // transición de estado. Antes eran 2 round-trips para no-admins que cambian
@@ -352,17 +353,18 @@ export class PedidosService {
         select: { id_usuario: true, estado: true },
       });
       if (!actual) throw new NotFoundException('Pedido no encontrado');
+      estadoActual = actual.estado;
       if (!isAdmin && actual.id_usuario !== id_usuario) {
         throw new ForbiddenException('No tienes permiso sobre este pedido');
       }
       if (dto.estado) {
         const nuevoEstado = dto.estado.trim();
-        const estadoActual = actual.estado ?? 'pendiente';
-        if (nuevoEstado !== estadoActual) {
-          const permitidas = PedidosService.TRANSICIONES_PEDIDO[estadoActual] ?? [];
+        const estadoBase = actual.estado ?? 'pendiente';
+        if (nuevoEstado !== estadoBase) {
+          const permitidas = PedidosService.TRANSICIONES_PEDIDO[estadoBase] ?? [];
           if (!permitidas.includes(nuevoEstado)) {
             throw new BadRequestException(
-              `Transición de estado inválida: ${estadoActual} → ${nuevoEstado}.`,
+              `Transición de estado inválida: ${estadoBase} → ${nuevoEstado}.`,
             );
           }
           // Anti-fraude: un pedido sólo puede marcarse 'pagado' si existe un pago
@@ -383,26 +385,82 @@ export class PedidosService {
       }
     }
 
-    const updated = await this.prisma.pedidos.update({
-      where: { id_pedido },
-      data: {
-        id_usuario: dto.id_usuario,
-        estado: dto.estado?.trim(),
-        total: dto.total,
-        moneda: dto.moneda,
-        tipo_cambio: dto.tipo_cambio,
-        moneda_referencia: dto.moneda_referencia?.trim() as Moneda | undefined,
-        pais_destino_iso2: dto.pais_destino_iso2,
-        direccion_envio_snapshot: dto.direccion_envio_snapshot as
-          | any
-          | undefined,
-        direccion_facturacion_snapshot: dto.direccion_facturacion_snapshot as
-          | any
-          | undefined,
-        devolucion_estado: dto.devolucion_estado,
-        devolucion_motivo: dto.devolucion_motivo,
-      },
-    });
+    const pedidoData = {
+      id_usuario: dto.id_usuario,
+      estado: dto.estado?.trim(),
+      total: dto.total,
+      moneda: dto.moneda,
+      tipo_cambio: dto.tipo_cambio,
+      moneda_referencia: dto.moneda_referencia?.trim() as Moneda | undefined,
+      pais_destino_iso2: dto.pais_destino_iso2,
+      direccion_envio_snapshot: dto.direccion_envio_snapshot as any | undefined,
+      direccion_facturacion_snapshot: dto.direccion_facturacion_snapshot as any | undefined,
+      devolucion_estado: dto.devolucion_estado,
+      devolucion_motivo: dto.devolucion_motivo,
+    };
+
+    // Cancelación manual: restaurar stock en la misma transacción para evitar
+    // inventario bloqueado permanentemente. Solo aplica cuando realmente se cambia
+    // a 'cancelado' (no si ya estaba cancelado).
+    const esCancelacionNueva = dto.estado?.trim() === 'cancelado' && estadoActual !== 'cancelado';
+
+    if (esCancelacionNueva) {
+      return this.prisma.$transaction(async (tx) => {
+        const updated = await tx.pedidos.update({ where: { id_pedido }, data: pedidoData });
+
+        await tx.pedido_productor.updateMany({
+          where: { id_pedido },
+          data: { estado: 'cancelado' },
+        });
+
+        const detalles = await tx.detalle_pedido.findMany({
+          where: { id_pedido },
+          select: { id_producto: true, cantidad: true, id_inventario: true },
+        });
+
+        for (const detalle of detalles) {
+          const inv = detalle.id_inventario
+            ? await tx.inventario.findUnique({
+                where: { id_inventario: detalle.id_inventario },
+                select: { id_inventario: true, stock: true },
+              })
+            : await tx.inventario.findFirst({
+                where: { id_producto: detalle.id_producto },
+                select: { id_inventario: true, stock: true },
+              });
+          if (inv) {
+            const restaurar = Number(detalle.cantidad);
+            await tx.inventario.update({
+              where: { id_inventario: inv.id_inventario },
+              data: { stock: { increment: restaurar } },
+            });
+            await tx.movimientos_inventario.create({
+              data: {
+                id_inventario: inv.id_inventario,
+                id_pedido,
+                tipo: 'cancelacion',
+                cantidad: restaurar,
+                stock_resultante: Number(inv.stock) + restaurar,
+                motivo: `Pedido ${id_pedido} cancelado manualmente`,
+              },
+            });
+          }
+        }
+
+        await tx.auditoria.create({
+          data: {
+            accion: 'actualizar_pedido',
+            tabla_afectada: 'pedidos',
+            registro_id: String(id_pedido),
+            valor_nuevo: { estado: updated.estado, total: Number(updated.total), moneda: updated.moneda } as any,
+          },
+        });
+
+        return serializeBigInts(updated);
+      });
+    }
+
+    const updated = await this.prisma.pedidos.update({ where: { id_pedido }, data: pedidoData });
 
     await this.prisma.auditoria.create({
       data: {
@@ -923,7 +981,15 @@ export class PedidosService {
 
     return { message: "Detalle eliminado" };
   }
-  async addFactura(id: string, dto: CreateFacturaDto) {
+  async addFactura(id: string, dto: CreateFacturaDto, id_usuario: string, adminFlag: boolean) {
+    if (!adminFlag) {
+      const pedido = await this.prisma.pedidos.findUnique({
+        where: { id_pedido: toBigIntId(id) },
+        select: { id_usuario: true },
+      });
+      if (!pedido) throw new NotFoundException('Pedido no encontrado');
+      if (pedido.id_usuario !== id_usuario) throw new ForbiddenException('No tienes acceso a este pedido');
+    }
     const factura = await this.prisma.facturas.create({
       data: {
         id_pedido: toBigIntId(id),
@@ -1013,7 +1079,17 @@ export class PedidosService {
 
     return serializeBigInts(factura);
   }
-  async updateFactura(id_factura: string, dto: UpdateFacturaDto) {
+  async updateFactura(id_factura: string, dto: UpdateFacturaDto, id_usuario: string, adminFlag: boolean) {
+    if (!adminFlag) {
+      const existing = await this.prisma.facturas.findUnique({
+        where: { id_factura: toBigIntId(id_factura) },
+        select: { pedidos: { select: { id_usuario: true } } },
+      });
+      if (!existing) throw new NotFoundException('Factura no encontrada');
+      if (!existing.pedidos || existing.pedidos.id_usuario !== id_usuario) {
+        throw new ForbiddenException('No tienes acceso a esta factura');
+      }
+    }
     return serializeBigInts(
       await this.prisma.facturas.update({
         where: { id_factura: toBigIntId(id_factura) },
@@ -1034,7 +1110,17 @@ export class PedidosService {
       }),
     );
   }
-  async removeFactura(id_factura: string) {
+  async removeFactura(id_factura: string, id_usuario: string, adminFlag: boolean) {
+    if (!adminFlag) {
+      const existing = await this.prisma.facturas.findUnique({
+        where: { id_factura: toBigIntId(id_factura) },
+        select: { pedidos: { select: { id_usuario: true } } },
+      });
+      if (!existing) throw new NotFoundException('Factura no encontrada');
+      if (!existing.pedidos || existing.pedidos.id_usuario !== id_usuario) {
+        throw new ForbiddenException('No tienes acceso a esta factura');
+      }
+    }
     await this.prisma.facturas.delete({
       where: { id_factura: toBigIntId(id_factura) },
     });
@@ -1389,34 +1475,34 @@ export class PedidosService {
     proveedor: 'stripe' | 'paypal';
   }): Promise<bigint | null> {
     const today = new Date();
-    const placeholder = await this.prisma.payouts.create({
-      data: {
-        id_productor: args.id_productor,
-        moneda: args.moneda,
-        monto_bruto: args.subtotal_bruto ?? args.monto_neto ?? 0,
-        monto_comision: args.comision_marketplace,
-        monto_neto: args.monto_neto ?? 0,
-        estado: 'procesando',
-        proveedor: args.proveedor,
-        periodo_desde: today,
-        periodo_hasta: today,
-      },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const placeholder = await tx.payouts.create({
+        data: {
+          id_productor: args.id_productor,
+          moneda: args.moneda,
+          monto_bruto: args.subtotal_bruto ?? args.monto_neto ?? 0,
+          monto_comision: args.comision_marketplace,
+          monto_neto: args.monto_neto ?? 0,
+          estado: 'procesando',
+          proveedor: args.proveedor,
+          periodo_desde: today,
+          periodo_hasta: today,
+        },
+      });
 
-    const claim = await this.prisma.pedido_productor.updateMany({
-      where: { id_pedido: args.id_pedido, id_productor: args.id_productor, id_payout: null },
-      data: { id_payout: placeholder.id_payout },
-    });
+      const claim = await tx.pedido_productor.updateMany({
+        where: { id_pedido: args.id_pedido, id_productor: args.id_productor, id_payout: null },
+        data: { id_payout: placeholder.id_payout },
+      });
 
-    if (claim.count === 0) {
-      // Otro proceso ya reservó el payout de este pedido_productor: revertir placeholder.
-      await this.prisma.payouts
-        .delete({ where: { id_payout: placeholder.id_payout } })
-        .catch(() => undefined);
-      return null;
-    }
+      if (claim.count === 0) {
+        // Otro proceso ya reservó el payout — revertir placeholder dentro del mismo tx.
+        await tx.payouts.delete({ where: { id_payout: placeholder.id_payout } });
+        return null;
+      }
 
-    return placeholder.id_payout;
+      return placeholder.id_payout;
+    }).catch(() => null);
   }
 
   private async triggerPayoutForProductor(id_pedido: bigint, id_productor: number, moneda: Moneda) {

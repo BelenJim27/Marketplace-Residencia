@@ -7,6 +7,7 @@ import { SignUpForm } from "./_components/sign-up-form";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useTheme } from "next-themes";
+import { useLocale } from "@/context/LocaleContext";
 import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
 import {
   UserCircle, Users, Tag, LayoutGrid, ShieldCheck,
@@ -31,6 +32,7 @@ function SignUpContent() {
   const searchParams = useSearchParams();
   const isVenderFlow = searchParams.get("vender") === "true";
   const { resolvedTheme } = useTheme();
+  const { t } = useLocale();
   const isDark = resolvedTheme === "dark";
 
   /* ── Vender flow: wizard de pasos (para usuarios sin cuenta) ── */
@@ -214,22 +216,22 @@ function SignUpContent() {
                 />
               </div>
               <h1 className="text-2xl font-bold text-dark dark:text-white">
-                Crea tu cuenta
+                {t("Crea tu cuenta")}
               </h1>
               <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-                Regístrate para comenzar a comprar.
+                {t("Regístrate para comenzar a comprar.")}
               </p>
             </div>
 
             <SignUpForm />
 
             <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-              ¿Ya tienes una cuenta?{" "}
+              {t("¿Ya tienes una cuenta?")}{" "}
               <Link
                 href="/auth/sign-in"
                 className="font-semibold text-green-600 underline underline-offset-2 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
               >
-                Inicia sesión
+                {t("Inicia sesión")}
               </Link>
             </p>
           </div>

@@ -1,4 +1,9 @@
 {
+  "Completa tu pago en PayPal": "Complete your PayPal payment",
+  "Haz clic en el botón abajo. Te redirigiremos a PayPal de forma segura para que confirmes tu pago.": "Click the button below. We'll securely redirect you to PayPal to confirm your payment.",
+  "¡Pago con PayPal confirmado!": "PayPal payment confirmed!",
+  "Tu pago ha sido procesado exitosamente.": "Your payment has been processed successfully.",
+  "tiene restricciones legales para el envío de bebidas alcohólicas.": "has legal restrictions for shipping alcoholic beverages.",
   "Guardar como dirección predeterminada": "Save as default address",
   "Obteniendo ubicación...": "Getting location...",
   "Usar mi ubicación actual": "Use my current location",
@@ -111,6 +116,7 @@
   "checkout_payment_paypal_secure": "Fast and secure with your account",
   "checkout_button_back": "Back",
   "checkout_button_continue": "Continue",
+  "checkout_processing": "Processing...",
   "checkout_summary_section": "Summary",
   "checkout_summary_subtotal": "Subtotal",
   "checkout_summary_shipping": "Shipping",

@@ -2,6 +2,7 @@
 
 import { Eye, Pencil, Plus, Trash2, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { ProductoThumbnail } from "@/components/Producer/Products/ImagenProducto";
+import { formatMXN } from "@/lib/format-number";
 import type { ProductItem, StoreItem } from "@/hooks/useProductos";
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
@@ -366,7 +367,7 @@ export function ProductoTabla({
                         $0.00 ⚠
                       </span>
                     ) : (
-                      <span className="text-[#1F3A2E]">{Number(product.precio_base || 0).toFixed(2)}</span>
+                      <span className="text-[#1F3A2E]">{formatMXN(product.precio_base || 0)}</span>
                     )}
                   </td>
 
