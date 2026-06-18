@@ -223,7 +223,7 @@ export default function MisComprasPage() {
 
       {/* ── Columna izquierda ────────────────────────────────────── */}
       {sideRows.map((r, i) => (
-        <div key={`l-${i}`} aria-hidden style={{ position: "absolute", top: r.top, left: 0, width: r.w, height: r.w, zIndex: 2, pointerEvents: "none" }}>
+        <div key={`l-${i}`} aria-hidden className="hidden md:block" style={{ position: "absolute", top: r.top, left: 0, width: r.w, height: r.w, zIndex: 2, pointerEvents: "none" }}>
           <Image src={`/fotos/${r.img}.png`} alt="" width={r.w} height={r.w}
             style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
         </div>
@@ -231,7 +231,7 @@ export default function MisComprasPage() {
 
       {/* ── Columna derecha ──────────────────────────────────────── */}
       {sideRows.map((r, i) => (
-        <div key={`r-${i}`} aria-hidden style={{ position: "absolute", top: r.top, right: 0, width: r.w, height: r.w, zIndex: 2, pointerEvents: "none", transform: r.img === "murcielago" ? "scaleX(-1)" : "none" }}>
+        <div key={`r-${i}`} aria-hidden className="hidden md:block" style={{ position: "absolute", top: r.top, right: 0, width: r.w, height: r.w, zIndex: 2, pointerEvents: "none", transform: r.img === "murcielago" ? "scaleX(-1)" : "none" }}>
           <Image src={`/fotos/${r.img}.png`} alt="" width={r.w} height={r.w}
             style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
         </div>

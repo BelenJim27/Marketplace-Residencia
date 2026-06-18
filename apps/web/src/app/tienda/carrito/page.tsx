@@ -165,10 +165,10 @@ export default function CarritoPage() {
   if (items.length === 0) {
     return (
       <div style={{ position: "relative" }}>
-        <div aria-hidden style={{ position: "absolute", bottom: 0, left: 0, width: 200, height: "130vh", zIndex: 2, pointerEvents: "none" }}>
+        <div aria-hidden className="hidden lg:block" style={{ position: "absolute", bottom: 0, left: 0, width: 200, height: "130vh", zIndex: 2, pointerEvents: "none" }}>
           <Image src="/fotos/quiote.png" alt="" fill style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain", objectPosition: "bottom center" }} />
         </div>
-        <div aria-hidden style={{ position: "absolute", bottom: 0, right: 0, width: 200, height: "130vh", zIndex: 2, pointerEvents: "none", transform: "scaleX(-1)" }}>
+        <div aria-hidden className="hidden lg:block" style={{ position: "absolute", bottom: 0, right: 0, width: 200, height: "130vh", zIndex: 2, pointerEvents: "none", transform: "scaleX(-1)" }}>
           <Image src="/fotos/quiote.png" alt="" fill style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain", objectPosition: "bottom center" }} />
         </div>
       <main style={{ position: "relative", zIndex: 1, maxWidth: "860px", margin: "0 auto", padding: "48px 20px 80px" }}>
@@ -223,13 +223,13 @@ export default function CarritoPage() {
     <div style={{ position: "relative" }}>
 
       {/* ── Quiote izquierdo ────────────────────────────────────── */}
-      <div aria-hidden style={{ position: "absolute", bottom: 0, left: 0, width: 200, height: "130vh", zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden lg:block" style={{ position: "absolute", bottom: 0, left: 0, width: 200, height: "130vh", zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/quiote.png" alt="" fill
           style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain", objectPosition: "bottom center" }} />
       </div>
 
       {/* ── Quiote derecho ──────────────────────────────────────── */}
-      <div aria-hidden style={{ position: "absolute", bottom: 0, right: 0, width: 200, height: "130vh", zIndex: 2, pointerEvents: "none", transform: "scaleX(-1)" }}>
+      <div aria-hidden className="hidden lg:block" style={{ position: "absolute", bottom: 0, right: 0, width: 200, height: "130vh", zIndex: 2, pointerEvents: "none", transform: "scaleX(-1)" }}>
         <Image src="/fotos/quiote.png" alt="" fill
           style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain", objectPosition: "bottom center" }} />
       </div>
