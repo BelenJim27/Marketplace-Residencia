@@ -1086,9 +1086,20 @@ export class EnviosService {
   async iniciarEnvioParaProductor(id_pedido: number, id_productor: number): Promise<{ id_envio: number }> {
     const pp = await this.prisma.pedido_productor.findUnique({
       where: { id_pedido_id_productor: { id_pedido: BigInt(id_pedido), id_productor } },
+      include: {
+        productores: {
+          select: { direccion_bodega: { select: { linea_1: true, codigo_postal: true } } },
+        },
+      },
     });
     if (!pp) throw new NotFoundException('No tienes acceso a este pedido');
     if (pp.id_envio) return { id_envio: Number(pp.id_envio) };
+
+    if (!pp.productores?.direccion_bodega?.linea_1 || !pp.productores?.direccion_bodega?.codigo_postal) {
+      throw new UnprocessableEntityException(
+        'No tienes configurada la dirección de bodega. Configúrala en tu perfil antes de generar envíos.',
+      );
+    }
 
     const items = await this.prisma.detalle_pedido.findMany({
       where: { id_pedido: BigInt(id_pedido), id_productor },
@@ -1195,6 +1206,14 @@ export class EnviosService {
         );
         const pesoVolumetrico = (maxLargo * maxAncho * alturaTotal) / 5000;
         const pesoFacturable = Math.max(pesoReal, pesoVolumetrico);
+
+        // Validar dirección de bodega ANTES de crear el registro de envío para
+        // evitar registros huérfanos cuando el productor no tiene bodega configurada.
+        if (!pp.productores?.direccion_bodega?.linea_1 || !pp.productores?.direccion_bodega?.codigo_postal) {
+          throw new Error(
+            `Productor ${pp.id_productor} sin dirección de bodega configurada. Configure la bodega antes de generar guías.`,
+          );
+        }
 
         const esAlcohol = await this.detectarFirmaAdulto(id_pedido, pp.id_productor);
 

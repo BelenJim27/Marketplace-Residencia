@@ -33,3 +33,13 @@ export function formatPrice(value: number | string, options?: { currency?: strin
     maximumFractionDigits: 2,
   }).format(numValue);
 }
+
+export function formatMXN(amount: number | string): string {
+  const num = typeof amount === "string" ? parseFloat(amount) || 0 : amount;
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+}

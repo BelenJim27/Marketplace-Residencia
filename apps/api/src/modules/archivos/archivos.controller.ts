@@ -5,6 +5,8 @@ import { extname } from 'path';
 import { CreateArchivoDto, UpdateArchivoDto } from './dto/archivos.dto';
 import { ArchivosService } from './archivos.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
+import { RolesGuard } from '../auth/guards/rbac.guard';
+import { Roles } from '../auth/guards/roles.decorator';
 import { Throttle } from '@nestjs/throttler';
 
 const FILE_SIZE_LIMIT = 5 * 1024 * 1024; // 5 MB
@@ -18,11 +20,14 @@ export class ArchivosController {
   constructor(private readonly service: ArchivosService) {}
 
   @Get()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
   findAll(@Query('entidad_tipo') entidadTipo?: string, @Query('entidad_id') entidadId?: string) {
     return this.service.findAll(entidadTipo, entidadId ? Number(entidadId) : undefined);
   }
 
   @Get(':id')
+  @UseGuards(AuthGuard)
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
   }

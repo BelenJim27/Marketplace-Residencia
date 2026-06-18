@@ -174,7 +174,8 @@ export class PagosController {
   @Roles('administrador')
   @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('administrador')
   @Post(':id/resolver-manual')
   resolverManual(@Param('id') id: string, @Body() body: { notas?: string }) {
     return this.service.resolverManual(id, body.notas);

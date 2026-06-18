@@ -5,6 +5,7 @@ import { Loader2, AlertCircle, DollarSign, TrendingUp, Receipt, CreditCard, Chec
 import { useAuth } from "@/context/AuthContext";
 import { api, type Payout } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
+import { formatMXN } from "@/lib/format-number";
 
 type ConnectStatus = {
   connected: boolean;
@@ -244,11 +245,11 @@ export default function IngresosProductorPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-        <SummaryCard icon={<DollarSign />} label="Ventas totales" value={ingresosResumen?.ventas_totales ?? "0.00"} colorClass="text-blue-700" tooltip="Items vendidos (sin impuestos/envío)" />
-        <SummaryCard icon={<DollarSign />} label="Bruto total" value={ingresosResumen?.bruto_total ?? "0.00"} colorClass="text-[#3D6B3F]" tooltip="Ventas + IVA prorrateado + envío prorrateado" />
-        <SummaryCard icon={<Receipt />} label="Comisión marketplace" value={ingresosResumen?.comision_total ?? "0.00"} colorClass="text-red-600" tooltip="Comisión aplicada sobre el bruto total" />
-        <SummaryCard icon={<TrendingUp />} label="Recibido" value={ingresosResumen?.ingresos_recibidos ?? "0.00"} colorClass="text-[#3D6B3F]" tooltip="Dinero transferido a tu cuenta" />
-        <SummaryCard icon={<Receipt />} label="Pendiente" value={ingresosResumen?.pendiente_recibir ?? "0.00"} colorClass="text-[#C97A3E]" tooltip="En período de retención o en proceso" />
+        <SummaryCard icon={<DollarSign />} label="Ventas totales" value={ingresosResumen?.ventas_totales ?? "0"} colorClass="text-blue-700" tooltip="Items vendidos (sin impuestos/envío)" />
+        <SummaryCard icon={<DollarSign />} label="Bruto total" value={formatMXN(ingresosResumen?.bruto_total ?? 0)} colorClass="text-[#3D6B3F]" tooltip="Ventas + IVA prorrateado + envío prorrateado" />
+        <SummaryCard icon={<Receipt />} label="Comisión marketplace" value={formatMXN(ingresosResumen?.comision_total ?? 0)} colorClass="text-red-600" tooltip="Comisión aplicada sobre el bruto total" />
+        <SummaryCard icon={<TrendingUp />} label="Recibido" value={formatMXN(ingresosResumen?.ingresos_recibidos ?? 0)} colorClass="text-[#3D6B3F]" tooltip="Dinero transferido a tu cuenta" />
+        <SummaryCard icon={<Receipt />} label="Pendiente" value={formatMXN(ingresosResumen?.pendiente_recibir ?? 0)} colorClass="text-[#C97A3E]" tooltip="En período de retención o en proceso" />
       </div>
 
       {/* Payouts table */}
@@ -295,9 +296,9 @@ export default function IngresosProductorPage() {
                   <td className="px-4 py-3 text-[#3D6B3F]/70">
                     {new Date(p.periodo_desde).toLocaleDateString()} → {new Date(p.periodo_hasta).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3 text-right text-[#3D6B3F]/70">{Number(p.monto_bruto).toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right text-[#3D6B3F]/70">{Number(p.monto_comision).toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right font-medium text-[#1F3A2E]">{Number(p.monto_neto).toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right text-[#3D6B3F]/70">{formatMXN(p.monto_bruto)}</td>
+                  <td className="px-4 py-3 text-right text-[#3D6B3F]/70">{formatMXN(p.monto_comision)}</td>
+                  <td className="px-4 py-3 text-right font-medium text-[#1F3A2E]">{formatMXN(p.monto_neto)}</td>
                   <td className="px-4 py-3 text-[#3D6B3F]/70">{p.moneda}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_BADGE[p.estado] ?? "bg-[#C5CFB0]/30 text-[#1F3A2E]"}`}
@@ -377,9 +378,9 @@ export default function IngresosProductorPage() {
             <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
               <div><span className="text-[#3D6B3F]/70">Periodo:</span>{" "}{new Date(detalleModal.periodo_desde).toLocaleDateString()} → {new Date(detalleModal.periodo_hasta).toLocaleDateString()}</div>
               <div><span className="text-[#3D6B3F]/70">Moneda:</span> {detalleModal.moneda}</div>
-              <div><span className="text-[#3D6B3F]/70">Bruto:</span> {Number(detalleModal.monto_bruto).toFixed(2)}</div>
-              <div><span className="text-[#3D6B3F]/70">Comisión:</span> {Number(detalleModal.monto_comision).toFixed(2)}</div>
-              <div><span className="text-[#3D6B3F]/70">Neto:</span> <strong className="text-[#1F3A2E]">{Number(detalleModal.monto_neto).toFixed(2)}</strong></div>
+              <div><span className="text-[#3D6B3F]/70">Bruto:</span> {formatMXN(detalleModal.monto_bruto)}</div>
+              <div><span className="text-[#3D6B3F]/70">Comisión:</span> {formatMXN(detalleModal.monto_comision)}</div>
+              <div><span className="text-[#3D6B3F]/70">Neto:</span> <strong className="text-[#1F3A2E]">{formatMXN(detalleModal.monto_neto)}</strong></div>
               <div>
                 <span className="text-[#3D6B3F]/70">Estado:</span>{" "}
                 <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_BADGE[detalleModal.estado] ?? "bg-[#C5CFB0]/30 text-[#1F3A2E]"}`}>
@@ -443,9 +444,9 @@ export default function IngresosProductorPage() {
                           <td className="px-4 py-2.5">
                             <span className="inline-flex rounded-full bg-[#A8C26B]/20 px-2 py-0.5 text-xs font-medium text-[#3D6B3F]">{pp.estado}</span>
                           </td>
-                          <td className="px-4 py-2.5 text-right font-medium text-[#1F3A2E]">{pp.subtotal_bruto ?? "—"}</td>
-                          <td className="px-4 py-2.5 text-right text-[#3D6B3F]/70">{pp.comision_marketplace}</td>
-                          <td className="px-4 py-2.5 text-right font-medium text-[#3D6B3F]">{pp.monto_neto_productor ?? "—"}</td>
+                          <td className="px-4 py-2.5 text-right font-medium text-[#1F3A2E]">{pp.subtotal_bruto ? formatMXN(pp.subtotal_bruto) : "—"}</td>
+                          <td className="px-4 py-2.5 text-right text-[#3D6B3F]/70">{pp.comision_marketplace ? formatMXN(pp.comision_marketplace) : "—"}</td>
+                          <td className="px-4 py-2.5 text-right font-medium text-[#3D6B3F]">{pp.monto_neto_productor ? formatMXN(pp.monto_neto_productor) : "—"}</td>
                         </tr>
                       ))}
                     </tbody>

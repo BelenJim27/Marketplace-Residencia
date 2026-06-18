@@ -10,6 +10,7 @@ import { SuccessToast } from "@/components/ui/SuccessToast";
 const PAGE_SIZE = 10;
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { formatMXN } from "@/lib/format-number";
 import { getCookie } from "@/lib/cookies";
 
 type ProductosProductorProps = {
@@ -268,7 +269,7 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
                       {product.nombre}
                     </td>
                     <td className="px-5 py-4 text-[#1F3A2E]">
-                      {Number(product.precio_base ?? 0).toFixed(2)}
+                      {formatMXN(product.precio_base ?? 0)}
                     </td>
                     <td className="px-5 py-4 text-[#1F3A2E]">
                       {product.moneda_base || "MXN"}

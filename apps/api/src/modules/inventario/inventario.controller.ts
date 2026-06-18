@@ -27,6 +27,8 @@ const WRITE_GUARDS = [AuthGuard, RolesGuard] as const;
 export class InventarioController {
   constructor(private readonly service: InventarioService) {}
 
+  @UseGuards(...WRITE_GUARDS)
+  @Roles("productor", "administrador")
   @Get("movimientos") listMovimientos() {
     return this.service.listMovimientos();
   }
@@ -39,17 +41,25 @@ export class InventarioController {
     return this.service.createMovimiento(dto);
   }
 
+  @UseGuards(...WRITE_GUARDS)
+  @Roles("productor", "administrador")
   @Get("dashboard") getDashboard(@Query() query: PaginacionQueryDto) {
     return this.service.listInventario(query);
   }
+  @UseGuards(...WRITE_GUARDS)
+  @Roles("productor", "administrador")
   @Get() listInventario(@Query() query: PaginacionQueryDto) {
     return this.service.listInventario(query);
   }
+  @UseGuards(...WRITE_GUARDS)
+  @Roles("productor", "administrador")
   @Get("producto/:id_producto") getByProducto(
     @Param("id_producto") id_producto: string,
   ) {
     return this.service.getByProducto(id_producto);
   }
+  @UseGuards(...WRITE_GUARDS)
+  @Roles("productor", "administrador")
   @Get(":id") getInventario(@Param("id") id: string) {
     return this.service.getInventario(id);
   }

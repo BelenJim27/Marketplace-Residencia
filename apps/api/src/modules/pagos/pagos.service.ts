@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Logger, NotFoundException, Optional, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Logger, NotFoundException, Optional, ServiceUnavailableException, UnprocessableEntityException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Moneda } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -74,6 +74,17 @@ export class PagosService {
    */
   async discardWebhookEvent(provider: string, event_id: string): Promise<void> {
     await this.prisma.webhook_events_log.deleteMany({ where: { provider, event_id } });
+  }
+
+  @Cron('0 3 * * *') // Diario a las 3am
+  async purgeOldWebhookEvents(): Promise<void> {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const { count } = await this.prisma.webhook_events_log.deleteMany({
+      where: { processed_at: { lt: cutoff } },
+    });
+    if (count > 0) {
+      this.logger.log(`[webhook-purge] Eliminados ${count} eventos con más de 30 días`);
+    }
   }
 
   async resolverManual(id_pago: string, notas?: string) {
@@ -851,7 +862,15 @@ export class PagosService {
       return { moneda: 'MXN', tasa: 1, ...montosMxn, total: totalMxn, totalMxn };
     }
     const r: any = await this.tasasCambioService.getVigente('MXN', 'USD');
+    if (!r?.tasa) {
+      throw new ServiceUnavailableException(
+        'Tasa de cambio MXN→USD no disponible. Intente de nuevo en unos momentos.',
+      );
+    }
     const tasa = Number(r.tasa);
+    if (!isFinite(tasa) || tasa <= 0) {
+      throw new ServiceUnavailableException('Tasa de cambio MXN→USD inválida. Contacte al administrador.');
+    }
     const conv = (n: number) => Math.round(n * tasa * 100) / 100;
     return {
       moneda: 'USD',

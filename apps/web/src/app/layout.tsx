@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     template: "%s | Mezcales",
-    default: "Mezcales — Artisanal Oaxacan Mezcal Marketplace",
+    default: "Mezcales — Oaxacan Mezcal",
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
-    title: "Mezcales — Artisanal Oaxacan Mezcal Marketplace",
+    title: "Mezcales — Oaxacan Mezcal",
     description: SITE_DESCRIPTION,
     url: SITE_URL,
     locale: "es_MX",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Mezcales — Artisanal Oaxacan Mezcal Marketplace",
+    title: "Mezcales — Oaxacan Mezcal",
     description: SITE_DESCRIPTION,
   },
 };

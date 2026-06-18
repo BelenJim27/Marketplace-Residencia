@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
+import { formatMXN } from "@/lib/format-number";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
 import { SuccessToast } from "@/components/ui/SuccessToast";
@@ -292,7 +293,7 @@ export default function ReembolsosAdminPage() {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right font-semibold text-[#1F3A2E]">
-                        {Number(p.monto).toFixed(2)} {p.moneda}
+                        {formatMXN(p.monto)}
                       </td>
                       <td className="px-3 py-2">
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${BADGE[p.estado] ?? "bg-gray-100 text-gray-700"}`}>
@@ -391,7 +392,7 @@ export default function ReembolsosAdminPage() {
 
             <div className="mb-4 text-sm space-y-1 text-[#1F3A2E]">
               <div><span className="text-[#3D6B3F]/70">Pago:</span> #{modalPago.id_pago}</div>
-              <div><span className="text-[#3D6B3F]/70">Monto:</span> {Number(modalPago.monto).toFixed(2)} {modalPago.moneda}</div>
+              <div><span className="text-[#3D6B3F]/70">Monto:</span> {formatMXN(modalPago.monto)}</div>
               <div><span className="text-[#3D6B3F]/70">Proveedor:</span> {modalPago.proveedor ?? "—"}</div>
               {modalPago.payment_intent_id && (
                 <div className="font-mono text-xs text-[#3D6B3F]/60 break-all">

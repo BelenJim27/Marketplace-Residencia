@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import GoogleSigninButton from "@/components/Administrator/Auth/GoogleSigninButton";
 import { useAuth } from "@/context/AuthContext";
+import { useLocale } from "@/context/LocaleContext";
 import { Eye, EyeOff } from "lucide-react";
 import { getPasswordChecks, isValidEmail, isValidUsername } from "@/shared/validation/auth";
 
@@ -12,6 +13,7 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
+  const { t } = useLocale();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -56,40 +58,39 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
 
     // Nombre de usuario
     if (!formData.nombre_usuario.trim())
-      errors.nombre_usuario = "El nombre de usuario es obligatorio";
+      errors.nombre_usuario = t("El nombre de usuario es obligatorio");
     else if (!isValidUsername(formData.nombre_usuario))
-      errors.nombre_usuario =
-        "Usuario inválido (2-50 caracteres: letras, números, punto, guion o guion bajo)";
+      errors.nombre_usuario = t("Usuario inválido (2-50 caracteres: letras, números, punto, guion o guion bajo)");
 
     // Correo
-    if (!formData.email.trim()) errors.email = "El correo electrónico es obligatorio";
+    if (!formData.email.trim()) errors.email = t("El correo electrónico es obligatorio");
     else if (!isValidEmail(formData.email))
-      errors.email = "Ingresa un correo electrónico válido";
+      errors.email = t("Ingresa un correo electrónico válido");
 
     // Nombre
-    if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
+    if (!formData.nombre.trim()) errors.nombre = t("El nombre es obligatorio");
     else if (formData.nombre.trim().length < 2)
-      errors.nombre = "Ingresa un nombre válido (mínimo 2 letras)";
+      errors.nombre = t("Ingresa un nombre válido (mínimo 2 letras)");
 
     // Apellido paterno
     if (!formData.apellido_paterno.trim())
-      errors.apellido_paterno = "El apellido paterno es obligatorio";
+      errors.apellido_paterno = t("El apellido paterno es obligatorio");
     else if (formData.apellido_paterno.trim().length < 2)
-      errors.apellido_paterno = "Ingresa un apellido válido (mínimo 2 letras)";
+      errors.apellido_paterno = t("Ingresa un apellido válido (mínimo 2 letras)");
 
     // Apellido materno (opcional, pero si se llena debe ser válido)
     if (formData.apellido_materno.trim().length > 0 && formData.apellido_materno.trim().length < 2)
-      errors.apellido_materno = "El apellido debe tener al menos 2 letras";
+      errors.apellido_materno = t("El apellido debe tener al menos 2 letras");
 
     // Contraseña
-    if (!formData.password) errors.password = "La contraseña es obligatoria";
-    else if (!allPasswordValid) errors.password = "La contraseña no cumple con los requisitos";
+    if (!formData.password) errors.password = t("La contraseña es obligatoria");
+    else if (!allPasswordValid) errors.password = t("La contraseña no cumple con los requisitos");
 
     // Confirmar contraseña
     if (!formData.confirmarPassword)
-      errors.confirmarPassword = "Confirma tu contraseña";
+      errors.confirmarPassword = t("Confirma tu contraseña");
     else if (!passwordsMatch)
-      errors.confirmarPassword = "Las contraseñas no coinciden";
+      errors.confirmarPassword = t("Las contraseñas no coinciden");
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -133,7 +134,7 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
         router.push(redirectUrl || "/cliente/producto");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al registrar usuario");
+      setError(err instanceof Error ? err.message : t("Error al registrar usuario"));
     } finally {
       setLoading(false);
     }
@@ -146,7 +147,7 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
       <div className="my-6 flex items-center justify-center">
         <span className="block h-px w-full bg-stroke dark:bg-dark-3"></span>
         <div className="block w-full min-w-fit bg-white px-3 text-center font-medium dark:bg-gray-dark">
-          O regístrate con tu correo
+          {t("O regístrate con tu correo")}
         </div>
         <span className="block h-px w-full bg-stroke dark:bg-dark-3"></span>
       </div>
@@ -162,13 +163,13 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
-              Nombre de usuario
+              {t("Nombre de usuario")}
             </label>
             <input
               type="text"
               required
               className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none dark:bg-gray-dark ${fieldErrors.nombre_usuario ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
-              placeholder="Tu usuario"
+              placeholder={t("Tu usuario")}
               value={formData.nombre_usuario}
               onChange={(e) => {
                 setFormData({ ...formData, nombre_usuario: e.target.value });
@@ -179,13 +180,13 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
-              Correo electrónico
+              {t("Correo electrónico")}
             </label>
             <input
               type="email"
               required
               className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none dark:bg-gray-dark ${fieldErrors.email ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
-              placeholder="tu@correo.com"
+              placeholder={t("tu@correo.com")}
               value={formData.email}
               onChange={(e) => {
                 setFormData({ ...formData, email: e.target.value });
@@ -200,13 +201,13 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
-              Nombre(s)
+              {t("Nombre(s)")}
             </label>
             <input
               type="text"
               required
               className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none dark:bg-gray-dark ${fieldErrors.nombre ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
-              placeholder="Tu nombre"
+              placeholder={t("Tu nombre")}
               value={formData.nombre}
               onChange={(e) => handleNombreChange("nombre", e.target.value)}
             />
@@ -214,13 +215,13 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
-              Apellido paterno
+              {t("Apellido paterno")}
             </label>
             <input
               type="text"
               required
               className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none dark:bg-gray-dark ${fieldErrors.apellido_paterno ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
-              placeholder="Apellido paterno"
+              placeholder={t("Apellido paterno")}
               value={formData.apellido_paterno}
               onChange={(e) => handleNombreChange("apellido_paterno", e.target.value)}
             />
@@ -232,12 +233,12 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
-              Apellido materno
+              {t("Apellido materno")}
             </label>
             <input
               type="text"
               className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none dark:bg-gray-dark ${fieldErrors.apellido_materno ? "border-red-400 focus:border-red-400" : "border-green-200 focus:border-green-400"}`}
-              placeholder="Apellido materno"
+              placeholder={t("Apellido materno")}
               value={formData.apellido_materno}
               onChange={(e) => handleNombreChange("apellido_materno", e.target.value)}
             />
@@ -249,7 +250,7 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
-              Contraseña
+              {t("Contraseña")}
             </label>
             <div className="relative">
               <input
@@ -272,7 +273,7 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-dark dark:text-white">
-              Confirmar contraseña
+              {t("Confirmar contraseña")}
             </label>
             <div className="relative">
               <input
@@ -300,7 +301,7 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
             {fieldErrors.confirmarPassword ? (
               <p aria-live="polite" className="mt-1 text-[11px] text-red-500">{fieldErrors.confirmarPassword}</p>
             ) : formData.confirmarPassword.length > 0 && !passwordsMatch ? (
-              <p className="mt-1 text-[11px] text-red-500">Las contraseñas no coinciden</p>
+              <p className="mt-1 text-[11px] text-red-500">{t("Las contraseñas no coinciden")}</p>
             ) : null}
           </div>
         </div>
@@ -322,7 +323,7 @@ export function SignUpForm({ isVenderFlow: isVenderFlowProp, onSuccess }: { isVe
           disabled={loading}
           className="flex w-full justify-center rounded-lg bg-green-600 py-2.5 font-medium text-white hover:bg-green-700 disabled:opacity-50"
         >
-          {loading ? "Registrando..." : "Crear cuenta"}
+          {loading ? t("Registrando...") : t("Crear cuenta")}
         </button>
       </form>
     </div>

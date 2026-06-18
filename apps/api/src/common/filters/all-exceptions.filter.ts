@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
+import * as Sentry from '@sentry/nestjs';
 
 /**
  * Forma estandarizada de TODA respuesta de error de la API.
@@ -108,6 +109,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         }),
         exception instanceof Error ? exception.stack : String(exception),
       );
+      // Capturar en Sentry (solo 5xx — los 4xx son errores del cliente, no bugs).
+      Sentry.captureException(exception, {
+        extra: { requestId, method: request.method, url: request.url, statusCode },
+      });
     }
 
     const payload: ErrorResponseBody = { success: false, statusCode, message };

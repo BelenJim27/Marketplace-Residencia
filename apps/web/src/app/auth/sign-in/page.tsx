@@ -15,12 +15,7 @@ import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
 import {
   UserCircle, Users, Tag, LayoutGrid, ShieldCheck,
 } from "lucide-react";
-
-const FEATURES = [
-  "Productores artesanales verificados",
-  "Envíos a todo México y el mundo",
-  "Variedad única de agaves oaxaqueños",
-];
+import { useLocale } from "@/context/LocaleContext";
 
 const WIZARD_STEPS = [
   { n: 0, label: "Cuenta",      eyebrow: "00", Icon: UserCircle,  hint: "Acceso" },
@@ -37,6 +32,7 @@ function SignInContent() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const router = useRouter();
+  const { t } = useLocale();
 
   useEffect(() => {
     if (loading) return;
@@ -204,12 +200,12 @@ function SignInContent() {
                   de México
                 </h3>
                 <p style={{ color:"rgba(255,255,255,0.6)", fontSize:"12px", lineHeight:1.6, margin:"0 0 14px", maxWidth:"200px" }}>
-                  Conectamos productores artesanales con amantes del buen mezcal.
+                  {t("Conectamos productores artesanales con amantes del buen mezcal en todo el mundo.")}
                 </p>
-                {["Productores verificados", "Envíos a todo México", "Agaves oaxaqueños"].map((f) => (
+                {(["Productores verificados", "Envíos a todo México", "Agaves oaxaqueños"] as const).map((f) => (
                   <div key={f} style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"6px" }}>
                     <span style={{ width:"16px", height:"16px", borderRadius:"50%", background:"rgba(74,222,128,0.25)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:"9px", color:"#86efac", fontWeight:700 }}>✓</span>
-                    <span style={{ color:"rgba(255,255,255,0.75)", fontSize:"12px" }}>{f}</span>
+                    <span style={{ color:"rgba(255,255,255,0.75)", fontSize:"12px" }}>{t(f)}</span>
                   </div>
                 ))}
               </div>
@@ -242,7 +238,7 @@ function SignInContent() {
           <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
           <div className="absolute inset-0 flex flex-col justify-end p-12 pb-16">
             <p className="text-green-300 text-xs font-semibold tracking-widest uppercase mb-3">
-              Marketplace Artesanal
+              {t("Marketplace Artesanal")}
             </p>
             <h2 className="text-5xl font-bold text-white leading-tight mb-4">
               Mezcal Oaxaqueño<br />
@@ -250,15 +246,19 @@ function SignInContent() {
               de México
             </h2>
             <p className="text-white/60 text-base max-w-xs leading-relaxed mb-8">
-              Conectamos productores artesanales con amantes del buen mezcal en todo el mundo.
+              {t("Conectamos productores artesanales con amantes del buen mezcal en todo el mundo.")}
             </p>
             <div className="flex flex-col gap-2.5">
-              {FEATURES.map((feat) => (
+              {([
+                "Productores artesanales verificados",
+                "Envíos a todo México y el mundo",
+                "Variedad única de agaves oaxaqueños",
+              ] as const).map((feat) => (
                 <div key={feat} className="flex items-center gap-3">
                   <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-500/25 text-green-300 text-xs font-bold">
                     ✓
                   </span>
-                  <span className="text-white/75 text-sm">{feat}</span>
+                  <span className="text-white/75 text-sm">{t(feat)}</span>
                 </div>
               ))}
             </div>

@@ -54,6 +54,7 @@
   "checkout_payment_paypal_secure": "Rápido y seguro con tu cuenta",
   "checkout_button_back": "Atrás",
   "checkout_button_continue": "Continuar",
+  "checkout_processing": "Procesando...",
   "checkout_summary_section": "Resumen",
   "checkout_summary_subtotal": "Subtotal",
   "checkout_summary_shipping": "Envío",

@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { X, ImagePlus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { AlertService } from "@/shared/alerts/alert.service";
 
 interface Categoria {
     id_categoria: number;
@@ -75,7 +76,7 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
         const file = e.target.files?.[0];
         if (!file) return;
         if (file.size > 500 * 1024) {
-            alert("La imagen debe pesar menos de 500 KB.");
+            AlertService.showWarning("La imagen debe pesar menos de 500 KB.");
             e.target.value = "";
             return;
         }

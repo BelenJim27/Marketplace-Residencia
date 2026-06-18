@@ -1,3 +1,4 @@
+import './instrument'; // Sentry must be imported before everything else
 import * as dotenv from 'dotenv';
 import { randomUUID } from 'crypto';
 import { Logger, ValidationPipe } from '@nestjs/common';
@@ -23,11 +24,21 @@ dotenv.config({ path: resolve(process.cwd(), '.env'), override: false });
  */
 function assertProductionConfig() {
   const isProd = process.env.NODE_ENV === 'production';
+  const logger = console; // Logger de NestJS no está disponible aún en este punto
 
-  // Secretos JWT obligatorios en todo entorno; el webhook de Stripe solo en prod.
-  const requiredSecrets = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
-  if (isProd) requiredSecrets.push('STRIPE_WEBHOOK_SECRET');
-  const missing = requiredSecrets.filter((k) => !process.env[k]);
+  // Secretos JWT obligatorios en todo entorno; el resto solo en prod.
+  const requiredAlways = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'DATABASE_URL'];
+  const requiredInProd = [
+    'STRIPE_WEBHOOK_SECRET',
+    'SENDGRID_API_KEY',
+    'NEXTAUTH_SECRET',
+    'CORS_ORIGINS',
+    'FRONTEND_URL',
+  ];
+
+  const missing = requiredAlways.filter((k) => !process.env[k]);
+  if (isProd) missing.push(...requiredInProd.filter((k) => !process.env[k]));
+
   if (missing.length) {
     throw new Error(`[config] Faltan variables de entorno requeridas: ${missing.join(', ')}`);
   }
@@ -41,8 +52,12 @@ function assertProductionConfig() {
     if (notHttps.length) {
       throw new Error(`[config] En producción estas URLs deben usar HTTPS: ${notHttps.join(', ')}`);
     }
-    if (!process.env.CORS_ORIGINS) {
-      throw new Error('[config] CORS_ORIGINS es obligatorio en producción (no se permite el default localhost).');
+
+    // Advertencias no bloqueantes para vars opcionales recomendadas en prod
+    const recommended = ['SENTRY_DSN', 'EMAIL_FROM', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'];
+    const missingRec = recommended.filter((k) => !process.env[k]);
+    if (missingRec.length) {
+      logger.warn(`[config] ADVERTENCIA — variables recomendadas no configuradas: ${missingRec.join(', ')}`);
     }
   }
 }
@@ -118,20 +133,24 @@ async function bootstrap() {
     }),
   );
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Marketplace Residencia API')
-    .setDescription('API del marketplace de mezcal')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
+  if (process.env.NODE_ENV !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Marketplace Residencia API')
+      .setDescription('API del marketplace de mezcal')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
   const logger = new Logger('Bootstrap');
   logger.log(`API running on http://localhost:${port}`);
-  logger.log(`Swagger docs: http://localhost:${port}/api/docs`);
+  if (process.env.NODE_ENV !== 'production') {
+    logger.log(`Swagger docs: http://localhost:${port}/api/docs`);
+  }
   
 }
 bootstrap();
