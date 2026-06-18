@@ -271,14 +271,14 @@ export default function CheckoutPage() {
 
       {/* ── Agavenuevo lado izquierdo ────────────────────────────── */}
       {["5%","18%","31%","44%","57%","70%","83%"].map((top, i) => (
-        <div key={`al-${i}`} aria-hidden style={{ position: "absolute", top, left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+        <div key={`al-${i}`} aria-hidden className="hidden md:block" style={{ position: "absolute", top, left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
           <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
         </div>
       ))}
 
       {/* ── Agavenuevo lado derecho ──────────────────────────────── */}
       {["5%","18%","31%","44%","57%","70%","83%"].map((top, i) => (
-        <div key={`ar-${i}`} aria-hidden style={{ position: "absolute", top, right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+        <div key={`ar-${i}`} aria-hidden className="hidden md:block" style={{ position: "absolute", top, right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
           <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
         </div>
       ))}

@@ -670,76 +670,76 @@ function DetallePedidoContent() {
     <div style={{ position: "relative" }}>
 
       {/* ── 5 Agaves lado izquierdo ─────────────────────────────── */}
-      <div aria-hidden style={{ position: "absolute", top: "20%", left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden md:block" style={{ position: "absolute", top: "20%", left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
-      <div aria-hidden style={{ position: "absolute", top: "32%", left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden md:block" style={{ position: "absolute", top: "32%", left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
-      <div aria-hidden style={{ position: "absolute", top: "44%", left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden md:block" style={{ position: "absolute", top: "44%", left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
-      <div aria-hidden style={{ position: "absolute", top: "56%", left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden md:block" style={{ position: "absolute", top: "56%", left: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
       {/* ── 4 Agaves lado derecho ───────────────────────────────── */}
-      <div aria-hidden style={{ position: "absolute", top: "20%", right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden md:block" style={{ position: "absolute", top: "20%", right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
-      <div aria-hidden style={{ position: "absolute", top: "32%", right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden md:block" style={{ position: "absolute", top: "32%", right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
-      <div aria-hidden style={{ position: "absolute", top: "44%", right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden md:block" style={{ position: "absolute", top: "44%", right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
-      <div aria-hidden style={{ position: "absolute", top: "56%", right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden md:block" style={{ position: "absolute", top: "56%", right: 0, width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/agavenuevo.png" alt="" width={110} height={110} style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
 
       {/* ── 3 Murciélagos al nivel del título ───────────────────── */}
-      <div aria-hidden style={{ position: "absolute", top: "-65px", left: "2%", width: 150, height: 150, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden md:block" style={{ position: "absolute", top: "-65px", left: "2%", width: 150, height: 150, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/murcielago.png" alt="" width={150} height={150}
           style={{ opacity: 0.60, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
-      <div aria-hidden style={{ position: "absolute", top: "-90px", left: "50%", transform: "translateX(-50%)", width: 170, height: 170, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden md:block" style={{ position: "absolute", top: "-90px", left: "50%", transform: "translateX(-50%)", width: 170, height: 170, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/murcielago.png" alt="" width={170} height={170}
           style={{ opacity: 0.60, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
-      <div aria-hidden style={{ position: "absolute", top: "-62px", right: "2%", width: 145, height: 145, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden md:block" style={{ position: "absolute", top: "-62px", right: "2%", width: 145, height: 145, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/murcielago.png" alt="" width={145} height={145}
           style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
 
       {/* ── Quiote izquierdo ────────────────────────────────────── */}
-      <div aria-hidden style={{ position: "absolute", bottom: 0, left: 0, width: 240, height: "130vh", zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden lg:block" style={{ position: "absolute", bottom: 0, left: 0, width: 240, height: "130vh", zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/quiote.png" alt="" fill
           style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain", objectPosition: "bottom center" }} />
       </div>
 
       {/* ── Quiote derecho ──────────────────────────────────────── */}
-      <div aria-hidden style={{ position: "absolute", bottom: 0, right: 0, width: 240, height: "130vh", zIndex: 2, pointerEvents: "none", transform: "scaleX(-1)" }}>
+      <div aria-hidden className="hidden lg:block" style={{ position: "absolute", bottom: 0, right: 0, width: 240, height: "130vh", zIndex: 2, pointerEvents: "none", transform: "scaleX(-1)" }}>
         <Image src="/fotos/quiote.png" alt="" fill
           style={{ opacity: 0.55, mixBlendMode: "multiply", objectFit: "contain", objectPosition: "bottom center" }} />
       </div>
 
       {/* ── 5 Mezcalll en la parte inferior ─────────────────────── */}
-      <div aria-hidden style={{ position: "absolute", bottom: 0, left: "21%", width: 115, height: 115, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden sm:block" style={{ position: "absolute", bottom: 0, left: "21%", width: 115, height: 115, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/mezcalll.png" alt="" width={115} height={115}
           style={{ opacity: 0.50, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
-      <div aria-hidden style={{ position: "absolute", bottom: 0, left: "33%", width: 135, height: 135, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden sm:block" style={{ position: "absolute", bottom: 0, left: "33%", width: 135, height: 135, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/mezcalll.png" alt="" width={135} height={135}
           style={{ opacity: 0.50, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
-      <div aria-hidden style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 125, height: 125, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden sm:block" style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 125, height: 125, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/mezcalll.png" alt="" width={125} height={125}
           style={{ opacity: 0.50, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
-      <div aria-hidden style={{ position: "absolute", bottom: 0, right: "33%", width: 120, height: 120, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden sm:block" style={{ position: "absolute", bottom: 0, right: "33%", width: 120, height: 120, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/mezcalll.png" alt="" width={120} height={120}
           style={{ opacity: 0.50, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
-      <div aria-hidden style={{ position: "absolute", bottom: 0, right: "21%", width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
+      <div aria-hidden className="hidden sm:block" style={{ position: "absolute", bottom: 0, right: "21%", width: 110, height: 110, zIndex: 2, pointerEvents: "none" }}>
         <Image src="/fotos/mezcalll.png" alt="" width={110} height={110}
           style={{ opacity: 0.45, mixBlendMode: "multiply", objectFit: "contain" }} />
       </div>
