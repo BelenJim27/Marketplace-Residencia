@@ -11,7 +11,10 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 2. Definir rutas que requieren protección (teniendo en cuenta los prefijos /es o /en)
-  const isProtectedRoute = pathname.includes('/dashboard') || pathname.includes('/dashboard/productor/solicitar');
+  // /dashboard/productor/unirse es pública (landing de captación de productores)
+  const isProtectedRoute =
+    pathname.includes('/dashboard') &&
+    !pathname.includes('/dashboard/productor/unirse');
 
   if (isProtectedRoute) {
     const token = request.cookies.get("token")?.value;
