@@ -23,6 +23,10 @@ export function getSteps(lang: 'es' | 'en' = 'es'): DriveStep[] {
       element: '[data-tour="buy-now-btn"]',
       popover: { title: t.buyNow.title, description: t.buyNow.desc, side: 'top', align: 'center' },
     },
+    {
+      element: '[data-tour="product-trazabilidad"]',
+      popover: { title: t.traza.title, description: t.traza.desc, side: 'top', align: 'start' },
+    },
   ];
 }
 
@@ -48,6 +52,10 @@ const TEXTS = {
       title: '⚡ Comprar Ahora',
       desc: 'Agrega al carrito e ir directo al checkout para completar tu compra sin más pasos.',
     },
+    traza: {
+      title: '🔍 Rastreo y Autenticidad',
+      desc: 'Escanea el código QR o haz clic en "Verifica aquí" para ver el recorrido completo del mezcal: productor, región, tipo de agave y fecha de elaboración.',
+    },
   },
   en: {
     gallery: {
@@ -69,6 +77,10 @@ const TEXTS = {
     buyNow: {
       title: '⚡ Buy Now',
       desc: 'Add to cart and go directly to checkout to complete your purchase without extra steps.',
+    },
+    traza: {
+      title: '🔍 Traceability & Authenticity',
+      desc: 'Scan the QR code or click "Verify here" to see the full journey of this mezcal: producer, region, agave type, and production date.',
     },
   },
 };
