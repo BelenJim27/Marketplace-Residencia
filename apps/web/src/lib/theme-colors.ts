@@ -1,12 +1,16 @@
+import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { semanticColors, darkModeSemanticColors, hexFallbacks, darkModeColors, colors } from "./colors";
 import { catalogColors } from "./colors-catalog";
 
 export function useThemeColors() {
   const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  const currentSemanticColors = theme === 'dark' ? darkModeSemanticColors : semanticColors;
-  const currentHexFallbacks = theme === 'dark' ? {
+  const isDark = mounted && theme === 'dark';
+  const currentSemanticColors = isDark ? darkModeSemanticColors : semanticColors;
+  const currentHexFallbacks = isDark ? {
     ...hexFallbacks,
     brand: darkModeColors.brand[500],
     brandLight: darkModeColors.brand[400],
@@ -26,7 +30,7 @@ export function useThemeColors() {
     infoColor: colors.info[500],
   } : hexFallbacks;
 
-  const currentCatalogColors = theme === 'dark' ? {
+  const currentCatalogColors = isDark ? {
     ...catalogColors,
     hero: catalogColors.darkMode.hero,
     card: {
@@ -79,5 +83,6 @@ export function useThemeColors() {
     hex: currentHexFallbacks,
     catalog: currentCatalogColors,
     theme,
+    isDark,
   };
 }

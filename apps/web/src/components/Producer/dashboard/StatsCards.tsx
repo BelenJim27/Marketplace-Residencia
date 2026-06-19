@@ -45,9 +45,9 @@ export function StatsCards({ products, active, profileLabel }: Props) {
       {cards.map((stat) => {
         const Icon = stat.icon;
         return (
-          <div key={stat.label} className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <div key={stat.label} className="rounded-2xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-[#F4F0E3] dark:bg-[#162218] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-[#3D6B3F]/70">
+              <span className="text-sm font-medium text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">
                 {stat.label}
               </span>
               {!stat.isBadge && <Icon className={`h-5 w-5 ${stat.color}`} />}
@@ -58,7 +58,7 @@ export function StatsCards({ products, active, profileLabel }: Props) {
                   {stat.value}
                 </span>
               ) : (
-                <span className="text-2xl font-bold text-[#1F3A2E]">
+                <span className="text-2xl font-bold text-[#1F3A2E] dark:text-[#e2ede3]">
                   {stat.value}
                 </span>
               )}

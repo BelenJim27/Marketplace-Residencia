@@ -27,13 +27,13 @@ const ESTADO_LABELS: Record<string, string> = {
 };
 
 const ESTADO_COLOR: Record<string, string> = {
-  pendiente: 'bg-yellow-100 text-yellow-800',
-  confirmado: 'bg-lime-100 text-lime-800',
-  preparando: 'bg-yellow-100 text-yellow-800',
-  enviado: 'bg-blue-100 text-blue-800',
-  en_transito: 'bg-blue-100 text-blue-800',
-  entregado: 'bg-green-100 text-green-800',
-  cancelado: 'bg-red-100 text-red-800',
+  pendiente: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
+  confirmado: 'bg-lime-100 text-lime-800 dark:bg-lime-900/40 dark:text-lime-300',
+  preparando: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
+  enviado: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  en_transito: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  entregado: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  cancelado: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
 };
 
 export default function MisPedidosPage() {
@@ -68,23 +68,23 @@ export default function MisPedidosPage() {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 rounded-full border-4 border-amber-500 border-t-transparent" />
+        <div className="animate-spin h-8 w-8 rounded-full border-4 border-amber-500 border-t-transparent dark:border-amber-400 dark:border-t-transparent" />
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Mis pedidos</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Mis pedidos</h1>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 mb-4">{error}</div>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400 mb-4">{error}</div>
       )}
 
       {pedidos.length === 0 && !error && (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-12 text-gray-400 dark:text-gray-500">
           <p className="text-lg">Aún no tienes pedidos.</p>
-          <Link href="/tienda" className="mt-4 inline-block text-amber-700 hover:underline text-sm">
+          <Link href="/tienda" className="mt-4 inline-block text-amber-700 dark:text-amber-400 hover:underline text-sm">
             Explorar productos →
           </Link>
         </div>
@@ -99,12 +99,12 @@ export default function MisPedidosPage() {
             <Link
               key={pedido.id_pedido}
               href={`/cliente/pedidos/${pedido.id_pedido}`}
-              className="block bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:border-amber-300 hover:shadow transition-all"
+              className="block bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:border-amber-300 dark:hover:border-amber-600 hover:shadow transition-all"
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="font-semibold text-gray-900">Pedido #{pedido.id_pedido}</p>
-                  <p className="text-sm text-gray-500 mt-0.5">
+                  <p className="font-semibold text-gray-900 dark:text-white">Pedido #{pedido.id_pedido}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                     {pedido.fecha_creacion
                       ? new Date(pedido.fecha_creacion).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' })
                       : ''}
@@ -115,11 +115,11 @@ export default function MisPedidosPage() {
                 </span>
               </div>
               <div className="mt-2 flex justify-between items-center text-sm">
-                <span className="text-gray-600">
+                <span className="text-gray-600 dark:text-gray-300">
                   {Number(pedido.total).toLocaleString('es-MX', { style: 'currency', currency: pedido.moneda ?? 'MXN' })}
                 </span>
                 {envio?.numero_rastreo && (
-                  <span className="text-xs text-blue-600 font-mono">{envio.numero_rastreo}</span>
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-mono">{envio.numero_rastreo}</span>
                 )}
               </div>
             </Link>

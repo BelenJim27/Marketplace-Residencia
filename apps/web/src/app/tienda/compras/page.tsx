@@ -6,6 +6,7 @@ import Image from "next/image";
 import { getMediaUrl } from "@/lib/media";
 import { useRouter } from "next/navigation";
 import { ChevronRight, ShoppingBag, Search, Package } from "lucide-react";
+import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
@@ -35,7 +36,7 @@ interface Pedido {
 }
 
 /* ── Paleta ────────────────────────────────────────────────────────────────── */
-const C = {
+const LIGHT_C = {
   green:     "#3D6B3F",
   greenDark: "#2A4A2C",
   copper:    "#C97A3E",
@@ -46,6 +47,24 @@ const C = {
   muted:     "#9A9590",
   border:    "rgba(61,107,63,0.12)",
 };
+
+function usePalette() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === "dark";
+  if (!isDark) return LIGHT_C;
+  return {
+    ...LIGHT_C,
+    white:     "#1c2422",
+    text:      "#e5e7eb",
+    muted:     "#9ca3af",
+    border:    "rgba(255,255,255,0.10)",
+    cream:     "#1a2820",
+    page:      "#0f1610",
+    greenDark: "#a8d1a8",
+  };
+}
 
 /* ── Estados agrupados (para los pills de filtro) ─────────────────────────── */
 const FILTROS = [
@@ -67,6 +86,7 @@ const ESTADO_CFG: Record<string, { label: string; bg: string; text: string; dot:
 
 /* ── Collage de imágenes del pedido ──────────────────────────────────────── */
 function ProductCollage({ items }: { items: DetallePedido[] }) {
+  const C = usePalette();
   const imgs = items
     .map((i) => i.productos?.imagen_principal_url ?? i.productos?.producto_imagenes?.[0]?.url ?? null)
     .filter(Boolean)
@@ -128,6 +148,7 @@ function ProductCollage({ items }: { items: DetallePedido[] }) {
 
 /* ── Skeleton ─────────────────────────────────────────────────────────────── */
 function SkeletonCard() {
+  const C = usePalette();
   return (
     <div style={{
       borderRadius: "14px", background: C.white, border: `1px solid ${C.border}`,
@@ -207,6 +228,7 @@ export default function MisComprasPage() {
 
   const cambiarFiltro = (key: string) => { setFiltro(key); setPagina(1); };
   const cambiarBusqueda = (val: string) => { setBusqueda(val); setPagina(1); };
+  const C = usePalette();
 
   // Patrón alternado: agavenuevo / murciélago / agavenuevo / murciélago...
   const sideRows = [

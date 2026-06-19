@@ -164,11 +164,11 @@ export function ProductorDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-        <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
+      <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-[#F4F0E3] dark:bg-[#162218] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <h1 className="text-2xl font-bold text-[#1F3A2E] dark:text-[#e2ede3] [font-family:'Playfair_Display',serif]">
           Dashboard Productor
         </h1>
-        <p className="text-[#3D6B3F]/70">
+        <p className="text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">
           {tieneLotes ? "Panel de Maestro Mezcalero" : `Panel de Productor · ${categoriasLabel}`}
         </p>
       </div>
@@ -188,29 +188,29 @@ export function ProductorDashboard() {
       </div>
 
       {tieneLotes && (
-        <section className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-          <div className="border-b border-[#C5CFB0]/50 p-6">
-            <h2 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
+        <section className="rounded-2xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-[#F4F0E3] dark:bg-[#162218] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <div className="border-b border-[#C5CFB0]/50 dark:border-[#2d4a35]/50 p-6">
+            <h2 className="text-xl font-bold text-[#1F3A2E] dark:text-[#e2ede3] [font-family:'Playfair_Display',serif]">
               Lotes de Producción
             </h2>
-            <p className="text-sm text-[#3D6B3F]/70">
+            <p className="text-sm text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">
               Gestiona los lotes de tu producción de mezcal
             </p>
           </div>
           <div className="p-6">
-            <p className="text-sm text-[#3D6B3F]/50">
+            <p className="text-sm text-[#3D6B3F]/50 dark:text-[#9dc49e]/50">
               Componente de Lotes aquí
             </p>
           </div>
         </section>
       )}
 
-      <section data-tour="analytics-section" className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-        <div className="border-b border-[#C5CFB0]/50 p-6">
+      <section data-tour="analytics-section" className="rounded-2xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-[#F4F0E3] dark:bg-[#162218] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <div className="border-b border-[#C5CFB0]/50 dark:border-[#2d4a35]/50 p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Analíticas</h2>
-              <p className="text-sm text-[#3D6B3F]/70">
+              <h2 className="text-xl font-bold text-[#1F3A2E] dark:text-[#e2ede3] [font-family:'Playfair_Display',serif]">Analíticas</h2>
+              <p className="text-sm text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">
                 {tieneLotes
                   ? "Ventas y productos más vendidos de tu producción"
                   : "Ventas y productos más vendidos"}
@@ -285,11 +285,11 @@ function MiniStat({
   highlight?: boolean;
 }) {
   return (
-    <div className="flex flex-col rounded-xl border border-[#C5CFB0]/50 bg-white p-5 transition-colors hover:bg-[#C5CFB0]/10">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40">
+    <div className="flex flex-col rounded-xl border border-[#C5CFB0]/50 dark:border-[#2d4a35]/50 bg-white dark:bg-[#1a2a1e] p-5 transition-colors hover:bg-[#C5CFB0]/10 dark:hover:bg-[#2d4a35]/20">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40 dark:text-[#e2ede3]/40">
         {title} {subtitle && `(${subtitle})`}
       </span>
-      <span className={`mt-2 text-2xl font-black ${highlight ? "text-[#3D6B3F]" : "text-[#1F3A2E]"}`}>
+      <span className={`mt-2 text-2xl font-black ${highlight ? "text-[#3D6B3F] dark:text-[#6ab86c]" : "text-[#1F3A2E] dark:text-[#e2ede3]"}`}>
         {value}
       </span>
     </div>

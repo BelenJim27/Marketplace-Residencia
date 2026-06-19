@@ -13,6 +13,7 @@ import {
   MapPin, Copy, RefreshCw, AlertCircle, Star, ShieldCheck,
   FileText, Loader2,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 import { formatPrice } from "@/lib/format-number";
 import { getCookie } from "@/lib/cookies";
@@ -61,17 +62,34 @@ interface Pedido {
   pedido_productor?: PedidoProductor[];
 }
 
-const C = {
-  green: "#3D6B3F",
+const LIGHT_C = {
+  green:     "#3D6B3F",
   greenDark: "#2A4A2C",
-  copper: "#C97A3E",
-  amber: "#A8C26B",
-  cream: "#F4F0E3",
-  white: "#FFFFFF",
-  text: "#2A2622",
-  muted: "#9A9590",
-  border: "rgba(61,107,63,0.12)",
+  copper:    "#C97A3E",
+  amber:     "#A8C26B",
+  cream:     "#F4F0E3",
+  white:     "#FFFFFF",
+  text:      "#2A2622",
+  muted:     "#9A9590",
+  border:    "rgba(61,107,63,0.12)",
 };
+
+function usePalette() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === "dark";
+  if (!isDark) return LIGHT_C;
+  return {
+    ...LIGHT_C,
+    white:     "#1c2422",
+    text:      "#e5e7eb",
+    muted:     "#9ca3af",
+    border:    "rgba(255,255,255,0.10)",
+    cream:     "#1a2820",
+    greenDark: "#a8d1a8",
+  };
+}
 
 // Página de rastreo personalizada (con marca) de SkydropX. Sirve para cualquier
 // paquetería: el cliente pega su número de guía y ve el estado en tiempo real.
@@ -126,6 +144,7 @@ const ESTADO_BADGE: Record<string, { label: string; bg: string; text: string; do
 
 /* ── Card ────────────────────────────────────────────────────────────────── */
 function Card({ children, accentColor }: { children: React.ReactNode; accentColor?: string }) {
+  const C = usePalette();
   return (
     <div style={{
       overflow: "hidden", borderRadius: "14px",
@@ -142,6 +161,7 @@ function Card({ children, accentColor }: { children: React.ReactNode; accentColo
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
+  const C = usePalette();
   return (
     <p style={{
       marginBottom: "16px", fontSize: "11px", fontWeight: "700",
@@ -154,6 +174,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 /* ── Mini-timeline de paquetería (por envío) ───────────────────────────────── */
 function CarrierTimeline({ index, t }: { index: number; t: (s: string) => string }) {
+  const C = usePalette();
   const total = CARRIER_TIMELINE.length - 1;
   return (
     <div style={{ position: "relative", display: "flex", alignItems: "flex-start", padding: "2px 4px 0", marginBottom: "16px" }}>
@@ -193,6 +214,7 @@ function CarrierTimeline({ index, t }: { index: number; t: (s: string) => string
 
 /* ── Skeleton ────────────────────────────────────────────────────────────── */
 function Skeleton() {
+  const C = usePalette();
   return (
     <main style={{ maxWidth: "860px", margin: "0 auto", padding: "36px 20px 80px" }}>
       <style>{`@keyframes skPulse{0%,100%{opacity:1}50%{opacity:.4}}.sk{animation:skPulse 1.6s ease infinite}`}</style>
@@ -215,6 +237,7 @@ function Skeleton() {
 
 /* ── Main ────────────────────────────────────────────────────────────────── */
 function DetallePedidoContent() {
+  const C = usePalette();
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();

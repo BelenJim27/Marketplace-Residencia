@@ -156,8 +156,8 @@ export function ProductoresTabla() {
   }
   function closeModal() { setActiveMode(null); setSelectedProductor(null); }
 
-  const inputCls = "w-full rounded-xl border border-[#C5CFB0] bg-white py-3 pl-12 pr-4 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/50 outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20";
-  const selectCls = "rounded-xl border border-[#C5CFB0] bg-white px-4 py-3 text-sm text-[#1F3A2E] outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20";
+  const inputCls = "w-full rounded-xl border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#0F1A13] py-3 pl-12 pr-4 text-sm text-[#1F3A2E] dark:text-[#B8DCA8] placeholder-[#3D6B3F]/50 dark:placeholder-[#5A8060]/70 outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20";
+  const selectCls = "rounded-xl border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#0F1A13] px-4 py-3 text-sm text-[#1F3A2E] dark:text-[#B8DCA8] outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20";
 
   return (
     <div className="space-y-6">
@@ -174,15 +174,15 @@ export function ProductoresTabla() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {stats.map((item) => (
-          <div key={item.label} className="bg-[#F4F0E3] rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 flex flex-col gap-1">
-            <p className="text-sm font-semibold text-[#3D6B3F]/70 uppercase tracking-wider">{item.label}</p>
+          <div key={item.label} className="bg-[#F4F0E3] dark:bg-[#111C16] rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 flex flex-col gap-1">
+            <p className="text-sm font-semibold text-[#3D6B3F]/70 dark:text-[#7A9E6E] uppercase tracking-wider">{item.label}</p>
             <h2 className={`mt-1 text-2xl font-bold [font-family:'DM_Sans',sans-serif] ${item.color}`}>{item.value}</h2>
           </div>
         ))}
       </div>
 
       {/* Filters — cascading: Asociación → Marca → Productor */}
-      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)] space-y-3">
+      <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] bg-[#F4F0E3] dark:bg-[#111C16] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)] space-y-3">
         {/* Row 1: cascading hierarchy */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <select
@@ -231,7 +231,7 @@ export function ProductoresTabla() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1000px] text-left">
             <thead className="bg-[#1F3A2E] text-xs font-semibold text-white uppercase tracking-wider">
@@ -245,29 +245,29 @@ export function ProductoresTabla() {
                 <th className="px-4 py-3 text-center">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#C5CFB0]/30">
+            <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#2A4830]/30">
               {loading ? (
-                <tr><td colSpan={7} className="p-10 text-center text-sm text-[#3D6B3F]/70 bg-white">Cargando productores...</td></tr>
+                <tr><td colSpan={7} className="p-10 text-center text-sm text-[#3D6B3F]/70 dark:text-[#7A9E6E] bg-white dark:bg-[#0F1A13]">Cargando productores...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="p-10 text-center text-sm text-[#3D6B3F]/70 bg-white">No hay productores para mostrar.</td></tr>
+                <tr><td colSpan={7} className="p-10 text-center text-sm text-[#3D6B3F]/70 dark:text-[#7A9E6E] bg-white dark:bg-[#0F1A13]">No hay productores para mostrar.</td></tr>
               ) : (
                 paginatedFiltered.map((p) => (
-                  <tr key={p.id} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200 group">
-                    <td className="px-4 py-3 font-mono text-xs text-[#3D6B3F]/70">#PR-{String(p.id).padStart(4, "0")}</td>
-                    <td className="px-4 py-3 font-semibold text-[#1F3A2E]">{`${p.nombre} ${p.apellido_paterno} ${p.apellido_materno}`.trim()}</td>
-                    <td className="px-4 py-3 text-sm text-[#1F3A2E]">{p.region}</td>
-                    <td className="px-4 py-3 text-sm text-[#1F3A2E]">
+                  <tr key={p.id} className="odd:bg-white dark:odd:bg-[#0F1A13] even:bg-[#F4F0E3]/40 dark:even:bg-[#111C16]/60 hover:bg-[#C5CFB0]/20 dark:hover:bg-[#1A2E22]/40 transition-all duration-200 group">
+                    <td className="px-4 py-3 font-mono text-xs text-[#3D6B3F]/70 dark:text-[#7A9E6E]">#PR-{String(p.id).padStart(4, "0")}</td>
+                    <td className="px-4 py-3 font-semibold text-[#1F3A2E] dark:text-[#B8DCA8]">{`${p.nombre} ${p.apellido_paterno} ${p.apellido_materno}`.trim()}</td>
+                    <td className="px-4 py-3 text-sm text-[#1F3A2E] dark:text-[#B8DCA8]">{p.region}</td>
+                    <td className="px-4 py-3 text-sm text-[#1F3A2E] dark:text-[#B8DCA8]">
                       {p.asociacion ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#3D6B3F]/10 text-[#3D6B3F]">{p.asociacion}</span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#3D6B3F]/10 dark:bg-[#3D6B3F]/20 text-[#3D6B3F] dark:text-[#A8C26B]">{p.asociacion}</span>
                       ) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-[#1F3A2E] text-center">{p.marca ?? "—"}</td>
+                    <td className="px-4 py-3 text-sm text-[#1F3A2E] dark:text-[#B8DCA8] text-center">{p.marca ?? "—"}</td>
                     <td className="px-4 py-3 text-center"><StatusBadge status={p.status} /></td>
                     <td className="px-4 py-3">
                       <div className="flex justify-center gap-2 transition-opacity">
                         <Link
                           href={`/Administrador/tienda/productores/${p.id}/productos`}
-                          className="inline-flex items-center whitespace-nowrap rounded-lg border border-[#C5CFB0] px-2 py-1 text-xs font-medium text-[#1F3A2E] transition-all duration-200 hover:bg-[#A8C26B]/15 hover:text-[#1F3A2E]"
+                          className="inline-flex items-center whitespace-nowrap rounded-lg border border-[#C5CFB0] dark:border-[#2A4830] px-2 py-1 text-xs font-medium text-[#1F3A2E] dark:text-[#B8DCA8] transition-all duration-200 hover:bg-[#A8C26B]/15 hover:text-[#1F3A2E] dark:hover:bg-[#A8C26B]/10 dark:hover:text-[#B8DCA8]"
                         >
                           Ver productos
                         </Link>
@@ -286,20 +286,20 @@ export function ProductoresTabla() {
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-          <p className="text-sm text-[#1F3A2E]">
+        <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#2A4830] px-4 py-3 bg-white dark:bg-[#0F1A13] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <p className="text-sm text-[#1F3A2E] dark:text-[#B8DCA8]">
             Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> de <span className="font-semibold">{filtered.length}</span> productores
           </p>
           <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
             <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
-              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#7A9E6E] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2A4830] hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] disabled:opacity-50">
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#B8DCA8] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2A4830]">
               Página {currentPage} de {totalPages}
             </span>
             <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
-              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#7A9E6E] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2A4830] hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] disabled:opacity-50">
               <ChevronRight className="h-5 w-5" />
             </button>
           </nav>
@@ -357,10 +357,10 @@ export function ProductoresTabla() {
 function StatusBadge({ status }: { status: ProductorAdmin["status"] }) {
   const cls =
     status === "ACTIVO"
-      ? "bg-[#A8C26B]/20 text-[#3D6B3F] border-[#A8C26B]/40"
+      ? "bg-[#A8C26B]/20 text-[#3D6B3F] dark:text-[#A8C26B] border-[#A8C26B]/40"
       : status === "PAUSADO"
         ? "bg-[#C97A3E]/15 text-[#C97A3E] border-[#C97A3E]/30"
-        : "bg-[#C5CFB0]/30 text-[#3D6B3F]/70 border-[#C5CFB0]";
+        : "bg-[#C5CFB0]/30 text-[#3D6B3F]/70 dark:text-[#5A8060] border-[#C5CFB0] dark:border-[#2A4830]";
   return (
     <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${cls}`}>{status}</span>
   );

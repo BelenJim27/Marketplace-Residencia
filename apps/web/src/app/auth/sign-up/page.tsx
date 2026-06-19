@@ -212,7 +212,7 @@ function SignUpContent() {
                   alt="Mezcanea"
                   width={180}
                   height={72}
-                  className="object-contain"
+                  className="object-contain dark:brightness-0 dark:invert"
                 />
               </div>
               <h1 className="text-2xl font-bold text-dark dark:text-white">

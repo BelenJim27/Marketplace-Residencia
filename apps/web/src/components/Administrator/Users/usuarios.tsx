@@ -197,13 +197,13 @@ export default function UsuariosUI() {
       {/* Stats */}
       <div data-tour="usuarios-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Total Usuarios", value: usuarios.length,      color: "text-[#1F3A2E]" },
-          { label: "Activos",        value: activeUsers,           color: "text-[#3D6B3F]" },
-          { label: "Con Roles",      value: usersWithRoles,        color: "text-[#3D6B3F]" },
+          { label: "Total Usuarios", value: usuarios.length,      color: "text-[#1F3A2E] dark:text-[#B8DCA8]" },
+          { label: "Activos",        value: activeUsers,           color: "text-[#3D6B3F] dark:text-[#7FBB7F]" },
+          { label: "Con Roles",      value: usersWithRoles,        color: "text-[#3D6B3F] dark:text-[#7FBB7F]" },
           { label: "Pendientes",     value: usuarios.length - activeUsers, color: "text-[#C97A3E]" },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-[#F4F0E3] rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 flex flex-col gap-1">
-            <p className="text-sm font-semibold text-[#3D6B3F]/70 uppercase tracking-wider">{label}</p>
+          <div key={label} className="bg-[#F4F0E3] dark:bg-[#111C16] rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 flex flex-col gap-1">
+            <p className="text-sm font-semibold text-[#3D6B3F]/70 dark:text-[#7A9E6E] uppercase tracking-wider">{label}</p>
             <h2 className={`text-2xl font-bold mt-1 [font-family:'DM_Sans',sans-serif] ${color}`}>{value}</h2>
           </div>
         ))}
@@ -217,18 +217,18 @@ export default function UsuariosUI() {
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
-              setCurrentPage(1); // Regresa a la página 1 al buscar
+              setCurrentPage(1);
             }}
-            className="w-full border border-[#C5CFB0] bg-[#F4F0E3] text-[#1F3A2E] placeholder-[#3D6B3F]/50 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent transition-all"
+            className="w-full border border-[#C5CFB0] dark:border-[#2A4830] bg-[#F4F0E3] dark:bg-[#111C16] text-[#1F3A2E] dark:text-[#B8DCA8] placeholder-[#3D6B3F]/50 dark:placeholder-[#5A8060]/70 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent transition-all"
           />
         </div>
         <select
           value={filterRole}
           onChange={(e) => {
             setFilterRole(e.target.value);
-            setCurrentPage(1); // Regresa a la página 1 al filtrar
+            setCurrentPage(1);
           }}
-          className="border border-[#C5CFB0] bg-[#F4F0E3] text-[#1F3A2E] p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent"
+          className="border border-[#C5CFB0] dark:border-[#2A4830] bg-[#F4F0E3] dark:bg-[#111C16] text-[#1F3A2E] dark:text-[#B8DCA8] p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent"
         >
           <option value="todos">Todos los Roles</option>
           {roles.map((r) => <option key={r.id_rol} value={r.nombre.toLowerCase()}>{r.nombre}</option>)}
@@ -236,7 +236,7 @@ export default function UsuariosUI() {
       </div>
 
       {/* Table */}
-      <div data-tour="usuarios-tabla" className="border border-[#C5CFB0] rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div data-tour="usuarios-tabla" className="border border-[#C5CFB0] dark:border-[#2A4830] rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead className="bg-[#1F3A2E] text-xs font-semibold text-white uppercase tracking-wider">
@@ -248,13 +248,13 @@ export default function UsuariosUI() {
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#C5CFB0]/30">
+            <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#2A4830]/30">
               {currentUsuarios.length === 0 ? (
-                <tr><td colSpan={5} className="py-8 text-center text-[#3D6B3F]/70 bg-white">No se encontraron usuarios</td></tr>
+                <tr><td colSpan={5} className="py-8 text-center text-[#3D6B3F]/70 dark:text-[#7A9E6E] bg-white dark:bg-[#0F1A13]">No se encontraron usuarios</td></tr>
               ) : (
                 currentUsuarios.map((user) => (
-                  <tr key={user.id_usuario} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200 group">
-                    <td className="px-4 py-3 text-[#1F3A2E]">
+                  <tr key={user.id_usuario} className="odd:bg-white dark:odd:bg-[#0F1A13] even:bg-[#F4F0E3]/40 dark:even:bg-[#111C16]/60 hover:bg-[#C5CFB0]/20 dark:hover:bg-[#1A2E22]/40 transition-all duration-200 group">
+                    <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {user.foto_url ? (
                           <img src={user.foto_url} alt={user.nombre} className="w-10 h-10 rounded-full object-cover shadow-sm" />
@@ -262,29 +262,29 @@ export default function UsuariosUI() {
                           <div className={`w-10 h-10 rounded-full ${getColor(user.nombre)} flex items-center justify-center font-bold text-xs shadow-sm`}>{getInitials(user.nombre)}</div>
                         )}
                         <div>
-                          <p className="text-sm font-bold text-[#1F3A2E]">{user.nombre} {user.apellido_paterno}</p>
-                          <p className="text-xs text-[#3D6B3F]/60 flex items-center gap-1"><Mail size={12} /> {user.email}</p>
+                          <p className="text-sm font-bold text-[#1F3A2E] dark:text-[#B8DCA8]">{user.nombre} {user.apellido_paterno}</p>
+                          <p className="text-xs text-[#3D6B3F]/60 dark:text-[#5A8060]/80 flex items-center gap-1"><Mail size={12} /> {user.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-[#1F3A2E]">
-                      <div className="flex items-center gap-2 text-sm text-[#1F3A2E]">
-                        <ShieldCheck size={16} className={getUserRoles(user).some((r) => r?.toLowerCase().includes("admin")) ? "text-[#3D6B3F]" : "text-[#C5CFB0]"} />
-                        {getUserRoles(user).length > 0 ? getUserRoles(user).map((rol, i) => <span key={i} className="font-medium">{rol}</span>) : <span className="text-[#3D6B3F]/50">Sin rol</span>}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2 text-sm text-[#1F3A2E] dark:text-[#B8DCA8]">
+                        <ShieldCheck size={16} className={getUserRoles(user).some((r) => r?.toLowerCase().includes("admin")) ? "text-[#3D6B3F] dark:text-[#7FBB7F]" : "text-[#C5CFB0] dark:text-[#2A4830]"} />
+                        {getUserRoles(user).length > 0 ? getUserRoles(user).map((rol, i) => <span key={i} className="font-medium">{rol}</span>) : <span className="text-[#3D6B3F]/50 dark:text-[#5A8060]">Sin rol</span>}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-[#1F3A2E]">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.estado === "activo" ? "bg-[#A8C26B]/20 text-[#3D6B3F]" : "bg-[#C97A3E]/15 text-[#C97A3E]"}`}>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.estado === "activo" ? "bg-[#A8C26B]/20 text-[#3D6B3F] dark:text-[#A8C26B]" : "bg-[#C97A3E]/15 text-[#C97A3E]"}`}>
                         {user.estado || "Activo"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-[#3D6B3F]/70 font-medium">
+                    <td className="px-4 py-3 text-sm text-[#3D6B3F]/70 dark:text-[#7A9E6E] font-medium">
                       {user.fecha_registro ? new Date(user.fecha_registro).toLocaleDateString("es-MX") : "-"}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-3">
-                        <button onClick={() => openEdit(user)}         className="p-1.5 text-[#3D6B3F]/50 hover:text-[#3D6B3F] hover:bg-[#A8C26B]/20 rounded-lg transition-all duration-200"><Pencil size={16} /></button>
-                        <button onClick={() => handleDelete(user)} className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"><Trash2 size={16} /></button>
+                        <button onClick={() => openEdit(user)} className="p-1.5 text-[#3D6B3F]/50 hover:text-[#3D6B3F] hover:bg-[#A8C26B]/20 dark:hover:bg-[#A8C26B]/10 rounded-lg transition-all duration-200"><Pencil size={16} /></button>
+                        <button onClick={() => handleDelete(user)} className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"><Trash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>
@@ -297,26 +297,26 @@ export default function UsuariosUI() {
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 sm:px-6 mt-4 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#2A4830] px-4 py-3 sm:px-6 mt-4 bg-white dark:bg-[#0F1A13] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
           <div className="flex flex-1 justify-between sm:hidden">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-medium text-[#1F3A2E] hover:bg-[#F4F0E3] disabled:opacity-50"
+              className="relative inline-flex items-center rounded-xl border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#111C16] px-4 py-2 text-sm font-medium text-[#1F3A2E] dark:text-[#B8DCA8] hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] disabled:opacity-50"
             >
               Anterior
             </button>
             <button
               onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="relative ml-3 inline-flex items-center rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-medium text-[#1F3A2E] hover:bg-[#F4F0E3] disabled:opacity-50"
+              className="relative ml-3 inline-flex items-center rounded-xl border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#111C16] px-4 py-2 text-sm font-medium text-[#1F3A2E] dark:text-[#B8DCA8] hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] disabled:opacity-50"
             >
               Siguiente
             </button>
           </div>
           <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-[#1F3A2E]">
+              <p className="text-sm text-[#1F3A2E] dark:text-[#B8DCA8]">
                 Mostrando <span className="font-semibold">{((currentPage - 1) * itemsPerPage) + 1}</span> a <span className="font-semibold">{Math.min(currentPage * itemsPerPage, filteredUsuarios.length)}</span> de <span className="font-semibold">{filteredUsuarios.length}</span> usuarios
               </p>
             </div>
@@ -325,18 +325,18 @@ export default function UsuariosUI() {
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                  className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#7A9E6E] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2A4830] hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] focus:z-20 focus:outline-offset-0 disabled:opacity-50"
                 >
                   <span className="sr-only">Anterior</span>
                   <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                 </button>
-                <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0] focus:z-20 focus:outline-offset-0">
+                <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#B8DCA8] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2A4830] focus:z-20 focus:outline-offset-0">
                   Página {currentPage} de {totalPages}
                 </span>
                 <button
                   onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                  className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#7A9E6E] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2A4830] hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] focus:z-20 focus:outline-offset-0 disabled:opacity-50"
                 >
                   <span className="sr-only">Siguiente</span>
                   <ChevronRight className="h-5 w-5" aria-hidden="true" />

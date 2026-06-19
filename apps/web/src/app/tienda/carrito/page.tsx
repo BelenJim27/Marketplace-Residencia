@@ -4,8 +4,9 @@ import Image from "next/image";
 import { getMediaUrl } from "@/lib/media";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Minus, Plus, Trash2, ShoppingBag, Info, X, UserPlus, LogIn } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useCarrito } from "@/context/CarritoContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
@@ -13,7 +14,7 @@ import { useFeedback } from "@/hooks/useFeedback";
 import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 
-const C = {
+const LIGHT_C = {
   green: "#3D6B3F",
   greenDark: "#2A4A2C",
   copper: "#C97A3E",
@@ -24,11 +25,31 @@ const C = {
   border: "rgba(61,107,63,0.12)",
 };
 
+const DARK_C = {
+  ...LIGHT_C,
+  green:     "#4a9e52",
+  greenDark: "#a8d1a8",
+  white:     "#1c2422",
+  text:      "#e5e7eb",
+  muted:     "#9ca3af",
+  border:    "rgba(255,255,255,0.10)",
+  cream:     "#1a2820",
+};
+
+function usePalette(): typeof LIGHT_C & { isDark: boolean } {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === "dark";
+  return isDark ? { ...DARK_C, isDark: true } : { ...LIGHT_C, isDark: false };
+}
+
 function ModalRegistro({ onClose, onRegistrar, onLogin }: {
   onClose: () => void;
   onRegistrar: () => void;
   onLogin: () => void;
 }) {
+  const C = usePalette();
   return (
     <div
       style={{
@@ -96,7 +117,7 @@ function ModalRegistro({ onClose, onRegistrar, onLogin }: {
               style={{
                 width: "100%", padding: "13px 20px",
                 borderRadius: "10px", border: "none",
-                background: C.green, color: C.white,
+                background: C.green, color: "#ffffff",
                 fontSize: "15px", fontWeight: "700",
                 cursor: "pointer", display: "flex",
                 alignItems: "center", justifyContent: "center", gap: "8px",
@@ -140,6 +161,7 @@ function ModalRegistro({ onClose, onRegistrar, onLogin }: {
 }
 
 export default function CarritoPage() {
+  const C = usePalette();
   const router = useRouter();
   const { items, precioTotal, actualizarCantidad, eliminarProducto } = useCarrito();
   const { isAuthenticated } = useAuth();
@@ -177,8 +199,9 @@ export default function CarritoPage() {
         <h1 style={{
           fontFamily: "var(--font-family-store)",
           fontSize: "clamp(28px, 5vw, 40px)", fontWeight: "700",
-          background: `linear-gradient(90deg, ${C.greenDark} 0%, ${C.copper} 100%)`,
-          backgroundClip: "text", WebkitBackgroundClip: "text", color: "transparent",
+          ...(C.isDark
+            ? { color: "#e5e7eb" }
+            : { backgroundImage: `linear-gradient(90deg, ${C.greenDark} 0%, ${C.copper} 100%)`, backgroundClip: "text", WebkitBackgroundClip: "text", color: "transparent" }),
           margin: "0 0 32px 0", lineHeight: 1.1,
         }}>
           {t("cart_title")}
@@ -203,7 +226,7 @@ export default function CarritoPage() {
             href="/cliente/producto"
             style={{
               display: "inline-block", borderRadius: "10px",
-              background: C.green, color: C.white,
+              background: C.green, color: "#ffffff",
               padding: "13px 32px", fontSize: "14px", fontWeight: "700",
               textDecoration: "none",
             }}
@@ -249,7 +272,7 @@ export default function CarritoPage() {
         .cart-item{transition:background 160ms ease}
         .cart-item:hover{background:rgba(244,240,227,0.5)!important}
         .qty-btn{transition:all 140ms ease}
-        .qty-btn:hover{background:${C.copper}!important;color:${C.white}!important;border-color:${C.copper}!important}
+        .qty-btn:hover{background:${C.copper}!important;color:#ffffff!important;border-color:${C.copper}!important}
         .del-btn{transition:all 140ms ease}
         .del-btn:hover{background:rgba(220,38,38,0.08)!important;color:#DC2626!important}
         .checkout-btn{transition:background 180ms ease}
@@ -270,8 +293,9 @@ export default function CarritoPage() {
         <h1 style={{
           fontFamily: "var(--font-family-store)",
           fontSize: "clamp(28px, 5vw, 40px)", fontWeight: "700",
-          background: `linear-gradient(90deg, ${C.greenDark} 0%, ${C.copper} 100%)`,
-          backgroundClip: "text", WebkitBackgroundClip: "text", color: "transparent",
+          ...(C.isDark
+            ? { color: "#e5e7eb" }
+            : { backgroundImage: `linear-gradient(90deg, ${C.greenDark} 0%, ${C.copper} 100%)`, backgroundClip: "text", WebkitBackgroundClip: "text", color: "transparent" }),
           margin: "0 0 4px 0", lineHeight: 1.1,
         }}>
           {t("cart_title")}
@@ -493,7 +517,7 @@ export default function CarritoPage() {
               onClick={handleCheckout}
               style={{
                 width: "100%", padding: "14px", borderRadius: "10px",
-                background: C.green, color: C.white,
+                background: C.green, color: "#ffffff",
                 fontSize: "15px", fontWeight: "700",
                 border: "none", cursor: "pointer",
               }}

@@ -22,10 +22,10 @@ export default function TiendaPage() {
   }, [params.id, router]);
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center" style={{ backgroundColor: "#F4F0E3" }}>
+    <div className="flex min-h-[60vh] items-center justify-center bg-[#F4F0E3] dark:bg-gray-900">
       <div className="flex flex-col items-center gap-4">
-        <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#ddd8c4] border-t-[#306B3F]" />
-        <p className="text-sm" style={{ color: "#A8C26B" }}>Cargando...</p>
+        <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#ddd8c4] dark:border-gray-600 border-t-[#306B3F] dark:border-t-amber-500" />
+        <p className="text-sm text-[#A8C26B] dark:text-amber-400">Cargando...</p>
       </div>
     </div>
   );

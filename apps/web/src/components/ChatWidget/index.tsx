@@ -1,6 +1,5 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef, useState } from "react";
 
 const SUGGESTED_ES = [
@@ -30,6 +29,7 @@ const LABELS = {
       "Hola, soy el asistente de Mezcales. Pregúntame sobre nuestros productos, pedidos o envíos.",
     close: "Cerrar chat",
     open: "Abrir asistente",
+    error: "Ocurrió un error. Intenta de nuevo.",
   },
   en: {
     title: "Mezcales Assistant",
@@ -40,18 +40,23 @@ const LABELS = {
       "Hi! I'm the Mezcales assistant. Ask me about our products, orders, or shipping.",
     close: "Close chat",
     open: "Open assistant",
+    error: "An error occurred. Please try again.",
   },
 };
+
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
 
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<"es" | "en">("es");
   const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const { messages, sendMessage, status } = useChat({ api: "/api/chat" });
-
-  const isLoading = status === "submitted" || status === "streaming";
 
   useEffect(() => {
     setLang(detectLang());
@@ -65,21 +70,57 @@ export function ChatWidget() {
   const suggestions = lang === "en" ? SUGGESTED_EN : SUGGESTED_ES;
   const showWelcome = messages.length === 0;
 
-  function handleSend(text: string) {
+  async function handleSend(text: string) {
     const trimmed = text.trim();
     if (!trimmed || isLoading) return;
     setInput("");
-    sendMessage({ text: trimmed });
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: trimmed,
+    };
+
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: updatedMessages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: data.content ?? t.error,
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch {
+      const errorMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: t.error,
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     handleSend(input);
-  }
-
-  function getMessageText(msg: (typeof messages)[0]): string {
-    const textPart = msg.parts.find((p) => p.type === "text");
-    return textPart ? (textPart as { type: "text"; text: string }).text : "";
   }
 
   return (
@@ -171,26 +212,22 @@ export function ChatWidget() {
               </div>
             )}
 
-            {messages.map((m) => {
-              const text = getMessageText(m);
-              if (!text) return null;
-              return (
+            {messages.map((m) => (
+              <div
+                key={m.id}
+                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+              >
                 <div
-                  key={m.id}
-                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                    m.role === "user"
+                      ? "rounded-tr-sm bg-[#5750F1] text-white"
+                      : "rounded-tl-sm bg-gray-2 text-dark dark:bg-dark-2 dark:text-white"
+                  }`}
                 >
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                      m.role === "user"
-                        ? "rounded-tr-sm bg-[#5750F1] text-white"
-                        : "rounded-tl-sm bg-gray-2 text-dark dark:bg-dark-2 dark:text-white"
-                    }`}
-                  >
-                    {text}
-                  </div>
+                  {m.content}
                 </div>
-              );
-            })}
+              </div>
+            ))}
 
             {isLoading && (
               <div className="flex justify-start">

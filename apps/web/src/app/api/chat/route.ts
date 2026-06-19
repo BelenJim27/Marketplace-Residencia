@@ -1,5 +1,4 @@
-import { google } from "@ai-sdk/google";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const maxDuration = 30;
 
@@ -52,33 +51,50 @@ async function fetchCategorias(): Promise<string> {
   }
 }
 
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export async function POST(req: Request) {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
   if (!apiKey) {
-    console.error("[chat] GOOGLE_GENERATIVE_AI_API_KEY no está definida");
     return new Response(JSON.stringify({ error: "API key no configurada" }), {
       status: 500,
+      headers: { "Content-Type": "application/json" },
     });
   }
 
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  const { messages }: { messages: ChatMessage[] } = await req.json();
   const categoriasContext = await fetchCategorias();
   const systemPrompt = STATIC_CONTEXT + categoriasContext;
 
   try {
-    const modelMessages = await convertToModelMessages(messages);
-
-    const result = streamText({
-      model: google("gemini-2.5-flash"),
-      system: systemPrompt,
-      messages: modelMessages,
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash",
+      systemInstruction: systemPrompt,
     });
 
-    return result.toUIMessageStreamResponse();
+    const history = messages.slice(0, -1).map((m) => ({
+      role: m.role === "user" ? "user" : "model",
+      parts: [{ text: m.content }],
+    }));
+
+    const lastMessage = messages[messages.length - 1];
+    const chat = model.startChat({ history });
+    const result = await chat.sendMessage(lastMessage.content);
+    const text = result.response.text();
+
+    return new Response(JSON.stringify({ content: text }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("[chat] Error al llamar Gemini:", err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
+      headers: { "Content-Type": "application/json" },
     });
   }
 }

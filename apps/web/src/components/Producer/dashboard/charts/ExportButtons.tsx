@@ -14,7 +14,7 @@ export function ExportButtons({ onExportPdf, onExportCsv, disabled, pdfLoading }
         type="button"
         onClick={onExportPdf}
         disabled={disabled || pdfLoading}
-        className="inline-flex items-center gap-2 rounded-lg border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#F4F0E3] disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-lg border border-[#C5CFB0] dark:border-[#2d4a35] bg-white dark:bg-[#1a2a1e] px-4 py-2 text-sm font-medium text-[#1F3A2E] dark:text-[#e2ede3] transition hover:bg-[#F4F0E3] dark:hover:bg-[#2d4a35]/40 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pdfLoading ? (
           <>

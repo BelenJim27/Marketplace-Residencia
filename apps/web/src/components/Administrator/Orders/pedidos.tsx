@@ -259,30 +259,30 @@ export default function Pedidos() {
       {/* Stats */}
       <div data-tour="pedidos-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
-          { label: "Total Pedidos",  value: counts.total,      color: "text-[#1F3A2E]" },
+          { label: "Total Pedidos",  value: counts.total,      color: "text-[#1F3A2E] dark:text-[#B8DCA8]" },
           { label: "Pendientes",     value: counts.pendiente,  color: "text-[#C97A3E]" },
-          { label: "Enviados",       value: counts.enviado,    color: "text-[#3D6B3F]" },
-          { label: "Completados",    value: counts.completado, color: "text-[#3D6B3F]" },
-          { label: "Cancelados",     value: counts.cancelado,  color: "text-red-500"   },
+          { label: "Enviados",       value: counts.enviado,    color: "text-[#3D6B3F] dark:text-[#7FBB7F]" },
+          { label: "Completados",    value: counts.completado, color: "text-[#3D6B3F] dark:text-[#7FBB7F]" },
+          { label: "Cancelados",     value: counts.cancelado,  color: "text-red-500 dark:text-red-400" },
         ].map((s) => (
-          <div key={s.label} className="bg-[#F4F0E3] p-5 rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-            <p className="text-sm font-semibold text-[#3D6B3F]/70 uppercase tracking-wider">{s.label}</p>
+          <div key={s.label} className="bg-[#F4F0E3] dark:bg-[#111C16] p-5 rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+            <p className="text-sm font-semibold text-[#3D6B3F]/70 dark:text-[#7A9E6E] uppercase tracking-wider">{s.label}</p>
             <h2 className={`text-2xl font-bold mt-1 [font-family:'DM_Sans',sans-serif] ${s.color}`}>{s.value.toLocaleString()}</h2>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div data-tour="pedidos-filtros" className="bg-[#F4F0E3] rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 space-y-3">
+      <div data-tour="pedidos-filtros" className="bg-[#F4F0E3] dark:bg-[#111C16] rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 space-y-3">
         <div className="flex flex-wrap gap-3 items-center">
           {/* Búsqueda */}
           <div className="relative flex-grow min-w-[220px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#3D6B3F]/40" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#3D6B3F]/40 dark:text-[#7A9E6E]" />
             <input
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); resetPage(); }}
               placeholder="Buscar por ID, cliente o estado..."
-              className="w-full border border-[#C5CFB0] pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent transition-all bg-white text-[#1F3A2E] placeholder-[#3D6B3F]/50"
+              className="w-full border border-[#C5CFB0] dark:border-[#2A4830] pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent transition-all bg-white dark:bg-[#0F1A13] text-[#1F3A2E] dark:text-[#B8DCA8] placeholder-[#3D6B3F]/50 dark:placeholder-[#5A8060]/70"
             />
           </div>
 
@@ -290,7 +290,7 @@ export default function Pedidos() {
           <select
             value={productorFilter}
             onChange={(e) => { setProductorFilter(e.target.value); resetPage(); }}
-            className="border border-[#C5CFB0] bg-white px-4 py-2.5 rounded-xl text-sm text-[#1F3A2E] outline-none focus:ring-2 focus:ring-[#3D6B3F] transition-all min-w-[200px]"
+            className="border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#0F1A13] px-4 py-2.5 rounded-xl text-sm text-[#1F3A2E] dark:text-[#B8DCA8] outline-none focus:ring-2 focus:ring-[#3D6B3F] transition-all min-w-[200px]"
           >
             <option value="">Todos los productores</option>
             {productores.map((p) => (
@@ -318,7 +318,7 @@ export default function Pedidos() {
         </div>
 
         {/* Tabla */}
-        <div data-tour="pedidos-tabla" className="overflow-x-auto rounded-2xl border border-[#C5CFB0]">
+        <div data-tour="pedidos-tabla" className="overflow-x-auto rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830]">
           <table className="w-full min-w-[900px] text-left border-collapse">
             <thead className="bg-[#1F3A2E] text-xs font-semibold text-white uppercase tracking-wider">
               <tr>
@@ -331,10 +331,10 @@ export default function Pedidos() {
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#C5CFB0]/30">
+            <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#2A4830]/30">
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-[#3D6B3F]/70 text-sm bg-white">
+                  <td colSpan={7} className="px-6 py-8 text-center text-[#3D6B3F]/70 dark:text-[#7A9E6E] text-sm bg-white dark:bg-[#0F1A13]">
                     <Package className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     No hay pedidos
                   </td>
@@ -352,16 +352,16 @@ export default function Pedidos() {
                     .filter((p): p is Productor => p !== undefined);
 
                   return (
-                    <tr key={pedido.id_pedido} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200">
+                    <tr key={pedido.id_pedido} className="odd:bg-white dark:odd:bg-[#0F1A13] even:bg-[#F4F0E3]/40 dark:even:bg-[#111C16]/60 hover:bg-[#C5CFB0]/20 dark:hover:bg-[#1A2E22]/40 transition-all duration-200">
                       <td className="px-4 py-3">
-                        <span className="font-bold text-sm text-[#1F3A2E]">#{pedido.id_pedido}</span>
+                        <span className="font-bold text-sm text-[#1F3A2E] dark:text-[#B8DCA8]">#{pedido.id_pedido}</span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <span className={`w-8 h-8 rounded-full ${getAvatarColor(pedido.id_pedido)} flex items-center justify-center text-[10px] font-bold shrink-0`}>
                             {getInitials(pedido.usuarios?.nombre)}
                           </span>
-                          <span className="text-sm font-medium text-[#1F3A2E]">
+                          <span className="text-sm font-medium text-[#1F3A2E] dark:text-[#B8DCA8]">
                             {pedido.usuarios?.nombre || "—"}
                           </span>
                         </div>
@@ -369,12 +369,12 @@ export default function Pedidos() {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {productoresEnPedido.length === 0 ? (
-                            <span className="text-sm text-[#3D6B3F]/50">—</span>
+                            <span className="text-sm text-[#3D6B3F]/50 dark:text-[#5A8060]">—</span>
                           ) : (
                             productoresEnPedido.map((pr) => (
                               <span
                                 key={pr.id_productor}
-                                className="inline-flex rounded-full bg-[#3D6B3F]/10 px-2 py-0.5 text-xs font-medium text-[#3D6B3F]"
+                                className="inline-flex rounded-full bg-[#3D6B3F]/10 dark:bg-[#3D6B3F]/20 px-2 py-0.5 text-xs font-medium text-[#3D6B3F] dark:text-[#A8C26B]"
                               >
                                 {productorLabel(pr)}
                               </span>
@@ -382,10 +382,10 @@ export default function Pedidos() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-[#3D6B3F]/70">
+                      <td className="px-4 py-3 text-sm text-[#3D6B3F]/70 dark:text-[#7A9E6E]">
                         {pedido.fecha_creacion ? formatDate(pedido.fecha_creacion) : "—"}
                       </td>
-                      <td className="px-4 py-3 text-sm font-bold text-[#1F3A2E]">
+                      <td className="px-4 py-3 text-sm font-bold text-[#1F3A2E] dark:text-[#B8DCA8]">
                         {formatTotal(pedido.total)}
                       </td>
                       <td className="px-4 py-3">
@@ -395,7 +395,7 @@ export default function Pedidos() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end items-center gap-1">
-                          <button onClick={() => setDetalleModal(pedido)} title="Ver detalles" className="p-1.5 text-[#3D6B3F]/50 hover:text-[#3D6B3F] hover:bg-[#A8C26B]/20 rounded-lg transition-all duration-200">
+                          <button onClick={() => setDetalleModal(pedido)} title="Ver detalles" className="p-1.5 text-[#3D6B3F]/50 hover:text-[#3D6B3F] hover:bg-[#A8C26B]/20 dark:hover:bg-[#A8C26B]/10 rounded-lg transition-all duration-200">
                             <Eye size={16} />
                           </button>
                           <button onClick={() => setEditModal(pedido)} title="Editar estado" className="p-1.5 text-[#3D6B3F]/50 hover:text-[#C97A3E] hover:bg-[#C97A3E]/10 rounded-lg transition-all duration-200">
@@ -404,7 +404,7 @@ export default function Pedidos() {
                           <button
                             onClick={() => handleDelete(pedido)}
                             title="Eliminar"
-                            className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                            className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -420,8 +420,8 @@ export default function Pedidos() {
 
         {/* Paginación */}
         {filtered.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-            <p className="text-sm text-[#1F3A2E]">
+          <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#2A4830] px-4 py-3 bg-white dark:bg-[#0F1A13] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+            <p className="text-sm text-[#1F3A2E] dark:text-[#B8DCA8]">
               Mostrando <span className="font-semibold">{(page - 1) * PAGE_SIZE + 1}</span>–<span className="font-semibold">{Math.min(page * PAGE_SIZE, filtered.length)}</span> de <span className="font-semibold">{filtered.length}</span> pedidos
             </p>
             <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
@@ -429,18 +429,18 @@ export default function Pedidos() {
                 type="button"
                 disabled={page === 1}
                 onClick={() => setPage((p) => p - 1)}
-                className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50"
+                className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#7A9E6E] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2A4830] hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] disabled:opacity-50"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+              <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#B8DCA8] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2A4830]">
                 Página {page} de {totalPages}
               </span>
               <button
                 type="button"
                 disabled={page === totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50"
+                className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#7A9E6E] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2A4830] hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] disabled:opacity-50"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>

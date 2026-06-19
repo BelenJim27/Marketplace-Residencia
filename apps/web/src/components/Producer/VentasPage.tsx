@@ -144,8 +144,8 @@ export default function VentasPage() {
     );
   }
 
-  const inp = "w-full rounded-lg border border-[#C5CFB0] bg-transparent px-3 py-2 text-sm text-[#1F3A2E] outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20 placeholder:text-[#3D6B3F]/40";
-  const lbl = "mb-1 block text-xs font-medium text-[#1F3A2E]/70";
+  const inp = "w-full rounded-lg border border-[#C5CFB0] dark:border-[#2d4a35] bg-transparent dark:bg-[#1f3025] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#e2ede3] outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20 dark:focus:ring-[#3d7a4f]/30 placeholder:text-[#3D6B3F]/40 dark:placeholder:text-[#9dc49e]/40";
+  const lbl = "mb-1 block text-xs font-medium text-[#1F3A2E]/70 dark:text-[#e2ede3]/70";
   return (
     <div className="mx-auto w-full max-w-[1200px] space-y-5">
 
@@ -154,10 +154,10 @@ export default function VentasPage() {
       )}
 
       {/* Header */}
-      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)] flex items-center justify-between gap-4">
+      <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-[#F4F0E3] dark:bg-[#162218] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)] flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Ventas</h1>
-          <p className="text-sm text-[#3D6B3F]/70">Consulta el estado de tus movimientos comerciales.</p>
+          <h1 className="text-2xl font-bold text-[#1F3A2E] dark:text-[#e2ede3] [font-family:'Playfair_Display',serif]">Ventas</h1>
+          <p className="text-sm text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">Consulta el estado de tus movimientos comerciales.</p>
         </div>
         <Link
           href={isAdmin ? "/Administrador/dashboard" : "/dashboard/productor"}
@@ -179,7 +179,7 @@ export default function VentasPage() {
       </div>
 
       {/* Search + Filters — single compact card */}
-      <div data-tour="ventas-filtros" className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-3 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div data-tour="ventas-filtros" className="rounded-2xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-[#F4F0E3] dark:bg-[#162218] p-3 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -218,17 +218,17 @@ export default function VentasPage() {
             <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={inp} />
           </label>
           <button type="button" onClick={clearFilters}
-            className="shrink-0 rounded-lg border border-[#C5CFB0] px-3 py-2 text-xs font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/20">
+            className="shrink-0 rounded-lg border border-[#C5CFB0] dark:border-[#2d4a35] px-3 py-2 text-xs font-medium text-[#1F3A2E] dark:text-[#e2ede3] transition hover:bg-[#C5CFB0]/20 dark:hover:bg-[#2d4a35]/40">
             Limpiar
           </button>
         </div>
       </div>
 
       {/* Table */}
-      <div data-tour="ventas-tabla" className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div data-tour="ventas-tabla" className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#2d4a35] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] table-fixed text-left">
-            <thead className="bg-[#1F3A2E]">
+            <thead className="bg-[#1F3A2E] dark:bg-[#0d1b12]">
               <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white">
                 <th className="w-[22%] px-3 py-3">Producto</th>
                 <th className="w-[18%] px-3 py-3">Tienda</th>
@@ -243,18 +243,18 @@ export default function VentasPage() {
             <tbody>
               {pagedSales.map((sale) => (
                 <tr key={`${sale.id_pedido}-${sale.id_detalle}`}
-                  className="border-t border-[#C5CFB0]/30 bg-white text-sm transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20">
-                  <td className="px-3 py-3 font-medium text-[#1F3A2E]">
+                  className="border-t border-[#C5CFB0]/30 dark:border-[#2d4a35]/30 text-sm transition-colors odd:bg-white dark:odd:bg-[#1a2a1e] even:bg-[#F4F0E3]/40 dark:even:bg-[#162218]/60 hover:bg-[#C5CFB0]/20 dark:hover:bg-[#2d4a35]/30">
+                  <td className="px-3 py-3 font-medium text-[#1F3A2E] dark:text-[#e2ede3]">
                     <span className="block truncate" title={sale.producto}>{sale.producto}</span>
                   </td>
-                  <td className="px-3 py-3 text-[#3D6B3F]/70">
+                  <td className="px-3 py-3 text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">
                     <span className="block truncate" title={sale.tienda}>{sale.tienda}</span>
                   </td>
-                  <td className="px-3 py-3 text-[#3D6B3F]/70 whitespace-nowrap">{formatCurrency(sale.precio_unitario, sale.moneda)}</td>
-                  <td className="px-3 py-3 text-[#3D6B3F]/70">{sale.cantidad}</td>
-                  <td className="pl-3 pr-1 py-3 font-medium text-[#1F3A2E] whitespace-nowrap">{formatCurrency(sale.total, sale.moneda)}</td>
+                  <td className="px-3 py-3 text-[#3D6B3F]/70 dark:text-[#9dc49e]/70 whitespace-nowrap">{formatCurrency(sale.precio_unitario, sale.moneda)}</td>
+                  <td className="px-3 py-3 text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">{sale.cantidad}</td>
+                  <td className="pl-3 pr-1 py-3 font-medium text-[#1F3A2E] dark:text-[#e2ede3] whitespace-nowrap">{formatCurrency(sale.total, sale.moneda)}</td>
                   <td className="pl-1 pr-3 py-3"><Badge status={sale.status} /></td>
-                  <td className="px-3 py-3 text-[#3D6B3F]/60">{formatDate(sale.fecha)}</td>
+                  <td className="px-3 py-3 text-[#3D6B3F]/60 dark:text-[#9dc49e]/60">{formatDate(sale.fecha)}</td>
                   <td className="px-3 py-3">
                     <div className="flex justify-end">
                       <ActionButton label="Ver detalle" icon={<Eye size={15} />} onClick={() => { setVentaSeleccionada(sale); setModalAbierto(true); }} />
@@ -264,7 +264,7 @@ export default function VentasPage() {
               ))}
               {filteredSales.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-3 py-10 text-center text-[#3D6B3F]/60">No hay ventas para mostrar</td>
+                  <td colSpan={8} className="px-3 py-10 text-center text-[#3D6B3F]/60 dark:text-[#9dc49e]/60 dark:bg-[#1a2a1e]">No hay ventas para mostrar</td>
                 </tr>
               )}
             </tbody>
@@ -274,20 +274,20 @@ export default function VentasPage() {
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-          <p className="text-sm text-[#1F3A2E]">
+        <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#2d4a35] px-4 py-3 bg-white dark:bg-[#1a2a1e] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <p className="text-sm text-[#1F3A2E] dark:text-[#e2ede3]">
             Mostrando <span className="font-semibold">{from}</span>–<span className="font-semibold">{to}</span> de <span className="font-semibold">{filteredSales.length}</span> venta{filteredSales.length !== 1 ? "s" : ""}
           </p>
           <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
             <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
-              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#9dc49e] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2d4a35] hover:bg-[#F4F0E3] dark:hover:bg-[#2d4a35]/40 disabled:opacity-50">
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#e2ede3] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2d4a35]">
               Página {currentPage} de {totalPages}
             </span>
             <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
-              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#9dc49e] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2d4a35] hover:bg-[#F4F0E3] dark:hover:bg-[#2d4a35]/40 disabled:opacity-50">
               <ChevronRight className="h-5 w-5" />
             </button>
           </nav>
@@ -298,22 +298,22 @@ export default function VentasPage() {
       {modalAbierto && ventaSeleccionada && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => { setModalAbierto(false); setVentaSeleccionada(null); }}>
           <div role="dialog" aria-modal="true"
-            className="w-full max-w-lg rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-xl max-h-[90vh] overflow-y-auto"
+            className="w-full max-w-lg rounded-2xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-[#F4F0E3] dark:bg-[#162218] p-6 shadow-xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}>
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Detalle de Venta</h2>
-                <p className="text-sm text-[#3D6B3F]/70">Pedido #{ventaSeleccionada.id_pedido}</p>
+                <h2 className="text-xl font-bold text-[#1F3A2E] dark:text-[#e2ede3] [font-family:'Playfair_Display',serif]">Detalle de Venta</h2>
+                <p className="text-sm text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">Pedido #{ventaSeleccionada.id_pedido}</p>
               </div>
               <button type="button" onClick={() => { setModalAbierto(false); setVentaSeleccionada(null); }}
-                className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-[#C5CFB0]/20 hover:text-[#1F3A2E]" aria-label="Cerrar modal">
+                className="rounded-lg p-2 text-[#3D6B3F]/50 dark:text-[#9dc49e]/50 hover:bg-[#C5CFB0]/20 dark:hover:bg-[#2d4a35]/40 hover:text-[#1F3A2E] dark:hover:text-[#e2ede3]" aria-label="Cerrar modal">
                 ✕
               </button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-[#C5CFB0] bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40">Información del producto</p>
+              <div className="rounded-xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-white dark:bg-[#1a2a1e] p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40 dark:text-[#e2ede3]/40">Información del producto</p>
                 <div className="mt-3 space-y-3 text-sm">
                   <DetailRow label="Producto" value={ventaSeleccionada.producto} />
                   <DetailRow label="Precio unitario" value={formatCurrency(ventaSeleccionada.precio_unitario, ventaSeleccionada.moneda)} />
@@ -324,8 +324,8 @@ export default function VentasPage() {
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border border-[#C5CFB0] bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40">Información de la venta</p>
+              <div className="rounded-xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-white dark:bg-[#1a2a1e] p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40 dark:text-[#e2ede3]/40">Información de la venta</p>
                 <div className="mt-3 space-y-3 text-sm">
                   <DetailRow label="Tienda" value={ventaSeleccionada.tienda} />
                   <DetailRow label="Fecha" value={formatDateTime(ventaSeleccionada.fecha)} />
@@ -339,8 +339,8 @@ export default function VentasPage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-[#C5CFB0] p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40">Línea de tiempo</p>
+            <div className="mt-4 rounded-xl border border-[#C5CFB0] dark:border-[#2d4a35] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40 dark:text-[#e2ede3]/40">Línea de tiempo</p>
               <div className="mt-3 space-y-3">
                 <TimelineStep title="Pedido recibido" date={formatDateTime(ventaSeleccionada.fecha)} active done />
                 <TimelineStep title="En proceso" date="" active={!isCancelledStatus(ventaSeleccionada.status)} done={isCompletedStatus(ventaSeleccionada.status)} />
@@ -371,9 +371,9 @@ export default function VentasPage() {
 
 function Card({ title, value }: { title: string; value: number | string }) {
   return (
-    <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-      <p className="text-sm text-[#3D6B3F]/70">{title}</p>
-      <div className="mt-1 text-2xl font-bold text-[#1F3A2E]">{value}</div>
+    <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-[#F4F0E3] dark:bg-[#162218] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <p className="text-sm text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">{title}</p>
+      <div className="mt-1 text-2xl font-bold text-[#1F3A2E] dark:text-[#e2ede3]">{value}</div>
     </div>
   );
 }
@@ -399,8 +399,8 @@ function ActionButton({ label, icon, onClick }: { label: string; icon: ReactNode
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-[#3D6B3F]/70">{label}</span>
-      <span className="font-medium text-[#1F3A2E] text-right">{value}</span>
+      <span className="text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">{label}</span>
+      <span className="font-medium text-[#1F3A2E] dark:text-[#e2ede3] text-right">{value}</span>
     </div>
   );
 }
@@ -418,14 +418,14 @@ function TimelineStep({ title, date, active, done }: { title: string; date: stri
   return (
     <div className="flex items-start gap-3">
       <div className="flex flex-col items-center">
-        <div className={`grid size-7 place-items-center rounded-full border text-xs ${done ? "border-[#3D6B3F] bg-[#3D6B3F] text-white" : active ? "border-[#C5CFB0] bg-[#F4F0E3] text-[#3D6B3F]" : "border-[#C5CFB0] bg-white text-[#3D6B3F]/40"}`}>
+        <div className={`grid size-7 place-items-center rounded-full border text-xs ${done ? "border-[#3D6B3F] bg-[#3D6B3F] text-white" : active ? "border-[#C5CFB0] dark:border-[#2d4a35] bg-[#F4F0E3] dark:bg-[#1a2a1e] text-[#3D6B3F] dark:text-[#9dc49e]" : "border-[#C5CFB0] dark:border-[#2d4a35] bg-white dark:bg-[#162218] text-[#3D6B3F]/40 dark:text-[#9dc49e]/40"}`}>
           {done ? "✓" : active ? "↻" : "○"}
         </div>
-        <div className="mt-1 h-6 w-px bg-[#C5CFB0]/50" />
+        <div className="mt-1 h-6 w-px bg-[#C5CFB0]/50 dark:bg-[#2d4a35]/50" />
       </div>
       <div>
-        <p className={`text-sm font-medium ${done ? "text-[#3D6B3F]" : "text-[#1F3A2E]"}`}>{title}</p>
-        {date && <p className="text-xs text-[#3D6B3F]/60">{date}</p>}
+        <p className={`text-sm font-medium ${done ? "text-[#3D6B3F] dark:text-[#6ab86c]" : "text-[#1F3A2E] dark:text-[#e2ede3]"}`}>{title}</p>
+        {date && <p className="text-xs text-[#3D6B3F]/60 dark:text-[#9dc49e]/60">{date}</p>}
       </div>
     </div>
   );

@@ -413,12 +413,12 @@ function CustomTooltip({ active, payload, label, currency = false }: {
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl border border-[#C5CFB0] bg-[#FDFBF5] px-4 py-3 shadow-[0_8px_24px_rgba(31,58,46,0.14)] text-sm">
-      {label && <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#3D6B3F]/60">{label}</p>}
+    <div className="rounded-xl border border-[#C5CFB0] dark:border-[#2A4830] bg-[#FDFBF5] dark:bg-[#1A3028] px-4 py-3 shadow-[0_8px_24px_rgba(31,58,46,0.14)] text-sm">
+      {label && <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#3D6B3F]/60 dark:text-[#7A9E6E]">{label}</p>}
       {payload.map((e, i) => (
         <div key={i} className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: e.color }} />
-          <span className="font-semibold text-[#1F3A2E]">
+          <span className="font-semibold text-[#1F3A2E] dark:text-[#B8DCA8]">
             {currency
               ? new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(e.value)
               : e.value.toLocaleString("es-MX")}
@@ -437,13 +437,13 @@ function PeriodSelector({ value, onChange, options }: {
   options: { label: string; value: Period }[];
 }) {
   return (
-    <div className="flex gap-1 rounded-xl border border-[#C5CFB0] bg-white p-1 shadow-sm">
+    <div className="flex gap-1 rounded-xl border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#111C16] p-1 shadow-sm">
       {options.map((opt) => (
         <button key={opt.value} onClick={() => onChange(opt.value)}
           className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
             value === opt.value
               ? "bg-[#1F3A2E] text-white shadow-sm"
-              : "text-[#3D6B3F]/70 hover:text-[#1F3A2E]"
+              : "text-[#3D6B3F]/70 dark:text-[#7A9E6E] hover:text-[#1F3A2E] dark:hover:text-[#B8DCA8]"
           }`}>
           {opt.label}
         </button>
@@ -459,11 +459,11 @@ function ChartCard({ title, subtitle, children, action }: {
   children: React.ReactNode; action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-[#C5CFB0] bg-white p-6 shadow-[0_2px_12px_rgba(61,107,63,0.08)]">
+    <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#0F1A13] p-6 shadow-[0_2px_12px_rgba(61,107,63,0.08)]">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-base font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">{title}</h3>
-          {subtitle && <p className="mt-0.5 text-xs text-[#3D6B3F]/60">{subtitle}</p>}
+          <h3 className="text-base font-bold text-[#1F3A2E] dark:text-[#B8DCA8] [font-family:'Playfair_Display',serif]">{title}</h3>
+          {subtitle && <p className="mt-0.5 text-xs text-[#3D6B3F]/60 dark:text-[#7A9E6E]">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -499,7 +499,7 @@ function BarTopLabel({ x, y, width, value }: any) {
   if (!value) return null;
   return (
     <text x={x + width / 2} y={y - 6} textAnchor="middle"
-      fill={COLORS.tobala} fontSize={11} fontWeight={600} fontFamily="DM Sans, sans-serif">
+      fill={COLORS.ambar} fontSize={11} fontWeight={600} fontFamily="DM Sans, sans-serif">
       {fmtMXN(value)}
     </text>
   );
@@ -509,7 +509,7 @@ function BarEndLabel({ x, y, width, height, value }: any) {
   if (!value) return null;
   return (
     <text x={x + width + 6} y={y + height / 2 + 4}
-      fill={COLORS.tobala} fontSize={11} fontWeight={600} fontFamily="DM Sans, sans-serif">
+      fill={COLORS.ambar} fontSize={11} fontWeight={600} fontFamily="DM Sans, sans-serif">
       {value}
     </text>
   );
@@ -615,10 +615,10 @@ export function AdminChartsContent() {
       )}
 
       {/* ── Barra de exportación ── */}
-      <div className="flex items-center justify-between rounded-2xl border border-[#C5CFB0] bg-white px-5 py-3.5 shadow-[0_2px_8px_rgba(61,107,63,0.06)]">
+      <div className="flex items-center justify-between rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#0F1A13] px-5 py-3.5 shadow-[0_2px_8px_rgba(61,107,63,0.06)]">
         <div>
-          <p className="text-sm font-semibold text-[#1F3A2E]">Exportar reporte</p>
-          <p className="text-xs text-[#3D6B3F]/60">Descarga los datos en formato PDF o CSV</p>
+          <p className="text-sm font-semibold text-[#1F3A2E] dark:text-[#B8DCA8]">Exportar reporte</p>
+          <p className="text-xs text-[#3D6B3F]/60 dark:text-[#7A9E6E]">Descarga los datos en formato PDF o CSV</p>
         </div>
         <div className="flex items-center gap-3">
           {/* CSV */}
@@ -626,7 +626,7 @@ export function AdminChartsContent() {
             type="button"
             onClick={handleExportCSV}
             disabled={loading || !data}
-            className="inline-flex items-center gap-2 rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-semibold text-[#1F3A2E] shadow-sm transition hover:bg-[#F4F0E3] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#111C16] px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#B8DCA8] shadow-sm transition hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Table2 className="h-4 w-4 text-[#3D6B3F]" />
             Exportar CSV

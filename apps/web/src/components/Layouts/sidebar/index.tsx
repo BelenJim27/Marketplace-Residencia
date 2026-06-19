@@ -75,7 +75,7 @@ export function Sidebar() {
       <aside
         className={cn(
           "flex flex-col h-screen sticky top-0 transition-all duration-300 ease-linear overflow-hidden",
-          "bg-[#1F3A2E]",
+          "bg-[#1F3A2E] dark:bg-[#0d1b12]",
           isMobile
             ? isOpen
               ? "translate-x-0 fixed bottom-0 top-0 left-0 z-50 w-[250px] max-w-[85vw]"
@@ -265,7 +265,7 @@ export function Sidebar() {
 
                         {/* Tooltip when collapsed */}
                         {isCollapsed && hoveredItem === item.title && !isMobile && (
-                          <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-xl bg-[#1F3A2E] border border-white/10 px-3 py-1.5 text-[14.5px] font-medium text-white shadow-xl">
+                          <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-xl bg-[#1F3A2E] dark:bg-[#0d1b12] border border-white/10 px-3 py-1.5 text-[14.5px] font-medium text-white shadow-xl">
                             {item.title}
                             <div className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-[#1F3A2E]" />
                           </div>
@@ -298,14 +298,14 @@ export function Sidebar() {
       {/* Logout modal */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Cerrar sesión</h3>
-            <p className="mt-2 text-sm text-[#3D6B3F]/70">¿Estás seguro que deseas cerrar sesión?</p>
-            <div className="mt-6 flex gap-3 border-t border-[#C5CFB0] pt-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[#F4F0E3] dark:bg-[#162218] border border-[#C5CFB0] dark:border-[#2d4a35] p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-[#1F3A2E] dark:text-[#e2ede3] [font-family:'Playfair_Display',serif]">Cerrar sesión</h3>
+            <p className="mt-2 text-sm text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">¿Estás seguro que deseas cerrar sesión?</p>
+            <div className="mt-6 flex gap-3 border-t border-[#C5CFB0] dark:border-[#2d4a35] pt-4">
               <button
                 type="button"
                 onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 rounded-xl border border-[#C5CFB0] px-4 py-2.5 text-sm font-semibold text-[#1F3A2E] transition hover:bg-[#C5CFB0]/30"
+                className="flex-1 rounded-xl border border-[#C5CFB0] dark:border-[#2d4a35] px-4 py-2.5 text-sm font-semibold text-[#1F3A2E] dark:text-[#e2ede3] transition hover:bg-[#C5CFB0]/30 dark:hover:bg-[#2d4a35]/40"
               >
                 Cancelar
               </button>

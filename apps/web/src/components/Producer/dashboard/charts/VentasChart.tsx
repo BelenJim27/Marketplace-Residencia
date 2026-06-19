@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTheme } from "next-themes";
 import {
   Area,
   AreaChart,
@@ -56,10 +57,10 @@ function fmtMXN(v: number): string {
 
 function MetricCard({ label, main, sub }: { label: string; main: string; sub?: string }) {
   return (
-    <div className="flex-1 min-w-[130px] rounded-xl border border-[#C5CFB0]/60 bg-[#F4F0E3]/60 px-4 py-3">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-[#1F3A2E]/50">{label}</p>
-      <p className="mt-1 text-lg font-black text-[#1F3A2E] leading-tight">{main}</p>
-      {sub && <p className="mt-0.5 text-xs text-[#3D6B3F]/70">{sub}</p>}
+    <div className="flex-1 min-w-[130px] rounded-xl border border-[#C5CFB0]/60 dark:border-[#2d4a35]/60 bg-[#F4F0E3]/60 dark:bg-[#1a2a1e]/60 px-4 py-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-[#1F3A2E]/50 dark:text-[#e2ede3]/50">{label}</p>
+      <p className="mt-1 text-lg font-black text-[#1F3A2E] dark:text-[#e2ede3] leading-tight">{main}</p>
+      {sub && <p className="mt-0.5 text-xs text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">{sub}</p>}
     </div>
   );
 }
@@ -77,9 +78,9 @@ function VentasTooltip({
   const diff = val - promedio;
   const positive = diff >= 0;
   return (
-    <div className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-4 py-3 text-sm shadow-[0_4px_12px_rgba(61,107,63,0.15)] min-w-[180px]">
-      <p className="font-semibold text-[#1F3A2E] mb-1.5">{label}</p>
-      <p className="font-bold text-[#1F3A2E] text-base">{fmtMXN(val)}</p>
+    <div className="rounded-xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-[#F4F0E3] dark:bg-[#162218] px-4 py-3 text-sm shadow-[0_4px_12px_rgba(61,107,63,0.15)] min-w-[180px]">
+      <p className="font-semibold text-[#1F3A2E] dark:text-[#e2ede3] mb-1.5">{label}</p>
+      <p className="font-bold text-[#1F3A2E] dark:text-[#e2ede3] text-base">{fmtMXN(val)}</p>
       {promedio > 0 && (
         <p className={`text-xs mt-1.5 font-medium ${positive ? "text-[#3d7a4f]" : "text-[#C97A3E]"}`}>
           {positive ? "▲" : "▼"} {fmtMXN(Math.abs(diff))} vs promedio diario
@@ -106,6 +107,11 @@ function CustomDot(props: {
 // ── Componente principal ───────────────────────────────────────────────────────
 
 export function VentasChart({ periodo, onPeriodoChange, data, isLoading, error, onRetry }: Props) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const axisColor = isDark ? "#9dc49e" : "#3D6B3F";
+  const gridColor = isDark ? "rgba(45,74,53,0.5)" : "rgba(197,207,176,0.5)";
+
   const rawData = data?.ventas ?? [];
 
   const { chartData, metrics } = useMemo(() => {
@@ -125,16 +131,16 @@ export function VentasChart({ periodo, onPeriodoChange, data, isLoading, error, 
   }, [rawData]);
 
   return (
-    <div id="export-ventas-chart" className="rounded-2xl border border-[#C5CFB0] bg-white shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 w-full">
+    <div id="export-ventas-chart" className="rounded-2xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-white dark:bg-[#1a2a1e] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 w-full">
       {/* Header */}
       <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
+          <h3 className="text-lg font-semibold text-[#1F3A2E] dark:text-[#e2ede3] [font-family:'Playfair_Display',serif]">
             Ventas
           </h3>
-          <p className="text-sm text-[#3D6B3F]/70">Monto total vendido en MXN</p>
+          <p className="text-sm text-[#3D6B3F]/70 dark:text-[#9dc49e]/70">Monto total vendido en MXN</p>
         </div>
-        <div className="flex rounded-full bg-[#F4F0E3] border border-[#C5CFB0]/50 p-1">
+        <div className="flex rounded-full bg-[#F4F0E3] dark:bg-[#162218] border border-[#C5CFB0]/50 dark:border-[#2d4a35]/50 p-1">
           {(["semana", "mes", "año"] as DashboardPeriod[]).map((opt) => (
             <button
               key={opt}
@@ -143,7 +149,7 @@ export function VentasChart({ periodo, onPeriodoChange, data, isLoading, error, 
               className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
                 periodo === opt
                   ? "bg-[#3d7a4f] text-white shadow-sm"
-                  : "text-[#3D6B3F]/70 hover:text-[#1F3A2E]"
+                  : "text-[#3D6B3F]/70 dark:text-[#9dc49e]/70 hover:text-[#1F3A2E] dark:hover:text-[#e2ede3]"
               }`}
             >
               {opt === "semana" ? "Semana" : opt === "mes" ? "Mes" : "Año"}
@@ -175,20 +181,20 @@ export function VentasChart({ periodo, onPeriodoChange, data, isLoading, error, 
 
       {/* Gráfica */}
       {isLoading ? (
-        <div className="h-[320px] animate-pulse rounded-xl bg-[#F4F0E3]" />
+        <div className="h-[320px] animate-pulse rounded-xl bg-[#F4F0E3] dark:bg-[#162218]" />
       ) : error ? (
-        <div className="flex h-[320px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-red-200 text-sm text-red-500">
+        <div className="flex h-[320px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-red-200 dark:border-red-800 text-sm text-red-500">
           <p>{error}</p>
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-lg bg-red-50 px-4 py-2 font-medium text-red-700 hover:bg-red-100 transition-colors"
+            className="rounded-lg bg-red-50 dark:bg-red-900/30 px-4 py-2 font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
           >
             Reintentar
           </button>
         </div>
       ) : !chartData.length ? (
-        <div className="flex h-[320px] items-center justify-center rounded-xl border border-dashed border-[#C5CFB0] text-sm text-[#3D6B3F]/60">
+        <div className="flex h-[320px] items-center justify-center rounded-xl border border-dashed border-[#C5CFB0] dark:border-[#2d4a35] text-sm text-[#3D6B3F]/60 dark:text-[#9dc49e]/60">
           No hay ventas para mostrar
         </div>
       ) : (
@@ -199,26 +205,26 @@ export function VentasChart({ periodo, onPeriodoChange, data, isLoading, error, 
           >
             <defs>
               <linearGradient id="ventasGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={LINE_COLOR} stopOpacity={0.18} />
+                <stop offset="5%" stopColor={LINE_COLOR} stopOpacity={isDark ? 0.3 : 0.18} />
                 <stop offset="95%" stopColor={LINE_COLOR} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid
               strokeDasharray="4 4"
               vertical={false}
-              stroke="rgba(197,207,176,0.5)"
+              stroke={gridColor}
             />
             <XAxis
               dataKey="xLabel"
               tickLine={false}
               axisLine={false}
-              tick={{ fill: "#3D6B3F", fontSize: 11 }}
+              tick={{ fill: axisColor, fontSize: 11 }}
               interval="preserveStartEnd"
             />
             <YAxis
               tickLine={false}
               axisLine={false}
-              tick={{ fill: "#3D6B3F", fontSize: 11 }}
+              tick={{ fill: axisColor, fontSize: 11 }}
               tickFormatter={fmtAxis}
               width={60}
             />
@@ -227,12 +233,12 @@ export function VentasChart({ periodo, onPeriodoChange, data, isLoading, error, 
                 y={metrics.avg}
                 stroke={LINE_COLOR}
                 strokeDasharray="6 4"
-                strokeOpacity={0.45}
+                strokeOpacity={isDark ? 0.6 : 0.45}
                 strokeWidth={1.5}
                 label={{
                   value: `Prom. ${fmtAxis(metrics.avg)}`,
                   position: "insideTopRight",
-                  fill: LINE_COLOR,
+                  fill: axisColor,
                   fontSize: 10,
                   fontWeight: 600,
                 }}

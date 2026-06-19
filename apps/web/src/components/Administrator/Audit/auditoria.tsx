@@ -105,20 +105,20 @@ export default function AuditoriaUI() {
 
   const getAccionColor = (accion: string) => {
     const colors: Record<string, string> = {
-      CREATE:   "bg-[#A8C26B]/20 text-[#3D6B3F]",
+      CREATE:   "bg-[#A8C26B]/20 text-[#3D6B3F] dark:text-[#A8C26B]",
       UPDATE:   "bg-[#C97A3E]/15 text-[#C97A3E]",
-      DELETE:   "bg-red-100 text-red-700",
-      LOGIN:    "bg-[#1F3A2E]/10 text-[#1F3A2E]",
-      LOGOUT:   "bg-[#C5CFB0]/30 text-[#3D6B3F]/70",
-      REGISTER: "bg-[#A8C26B]/20 text-[#3D6B3F]",
+      DELETE:   "bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400",
+      LOGIN:    "bg-[#1F3A2E]/10 dark:bg-[#1F3A2E]/30 text-[#1F3A2E] dark:text-[#B8DCA8]",
+      LOGOUT:   "bg-[#C5CFB0]/30 text-[#3D6B3F]/70 dark:text-[#5A8060]",
+      REGISTER: "bg-[#A8C26B]/20 text-[#3D6B3F] dark:text-[#A8C26B]",
     };
-    return colors[accion] || "bg-[#C5CFB0]/30 text-[#3D6B3F]/70";
+    return colors[accion] || "bg-[#C5CFB0]/30 text-[#3D6B3F]/70 dark:text-[#5A8060]";
   };
 
   const inputClass =
-    "w-full pl-10 pr-4 py-2 border border-[#C5CFB0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent bg-[#F4F0E3] text-[#1F3A2E] placeholder-[#3D6B3F]/50 text-sm";
+    "w-full pl-10 pr-4 py-2 border border-[#C5CFB0] dark:border-[#2A4830] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent bg-[#F4F0E3] dark:bg-[#111C16] text-[#1F3A2E] dark:text-[#B8DCA8] placeholder-[#3D6B3F]/50 dark:placeholder-[#5A8060]/70 text-sm";
   const selectClass =
-    "px-3 py-2 border border-[#C5CFB0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent bg-[#F4F0E3] text-[#1F3A2E] text-sm";
+    "px-3 py-2 border border-[#C5CFB0] dark:border-[#2A4830] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent bg-[#F4F0E3] dark:bg-[#111C16] text-[#1F3A2E] dark:text-[#B8DCA8] text-sm";
 
   if (loading) {
     return (
@@ -146,15 +146,15 @@ export default function AuditoriaUI() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1F3A2E] flex items-center gap-2 [font-family:'Playfair_Display',serif]">
+          <h1 className="text-2xl font-bold text-[#1F3A2E] dark:text-[#B8DCA8] flex items-center gap-2 [font-family:'Playfair_Display',serif]">
             <FileText className="w-6 h-6" />
             Auditoría
           </h1>
-          <p className="text-[#3D6B3F]/70 text-sm mt-0.5">
+          <p className="text-[#3D6B3F]/70 dark:text-[#7A9E6E] text-sm mt-0.5">
             Registro de todas las acciones del sistema
           </p>
         </div>
-        <span className="text-sm text-[#3D6B3F]/70">
+        <span className="text-sm text-[#3D6B3F]/70 dark:text-[#7A9E6E]">
           {filteredAuditoria.length} registros (Últimos 7 días)
         </span>
       </div>
@@ -201,7 +201,7 @@ export default function AuditoriaUI() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <table className="w-full text-sm">
           <thead className="bg-[#1F3A2E] text-xs font-semibold text-white uppercase tracking-wider">
             <tr>
@@ -219,39 +219,39 @@ export default function AuditoriaUI() {
               <th className="px-4 py-3 text-left">IP</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#C5CFB0]/30">
+          <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#2A4830]/30">
             {paginatedAuditoria.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-[#3D6B3F]/70 text-sm bg-white">
+                <td colSpan={6} className="px-6 py-8 text-center text-[#3D6B3F]/70 dark:text-[#7A9E6E] text-sm bg-white dark:bg-[#0F1A13]">
                   No hay registros de auditoría recientes
                 </td>
               </tr>
             ) : (
               paginatedAuditoria.map((item) => (
-                <tr key={item.id_auditoria} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200">
-                  <td className="px-4 py-3 text-[#1F3A2E]">
+                <tr key={item.id_auditoria} className="odd:bg-white dark:odd:bg-[#0F1A13] even:bg-[#F4F0E3]/40 dark:even:bg-[#111C16]/60 hover:bg-[#C5CFB0]/20 dark:hover:bg-[#1A2E22]/40 transition-all duration-200">
+                  <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getAccionColor(item.accion)}`}>
                       {item.accion}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-[#1F3A2E]">
+                  <td className="px-4 py-3 text-[#1F3A2E] dark:text-[#B8DCA8]">
                     {item.tabla_afectada}
                   </td>
-                  <td className="px-4 py-3 text-[#1F3A2E]">
-                    <div className="font-medium text-[#1F3A2E]">
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-[#1F3A2E] dark:text-[#B8DCA8]">
                       {item.usuarios?.nombre || "Sistema"}
                     </div>
-                    <div className="text-[#3D6B3F]/60 text-xs">
+                    <div className="text-[#3D6B3F]/60 dark:text-[#5A8060]/80 text-xs">
                       {item.usuarios?.email || ""}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-[#3D6B3F]/70 font-mono text-xs">
+                  <td className="px-4 py-3 text-[#3D6B3F]/70 dark:text-[#7A9E6E] font-mono text-xs">
                     {item.registro_id || "-"}
                   </td>
-                  <td className="px-4 py-3 text-[#3D6B3F]/70">
+                  <td className="px-4 py-3 text-[#3D6B3F]/70 dark:text-[#7A9E6E]">
                     {formatDate(item.fecha)}
                   </td>
-                  <td className="px-4 py-3 text-[#3D6B3F]/70 font-mono">
+                  <td className="px-4 py-3 text-[#3D6B3F]/70 dark:text-[#7A9E6E] font-mono">
                     {item.ip_origen || "-"}
                   </td>
                 </tr>
@@ -259,13 +259,13 @@ export default function AuditoriaUI() {
             )}
           </tbody>
         </table>
-        
+
         {/* Controles de Paginación */}
         {totalPages > 1 && (
-          <div className="bg-[#F4F0E3] px-4 py-3 border-t border-[#C5CFB0] flex items-center justify-between sm:px-6">
+          <div className="bg-[#F4F0E3] dark:bg-[#111C16] px-4 py-3 border-t border-[#C5CFB0] dark:border-[#2A4830] flex items-center justify-between sm:px-6">
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm text-[#1F3A2E]">
+                <p className="text-sm text-[#1F3A2E] dark:text-[#B8DCA8]">
                   Mostrando del <span className="font-medium">{startIndex + 1}</span> al{" "}
                   <span className="font-medium">
                     {Math.min(startIndex + ITEMS_PER_PAGE, filteredAuditoria.length)}
@@ -278,18 +278,18 @@ export default function AuditoriaUI() {
                   <button
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-[#C5CFB0] bg-white text-sm font-medium text-[#3D6B3F] hover:bg-[#F4F0E3] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#0F1A13] text-sm font-medium text-[#3D6B3F] dark:text-[#7A9E6E] hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="sr-only">Anterior</span>
                     <ChevronLeft className="h-4 w-4" />
                   </button>
-                  <span className="relative inline-flex items-center px-4 py-2 border border-[#C5CFB0] bg-white text-sm font-medium text-[#1F3A2E]">
+                  <span className="relative inline-flex items-center px-4 py-2 border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#0F1A13] text-sm font-medium text-[#1F3A2E] dark:text-[#B8DCA8]">
                     Página {currentPage} de {totalPages}
                   </span>
                   <button
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-[#C5CFB0] bg-white text-sm font-medium text-[#3D6B3F] hover:bg-[#F4F0E3] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#0F1A13] text-sm font-medium text-[#3D6B3F] dark:text-[#7A9E6E] hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="sr-only">Siguiente</span>
                     <ChevronRight className="h-4 w-4" />

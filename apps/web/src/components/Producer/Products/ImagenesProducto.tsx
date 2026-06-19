@@ -22,7 +22,8 @@ type Props = {
   onFilesChange: (files: File[]) => void;
 };
 
-const MAX_SIZE_KB = 500;
+const MAX_SIZE_MB = 5;
+const MAX_SIZE_KB = MAX_SIZE_MB * 1024;
 
 export function ImagenesProducto({
   id_producto,
@@ -52,7 +53,7 @@ export function ImagenesProducto({
 
     for (const file of files) {
       if (file.size > MAX_SIZE_KB * 1024) {
-        setError(`"${file.name}" supera ${MAX_SIZE_KB} KB y fue omitida.`);
+        setError(`"${file.name}" supera ${MAX_SIZE_MB} MB y fue omitida.`);
         continue;
       }
       validas.push(file);
@@ -161,7 +162,7 @@ export function ImagenesProducto({
         >
           + Seleccionar imágenes
         </label>
-        <p className="mt-1 text-xs text-gray-400">Máx. {MAX_SIZE_KB} KB por imagen · hasta 10 por carga</p>
+        <p className="mt-1 text-xs text-gray-400">Máx. {MAX_SIZE_MB} MB por imagen · hasta 10 por carga</p>
       </div>
 
       {error && <p className="text-xs text-red-500">{error}</p>}

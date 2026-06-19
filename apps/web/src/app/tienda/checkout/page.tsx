@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, Dispatch, SetStateAction } from "react";
+import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { getMediaUrl } from "@/lib/media";
@@ -21,14 +22,35 @@ import { isPaypalConfigured, getPaypalClientId } from "@/lib/paypal";
 import PaypalCheckoutButton from "@/components/PaypalCheckoutButton";
 
 // Paleta de colores similar a productor/solicitar
-const COLOR_PALETTE = {
-  green: "#2E4A33",
+const LIGHT_PALETTE = {
+  green:  "#2E4A33",
+  btnGreen: "#2E4A33",
   copper: "#C97A3E",
-  amber: "#C89B4A",
-  cream: "#F4F0E3",
-  white: "#FFFFFF",
+  amber:  "#C89B4A",
+  cream:  "#F4F0E3",
+  white:  "#FFFFFF",
+  text:   "#2A2622",
+  muted:  "#9A9590",
   border: "rgba(46,74,51,0.12)",
 };
+
+function usePalette() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === "dark";
+  if (!isDark) return LIGHT_PALETTE;
+  return {
+    ...LIGHT_PALETTE,
+    green:    "#7ec885",
+    btnGreen: "#4a9e52",
+    white:    "#1c2422",
+    text:     "#e5e7eb",
+    muted:    "#9ca3af",
+    border:   "rgba(255,255,255,0.10)",
+    cream:    "#1a2820",
+  };
+}
 
 const PASO_INDEX: Record<CheckoutStep, number> = {
   direccion: 0,
@@ -152,6 +174,7 @@ export default function CheckoutPage() {
   } = useCheckout();
 
   const { t, locale, rates } = useLocale();
+  const COLOR_PALETTE = usePalette();
 
   // USD si locale='en' o país destino ≠ MX; de lo contrario MXN
   const pais_destino = direccionSeleccionada?.pais_iso2 ?? (direccionSeleccionada?.ubicacion as any)?.pais ?? "MX";
@@ -289,7 +312,7 @@ export default function CheckoutPage() {
       <div style={{ height: "3px", background: `linear-gradient(90deg, ${COLOR_PALETTE.copper}, ${COLOR_PALETTE.amber}, ${COLOR_PALETTE.copper})`, borderRadius: "2px 2px 0 0", marginBottom: "0" }} />
 
       {/* Header */}
-      <div style={{ background: COLOR_PALETTE.green, borderRadius: "0 0 16px 16px", padding: "clamp(20px, 3vw, 32px)", marginBottom: "24px", position: "relative", overflow: "hidden" }}>
+      <div style={{ background: "#2E4A33", borderRadius: "0 0 16px 16px", padding: "clamp(20px, 3vw, 32px)", marginBottom: "24px", position: "relative", overflow: "hidden" }}>
         <p style={{ fontFamily: "ui-monospace", color: COLOR_PALETTE.copper, fontSize: "10px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", margin: "0 0 8px" }}>
           {t('checkout_title')}
         </p>
@@ -329,7 +352,7 @@ export default function CheckoutPage() {
                         : "#E5E7EB",
                     color:
                       idx < pasoActualIndex
-                        ? COLOR_PALETTE.white
+                        ? "#ffffff"
                         : idx === pasoActualIndex
                         ? COLOR_PALETTE.copper
                         : "#9CA3AF",
@@ -341,7 +364,7 @@ export default function CheckoutPage() {
                   }}
                 >
                   {idx < pasoActualIndex ? (
-                    <CheckCircle size={20} color={COLOR_PALETTE.white} />
+                    <CheckCircle size={20} color="#ffffff" />
                   ) : (
                     <span style={{ fontSize: "14px" }}>{idx + 1}</span>
                   )}
@@ -485,7 +508,7 @@ export default function CheckoutPage() {
                                   transition: "all 200ms ease",
                                 }}
                               >
-                                {metodoPago === 'stripe' && <CheckCircle size={12} color={COLOR_PALETTE.white} fill={COLOR_PALETTE.white} />}
+                                {metodoPago === 'stripe' && <CheckCircle size={12} color="#ffffff" fill="#ffffff" />}
                               </div>
                               <div>
                                 <h4 style={{ fontWeight: 600, color: COLOR_PALETTE.green, margin: 0 }}>{t('checkout_payment_credit_card')}</h4>
@@ -544,7 +567,7 @@ export default function CheckoutPage() {
                                   transition: "all 200ms ease",
                                 }}
                               >
-                                {metodoPago === 'paypal' && <CheckCircle size={12} color={COLOR_PALETTE.white} fill={COLOR_PALETTE.white} />}
+                                {metodoPago === 'paypal' && <CheckCircle size={12} color="#ffffff" fill="#ffffff" />}
                               </div>
                               <div>
                                 <h4 style={{ fontWeight: 600, color: COLOR_PALETTE.green, margin: 0 }}>PayPal</h4>
@@ -805,11 +828,11 @@ export default function CheckoutPage() {
                     background:
                       cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))
                         ? "#D1D5DB"
-                        : COLOR_PALETTE.green,
+                        : COLOR_PALETTE.btnGreen,
                     color:
                       cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))
                         ? "#6B7280"
-                        : COLOR_PALETTE.white,
+                        : "#ffffff",
                     boxShadow:
                       cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))
                         ? "none"
@@ -948,6 +971,7 @@ function DireccionStep({
   gpsError,
 }: any) {
   const { t } = useLocale();
+  const COLOR_PALETTE = usePalette();
   const [formErrors, setFormErrors] = useState<{
     nombre_destinatario?: string;
     telefono?: string;
@@ -1415,6 +1439,7 @@ function DobCaptureForm({
   onSubmit: (fechaISO: string) => Promise<boolean>;
 }) {
   const { t } = useLocale();
+  const COLOR_PALETTE = usePalette();
   const [dob, setDob] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -1484,6 +1509,7 @@ function FacturaSolicitudSection({
   };
   setFacturaData: Dispatch<SetStateAction<typeof facturaData>>;
 }) {
+  const COLOR_PALETTE = usePalette();
   const set = (key: string, val: string | boolean) =>
     setFacturaData((prev) => ({ ...prev, [key]: val }));
 
@@ -1609,7 +1635,7 @@ function FacturaSolicitudSection({
                 padding: "10px 14px",
                 fontSize: "14px",
                 outline: "none",
-                background: "#fff",
+                background: COLOR_PALETTE.white,
                 cursor: "pointer",
                 boxSizing: "border-box",
               }}
@@ -1703,6 +1729,7 @@ function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cot
   setSolicitarProteccion: (v: boolean) => void;
 }) {
   const { t } = useLocale();
+  const COLOR_PALETTE = usePalette();
   const hayOpciones = opciones && opciones.length > 0;
   const numProductores = grupos?.length ?? 0;
 
@@ -1852,6 +1879,7 @@ function PagoYResumen({
   numeroOrden: number | null;
 }) {
   const { t } = useLocale();
+  const COLOR_PALETTE = usePalette();
   const stripe = useStripe();
   const elements = useElements();
   const [confirming, setConfirming] = useState(false);
@@ -2155,6 +2183,7 @@ function PagoYResumenPaypal({
   locale: string;
 }) {
   const router = useRouter();
+  const COLOR_PALETTE = usePalette();
 
   const handleSuccess = () => {
     router.push(`/tienda/checkout/pago-exitoso?pedido=${pedidoId}`);

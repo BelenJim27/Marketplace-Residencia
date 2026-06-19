@@ -87,12 +87,13 @@ const CARD_COLORS = [
 // Sin reseñas → 5 estrellas con solo contorno
 // Con reseñas  → estrellas rellenas según el promedio real
 function StarRating({ rating = 0, reviews = 0, cardColor }: { rating?: number; reviews?: number; cardColor?: typeof CARD_COLORS[0] }) {
+  const { hex, catalog } = useThemeColors();
   const hasReviews = reviews > 0;
   const fullStars = hasReviews ? Math.floor(rating) : 0;
-  const isNeutralCard = cardColor?.bg === hexFallbacks.bgSecondary;
-  const starColor = isNeutralCard ? catalogColors.rating.full : hexFallbacks.bgSecondary;
-  const emptyStarColor = isNeutralCard ? catalogColors.rating.empty : catalogColors.rating.emptyDark;
-  const textColor = isNeutralCard ? catalogColors.rating.full : "rgb(255 255 255 / 0.9)";
+  const isNeutralCard = cardColor?.bg === hex.bgSecondary;
+  const starColor = isNeutralCard ? catalog.rating.full : hex.bgSecondary;
+  const emptyStarColor = isNeutralCard ? catalog.rating.empty : catalog.rating.emptyDark;
+  const textColor = isNeutralCard ? catalog.rating.full : "rgb(255 255 255 / 0.9)";
   const ratingLabel = hasReviews
     ? `${rating.toFixed(1)} de 5 estrellas (${reviews} ${reviews === 1 ? "reseña" : "reseñas"})`
     : "Sin reseñas aún";
@@ -116,7 +117,7 @@ function StarRating({ rating = 0, reviews = 0, cardColor }: { rating?: number; r
       {hasReviews && (
         <>
           <span className="text-xs font-semibold" style={{ color: textColor }} aria-hidden="true">{rating.toFixed(1)}</span>
-          <span className="text-[11px]" style={{ color: isNeutralCard ? catalogColors.card.text.muted : "rgb(255 255 255 / 0.8)" }} aria-hidden="true">({reviews})</span>
+          <span className="text-[11px]" style={{ color: isNeutralCard ? catalog.card.text.muted : "rgb(255 255 255 / 0.8)" }} aria-hidden="true">({reviews})</span>
         </>
       )}
     </div>
@@ -126,21 +127,22 @@ function StarRating({ rating = 0, reviews = 0, cardColor }: { rating?: number; r
 // Badge de Filtros Activos Mejorado
 function FilterBadge({ label, onRemove }: { label: string; onRemove: () => void }) {
   const { t } = useLocale();
+  const { hex } = useThemeColors();
   const ariaLabel = t("aria_label_remove_filter") + " " + label;
   return (
     <div
       className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-all hover:shadow-md animate-in fade-in duration-300"
       style={{
-        backgroundColor: `${hexFallbacks.brand}22`,  // 13% opacity
-        border: `1px solid ${hexFallbacks.brand}4d`, // 30% opacity
-        color: hexFallbacks.brand,
+        backgroundColor: `${hex.brand}22`,  // 13% opacity
+        border: `1px solid ${hex.brand}4d`, // 30% opacity
+        color: hex.brand,
       }}
     >
       <span className="max-w-xs truncate">{label}</span>
       <button
         onClick={onRemove}
         className="hover:opacity-70 transition-opacity hover:scale-110 focus:outline-none focus:ring-1 focus:ring-offset-1 rounded-sm p-0.5 flex-shrink-0"
-        style={{ "--tw-ring-color": hexFallbacks.brand } as React.CSSProperties}
+        style={{ "--tw-ring-color": hex.brand } as React.CSSProperties}
         aria-label={ariaLabel}
         title={ariaLabel}
       >
@@ -171,6 +173,7 @@ const ProductCard = memo(function ProductCard({
   stockDisponible?: number | null;
 }) {
   const { convertPrice, t } = useLocale();
+  const { hex, catalog, theme, isDark } = useThemeColors();
   const imagenUrl = producto.imagen_principal_url ?? producto.producto_imagenes?.[0]?.url;
   const maguey = producto.lotes?.datos_api?.maguey || "Espadin";
   const alcohol = producto.lotes?.datos_api?.grado_alcohol || producto.lotes?.datos_api?.alcohol || "46";
@@ -199,19 +202,23 @@ const ProductCard = memo(function ProductCard({
     >
       {/* Móvil: flex-col | SM+: flex-row */}
       <div
-        className="flex flex-col sm:flex-row gap-0 bg-white overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-2 border border-black/6 h-full"
+        className="flex flex-col sm:flex-row gap-0 overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-2 border h-full"
+        style={{
+          backgroundColor: hex.bgSecondary,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)'
+        }}
       >
         {/* BOTTLE SECTION - Responsive */}
         <div
           className="w-full h-48 sm:w-[140px] sm:h-auto md:w-[180px] flex-shrink-0 relative p-4 sm:p-6 flex flex-col justify-center items-center gap-4 transition-all hover:scale-105"
-          style={{ backgroundColor: bgColor }}
+          style={{ backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : bgColor }}
         >
           {/* Botón de favoritos */}
           <button
             className="absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center z-20 shadow-md transition-all hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-1"
             style={{
-              backgroundColor: isWishlisted ? "#C97A3E" : "rgba(255,255,255,0.92)",
-              border: isWishlisted ? "none" : "1px solid rgba(0,0,0,0.08)",
+              backgroundColor: isWishlisted ? hex.brand : "rgba(255,255,255,0.92)",
+              border: isWishlisted ? "none" : `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)'}`,
             }}
             onClick={(e) => {
               e.stopPropagation();
@@ -224,7 +231,7 @@ const ProductCard = memo(function ProductCard({
             <Heart
               size={16}
               fill={isWishlisted ? "white" : "none"}
-              color={isWishlisted ? "white" : "#C97A3E"}
+              color={isWishlisted ? "white" : hex.brand}
               aria-hidden="true"
             />
           </button>
@@ -243,7 +250,7 @@ const ProductCard = memo(function ProductCard({
             )}
           </div>
           <div
-            className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 right-2 sm:right-3 text-black text-center text-xs font-bold uppercase tracking-wider p-1 sm:p-1.5 rounded"
+            className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 right-2 sm:right-3 text-black dark:text-white text-center text-xs font-bold uppercase tracking-wider p-1 sm:p-1.5 rounded"
             style={{
               background: "rgba(0, 0, 0, 0.15)",
               backdropFilter: "blur(4px)",
@@ -257,40 +264,40 @@ const ProductCard = memo(function ProductCard({
         <div
           className="flex-1 p-4 sm:p-5 flex flex-col justify-between"
           style={{
-            backgroundColor: "rgba(255, 255, 255, 0.7)",
+            backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.7)',
           }}
         >
           <div className="flex flex-col gap-3">
             {/* Nombre */}
             <h3
-              className="text-base sm:text-lg font-semibold text-gray-900 leading-tight"
-              style={{ fontFamily: 'var(--font-family-store)' }}
+              className="text-base sm:text-lg font-semibold leading-tight"
+              style={{ fontFamily: 'var(--font-family-store)', color: hex.textPrimary }}
             >
               {producto.nombre}
             </h3>
 
             {/* Agave */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-widest text-black w-16 shrink-0">
+              <span className="text-xs font-bold uppercase tracking-widest w-16 shrink-0" style={{ color: hex.textSecondary }}>
                 {t("product_card_agave")}
               </span>
-              <span className="text-sm font-medium text-gray-800">{maguey}</span>
+              <span className="text-sm font-medium" style={{ color: hex.textPrimary }}>{maguey}</span>
             </div>
 
             {/* Alcohol + Rating en fila */}
             <div
               className="flex items-center gap-4 py-2.5 border-t border-b"
-              style={{ borderColor: "rgba(0,0,0,0.07)" }}
+              style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)' }}
             >
               {/* Alcohol */}
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold uppercase tracking-wider text-black">
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: hex.textSecondary }}>
                   {t("product_card_alcohol")}
                 </span>
-                <span className="text-sm font-bold text-amber-700">{alcohol}%</span>
+                <span className="text-sm font-bold text-amber-700 dark:text-amber-500">{alcohol}%</span>
               </div>
 
-              <div style={{ width: "1px", height: "20px", background: "rgba(0,0,0,0.1)" }} />
+              <div style={{ width: "1px", height: "20px", background: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)" }} />
 
               {/* Rating */}
               <div className="flex items-center gap-1.5">
@@ -301,8 +308,8 @@ const ProductCard = memo(function ProductCard({
                       className="text-sm leading-none"
                       style={{
                         color: hasReviews && i < Math.round(rating)
-                          ? catalogColors.rating.full
-                          : catalogColors.rating.empty,
+                          ? catalog.rating.full
+                          : catalog.rating.empty,
                       }}
                     >
                       ★
@@ -310,7 +317,7 @@ const ProductCard = memo(function ProductCard({
                   ))}
                 </div>
                 {hasReviews && (
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs" style={{ color: hex.textMuted }}>
                     {rating.toFixed(1)}
                   </span>
                 )}
@@ -324,7 +331,11 @@ const ProductCard = memo(function ProductCard({
               {botellas350 && Number(botellas350) > 0 && (
                 <span
                   className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                  style={{ backgroundColor: "rgba(201,122,62,0.1)", color: "#C97A3E", border: "1px solid rgba(201,122,62,0.25)" }}
+                  style={{
+                    backgroundColor: isDark ? "rgba(201,122,62,0.15)" : "rgba(201,122,62,0.1)",
+                    color: isDark ? "#f59e0b" : "#C97A3E",
+                    border: `1px solid ${isDark ? "rgba(201,122,62,0.3)" : "rgba(201,122,62,0.25)"}`
+                  }}
                 >
                   350 ml · {Number(botellas350)} bot.
                 </span>
@@ -332,7 +343,11 @@ const ProductCard = memo(function ProductCard({
               {botellas750 && Number(botellas750) > 0 && (
                 <span
                   className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                  style={{ backgroundColor: "rgba(201,122,62,0.1)", color: "#C97A3E", border: "1px solid rgba(201,122,62,0.25)" }}
+                  style={{
+                    backgroundColor: isDark ? "rgba(201,122,62,0.15)" : "rgba(201,122,62,0.1)",
+                    color: isDark ? "#f59e0b" : "#C97A3E",
+                    border: `1px solid ${isDark ? "rgba(201,122,62,0.3)" : "rgba(201,122,62,0.25)"}`
+                  }}
                 >
                   750 ml · {Number(botellas750)} bot.
                 </span>
@@ -342,16 +357,22 @@ const ProductCard = memo(function ProductCard({
 
           <div
             className="flex flex-col gap-2 sm:gap-3 pt-3 sm:pt-4 border-t"
-            style={{ borderColor: "rgba(0, 0, 0, 0.06)" }}
+            style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)" }}
           >
             {/* Badge de stock */}
             {stockDisponible !== undefined && stockDisponible !== null && (
               <div
                 className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold w-fit"
                 style={{
-                  backgroundColor: stockDisponible <= 0 ? "#fef2f2" : stockDisponible <= 10 ? "#fffbeb" : "#f0fdf4",
-                  border: `1px solid ${stockDisponible <= 0 ? "#fecaca" : stockDisponible <= 10 ? "#fde68a" : "#bbf7d0"}`,
-                  color: stockDisponible <= 0 ? "#dc2626" : stockDisponible <= 10 ? "#d97706" : "#16a34a",
+                  backgroundColor: isDark 
+                    ? (stockDisponible <= 0 ? "rgba(220,38,38,0.15)" : stockDisponible <= 10 ? "rgba(217,119,6,0.15)" : "rgba(22,163,74,0.15)")
+                    : (stockDisponible <= 0 ? "#fef2f2" : stockDisponible <= 10 ? "#fffbeb" : "#f0fdf4"),
+                  border: `1px solid ${isDark
+                    ? (stockDisponible <= 0 ? "rgba(220,38,38,0.3)" : stockDisponible <= 10 ? "rgba(217,119,6,0.3)" : "rgba(22,163,74,0.3)")
+                    : (stockDisponible <= 0 ? "#fecaca" : stockDisponible <= 10 ? "#fde68a" : "#bbf7d0")}`,
+                  color: isDark
+                    ? (stockDisponible <= 0 ? "#fca5a5" : stockDisponible <= 10 ? "#fcd34d" : "#86efac")
+                    : (stockDisponible <= 0 ? "#dc2626" : stockDisponible <= 10 ? "#d97706" : "#16a34a"),
                 }}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12" aria-hidden="true">
@@ -367,7 +388,7 @@ const ProductCard = memo(function ProductCard({
             )}
 
             <div className="flex items-baseline gap-1">
-              <span className="text-xl sm:text-2xl font-bold text-amber-700" style={{ fontFamily: "Courier New, monospace" }}>
+              <span className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "Courier New, monospace", color: catalog.price.text }}>
                 {convertPrice(Number(producto.precio_base || 0))}
               </span>
             </div>
@@ -377,9 +398,9 @@ const ProductCard = memo(function ProductCard({
               data-tour="product-card-details"
               className="w-full text-xs font-semibold py-1.5 rounded transition-all hover:opacity-80 active:scale-95"
               style={{
-                border: "1px solid rgba(0,0,0,0.12)",
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'}`,
                 background: "transparent",
-                color: "#4B5563",
+                color: isDark ? hex.textSecondary : "#4B5563",
                 cursor: "pointer",
                 letterSpacing: "0.04em",
               }}
@@ -395,7 +416,7 @@ const ProductCard = memo(function ProductCard({
               data-tour="product-card-add"
               className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded transition-all hover:opacity-90 active:scale-95 w-full"
               style={{
-                backgroundColor: stockDisponible !== null && stockDisponible !== undefined && stockDisponible <= 0 ? "#9CA3AF" : "var(--catalog-accent, #C97A3E)",
+                backgroundColor: stockDisponible !== null && stockDisponible !== undefined && stockDisponible <= 0 ? (isDark ? "#374151" : "#9CA3AF") : hex.brand,
                 border: "none",
                 cursor: stockDisponible !== null && stockDisponible !== undefined && stockDisponible <= 0 ? "not-allowed" : "pointer",
               }}
@@ -673,7 +694,7 @@ export default function ProductCatalogEnhanced() {
   const searchParams = useSearchParams();
   const { agregarProducto, items: carritoItems } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
-
+  const { hex, theme, isDark } = useThemeColors();
 
   const { convertPrice, t } = useLocale();
 
@@ -1021,7 +1042,7 @@ const productosMostrados = useMemo(() => {
 
 
   return (
-    <div style={{ backgroundColor: theme === 'dark' ? '#121212' : hexFallbacks.bgPrimary, minHeight: "100vh" }} className="font-sans">
+    <div style={{ backgroundColor: isDark ? '#121212' : hex.bgPrimary, minHeight: "100vh" }} className="font-sans">
       {/* ─── CONTENIDO PRINCIPAL ─── */}
       <main className="w-full px-4 py-6 sm:py-8">
         <div className="flex flex-col lg:flex-row gap-5 lg:gap-6">
@@ -1030,27 +1051,27 @@ const productosMostrados = useMemo(() => {
             <div
               className="sticky top-10 rounded-2xl p-5 shadow-sm transition-all"
               style={{
-                backgroundColor: hexFallbacks.bgSecondary,
-                border: `1px solid ${hexFallbacks.borderLight}`,
+                backgroundColor: hex.bgSecondary,
+                border: `1px solid ${hex.borderLight}`,
               }}
             >
               <div className="flex items-center gap-2 mb-4">
-                <Filter size={18} style={{ color: hexFallbacks.brand }} />
-                <h2 className="text-lg font-bold" style={{ fontFamily: 'var(--font-family-store)', color: hexFallbacks.textPrimary }}>
+                <Filter size={18} style={{ color: hex.brand }} />
+                <h2 className="text-lg font-bold" style={{ fontFamily: 'var(--font-family-store)', color: hex.textPrimary }}>
                   {t("sidebar_filters")}
                 </h2>
                 {cantidadFiltros > 0 && (
                   <div className="ml-auto flex items-center gap-2">
                     <span
                       className="text-xs font-bold px-2 py-1 rounded-full text-white"
-                      style={{ backgroundColor: hexFallbacks.brand }}
+                      style={{ backgroundColor: hex.brand }}
                     >
                       {cantidadFiltros}
                     </span>
                     <button
                       onClick={limpiarTodo}
                       className="text-xs font-semibold hover:opacity-70 transition-opacity focus:outline-none"
-                      style={{ color: hexFallbacks.brand }}
+                      style={{ color: hex.brand }}
                       aria-label={t("reset_filters")}
                     >
                       {t("reset_filters")}
@@ -1083,9 +1104,9 @@ const productosMostrados = useMemo(() => {
               onClick={() => setShowMobileFilters(true)}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-95 shadow-sm relative overflow-hidden group focus:outline-none focus:ring-2 focus:ring-offset-2"
               style={{
-                backgroundColor: hexFallbacks.brand,
+                backgroundColor: hex.brand,
                 color: "white",
-                "--tw-ring-color": hexFallbacks.brand,
+                "--tw-ring-color": hex.brand,
               } as React.CSSProperties}
               aria-label={`Abrir filtros${cantidadFiltros > 0 ? ` (${cantidadFiltros} activos)` : ""}`}
               title={`Abrir filtros${cantidadFiltros > 0 ? ` (${cantidadFiltros} activos)` : ""}`}
@@ -1100,7 +1121,7 @@ const productosMostrados = useMemo(() => {
           <div className="flex-1 w-full">
             {/* Ordenamiento mejorado */}
             <div className="mb-4 flex justify-between items-center gap-4">
-              <div className="text-sm" style={{ color: hexFallbacks.textSecondary }}>
+              <div className="text-sm" style={{ color: hex.textSecondary }}>
                 {!loading && productosMostrados.length > 0 && (
                   <span className="font-semibold">
                     {t("pagination_showing")
@@ -1111,7 +1132,7 @@ const productosMostrados = useMemo(() => {
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <label htmlFor="sort-select" className="text-sm font-medium" style={{ color: hexFallbacks.textPrimary }}>
+                <label htmlFor="sort-select" className="text-sm font-medium" style={{ color: hex.textPrimary }}>
                   {t("sidebar_sort_label")}
                 </label>
                 <select
@@ -1120,11 +1141,11 @@ const productosMostrados = useMemo(() => {
                   onChange={(e) => setOrdenar(e.target.value as any)}
                   className="text-sm rounded-xl px-4 py-2.5 outline-none font-medium transition-all shadow-sm focus:ring-2 focus:ring-offset-1"
                   style={{
-                    backgroundColor: hexFallbacks.bgSecondary,
-                    border: `1.5px solid ${hexFallbacks.borderLight}`,
-                    color: hexFallbacks.textPrimary,
+                    backgroundColor: hex.bgSecondary,
+                    border: `1.5px solid ${hex.borderLight}`,
+                    color: hex.textPrimary,
                     cursor: "pointer",
-                    "--tw-ring-color": hexFallbacks.brand,
+                    "--tw-ring-color": hex.brand,
                   } as React.CSSProperties}
                   aria-label="Ordenar productos por"
                 >
@@ -1142,14 +1163,14 @@ const productosMostrados = useMemo(() => {
                 <div className="text-center">
                   <div className="mb-4 relative inline-block">
                     <svg className="h-10 w-10 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" style={{ color: hexFallbacks.brand }} />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" style={{ color: hexFallbacks.brand }} />
+                      <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" style={{ color: hex.brand }} />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" style={{ color: hex.brand }} />
                     </svg>
                   </div>
-                  <p className="text-sm font-semibold" style={{ color: hexFallbacks.brand }}>
+                  <p className="text-sm font-semibold" style={{ color: hex.brand }}>
                     {t("loading_products")}
                   </p>
-                  <p className="text-xs mt-2" style={{ color: hexFallbacks.textSecondary }}>
+                  <p className="text-xs mt-2" style={{ color: hex.textSecondary }}>
                     {t("loading_products_wait")}
                   </p>
                 </div>
@@ -1159,14 +1180,14 @@ const productosMostrados = useMemo(() => {
                 <div
                   className="text-center p-6 rounded-2xl max-w-md"
                   style={{
-                    backgroundColor: `${hexFallbacks.errorColor}15`,
-                    border: `2px solid ${hexFallbacks.errorColor}4d`
+                    backgroundColor: `${hex.errorColor}15`,
+                    border: `2px solid ${hex.errorColor}4d`
                   }}
                 >
-                  <p className="text-sm font-semibold mb-2" style={{ color: hexFallbacks.errorColor }}>
+                  <p className="text-sm font-semibold mb-2" style={{ color: hex.errorColor }}>
                     ⚠️ {t("error_loading_products")}
                   </p>
-                  <p className="text-xs mb-4" style={{ color: hexFallbacks.textSecondary }}>
+                  <p className="text-xs mb-4" style={{ color: hex.textSecondary }}>
                     {error && typeof error === 'string'
                       ? error
                       : t("error_loading_description")}
@@ -1174,7 +1195,7 @@ const productosMostrados = useMemo(() => {
                   <button
                     onClick={() => fetchProductos(filtros)}
                     className="w-full px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-1"
-                    style={{ backgroundColor: hexFallbacks.brand, "--tw-ring-color": hexFallbacks.brand } as React.CSSProperties}
+                    style={{ backgroundColor: hex.brand, "--tw-ring-color": hex.brand } as React.CSSProperties}
                     aria-label="Reintentar cargar productos"
                   >
                     {t("error_retry_button")}
@@ -1186,15 +1207,15 @@ const productosMostrados = useMemo(() => {
                 <div
                   className="text-center p-8 rounded-2xl max-w-md"
                   style={{
-                    backgroundColor: `${hexFallbacks.brand}14`,
-                    border: `1px solid ${hexFallbacks.brand}26`
+                    backgroundColor: `${hex.brand}14`,
+                    border: `1px solid ${hex.brand}26`
                   }}
                 >
                   <div className="text-4xl mb-3" aria-hidden="true">🔍</div>
-                  <p className="text-sm font-semibold mb-2" style={{ color: hexFallbacks.textPrimary }}>
+                  <p className="text-sm font-semibold mb-2" style={{ color: hex.textPrimary }}>
                     {t("empty_state_title")}
                   </p>
-                  <p className="text-xs mb-6" style={{ color: hexFallbacks.textSecondary }}>
+                  <p className="text-xs mb-6" style={{ color: hex.textSecondary }}>
                     {cantidadFiltros > 0 ? t("empty_state_filters") + " " : ""}
                     {filtros.busqueda ? `"${filtros.busqueda}" no encontró resultados. ` : ""}
                     {t("empty_state_suggestion")}
@@ -1203,7 +1224,7 @@ const productosMostrados = useMemo(() => {
                     <button
                       onClick={limpiarTodo}
                       className="w-full px-4 py-2.5 rounded-lg text-xs font-bold transition-all hover:opacity-70 focus:outline-none focus:ring-2 focus:ring-offset-1"
-                      style={{ backgroundColor: `${hexFallbacks.brand}33`, color: hexFallbacks.brand, "--tw-ring-color": hexFallbacks.brand } as React.CSSProperties}
+                      style={{ backgroundColor: `${hex.brand}33`, color: hex.brand, "--tw-ring-color": hex.brand } as React.CSSProperties}
                     >
                       {t("reset_filters")}
                     </button>
@@ -1261,7 +1282,7 @@ const productosMostrados = useMemo(() => {
                       }}
                       disabled={paginaActual === 1}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-80 active:scale-95"
-                      style={{ backgroundColor: hexFallbacks.bgSecondary, color: hexFallbacks.textPrimary, border: `1px solid ${hexFallbacks.borderLight}` }}
+                      style={{ backgroundColor: hex.bgSecondary, color: hex.textPrimary, border: `1px solid ${hex.borderLight}` }}
                       aria-label="Página anterior"
                     >
                       {t("pagination_previous")}
@@ -1274,7 +1295,7 @@ const productosMostrados = useMemo(() => {
                       if (!isNear) {
                         const isGap = num === 2 || num === totalPaginas - 1;
                         return isGap ? (
-                          <span key={num} className="text-xs px-1" style={{ color: hexFallbacks.textMuted }}>…</span>
+                          <span key={num} className="text-xs px-1" style={{ color: hex.textMuted }}>…</span>
                         ) : null;
                       }
                       return (
@@ -1286,9 +1307,9 @@ const productosMostrados = useMemo(() => {
                           }}
                           className="w-8 h-8 rounded-lg text-xs font-bold transition-all hover:opacity-80 active:scale-95"
                           style={{
-                            backgroundColor: isActive ? hexFallbacks.brand : hexFallbacks.bgSecondary,
-                            color: isActive ? "white" : hexFallbacks.textPrimary,
-                            border: `1px solid ${isActive ? hexFallbacks.brand : hexFallbacks.borderLight}`,
+                            backgroundColor: isActive ? hex.brand : hex.bgSecondary,
+                            color: isActive ? "white" : hex.textPrimary,
+                            border: `1px solid ${isActive ? hex.brand : hex.borderLight}`,
                           }}
                           aria-label={`Página ${num}`}
                           aria-current={isActive ? "page" : undefined}
@@ -1306,7 +1327,7 @@ const productosMostrados = useMemo(() => {
                       }}
                       disabled={paginaActual === totalPaginas}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-80 active:scale-95"
-                      style={{ backgroundColor: hexFallbacks.bgSecondary, color: hexFallbacks.textPrimary, border: `1px solid ${hexFallbacks.borderLight}` }}
+                      style={{ backgroundColor: hex.bgSecondary, color: hex.textPrimary, border: `1px solid ${hex.borderLight}` }}
                       aria-label="Página siguiente"
                     >
                       {t("pagination_next")}
@@ -1338,22 +1359,22 @@ const productosMostrados = useMemo(() => {
             aria-labelledby="filters-modal-title"
             style={{
               width: "min(70vw, 400px)",
-              backgroundColor: hexFallbacks.bgPrimary,
+              backgroundColor: hex.bgPrimary,
               animation: showMobileFilters ? 'slideInLeft 0.3s ease-out' : 'slideOutLeft 0.3s ease-in',
             }}
           >
             {/* Header */}
-            <div className="p-4 border-b sticky top-0 z-10" style={{ borderColor: hexFallbacks.borderLight, backgroundColor: hexFallbacks.bgPrimary }}>
+            <div className="p-4 border-b sticky top-0 z-10" style={{ borderColor: hex.borderLight, backgroundColor: hex.bgPrimary }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 id="filters-modal-title" className="text-lg font-bold" style={{ fontFamily: 'var(--font-family-store)', color: hexFallbacks.textPrimary }}>
+                  <h2 id="filters-modal-title" className="text-lg font-bold" style={{ fontFamily: 'var(--font-family-store)', color: hex.textPrimary }}>
                     {t("sidebar_filters")}
                   </h2>
                   {cantidadFiltros > 0 && (
                     <button
                       onClick={() => { limpiarTodo(); }}
                       className="mt-0.5 text-xs font-semibold hover:opacity-70 transition-opacity focus:outline-none"
-                      style={{ color: hexFallbacks.brand }}
+                      style={{ color: hex.brand }}
                     >
                       {t("reset_filters")}
                     </button>
@@ -1362,11 +1383,11 @@ const productosMostrados = useMemo(() => {
                 <button
                   onClick={() => setShowMobileFilters(false)}
                   className="p-2 hover:opacity-70 transition-opacity rounded-lg hover:bg-white/50 focus:outline-none focus:ring-2 focus:ring-offset-1 w-10 h-10 flex items-center justify-center"
-                  style={{ "--tw-ring-color": hexFallbacks.brand } as React.CSSProperties}
+                  style={{ "--tw-ring-color": hex.brand } as React.CSSProperties}
                   aria-label="Cerrar filtros"
                   title="Cerrar filtros"
                 >
-                  <X size={22} style={{ color: hexFallbacks.textPrimary }} aria-hidden="true" />
+                  <X size={22} style={{ color: hex.textPrimary }} aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -1394,14 +1415,14 @@ const productosMostrados = useMemo(() => {
             {/* P1: Sticky footer with dynamic "Apply" button */}
             <div
               className="border-t p-3 sticky bottom-0"
-              style={{ borderColor: hexFallbacks.borderLight, backgroundColor: hexFallbacks.bgPrimary }}
+              style={{ borderColor: hex.borderLight, backgroundColor: hex.bgPrimary }}
             >
               {/* P4: Price validation error */}
               {(() => {
                 const minNum = Number(filtrosPendientes.precio_min) || 0;
                 const maxNum = Number(filtrosPendientes.precio_max) || 5000;
                 return minNum > maxNum ? (
-                  <div id="price-error" className="mb-3 text-xs font-semibold p-2 rounded" style={{ color: hexFallbacks.errorColor, backgroundColor: `${hexFallbacks.errorColor}1a` }} role="alert">
+                  <div id="price-error" className="mb-3 text-xs font-semibold p-2 rounded" style={{ color: hex.errorColor, backgroundColor: `${hex.errorColor}1a` }} role="alert">
                     {t("filters_min_greater_than_max")}
                   </div>
                 ) : null;
@@ -1419,9 +1440,9 @@ const productosMostrados = useMemo(() => {
                     const minNum = Number(filtrosPendientes.precio_min) || 0;
                     const maxNum = Number(filtrosPendientes.precio_max) || 5000;
                     return minNum > maxNum;
-                  })() ? hexFallbacks.brand : hexFallbacks.bgTertiary,
+                  })() ? hex.brand : hex.bgTertiary,
                   color: "white",
-                  "--tw-ring-color": hexFallbacks.brand,
+                  "--tw-ring-color": hex.brand,
                 } as React.CSSProperties}
                 aria-describedby={(() => {
                   const minNum = Number(filtrosPendientes.precio_min) || 0;
@@ -1481,7 +1502,7 @@ const productosMostrados = useMemo(() => {
             key={toast.id}
             className="flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg pointer-events-auto"
             style={{
-              backgroundColor: hexFallbacks.successColor,
+              backgroundColor: hex.successColor,
               color: "white",
               animation: "slideInRight 0.2s ease-out",
             }}

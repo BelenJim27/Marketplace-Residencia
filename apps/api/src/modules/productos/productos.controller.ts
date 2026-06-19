@@ -14,6 +14,8 @@ import { Roles } from '../auth/guards/roles.decorator';
 const UPLOADS_DIR = join(__dirname, '../../..', 'uploads', 'productos');
 mkdirSync(UPLOADS_DIR, { recursive: true });
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
 const productosStorage = diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
   filename: (_req, file, cb) => {
@@ -82,7 +84,7 @@ export class ProductosController {
   @Post()
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('productor', 'administrador')
-  @UseInterceptors(FileInterceptor('imagen', { storage: productosStorage }))
+  @UseInterceptors(FileInterceptor('imagen', { storage: productosStorage, limits: { fileSize: MAX_FILE_SIZE } }))
   async create(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() dto: CreateProductoDto,
@@ -99,7 +101,7 @@ export class ProductosController {
   @Patch(':id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('productor', 'administrador')
-  @UseInterceptors(FileInterceptor('imagen', { storage: productosStorage }))
+  @UseInterceptors(FileInterceptor('imagen', { storage: productosStorage, limits: { fileSize: MAX_FILE_SIZE } }))
   async update(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
@@ -124,7 +126,7 @@ export class ProductosController {
   @Post(':id/imagenes')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('productor', 'administrador')
-  @UseInterceptors(FilesInterceptor('imagenes', 10, { storage: productosStorage }))
+  @UseInterceptors(FilesInterceptor('imagenes', 10, { storage: productosStorage, limits: { fileSize: MAX_FILE_SIZE } }))
   addImagenes(
     @Param('id') id: string,
     @UploadedFiles() files: Express.Multer.File[],

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ShoppingCart, Zap, ChevronLeft, ChevronRight, Leaf, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { hexFallbacks } from '@/lib/colors';
 import { useCarrito } from '@/context/CarritoContext';
 import { useLocale } from '@/context/LocaleContext';
@@ -24,9 +25,13 @@ export function HeroMezcal() {
   const contentRef = useRef<HTMLDivElement>(null);
   const [scrollY, setScrollY] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [visibleElements, setVisibleElements] = useState<Set<string>>(new Set());
   const router = useRouter();
+
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDarkMode = mounted && resolvedTheme === 'dark';
 
   const { agregarProducto } = useCarrito();
   const { convertPrice, t } = useLocale();
@@ -48,19 +53,6 @@ export function HeroMezcal() {
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  // Check for dark mode
-  useEffect(() => {
-    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setIsDarkMode(darkModeQuery.matches);
-
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDarkMode(e.matches);
-    };
-
-    darkModeQuery.addEventListener('change', handleChange);
-    return () => darkModeQuery.removeEventListener('change', handleChange);
   }, []);
 
   // Optimized scroll handler
@@ -144,13 +136,12 @@ export function HeroMezcal() {
 
   const parallelOffset = prefersReducedMotion ? 0 : scrollY;
 
-  // Usa variables CSS del catálogo inyectadas por ConfigContext
   const activeColors = {
-    gradientStart: 'var(--catalog-hero-from, #3D6B3F)',
-    gradientMid:   'var(--catalog-hero-from, #3D6B3F)',
-    gradientEnd:   'var(--catalog-hero-to, #1F3A2E)',
+    gradientStart: isDarkMode ? '#0e1a10' : 'var(--catalog-hero-from, #3D6B3F)',
+    gradientMid:   isDarkMode ? '#111d13' : 'var(--catalog-hero-from, #3D6B3F)',
+    gradientEnd:   isDarkMode ? '#09100a' : 'var(--catalog-hero-to, #1F3A2E)',
     textPrimary:   isDarkMode ? '#e8f0ed' : '#fef5f0',
-    accentGreen:   '#A8C26B',
+    accentGreen:   isDarkMode ? '#A8C26B' : '#A8C26B',
     accentBrown:   'var(--catalog-accent, #C97A3E)',
   };
 

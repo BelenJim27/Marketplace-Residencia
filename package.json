@@ -17,7 +17,8 @@
     "start:api": "turbo run start:prod --filter=api",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "db:generate": "turbo run generate"
+    "db:generate": "turbo run generate",
+    "sync:uploads": "node scripts/sync-uploads.mjs"
   },
   "devDependencies": {
     "@types/multer": "^2.1.0",

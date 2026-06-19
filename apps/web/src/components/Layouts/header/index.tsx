@@ -36,7 +36,7 @@ export function Header() {
   const { resetTour } = useTour();
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-2 bg-[#1F3A2E] px-4 py-3 shadow-[0_2px_16px_rgba(0,0,0,0.28)] md:px-6">
+    <header className="sticky top-0 z-30 flex items-center gap-2 bg-[#1F3A2E] dark:bg-[#0d1b12] px-4 py-3 shadow-[0_2px_16px_rgba(0,0,0,0.28)] md:px-6">
 
       {/* Hamburguesa — mobile */}
       <button
