@@ -9,8 +9,10 @@ import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
 
 import { useLocale } from "@/context/LocaleContext";
+import { useTheme } from "next-themes";
 import { semanticColors, hexFallbacks } from "@/lib/colors";
 import { catalogColors } from "@/lib/colors-catalog";
+import { useThemeColors } from "@/lib/theme-colors";
 import { SidebarFiltersComponent } from "./SidebarFilters";
 
 interface Producto {
@@ -671,6 +673,7 @@ export default function ProductCatalogEnhanced() {
   const { agregarProducto, items: carritoItems } = useCarrito();
   const { isInWishlist, agregarProducto: agregarWishlist, eliminarProducto: eliminarWishlist } = useWishlist();
 
+
   const { convertPrice, t } = useLocale();
 
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -1017,7 +1020,7 @@ const productosMostrados = useMemo(() => {
 
 
   return (
-    <div style={{ backgroundColor: hexFallbacks.bgPrimary, minHeight: "100vh" }} className="font-sans">
+    <div style={{ backgroundColor: theme === 'dark' ? '#121212' : hexFallbacks.bgPrimary, minHeight: "100vh" }} className="font-sans">
       {/* ─── CONTENIDO PRINCIPAL ─── */}
       <main className="w-full px-4 py-6 sm:py-8">
         <div className="flex flex-col lg:flex-row gap-5 lg:gap-6">
