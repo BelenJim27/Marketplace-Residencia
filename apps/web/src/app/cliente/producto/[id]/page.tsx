@@ -402,7 +402,7 @@ export default function ProductoDetallePage() {
 
           {/* Trazabilidad QR */}
           {loteData && (
-            <div className="rounded-lg p-5 sm:p-6">
+            <div data-tour="product-trazabilidad" className="rounded-lg p-5 sm:p-6">
               <h2
                 className="text-lg sm:text-xl font-semibold mb-3"
                 style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
