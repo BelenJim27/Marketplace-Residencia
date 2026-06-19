@@ -257,7 +257,7 @@ export default function Pedidos() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div data-tour="pedidos-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { label: "Total Pedidos",  value: counts.total,      color: "text-[#1F3A2E]" },
           { label: "Pendientes",     value: counts.pendiente,  color: "text-[#C97A3E]" },
@@ -273,7 +273,7 @@ export default function Pedidos() {
       </div>
 
       {/* Filters */}
-      <div className="bg-[#F4F0E3] rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 space-y-3">
+      <div data-tour="pedidos-filtros" className="bg-[#F4F0E3] rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 space-y-3">
         <div className="flex flex-wrap gap-3 items-center">
           {/* Búsqueda */}
           <div className="relative flex-grow min-w-[220px]">
@@ -318,7 +318,7 @@ export default function Pedidos() {
         </div>
 
         {/* Tabla */}
-        <div className="overflow-x-auto rounded-2xl border border-[#C5CFB0]">
+        <div data-tour="pedidos-tabla" className="overflow-x-auto rounded-2xl border border-[#C5CFB0]">
           <table className="w-full min-w-[900px] text-left border-collapse">
             <thead className="bg-[#1F3A2E] text-xs font-semibold text-white uppercase tracking-wider">
               <tr>

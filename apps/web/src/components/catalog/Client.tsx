@@ -371,6 +371,7 @@ const ProductCard = memo(function ProductCard({
 
             {/* Ver detalles */}
             <button
+              data-tour="product-card-details"
               className="w-full text-xs font-semibold py-1.5 rounded transition-all hover:opacity-80 active:scale-95"
               style={{
                 border: "1px solid rgba(0,0,0,0.12)",
@@ -388,6 +389,7 @@ const ProductCard = memo(function ProductCard({
             </button>
 
             <button
+              data-tour="product-card-add"
               className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded transition-all hover:opacity-90 active:scale-95 w-full"
               style={{
                 backgroundColor: stockDisponible !== null && stockDisponible !== undefined && stockDisponible <= 0 ? "#9CA3AF" : "var(--catalog-accent, #C97A3E)",
@@ -990,7 +992,7 @@ export default function ProductCatalogEnhanced() {
       <main className="w-full px-4 py-6 sm:py-8">
         <div className="flex flex-col lg:flex-row gap-5 lg:gap-6">
           {/* ─── SIDEBAR ─── */}
-          <aside className="hidden lg:block lg:w-72 shrink-0">
+          <aside data-tour="catalog-sidebar" className="hidden lg:block lg:w-72 shrink-0">
             <div
               className="sticky top-10 rounded-2xl p-5 shadow-sm transition-all"
               style={{
@@ -1176,7 +1178,7 @@ export default function ProductCatalogEnhanced() {
               </div>
             ) : (
               <>
-                <div className="grid gap-6 animate-in fade-in duration-500 grid-cols-1 sm:grid-cols-2" data-grid="productos">
+                <div data-tour="catalog-grid" className="grid gap-6 animate-in fade-in duration-500 grid-cols-1 sm:grid-cols-2" data-grid="productos">
                   {productosPagina.map((producto, index) => (
                     <ProductCard
                       key={String(producto.id_producto)}

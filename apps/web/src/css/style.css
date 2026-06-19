@@ -80,6 +80,37 @@ input[type="password"]::-ms-clear {
   }
 }
 
+/* driver.js dark mode overrides */
+.dark .driver-popover {
+  background: #1F3A2E;
+  color: #e8f0ea;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.dark .driver-popover-title {
+  color: #f0f7f1;
+}
+.dark .driver-popover-description {
+  color: #9ab09e;
+}
+.dark .driver-popover-progress-text {
+  color: #9ab09e;
+}
+.dark .driver-popover-arrow-side-left.driver-popover-arrow { border-right-color: #1F3A2E; }
+.dark .driver-popover-arrow-side-right.driver-popover-arrow { border-left-color: #1F3A2E; }
+.dark .driver-popover-arrow-side-top.driver-popover-arrow { border-bottom-color: #1F3A2E; }
+.dark .driver-popover-arrow-side-bottom.driver-popover-arrow { border-top-color: #1F3A2E; }
+.driver-popover-next-btn,
+.driver-popover-prev-btn {
+  background: #3D6B3F !important;
+  color: #fff !important;
+  border: none !important;
+  text-shadow: none !important;
+}
+.driver-popover-next-btn:hover,
+.driver-popover-prev-btn:hover {
+  background: #1F3A2E !important;
+}
+
 /* third-party libraries CSS */
 
 .tableCheckbox:checked~div span {

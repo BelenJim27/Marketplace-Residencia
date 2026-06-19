@@ -89,7 +89,7 @@ export function AdminDashboard() {
       ) : (
         <>
           {/* ── Operación ── */}
-          <section>
+          <section data-tour="admin-metrics">
             <Eyebrow>Operación</Eyebrow>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricCard
@@ -136,7 +136,7 @@ export function AdminDashboard() {
           </section>
 
           {/* ── Gráficas ── */}
-          <section>
+          <section data-tour="admin-charts">
             <div className="flex items-center gap-4 mb-6">
               <h2 className="text-base font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] whitespace-nowrap [font-family:'Playfair_Display',serif]">
                 Análisis y Estadísticas

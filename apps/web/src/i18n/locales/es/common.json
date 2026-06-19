@@ -15,5 +15,13 @@
   "home": "Inicio",
   "dashboard": "Panel",
   "profile": "Perfil",
-  "settings": "Configuración"
+  "settings": "Configuración",
+  "tour": {
+    "start": "Iniciar guía",
+    "skip": "Saltar",
+    "next": "Siguiente →",
+    "prev": "← Anterior",
+    "done": "¡Listo! ✓",
+    "progress": "{{current}} de {{total}}"
+  }
 }

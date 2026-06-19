@@ -1,5 +1,6 @@
 import "@/css/satoshi.css";
 import "@/css/style.css";
+import "driver.js/dist/driver.css";
 
 import type { Metadata } from "next";
 import NextTopLoader from "nextjs-toploader";

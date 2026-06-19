@@ -169,7 +169,7 @@ export default function VentasPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div data-tour="ventas-resumen" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {[
           { label: "Total Ventas", value: summary.totalVentas },
           { label: "Ingresos Totales", value: formatCurrency(summary.ingresosTotales) },
@@ -179,7 +179,7 @@ export default function VentasPage() {
       </div>
 
       {/* Search + Filters — single compact card */}
-      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-3 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div data-tour="ventas-filtros" className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-3 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -225,7 +225,7 @@ export default function VentasPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div data-tour="ventas-tabla" className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] table-fixed text-left">
             <thead className="bg-[#1F3A2E]">
