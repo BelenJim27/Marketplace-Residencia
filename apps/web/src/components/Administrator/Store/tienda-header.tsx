@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import {
   ShoppingCart, Package, User, UserPlus, Heart,
-  Store, Home, ShoppingBag, Menu, X,
+  Store, Home, ShoppingBag, Menu, X, HelpCircle,
 } from "lucide-react";
 import { UserInfo } from "@/components/Layouts/header/user-info";
 import { LocaleSwitcher } from "@/components/Store/LocaleSwitcher";
@@ -16,6 +16,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useLocale } from "@/context/LocaleContext";
 import { useNotificationPoller } from "@/hooks/useNotificationPoller";
+import { useTour } from "@/hooks/useTour";
 
 interface NavItem {
   label: string;
@@ -23,6 +24,7 @@ interface NavItem {
   onClick: () => void;
   href?: string;
   badge?: number;
+  tourId?: string;
 }
 
 export function TiendaHeader() {
@@ -78,6 +80,7 @@ export function TiendaHeader() {
   }, []);
 
   const isClient = isAuthenticated && !isAdmin && !isProductor;
+  const { resetTour } = useTour();
 
   const handleCartClick = () => router.push("/tienda/carrito");
   const handleMyPurchasesClick = () => router.push(isAuthenticated ? "/tienda/compras" : "/auth/sign-in?redirect=/tienda/compras");
@@ -97,15 +100,16 @@ export function TiendaHeader() {
 
   // ─── Nav items por estado de autenticación ───────────────────
   const clientNavItems: NavItem[] = [
-    { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/cliente/inicio"),  href: "/cliente/inicio" },
-    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/cliente/producto"),        href: "/cliente/producto" },
-    { label: t("Mis compras"), icon: <Package size={22} />,      onClick: handleMyPurchasesClick,                href: "/tienda/compras" },
+    { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/cliente/inicio"),  href: "/cliente/inicio",   tourId: "nav-inicio" },
+    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/cliente/producto"),href: "/cliente/producto",  tourId: "nav-catalogo" },
+    { label: t("Mis compras"), icon: <Package size={22} />,      onClick: handleMyPurchasesClick,                href: "/tienda/compras",    tourId: "nav-compras" },
     {
       label: t("Favoritos"),
       icon: <Heart size={22} />,
       onClick: () => router.push("/tienda/deseos"),
       href: "/tienda/deseos",
       badge: wishlistCount > 0 ? wishlistCount : undefined,
+      tourId: "nav-favoritos",
     },
     {
       label: t("Carrito"),
@@ -113,28 +117,30 @@ export function TiendaHeader() {
       onClick: handleCartClick,
       href: "/tienda/carrito",
       badge: cantidadTotal > 0 ? cantidadTotal : undefined,
+      tourId: "nav-carrito",
     },
     { label: t("Mis ventas"),  icon: <Store size={22} />,        onClick: handleSellClick },
   ];
 
   const authNavItems: NavItem[] = [
-    { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/cliente/inicio"),  href: "/cliente/inicio" },
-    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/cliente/producto"),        href: "/cliente/producto" },
-    { label: t("Mis compras"), icon: <Package size={22} />,      onClick: handleMyPurchasesClick,                href: "/tienda/compras" },
+    { label: t("Inicio"),      icon: <Home size={22} />,         onClick: () => router.push("/cliente/inicio"),  href: "/cliente/inicio",   tourId: "nav-inicio" },
+    { label: t("Catálogo"),    icon: <ShoppingBag size={22} />,  onClick: () => router.push("/cliente/producto"),href: "/cliente/producto",  tourId: "nav-catalogo" },
+    { label: t("Mis compras"), icon: <Package size={22} />,      onClick: handleMyPurchasesClick,                href: "/tienda/compras",    tourId: "nav-compras" },
     {
       label: t("Carrito"),
       icon: <ShoppingCart size={22} />,
       onClick: handleCartClick,
       href: "/tienda/carrito",
       badge: cantidadTotal > 0 ? cantidadTotal : undefined,
+      tourId: "nav-carrito",
     },
     { label: t("Mis ventas"),  icon: <Store size={22} />,        onClick: handleSellClick },
   ];
 
   // Nav items desktop para guest — SIN "Ingresar" (va en dropdown Perfil)
   const guestNavItemsDesktop: NavItem[] = [
-    { label: t("Inicio"),          icon: <Home size={22} />,        onClick: () => router.push("/cliente/inicio"), href: "/cliente/inicio" },
-    { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/cliente/producto"),       href: "/cliente/producto" },
+    { label: t("Inicio"),          icon: <Home size={22} />,        onClick: () => router.push("/cliente/inicio"), href: "/cliente/inicio",  tourId: "nav-inicio" },
+    { label: t("Catálogo"),        icon: <ShoppingBag size={22} />, onClick: () => router.push("/cliente/producto"),href: "/cliente/producto", tourId: "nav-catalogo" },
     { label: t("Vender mezcal"),   icon: <Store size={22} />,       onClick: handleSellClick },
     {
       label: t("Carrito"),
@@ -142,6 +148,7 @@ export function TiendaHeader() {
       onClick: handleCartClick,
       href: "/tienda/carrito",
       badge: cantidadTotal > 0 ? cantidadTotal : undefined,
+      tourId: "nav-carrito",
     },
   ];
 
@@ -214,6 +221,7 @@ export function TiendaHeader() {
               <button
                 key={item.label}
                 onClick={item.onClick}
+                data-tour={item.tourId}
                 style={{ color: "#F4F0E3" }}
                 className="relative group flex flex-col items-center gap-1 px-4 py-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C97A3E]"
                 aria-current={item.href && pathname.startsWith(item.href) ? "page" : undefined}
@@ -238,10 +246,24 @@ export function TiendaHeader() {
           <div className="flex-1 flex justify-end items-center">
           <div className="flex items-center gap-4 border-l border-[rgba(244,240,227,0.15)] pl-4">
             <LocaleSwitcher />
+
+            {/* Botón de guía rápida */}
+            <button
+              data-tour="tour-btn-tienda"
+              onClick={resetTour}
+              title="Guía rápida"
+              style={{ color: "#F4F0E3", borderColor: "rgba(244,240,227,0.3)" }}
+              className="flex items-center gap-1.5 rounded-xl border bg-white/10 px-3 py-2 text-sm font-medium hover:bg-white/20 transition-all duration-200"
+            >
+              <HelpCircle size={16} className="flex-shrink-0" />
+              <span className="hidden lg:inline">Guía</span>
+            </button>
+
             {/* Profile / Guest Auth */}
             {!isAuthenticated ? (
               <div className="relative">
                 <button
+                  data-tour="nav-perfil"
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                   style={{ color: "#F4F0E3" }}
                   className="group relative flex flex-col items-center gap-1 px-4 py-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C97A3E]"
@@ -286,7 +308,7 @@ export function TiendaHeader() {
                 )}
               </div>
             ) : (
-              <div className="shrink-0">
+              <div className="shrink-0" data-tour="nav-perfil">
                 <UserInfo whiteText={true} />
               </div>
             )}

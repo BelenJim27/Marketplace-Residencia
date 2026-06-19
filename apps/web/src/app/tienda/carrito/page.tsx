@@ -285,7 +285,7 @@ export default function CarritoPage() {
         style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "24px", alignItems: "start" }}
       >
         {/* ── Products ── */}
-        <div style={{
+        <div data-tour="cart-items" style={{
           borderRadius: "16px", background: C.white, border: `1px solid ${C.border}`,
           overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
           animation: "fadeUp .4s ease .06s both",
@@ -439,7 +439,7 @@ export default function CarritoPage() {
         </div>
 
         {/* ── Summary ── */}
-        <div style={{
+        <div data-tour="cart-summary" style={{
           borderRadius: "16px", background: C.white, border: `1px solid ${C.border}`,
           overflow: "hidden", position: "sticky", top: "20px",
           boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
@@ -487,6 +487,7 @@ export default function CarritoPage() {
             </p>
 
             <button
+              data-tour="btn-checkout"
               className="checkout-btn"
               onClick={handleCheckout}
               style={{

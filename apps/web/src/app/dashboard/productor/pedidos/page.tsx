@@ -873,7 +873,7 @@ export default function PedidosProductor() {
       )}
 
       {/* Header */}
-      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div data-tour="pedidos-stats" className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Mis Pedidos</h1>
         <p className="text-sm text-[#3D6B3F]/70">Gestiona y consulta los pedidos de tus tiendas.</p>
       </div>
@@ -919,7 +919,7 @@ export default function PedidosProductor() {
         </div>
       ) : (
         <>
-          <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <div data-tour="pedidos-tabla" className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px] text-left">
                 <thead className="bg-[#1F3A2E]">

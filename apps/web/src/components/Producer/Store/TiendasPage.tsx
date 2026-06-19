@@ -109,7 +109,7 @@ export function TiendasPage() {
             <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Mi Tienda</h1>
             <p className="mt-0.5 text-sm text-[#3D6B3F]/60">Información y configuración de tu tienda</p>
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div data-tour="btn-editar-tienda" className="flex gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setActiveModal("edit")}
@@ -131,7 +131,7 @@ export function TiendasPage() {
       </div>
 
       {/* Tarjeta principal */}
-      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] bg-white shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div data-tour="tienda-card" className="overflow-hidden rounded-2xl border border-[#C5CFB0] bg-white shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
 
         {/* Banner + nombre */}
         <div className="bg-[#1F3A2E] px-6 py-8">

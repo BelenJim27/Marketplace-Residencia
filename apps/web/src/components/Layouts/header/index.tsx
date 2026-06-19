@@ -5,7 +5,8 @@ import { MenuIcon, CloseIcon } from "./icons";
 import { Notification } from "./notification";
 import { UserInfo } from "./user-info";
 import { useNotificationPoller } from "@/hooks/useNotificationPoller";
-import { Calendar } from "lucide-react";
+import { useTour } from "@/hooks/useTour";
+import { Calendar, HelpCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 function useDateLabel() {
@@ -32,6 +33,7 @@ export function Header() {
   const { toggleSidebar, isOpen } = useSidebarContext();
   useNotificationPoller();
   const dateLabel = useDateLabel();
+  const { resetTour } = useTour();
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-2 bg-[#1F3A2E] px-4 py-3 shadow-[0_2px_16px_rgba(0,0,0,0.28)] md:px-6">
@@ -57,6 +59,16 @@ export function Header() {
             <span>{dateLabel}</span>
           </div>
         )}
+
+        <button
+          data-tour="tour-btn"
+          onClick={resetTour}
+          title="Guía rápida"
+          className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-white/80 text-sm font-medium hover:bg-white/20 transition-all duration-200"
+        >
+          <HelpCircle className="h-4 w-4 flex-shrink-0" />
+          <span className="hidden md:inline">Guía</span>
+        </button>
 
         <Notification dark />
 

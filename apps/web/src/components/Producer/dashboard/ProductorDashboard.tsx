@@ -179,11 +179,13 @@ export function ProductorDashboard() {
         </div>
       )}
 
-      <StatsCards
-        products={products.length}
-        active={activeProducts}
-        profileLabel={producer ? "Completo" : "Pendiente"}
-      />
+      <div data-tour="stats-cards">
+        <StatsCards
+          products={products.length}
+          active={activeProducts}
+          profileLabel={producer ? "Completo" : "Pendiente"}
+        />
+      </div>
 
       {tieneLotes && (
         <section className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
@@ -203,7 +205,7 @@ export function ProductorDashboard() {
         </section>
       )}
 
-      <section className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <section data-tour="analytics-section" className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="border-b border-[#C5CFB0]/50 p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -214,12 +216,14 @@ export function ProductorDashboard() {
                   : "Ventas y productos más vendidos"}
               </p>
             </div>
-            <ExportButtons
-              onExportPdf={exportPdf}
-              onExportCsv={exportCsv}
-              disabled={salesLoading || productsLoading}
-              pdfLoading={pdfLoading}
-            />
+            <div data-tour="export-buttons">
+              <ExportButtons
+                onExportPdf={exportPdf}
+                onExportCsv={exportCsv}
+                disabled={salesLoading || productsLoading}
+                pdfLoading={pdfLoading}
+              />
+            </div>
           </div>
         </div>
 

@@ -310,7 +310,7 @@ export default function LotesView() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] space-y-5">
+    <div data-tour="lotes-section" className="mx-auto w-full max-w-[1200px] space-y-5">
 
       {/* Header */}
       <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

@@ -37,6 +37,22 @@ export function Sidebar() {
 
   const isFilesRoute = pathname.startsWith("/dashboard/productor/archivos");
 
+  const TOUR_ATTRS: Record<string, string> = {
+    Dashboard: "nav-dashboard",
+    Lotes: "nav-lotes",
+    Inventario: "nav-inventario",
+    Pedidos: "nav-pedidos",
+    Ventas: "nav-ventas",
+    "Mis Ingresos": "nav-ingresos",
+    Tienda: "nav-tienda",
+    Archivos: "nav-archivos",
+    Usuarios: "nav-usuarios",
+    "Auditoría": "nav-auditoria",
+    Productores: "nav-productores",
+    "Solicitudes Productores": "nav-solicitudes",
+    "Configuración": "nav-configuracion",
+  };
+
   const isItemActive = (item: { url?: string; children?: Array<{ url: string }> }) => {
     if (item.children?.length) {
       return item.children.some((child) => pathname === child.url) || (item.url ? pathname === item.url : false);
@@ -152,6 +168,7 @@ export function Sidebar() {
                     return (
                       <li
                         key={item.title}
+                        data-tour={TOUR_ATTRS[item.title] ?? undefined}
                         className={cn(
                           "relative",
                           showTab && "-mr-px z-10 sidebar-tab-active",

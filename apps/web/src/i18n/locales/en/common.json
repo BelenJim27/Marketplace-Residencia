@@ -16,6 +16,14 @@
   "dashboard": "Dashboard",
   "profile": "Profile",
   "settings": "Settings",
+  "tour": {
+    "start": "Start guide",
+    "skip": "Skip",
+    "next": "Next →",
+    "prev": "← Back",
+    "done": "Done! ✓",
+    "progress": "{{current}} of {{total}}"
+  },
   "Asociaciones": "Associations",
   "Contacto": "Contact",
   "Legal": "Legal",

@@ -194,7 +194,7 @@ export default function ProductosAdmin() {
             </div>
 
             {/* TABLA */}
-            <div className="rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)] border border-[#C5CFB0] overflow-hidden">
+            <div data-tour="admin-productos-tabla" className="rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)] border border-[#C5CFB0] overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-[#1F3A2E] text-xs font-semibold text-white uppercase tracking-wider">

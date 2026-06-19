@@ -183,6 +183,7 @@ export default function UsuariosUI() {
           <p className="text-[#3D6B3F]/70 text-sm mt-0.5">Controla los accesos y permisos del personal</p>
         </div>
         <button
+          data-tour="btn-nuevo-usuario"
           onClick={() => { setShowModal(true); setEditingUsuario(null); setUserFormData(DEFAULT_FORM); }}
           className="bg-[#3D6B3F] text-white text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-[#1F3A2E] transition-all duration-200 active:scale-95 w-full sm:w-auto"
         >
@@ -194,7 +195,7 @@ export default function UsuariosUI() {
       {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div data-tour="usuarios-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
           { label: "Total Usuarios", value: usuarios.length,      color: "text-[#1F3A2E]" },
           { label: "Activos",        value: activeUsers,           color: "text-[#3D6B3F]" },
@@ -209,7 +210,7 @@ export default function UsuariosUI() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center mb-6">
+      <div data-tour="usuarios-filtros" className="flex flex-wrap gap-3 items-center mb-6">
         <div className="flex-grow min-w-[300px]">
           <input
             placeholder="Buscar por nombre o correo..."
@@ -235,7 +236,7 @@ export default function UsuariosUI() {
       </div>
 
       {/* Table */}
-      <div className="border border-[#C5CFB0] rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div data-tour="usuarios-tabla" className="border border-[#C5CFB0] rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead className="bg-[#1F3A2E] text-xs font-semibold text-white uppercase tracking-wider">

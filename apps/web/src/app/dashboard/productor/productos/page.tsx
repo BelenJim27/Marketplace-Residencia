@@ -52,13 +52,15 @@ export default function ProductosPage() {
   return (
     <div className="mx-auto w-full max-w-[1200px]">
 
-      <ProductoHeader
-        onNew={ctx.openCreate}
-        disableNew={ctx.stores.length === 0}
-        onSync={ctx.syncFromLotes}
-        syncing={ctx.syncing}
-        syncMessage={ctx.syncMessage}
-      />
+      <div data-tour="producto-header">
+        <ProductoHeader
+          onNew={ctx.openCreate}
+          disableNew={ctx.stores.length === 0}
+          onSync={ctx.syncFromLotes}
+          syncing={ctx.syncing}
+          syncMessage={ctx.syncMessage}
+        />
+      </div>
 
       {ctx.error && (
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
@@ -66,27 +68,29 @@ export default function ProductosPage() {
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div data-tour="producto-stats" className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <ProductoStatCard title="Productos" value={ctx.products.length} />
         <ProductoStatCard title="Productos Activos" value={ctx.activeProductsCount} />
         <ProductoStatCard title="Productos Inactivos" value={ctx.inactiveProductsCount} />
         <ProductoStatCard title="Productor" value={ctx.producer?.id_productor ?? "-"} />
       </div>
 
-      <ProductoFiltros
-        query={ctx.query}
-        setQuery={ctx.setQuery}
-        statusFilter={ctx.statusFilter}
-        setStatusFilter={ctx.setStatusFilter}
-        storeFilter={ctx.storeFilter}
-        setStoreFilter={ctx.setStoreFilter}
-        minPrice={ctx.minPrice}
-        setMinPrice={ctx.setMinPrice}
-        maxPrice={ctx.maxPrice}
-        setMaxPrice={ctx.setMaxPrice}
-        stores={ctx.stores}
-        onClear={ctx.clearFilters}
-      />
+      <div data-tour="producto-filtros">
+        <ProductoFiltros
+          query={ctx.query}
+          setQuery={ctx.setQuery}
+          statusFilter={ctx.statusFilter}
+          setStatusFilter={ctx.setStatusFilter}
+          storeFilter={ctx.storeFilter}
+          setStoreFilter={ctx.setStoreFilter}
+          minPrice={ctx.minPrice}
+          setMinPrice={ctx.setMinPrice}
+          maxPrice={ctx.maxPrice}
+          setMaxPrice={ctx.setMaxPrice}
+          stores={ctx.stores}
+          onClear={ctx.clearFilters}
+        />
+      </div>
 
       <ProductoSeleccion
         selectionEnabled={ctx.selectionEnabled}
@@ -95,17 +99,19 @@ export default function ProductosPage() {
         onDeleteSelected={ctx.handleDeleteSelected}
       />
 
-      <ProductoTabla
-        products={pagedProducts}
-        selectionEnabled={ctx.selectionEnabled}
-        selectedIds={ctx.selectedIds}
-        allVisibleSelected={allPageSelected}
-        onToggleSelectAll={toggleSelectAllPage}
-        onToggleSelect={ctx.toggleProductSelection}
-        onView={ctx.openView}
-        onEdit={ctx.openEdit}
-        onDelete={ctx.handleDelete}
-      />
+      <div data-tour="producto-tabla">
+        <ProductoTabla
+          products={pagedProducts}
+          selectionEnabled={ctx.selectionEnabled}
+          selectedIds={ctx.selectedIds}
+          allVisibleSelected={allPageSelected}
+          onToggleSelectAll={toggleSelectAllPage}
+          onToggleSelect={ctx.toggleProductSelection}
+          onView={ctx.openView}
+          onEdit={ctx.openEdit}
+          onDelete={ctx.handleDelete}
+        />
+      </div>
 
       <ProductoPaginacion
         currentPage={currentPage}

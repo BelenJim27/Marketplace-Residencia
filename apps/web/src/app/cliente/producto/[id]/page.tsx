@@ -312,7 +312,7 @@ export default function ProductoDetallePage() {
         {/* Columna izquierda — Galería de imágenes */}
         <div className="space-y-6">
           {/* Galería: miniaturas a la izquierda + imagen principal a la derecha */}
-          <div className="flex gap-3">
+          <div data-tour="product-gallery" className="flex gap-3">
 
             {/* Tira de miniaturas — vertical a la izquierda cuando hay varias imágenes */}
             {todasImagenes.length > 1 && (
@@ -488,6 +488,7 @@ export default function ProductoDetallePage() {
               {producto.nombre}
             </h1>
             <p
+              data-tour="product-price"
               className="text-2xl sm:text-3xl font-bold"
               style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}
             >
@@ -541,7 +542,7 @@ export default function ProductoDetallePage() {
             <div className="flex items-center gap-6">
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{t("Cantidad")}</label>
-                <div className="flex items-center gap-3">
+                <div data-tour="quantity-selector" className="flex items-center gap-3">
                   <button
                     onClick={() => setCantidad(Math.max(1, cantidad - 1))}
                     className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 active:scale-95"
@@ -613,6 +614,7 @@ export default function ProductoDetallePage() {
                   <span className="sm:hidden">{isInWishlist(producto.id_producto) ? "✓" : "♡"}</span>
                 </button>
                 <button
+                  data-tour="add-to-cart-btn"
                   onClick={handleAgregar}
                   disabled={agregado || stockDisponible === 0}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-medium transition-all duration-200 text-white hover:shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
@@ -626,6 +628,7 @@ export default function ProductoDetallePage() {
               </div>
               <div className="flex gap-2">
                 <button
+                  data-tour="buy-now-btn"
                   onClick={handleComprarAhora}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
                   style={{ backgroundColor: "#306B3F" }}

@@ -300,7 +300,7 @@ export default function CheckoutPage() {
         </p>
       </div>
 
-      <div className="mb-8">
+      <div data-tour="checkout-stepper" className="mb-8">
         {/* Stepper — Premium con colores biocultural */}
         <div className="space-y-4">
           <div className="flex items-stretch justify-between gap-2 relative">
@@ -388,38 +388,42 @@ export default function CheckoutPage() {
 
             {/* PASO 1: Dirección */}
             {paso === "direccion" && (
-              <DireccionStep
-                direcciones={direcciones}
-                direccionSeleccionada={direccionSeleccionada}
-                setDireccionSeleccionada={setDireccionSeleccionada}
-                mostrarFormDireccion={mostrarFormDireccion}
-                setMostrarFormDireccion={setMostrarFormDireccion}
-                nuevaDireccion={nuevaDireccion}
-                setNuevaDireccion={setNuevaDireccion}
-                guardarNuevaDireccion={guardarNuevaDireccion}
-                paises={paises}
-                paisesLoading={paisesLoading}
-                handleUsarGPS={handleUsarGPS}
-                gpsLoading={gpsLoading}
-                gpsError={gpsError}
-              />
+              <div data-tour="checkout-address">
+                <DireccionStep
+                  direcciones={direcciones}
+                  direccionSeleccionada={direccionSeleccionada}
+                  setDireccionSeleccionada={setDireccionSeleccionada}
+                  mostrarFormDireccion={mostrarFormDireccion}
+                  setMostrarFormDireccion={setMostrarFormDireccion}
+                  nuevaDireccion={nuevaDireccion}
+                  setNuevaDireccion={setNuevaDireccion}
+                  guardarNuevaDireccion={guardarNuevaDireccion}
+                  paises={paises}
+                  paisesLoading={paisesLoading}
+                  handleUsarGPS={handleUsarGPS}
+                  gpsLoading={gpsLoading}
+                  gpsError={gpsError}
+                />
+              </div>
             )}
 
             {/* PASO 2: Envío */}
             {paso === "envio" && (
-              <EnvioStep
-                grupos={gruposEnvio}
-                opciones={opcionesAgregadas}
-                nivelKey={nivelKey}
-                setNivel={setNivel}
-                cotizandoLoading={cotizandoLoading}
-                cotizandoError={cotizandoError}
-                tieneAlcohol={tieneAlcohol}
-                convertQuotePrice={convertQuoteToDisplay}
-                displayCurrency={displayCurrency}
-                solicitarProteccion={solicitarProteccion}
-                setSolicitarProteccion={setSolicitarProteccion}
-              />
+              <div data-tour="checkout-shipping">
+                <EnvioStep
+                  grupos={gruposEnvio}
+                  opciones={opcionesAgregadas}
+                  nivelKey={nivelKey}
+                  setNivel={setNivel}
+                  cotizandoLoading={cotizandoLoading}
+                  cotizandoError={cotizandoError}
+                  tieneAlcohol={tieneAlcohol}
+                  convertQuotePrice={convertQuoteToDisplay}
+                  displayCurrency={displayCurrency}
+                  solicitarProteccion={solicitarProteccion}
+                  setSolicitarProteccion={setSolicitarProteccion}
+                />
+              </div>
             )}
 
             {/* PASOS 3 & 4: Pago y Resumen */}
@@ -427,7 +431,7 @@ export default function CheckoutPage() {
               <>
                 {/* Selector de método de pago (solo en paso "pago") */}
                 {paso === "pago" && (isStripeConfigured() || isPaypalConfigured()) && (
-                  <div className="mb-8">
+                  <div data-tour="checkout-payment" className="mb-8">
                     <div className="flex items-center gap-2.5 mb-6">
                       <div style={{ width: "4px", height: "24px", background: `linear-gradient(180deg, ${COLOR_PALETTE.green}, ${COLOR_PALETTE.copper})`, borderRadius: "2px" }} />
                       <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "24px", fontWeight: 400, color: COLOR_PALETTE.green, margin: 0 }}>{t('checkout_payment_method_title')}</h3>
@@ -2108,6 +2112,7 @@ function PagoYResumen({
         })()}
 
         <button
+          data-tour="checkout-confirm"
           onClick={handleConfirm}
           disabled={confirming || !stripe || !elements}
           aria-label="Confirmar pago - transacción segura"
