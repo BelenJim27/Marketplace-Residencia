@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { getMediaUrl } from "@/lib/media";
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
 
@@ -1153,7 +1154,7 @@ function DetallePedidoContent() {
                       background: C.cream, border: `1px solid ${C.border}`,
                     }}>
                       {imgUrl ? (
-                        <Image src={imgUrl} alt={nombre} fill sizes="58px" className="object-contain" />
+                        <Image src={getMediaUrl(imgUrl)} alt={nombre} fill sizes="58px" className="object-contain" />
                       ) : (
                         <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center" }}>
                           <Package size={20} style={{ color: C.border }} />
@@ -1364,7 +1365,7 @@ function DetallePedidoContent() {
                       }}>
                         {imgUrl ? (
                           <Image
-                            src={imgUrl}
+                            src={getMediaUrl(imgUrl)}
                             alt={nombre}
                             fill
                             sizes="58px"

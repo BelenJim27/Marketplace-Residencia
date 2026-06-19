@@ -3,6 +3,8 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/routing.ts");
 
+const _apiUrl = new URL(process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001");
+
 const nextConfig = {
   productionBrowserSourceMaps: false,
   typescript: { ignoreBuildErrors: true },
@@ -15,6 +17,12 @@ const nextConfig = {
   },
   images: {
     remotePatterns: [
+      {
+        protocol: _apiUrl.protocol.replace(":", ""),
+        hostname: _apiUrl.hostname,
+        port: _apiUrl.port || "",
+        pathname: "/**",
+      },
       { protocol: "https", hostname: "cdn.sanity.io" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
       { protocol: "https", hostname: "avatars.githubusercontent.com" },

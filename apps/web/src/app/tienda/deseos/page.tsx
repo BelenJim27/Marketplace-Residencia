@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { getMediaUrl } from "@/lib/media";
 import Link from "next/link";
 import { Heart, ShoppingBag, Trash2, ArrowRight } from "lucide-react";
 import { useWishlist } from "@/context/WishlistContext";
@@ -51,7 +52,7 @@ export default function WishlistPage() {
             >
               {item.producto.producto_imagenes?.[0]?.url ? (
                 <Image
-                  src={item.producto.producto_imagenes[0].url}
+                  src={getMediaUrl(item.producto.producto_imagenes[0].url)}
                   alt={item.producto.nombre}
                   fill
                   sizes="(max-width: 768px) 100vw, 33vw"
@@ -59,7 +60,7 @@ export default function WishlistPage() {
                 />
               ) : item.producto.imagen_principal_url ? (
                 <Image
-                  src={item.producto.imagen_principal_url}
+                  src={getMediaUrl(item.producto.imagen_principal_url)}
                   alt={item.producto.nombre}
                   fill
                   sizes="(max-width: 768px) 100vw, 33vw"

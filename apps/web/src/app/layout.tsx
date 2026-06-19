@@ -5,6 +5,7 @@ import "driver.js/dist/driver.css";
 import type { Metadata } from "next";
 import NextTopLoader from "nextjs-toploader";
 import type { PropsWithChildren } from "react";
+import { ChatWidget } from "@/components/ChatWidget";
 import { Providers } from "./providers";
 import { RootContent } from "./root-content";
 
@@ -95,6 +96,7 @@ export default function RootLayout({ children }: PropsWithChildren) {
         <Providers>
           <NextTopLoader color="#5750F1" showSpinner={false} />
           <RootContent>{children}</RootContent>
+          <ChatWidget />
         </Providers>
       </body>
     </html>

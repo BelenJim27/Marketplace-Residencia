@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
+import { getMediaUrl } from "@/lib/media";
 import { ShoppingCart, Heart, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { useCarrito } from "@/context/CarritoContext";
@@ -187,7 +188,7 @@ export default function CategoriaPage() {
           {categoria.imagen_url && (
             <div className="relative h-40 w-40 flex-shrink-0">
               <Image
-                src={categoria.imagen_url}
+                src={getMediaUrl(categoria.imagen_url)}
                 alt={categoria.nombre}
                 fill
                 className="object-cover rounded-lg"
@@ -348,7 +349,7 @@ export default function CategoriaPage() {
                     >
                       {imagenUrl ? (
                         <Image
-                          src={imagenUrl}
+                          src={getMediaUrl(imagenUrl)}
                           alt={producto.nombre}
                           fill
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

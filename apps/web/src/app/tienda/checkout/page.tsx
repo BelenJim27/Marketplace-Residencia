@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, Dispatch, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { getMediaUrl } from "@/lib/media";
 import Link from "next/link";
 import { CheckCircle, ChevronRight, Truck, CreditCard, ShoppingBag, ArrowLeft, Lock, MapPin, Loader2, FileText } from "lucide-react";
 import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useElements, useStripe } from "@stripe/react-stripe-js";
@@ -2032,7 +2033,7 @@ function PagoYResumen({
               <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
                 {(item.imagen_principal_url || item.producto_imagenes?.[0]?.url) ? (
                   <Image
-                    src={item.imagen_principal_url || item.producto_imagenes?.[0]?.url!}
+                    src={getMediaUrl(item.imagen_principal_url || item.producto_imagenes?.[0]?.url)}
                     alt={item.nombre}
                     fill
                     sizes="48px"

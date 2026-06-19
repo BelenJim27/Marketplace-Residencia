@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { getMediaUrl } from "@/lib/media";
 import { Star } from "lucide-react";
 import { api } from "@/lib/api";
 import { useLocale } from "@/context/LocaleContext";
@@ -42,7 +43,7 @@ function ProductoMiniCard({ producto }: { producto: ProductoCard }) {
       <div className="relative aspect-square bg-gray-50">
         {producto.imagen_principal_url ? (
           <Image
-            src={producto.imagen_principal_url}
+            src={getMediaUrl(producto.imagen_principal_url)}
             alt={producto.nombre}
             fill
             sizes="(max-width: 480px) 45vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"

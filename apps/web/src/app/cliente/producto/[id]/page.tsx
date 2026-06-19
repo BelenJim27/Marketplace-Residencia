@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { getMediaUrl } from "@/lib/media";
 import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap, ExternalLink, Package } from "lucide-react";
 import { api } from "@/lib/api";
 import type { ProductItem } from "@/types/producer";
@@ -330,7 +331,7 @@ export default function ProductoDetallePage() {
                     aria-current={idx === imagenSeleccionada ? "true" : "false"}
                   >
                     <Image
-                      src={img}
+                      src={getMediaUrl(img)}
                       alt={`${producto.nombre} vista ${idx + 1}`}
                       fill
                       sizes="72px"
@@ -349,7 +350,7 @@ export default function ProductoDetallePage() {
             >
               {todasImagenes[imagenSeleccionada] ? (
                 <Image
-                  src={todasImagenes[imagenSeleccionada]}
+                  src={getMediaUrl(todasImagenes[imagenSeleccionada])}
                   alt={producto.nombre}
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 60vw, 45vw"

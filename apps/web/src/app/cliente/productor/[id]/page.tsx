@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
+import { getMediaUrl } from "@/lib/media";
 import { ShoppingCart, Heart, ArrowLeft, Filter, X, Store, MapPin } from "lucide-react";
 import { api } from "@/lib/api";
 import { useCarrito } from "@/context/CarritoContext";
@@ -113,7 +114,7 @@ function ProductCard({
       >
         {imagenUrl ? (
           <Image
-            src={imagenUrl}
+            src={getMediaUrl(imagenUrl)}
             alt={producto.nombre}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
