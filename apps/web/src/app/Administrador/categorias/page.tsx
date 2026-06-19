@@ -119,8 +119,8 @@ export default function CategoriasAdminPage() {
     });
   };
 
-  const fieldCls  = "mt-1 w-full rounded-lg border border-[#C5CFB0] bg-white text-[#1F3A2E] px-3 py-2 text-sm outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20";
-  const labelCls  = "block text-sm font-medium text-[#1F3A2E]";
+  const fieldCls  = "mt-1 w-full rounded-lg border border-[#C5CFB0] bg-white text-[#1F3A2E] px-3 py-2 text-sm outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20 dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5]";
+  const labelCls  = "block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80";
 
   const renderAcciones = (cat: Categoria) => (
     <div className="flex justify-end gap-2">
@@ -134,8 +134,8 @@ export default function CategoriasAdminPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Gestión de Categorías</h1>
-          <p className="mt-0.5 text-sm text-[#3D6B3F]/70">Administra las categorías y subcategorías del sistema.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Gestión de Categorías</h1>
+          <p className="mt-0.5 text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Administra las categorías y subcategorías del sistema.</p>
         </div>
         <button
           type="button"
@@ -154,20 +154,20 @@ export default function CategoriasAdminPage() {
       )}
 
       {/* Search */}
-      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#3D6B3F]/40" />
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#3D6B3F]/40 dark:text-[#A8C26B]/40" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar categorías..."
-            className="w-full rounded-xl border border-[#C5CFB0] bg-white py-3 pl-12 pr-4 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/40 outline-none focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20"
+            className="w-full rounded-xl border border-[#C5CFB0] bg-white py-3 pl-12 pr-4 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/40 outline-none focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5] dark:placeholder-[#A8C26B]/30"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-left">
             <thead className="bg-[#1F3A2E] text-[11px] font-bold uppercase tracking-wider text-white">
@@ -179,24 +179,24 @@ export default function CategoriasAdminPage() {
                 <th className="p-4 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#C5CFB0]/30">
+            <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20">
               {loading ? (
-                <tr><td colSpan={5} className="p-10 text-center text-[#3D6B3F]/70 bg-white">Cargando...</td></tr>
+                <tr><td colSpan={5} className="p-10 text-center text-[#3D6B3F]/70 dark:text-[#A8C26B]/50 bg-white dark:bg-[#0f1a10]">Cargando...</td></tr>
               ) : query.trim() ? (
                 /* ── Vista plana al buscar ── */
                 busquedaPlana.length === 0 ? (
-                  <tr><td colSpan={5} className="p-10 text-center text-[#3D6B3F]/70 bg-white">Sin resultados.</td></tr>
+                  <tr><td colSpan={5} className="p-10 text-center text-[#3D6B3F]/70 dark:text-[#A8C26B]/50 bg-white dark:bg-[#0f1a10]">Sin resultados.</td></tr>
                 ) : (
                   paginatedList.map((cat) => (
-                    <tr key={cat.id_categoria} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200">
-                      <td className="p-4 font-semibold text-[#1F3A2E]">
-                        {cat.id_padre !== null && <span className="mr-1 text-[#3D6B3F]/40">↳</span>}
+                    <tr key={cat.id_categoria} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 dark:odd:bg-[#0f1a10] dark:even:bg-[#1a2a1f] dark:hover:bg-[#2d4a2e]/40 transition-all duration-200">
+                      <td className="p-4 font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">
+                        {cat.id_padre !== null && <span className="mr-1 text-[#3D6B3F]/40 dark:text-[#A8C26B]/40">↳</span>}
                         {cat.nombre}
                       </td>
-                      <td className="p-4 text-sm text-[#1F3A2E]/70">{cat.slug}</td>
-                      <td className="p-4 text-sm text-[#1F3A2E]/70">{cat.tipo}</td>
+                      <td className="p-4 text-sm text-[#1F3A2E]/70 dark:text-[#D4CEBF]/70">{cat.slug}</td>
+                      <td className="p-4 text-sm text-[#1F3A2E]/70 dark:text-[#D4CEBF]/70">{cat.tipo}</td>
                       <td className="p-4 text-center">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cat.activo ? "bg-[#A8C26B]/20 text-[#3D6B3F]" : "bg-[#C97A3E]/15 text-[#C97A3E]"}`}>
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cat.activo ? "bg-[#A8C26B]/20 text-[#3D6B3F] dark:bg-[#A8C26B]/15 dark:text-[#A8C26B]" : "bg-[#C97A3E]/15 text-[#C97A3E] dark:bg-[#C97A3E]/20 dark:text-[#E8A87C]"}`}>
                           {cat.activo ? "Activo" : "Inactivo"}
                         </span>
                       </td>
@@ -205,27 +205,27 @@ export default function CategoriasAdminPage() {
                   ))
                 )
               ) : padres.length === 0 ? (
-                <tr><td colSpan={5} className="p-10 text-center text-[#3D6B3F]/70 bg-white">No hay categorías.</td></tr>
+                <tr><td colSpan={5} className="p-10 text-center text-[#3D6B3F]/70 dark:text-[#A8C26B]/50 bg-white dark:bg-[#0f1a10]">No hay categorías.</td></tr>
               ) : (
                 /* ── Vista jerárquica ── */
                 paginatedList.map((cat) => (
                   <React.Fragment key={cat.id_categoria}>
                     {/* Fila padre */}
-                    <tr key={cat.id_categoria} className="bg-white hover:bg-[#C5CFB0]/20 transition-all duration-200">
+                    <tr key={cat.id_categoria} className="bg-white dark:bg-[#0f1a10] hover:bg-[#C5CFB0]/20 dark:hover:bg-[#2d4a2e]/40 transition-all duration-200">
                       <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-[#1F3A2E]">{cat.nombre}</span>
+                          <span className="font-bold text-[#1F3A2E] dark:text-[#E8E3D5]">{cat.nombre}</span>
                           {(cat.other_categorias?.length ?? 0) > 0 && (
-                            <span className="rounded-full bg-[#3D6B3F]/10 px-2 py-0.5 text-[10px] font-semibold text-[#3D6B3F]">
+                            <span className="rounded-full bg-[#3D6B3F]/10 dark:bg-[#A8C26B]/10 px-2 py-0.5 text-[10px] font-semibold text-[#3D6B3F] dark:text-[#A8C26B]">
                               {cat.other_categorias!.length} sub
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="p-4 text-sm text-[#1F3A2E]/70">{cat.slug}</td>
-                      <td className="p-4 text-sm text-[#1F3A2E]/70">{cat.tipo}</td>
+                      <td className="p-4 text-sm text-[#1F3A2E]/70 dark:text-[#D4CEBF]/70">{cat.slug}</td>
+                      <td className="p-4 text-sm text-[#1F3A2E]/70 dark:text-[#D4CEBF]/70">{cat.tipo}</td>
                       <td className="p-4 text-center">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cat.activo ? "bg-[#A8C26B]/20 text-[#3D6B3F]" : "bg-[#C97A3E]/15 text-[#C97A3E]"}`}>
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${cat.activo ? "bg-[#A8C26B]/20 text-[#3D6B3F] dark:bg-[#A8C26B]/15 dark:text-[#A8C26B]" : "bg-[#C97A3E]/15 text-[#C97A3E] dark:bg-[#C97A3E]/20 dark:text-[#E8A87C]"}`}>
                           {cat.activo ? "Activo" : "Inactivo"}
                         </span>
                       </td>
@@ -236,7 +236,7 @@ export default function CategoriasAdminPage() {
                             type="button"
                             title="Agregar subcategoría"
                             onClick={() => openCreateModal(cat.id_categoria)}
-                            className="rounded-lg p-2 text-[#3D6B3F]/40 hover:bg-[#3D6B3F]/10 hover:text-[#3D6B3F] transition-all duration-200 text-xs font-semibold"
+                            className="rounded-lg p-2 text-[#3D6B3F]/40 dark:text-[#A8C26B]/40 hover:bg-[#3D6B3F]/10 hover:text-[#3D6B3F] dark:hover:bg-[#A8C26B]/10 dark:hover:text-[#A8C26B] transition-all duration-200 text-xs font-semibold"
                           >
                             + sub
                           </button>
@@ -246,17 +246,17 @@ export default function CategoriasAdminPage() {
 
                     {/* Filas hijas */}
                     {cat.other_categorias?.map((sub) => (
-                      <tr key={`sub-${sub.id_categoria}`} className="bg-[#F4F0E3]/60 hover:bg-[#C5CFB0]/20 transition-all duration-200">
+                      <tr key={`sub-${sub.id_categoria}`} className="bg-[#F4F0E3]/60 dark:bg-[#1a2a1f] hover:bg-[#C5CFB0]/20 dark:hover:bg-[#2d4a2e]/40 transition-all duration-200">
                         <td className="p-4 pl-10">
-                          <div className="flex items-center gap-2 text-[#1F3A2E]/80">
-                            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#3D6B3F]/40" />
+                          <div className="flex items-center gap-2 text-[#1F3A2E]/80 dark:text-[#D4CEBF]">
+                            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#3D6B3F]/40 dark:text-[#A8C26B]/40" />
                             <span className="font-medium">{sub.nombre}</span>
                           </div>
                         </td>
-                        <td className="p-4 text-sm text-[#1F3A2E]/60">{sub.slug}</td>
-                        <td className="p-4 text-sm text-[#1F3A2E]/60">{sub.tipo}</td>
+                        <td className="p-4 text-sm text-[#1F3A2E]/60 dark:text-[#D4CEBF]/60">{sub.slug}</td>
+                        <td className="p-4 text-sm text-[#1F3A2E]/60 dark:text-[#D4CEBF]/60">{sub.tipo}</td>
                         <td className="p-4 text-center">
-                          <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${sub.activo ? "bg-[#A8C26B]/20 text-[#3D6B3F]" : "bg-[#C97A3E]/15 text-[#C97A3E]"}`}>
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${sub.activo ? "bg-[#A8C26B]/20 text-[#3D6B3F] dark:bg-[#A8C26B]/15 dark:text-[#A8C26B]" : "bg-[#C97A3E]/15 text-[#C97A3E] dark:bg-[#C97A3E]/20 dark:text-[#E8A87C]"}`}>
                             {sub.activo ? "Activo" : "Inactivo"}
                           </span>
                         </td>
@@ -273,20 +273,20 @@ export default function CategoriasAdminPage() {
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-          <p className="text-sm text-[#1F3A2E]">
+        <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-4 py-3 bg-white dark:bg-[#0f1a10] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <p className="text-sm text-[#1F3A2E] dark:text-[#D4CEBF]">
             Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, currentList.length)}</span> de <span className="font-semibold">{currentList.length}</span> categorías
           </p>
           <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
             <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
-              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50">
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#D4CEBF] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40">
               Página {currentPage} de {totalPages}
             </span>
             <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
-              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50">
               <ChevronRight className="h-5 w-5" />
             </button>
           </nav>
@@ -300,10 +300,10 @@ export default function CategoriasAdminPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] overflow-hidden">
+          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] dark:bg-[#0f1a10] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_24px_48px_rgba(31,58,46,0.25)] overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-6 pb-4">
-              <h2 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">{editingCategoria ? "Editar" : "Nueva"} Categoría</h2>
-              <button type="button" onClick={() => setShowModal(false)} className="rounded-lg p-1 hover:bg-[#C5CFB0]/30 text-[#3D6B3F]/50"><X className="h-5 w-5" /></button>
+              <h2 className="text-lg font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">{editingCategoria ? "Editar" : "Nueva"} Categoría</h2>
+              <button type="button" onClick={() => setShowModal(false)} className="rounded-lg p-1 hover:bg-[#C5CFB0]/30 dark:hover:bg-[#3D6B3F]/20 text-[#3D6B3F]/50 dark:text-[#A8C26B]/50"><X className="h-5 w-5" /></button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 px-6 pb-6">
@@ -319,7 +319,7 @@ export default function CategoriasAdminPage() {
                 <label className={labelCls}>Jerarquía</label>
                 <div className="mt-1 flex gap-3">
                   {(["categoria", "subcategoria"] as const).map((opcion) => (
-                    <label key={opcion} className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all duration-150 ${formData.jerarquia === opcion ? "border-[#3D6B3F] bg-[#3D6B3F]/10 text-[#1F3A2E]" : "border-[#C5CFB0] bg-white text-[#1F3A2E]/60 hover:bg-[#F4F0E3]"}`}>
+                    <label key={opcion} className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all duration-150 ${formData.jerarquia === opcion ? "border-[#3D6B3F] bg-[#3D6B3F]/10 text-[#1F3A2E] dark:bg-[#3D6B3F]/20 dark:text-[#A8C26B]" : "border-[#C5CFB0] bg-white text-[#1F3A2E]/60 hover:bg-[#F4F0E3] dark:border-[#3D6B3F]/40 dark:bg-[#0f1a10] dark:text-[#D4CEBF]/60 dark:hover:bg-[#1F3A2E]/60"}`}>
                       <input type="radio" name="jerarquia" value={opcion} checked={formData.jerarquia === opcion} onChange={() => setFormData({ ...formData, jerarquia: opcion, id_padre: "" })} className="sr-only" />
                       {opcion === "categoria" ? "Categoría" : "Subcategoría"}
                     </label>
@@ -347,10 +347,10 @@ export default function CategoriasAdminPage() {
               )}
               <div className="flex items-center gap-2">
                 <input type="checkbox" checked={formData.activo} onChange={(e) => setFormData({ ...formData, activo: e.target.checked })} className="h-4 w-4 rounded border-[#C5CFB0] text-[#3D6B3F]" />
-                <label className="text-sm text-[#1F3A2E]">Activo</label>
+                <label className="text-sm text-[#1F3A2E] dark:text-[#D4CEBF]">Activo</label>
               </div>
               <div className="flex justify-end gap-2 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="rounded-xl px-4 py-2 text-sm font-medium text-[#1F3A2E] border border-[#C5CFB0] hover:bg-[#C5CFB0]/30 transition-all duration-200">Cancelar</button>
+                <button type="button" onClick={() => setShowModal(false)} className="rounded-xl px-4 py-2 text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60 transition-all duration-200">Cancelar</button>
                 <button type="submit" className="rounded-xl bg-[#3D6B3F] px-4 py-2 text-sm font-medium text-white hover:bg-[#1F3A2E] transition-all duration-200">Guardar</button>
               </div>
             </form>

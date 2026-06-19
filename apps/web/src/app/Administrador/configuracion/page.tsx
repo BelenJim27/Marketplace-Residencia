@@ -14,14 +14,14 @@ function ColorField({ name, label, hint, value, onChange }: {
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-[#1F3A2E]">{label}</label>
-      {hint && <p className="text-[11px] text-[#3D6B3F]/50">{hint}</p>}
+      <label className="block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80">{label}</label>
+      {hint && <p className="text-[11px] text-[#3D6B3F]/50 dark:text-[#A8C26B]/40">{hint}</p>}
       <div className="flex items-center gap-2">
         <input type="color" name={name} value={value} onChange={onChange}
-          className="h-9 w-14 rounded-lg border border-[#C5CFB0] cursor-pointer p-0.5 bg-white" />
+          className="h-9 w-14 rounded-lg border border-[#C5CFB0] dark:border-[#3D6B3F]/40 cursor-pointer p-0.5 bg-white dark:bg-[#0f1a10]" />
         <input type="text" name={name} value={value} onChange={onChange}
-          className="flex-1 rounded-xl border border-[#C5CFB0] bg-white px-3 py-1.5 text-sm text-[#1F3A2E] font-mono focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20" />
-        <div className="h-9 w-9 rounded-lg border border-[#C5CFB0] shrink-0" style={{ backgroundColor: value }} />
+          className="flex-1 rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-3 py-1.5 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] font-mono focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20" />
+        <div className="h-9 w-9 rounded-lg border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shrink-0" style={{ backgroundColor: value }} />
       </div>
     </div>
   );
@@ -126,18 +126,18 @@ export default function ConfiguracionPage() {
   ];
 
   return (
-    <div className="rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-7 space-y-6">
+    <div className="rounded-2xl bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-7 space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif] mb-2">
+          <h2 className="text-2xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif] mb-2">
             Configuración del Sistema
           </h2>
-          <p className="text-sm text-[#3D6B3F]/70">
+          <p className="text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">
             Personaliza la identidad visual y la configuración de tu tienda
           </p>
         </div>
 
         {/* TABS */}
-        <div className="border-b border-[#C5CFB0]">
+        <div className="border-b border-[#C5CFB0] dark:border-[#3D6B3F]/40">
           <nav className="flex gap-1" aria-label="Tabs de configuración">
             {TABS.map((tab) => (
               <button
@@ -146,8 +146,8 @@ export default function ConfiguracionPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
                   activeTab === tab.id
-                    ? "border-[#3D6B3F] text-[#3D6B3F] bg-[#3D6B3F]/5"
-                    : "border-transparent text-[#3D6B3F]/60 hover:text-[#3D6B3F] hover:border-[#C5CFB0]"
+                    ? "border-[#3D6B3F] text-[#3D6B3F] dark:text-[#A8C26B] bg-[#3D6B3F]/5 dark:bg-[#A8C26B]/10"
+                    : "border-transparent text-[#3D6B3F]/60 dark:text-[#A8C26B]/50 hover:text-[#3D6B3F] dark:hover:text-[#A8C26B] hover:border-[#C5CFB0] dark:hover:border-[#3D6B3F]/40"
                 }`}
               >
                 {tab.icon}
@@ -161,7 +161,7 @@ export default function ConfiguracionPage() {
         {activeTab === "colores" && (
           <>
             {message && (
-              <div className={`rounded-xl border p-4 text-sm ${message.type === "success" ? "border-[#A8C26B]/40 bg-[#A8C26B]/10 text-[#3D6B3F]" : "border-red-200 bg-red-50 text-red-700"}`}>
+              <div className={`rounded-xl border p-4 text-sm ${message.type === "success" ? "border-[#A8C26B]/40 dark:border-[#A8C26B]/30 bg-[#A8C26B]/10 dark:bg-[#A8C26B]/15 text-[#3D6B3F] dark:text-[#A8C26B]" : "border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400"}`}>
                 {message.text}
               </div>
             )}
@@ -170,9 +170,9 @@ export default function ConfiguracionPage() {
 
               {/* ── Sección: Colores del Catálogo ── */}
               <section className="space-y-5">
-                <div className="pb-2 border-b border-[#C5CFB0]">
-                  <h3 className="text-base font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Colores del Catálogo</h3>
-                  <p className="text-xs text-[#3D6B3F]/60 mt-0.5">Afectan directamente la vista de productos que ve el cliente</p>
+                <div className="pb-2 border-b border-[#C5CFB0] dark:border-[#3D6B3F]/40">
+                  <h3 className="text-base font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Colores del Catálogo</h3>
+                  <p className="text-xs text-[#3D6B3F]/60 dark:text-[#A8C26B]/50 mt-0.5">Afectan directamente la vista de productos que ve el cliente</p>
                 </div>
 
                 {/* Fila 1: Acento + Fondo página + Precio */}
@@ -211,9 +211,9 @@ export default function ConfiguracionPage() {
 
               {/* ── Sección: Vista previa del catálogo ── */}
               <section className="space-y-3">
-                <div className="pb-2 border-b border-[#C5CFB0]">
-                  <h3 className="text-base font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Vista Previa</h3>
-                  <p className="text-xs text-[#3D6B3F]/60 mt-0.5">Aproximación de cómo se verán las tarjetas con los colores seleccionados</p>
+                <div className="pb-2 border-b border-[#C5CFB0] dark:border-[#3D6B3F]/40">
+                  <h3 className="text-base font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Vista Previa</h3>
+                  <p className="text-xs text-[#3D6B3F]/60 dark:text-[#A8C26B]/50 mt-0.5">Aproximación de cómo se verán las tarjetas con los colores seleccionados</p>
                 </div>
 
                 {/* Mini hero */}
@@ -264,16 +264,16 @@ export default function ConfiguracionPage() {
 
               {/* ── Sección: Tipografía del catálogo ── */}
               <section className="space-y-3">
-                <div className="pb-2 border-b border-[#C5CFB0]">
-                  <h3 className="text-base font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Tipografía</h3>
+                <div className="pb-2 border-b border-[#C5CFB0] dark:border-[#3D6B3F]/40">
+                  <h3 className="text-base font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Tipografía</h3>
                 </div>
                 <div className="max-w-xs">
-                  <label className="block text-sm font-medium text-[#1F3A2E] mb-2">Fuente de productos y catálogo</label>
+                  <label className="block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80 mb-2">Fuente de productos y catálogo</label>
                   <select
                     name="font_family_store"
                     value={formData.font_family_store}
                     onChange={handleChange}
-                    className="w-full rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
+                    className="w-full rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-4 py-2 text-[#1F3A2E] dark:text-[#E8E3D5] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
                   >
                     <option value="'Playfair Display', Georgia, serif">Playfair Display</option>
                     <option value="Georgia, serif">Georgia</option>
@@ -286,7 +286,7 @@ export default function ConfiguracionPage() {
               {/* ── Botones ── */}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={handleRestore} disabled={saving}
-                  className="flex items-center gap-2 px-5 py-2 border border-[#C5CFB0] rounded-xl text-sm text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200">
+                  className="flex items-center gap-2 px-5 py-2 border border-[#C5CFB0] dark:border-[#3D6B3F]/40 rounded-xl text-sm text-[#1F3A2E] dark:text-[#E8E3D5] hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60 transition-all duration-200">
                   <RotateCcw size={16} /> Restaurar defaults
                 </button>
                 <button type="submit" disabled={saving}

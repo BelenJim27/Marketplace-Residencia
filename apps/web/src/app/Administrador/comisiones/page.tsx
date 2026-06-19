@@ -147,7 +147,7 @@ export default function ComisionesAdminPage() {
       <Breadcrumb pageName="Comisiones" />
 
       {notice && (
-        <div className="flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-800">
+        <div className="flex items-center gap-2 rounded-md border border-red-300 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-4 py-2 text-sm text-red-800 dark:text-red-400">
           <AlertCircle size={16} />
           <span>{notice.message}</span>
           <button className="ml-auto" onClick={() => setNotice(null)}>
@@ -164,13 +164,13 @@ export default function ComisionesAdminPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar..."
-            className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] py-2 pl-9 pr-3 text-sm text-[#1F3A2E]"
+            className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] py-2 pl-9 pr-3 text-sm text-[#1F3A2E] dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5] dark:placeholder-[#A8C26B]/30"
           />
         </div>
         <select
           value={filtroAlcance}
           onChange={(e) => setFiltroAlcance(e.target.value)}
-          className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#1F3A2E]"
+          className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#1F3A2E] dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5]"
         >
           <option value="">Todos los alcances</option>
           {ALCANCES.map((a) => (
@@ -181,7 +181,7 @@ export default function ComisionesAdminPage() {
         </select>
         <button
           onClick={() => setShowResolver((v) => !v)}
-          className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#3D6B3F] hover:bg-[#C5CFB0]/30 transition-all duration-200"
+          className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 px-3 py-2 text-sm text-[#3D6B3F] dark:text-[#A8C26B] hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60 transition-all duration-200"
         >
           Probar resolver
         </button>
@@ -194,27 +194,27 @@ export default function ComisionesAdminPage() {
       </div>
 
       {showResolver && (
-        <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-          <h3 className="mb-3 font-medium text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Probar resolución de comisión</h3>
+        <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <h3 className="mb-3 font-medium text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Probar resolución de comisión</h3>
           <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-3">
             <input
               placeholder="id_productor (opcional)"
               value={resolverInput.id_productor}
               onChange={(e) => setResolverInput((p) => ({ ...p, id_productor: e.target.value }))}
-              className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E]"
+              className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5] dark:placeholder-[#A8C26B]/30"
             />
             <input
               placeholder="id_categoria (opcional)"
               value={resolverInput.id_categoria}
               onChange={(e) => setResolverInput((p) => ({ ...p, id_categoria: e.target.value }))}
-              className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E]"
+              className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5] dark:placeholder-[#A8C26B]/30"
             />
             <input
               placeholder="pais_iso2 (ej. US, MX)"
               value={resolverInput.pais_iso2}
               maxLength={2}
               onChange={(e) => setResolverInput((p) => ({ ...p, pais_iso2: e.target.value.toUpperCase() }))}
-              className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E]"
+              className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5] dark:placeholder-[#A8C26B]/30"
             />
           </div>
           <button
@@ -223,9 +223,9 @@ export default function ComisionesAdminPage() {
           >
             Resolver
           </button>
-          {resolverError && <p className="mt-3 text-sm text-red-700">{resolverError}</p>}
+          {resolverError && <p className="mt-3 text-sm text-red-700 dark:text-red-400">{resolverError}</p>}
           {resolverResult && (
-            <div className="mt-3 rounded-xl bg-white border border-[#C5CFB0] p-3 text-sm text-[#1F3A2E]">
+            <div className="mt-3 rounded-xl bg-white dark:bg-[#0f1a10] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 p-3 text-sm text-[#1F3A2E] dark:text-[#E8E3D5]">
               <div>
                 <strong>id_comision:</strong> {resolverResult.id_comision}
               </div>
@@ -245,8 +245,8 @@ export default function ComisionesAdminPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-        <table className="min-w-full divide-y divide-[#C5CFB0]/30 text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <table className="min-w-full divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20 text-sm">
           <thead className="bg-[#1F3A2E] text-white text-[11px] font-bold uppercase tracking-wider">
             <tr>
               <th className="px-3 py-2 text-left text-white">ID</th>
@@ -260,45 +260,45 @@ export default function ComisionesAdminPage() {
               <th className="px-3 py-2 text-right text-white">Acciones</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#C5CFB0]/30">
+          <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20">
             {loading && (
               <tr>
                 <td colSpan={9} className="px-3 py-6 text-center">
-                  <Loader2 className="mx-auto animate-spin" size={20} />
+                  <Loader2 className="mx-auto animate-spin text-[#3D6B3F] dark:text-[#A8C26B]" size={20} />
                 </td>
               </tr>
             )}
             {!loading && filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-[#3D6B3F]/70 bg-white">
+                <td colSpan={9} className="px-3 py-6 text-center text-[#3D6B3F]/70 dark:text-[#A8C26B]/50 bg-white dark:bg-[#0f1a10]">
                   Sin resultados
                 </td>
               </tr>
             )}
             {!loading &&
               paginatedComisiones.map((c) => (
-                <tr key={c.id_comision} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200">
-                  <td className="px-3 py-2">{c.id_comision}</td>
-                  <td className="px-3 py-2">{c.alcance}</td>
-                  <td className="px-3 py-2">
+                <tr key={c.id_comision} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 dark:odd:bg-[#0f1a10] dark:even:bg-[#1a2a1f] dark:hover:bg-[#2d4a2e]/40 transition-all duration-200">
+                  <td className="px-3 py-2 text-[#1F3A2E] dark:text-[#D4CEBF]">{c.id_comision}</td>
+                  <td className="px-3 py-2 text-[#1F3A2E] dark:text-[#D4CEBF]">{c.alcance}</td>
+                  <td className="px-3 py-2 text-[#1F3A2E]/70 dark:text-[#D4CEBF]/70">
                     {c.alcance === "pais" && c.pais_iso2}
                     {c.alcance === "categoria" && `cat #${c.id_categoria}`}
                     {c.alcance === "productor" && `productor #${c.id_productor}`}
                     {c.alcance === "global" && "—"}
                   </td>
-                  <td className="px-3 py-2 text-right">{(Number(c.porcentaje) * 100).toFixed(2)}%</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right text-[#1F3A2E] dark:text-[#D4CEBF]">{(Number(c.porcentaje) * 100).toFixed(2)}%</td>
+                  <td className="px-3 py-2 text-right text-[#1F3A2E]/70 dark:text-[#D4CEBF]/70">
                     {c.monto_fijo ? formatMXN(c.monto_fijo) : "—"}
                   </td>
-                  <td className="px-3 py-2 text-right">{c.prioridad}</td>
+                  <td className="px-3 py-2 text-right text-[#1F3A2E] dark:text-[#D4CEBF]">{c.prioridad}</td>
                   <td className="px-3 py-2">
                     {c.activo ? (
-                      <span className="inline-flex rounded-full bg-[#A8C26B]/20 text-[#3D6B3F] border border-[#A8C26B]/40 px-2 py-0.5 text-xs font-medium">activo</span>
+                      <span className="inline-flex rounded-full bg-[#A8C26B]/20 text-[#3D6B3F] border border-[#A8C26B]/40 px-2 py-0.5 text-xs font-medium dark:bg-[#A8C26B]/15 dark:text-[#A8C26B]">activo</span>
                     ) : (
-                      <span className="inline-flex rounded-full bg-[#C97A3E]/15 text-[#C97A3E] border border-[#C97A3E]/30 px-2 py-0.5 text-xs font-medium">inactivo</span>
+                      <span className="inline-flex rounded-full bg-[#C97A3E]/15 text-[#C97A3E] border border-[#C97A3E]/30 px-2 py-0.5 text-xs font-medium dark:bg-[#C97A3E]/20 dark:text-[#E8A87C]">inactivo</span>
                     )}
                   </td>
-                  <td className="px-3 py-2">{new Date(c.vigente_desde).toLocaleDateString()}</td>
+                  <td className="px-3 py-2 text-[#1F3A2E]/70 dark:text-[#D4CEBF]/70">{new Date(c.vigente_desde).toLocaleDateString()}</td>
                   <td className="px-3 py-2">
                     <div className="flex justify-end gap-1">
                       <button
@@ -327,20 +327,20 @@ export default function ComisionesAdminPage() {
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-          <p className="text-sm text-[#1F3A2E]">
+        <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-4 py-3 bg-white dark:bg-[#0f1a10] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <p className="text-sm text-[#1F3A2E] dark:text-[#D4CEBF]">
             Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> de <span className="font-semibold">{filtered.length}</span>
           </p>
           <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
             <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
-              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50">
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#D4CEBF] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40">
               Página {currentPage} de {totalPages}
             </span>
             <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
-              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50">
               <ChevronRight className="h-5 w-5" />
             </button>
           </nav>
@@ -352,20 +352,20 @@ export default function ComisionesAdminPage() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] overflow-hidden p-6">
+          <div className="w-full max-w-lg rounded-2xl bg-[#F4F0E3] dark:bg-[#0f1a10] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_24px_48px_rgba(31,58,46,0.25)] overflow-hidden p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">{editing ? "Editar regla" : "Nueva regla"}</h2>
-              <button onClick={() => setShowForm(false)} aria-label="Cerrar">
+              <h2 className="text-lg font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">{editing ? "Editar regla" : "Nueva regla"}</h2>
+              <button onClick={() => setShowForm(false)} aria-label="Cerrar" className="text-[#1F3A2E] dark:text-[#D4CEBF]">
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">Alcance</label>
+                <label className="mb-1 block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80">Alcance</label>
                 <select
                   value={form.alcance}
                   onChange={(e) => setForm((p) => ({ ...p, alcance: e.target.value as ComisionInput["alcance"] }))}
-                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
+                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20 dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5]"
                 >
                   {ALCANCES.map((a) => (
                     <option key={a} value={a}>
@@ -376,58 +376,58 @@ export default function ComisionesAdminPage() {
               </div>
               {form.alcance === "pais" && (
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">País (ISO2)</label>
+                  <label className="mb-1 block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80">País (ISO2)</label>
                   <input
                     required
                     maxLength={2}
                     value={form.pais_iso2 ?? ""}
                     onChange={(e) => setForm((p) => ({ ...p, pais_iso2: e.target.value.toUpperCase() }))}
-                    className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm uppercase text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
+                    className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm uppercase text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20 dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5]"
                     placeholder="US"
                   />
                 </div>
               )}
               {form.alcance === "categoria" && (
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">id_categoria</label>
+                  <label className="mb-1 block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80">id_categoria</label>
                   <input
                     type="number"
                     required
                     value={form.id_categoria ?? ""}
                     onChange={(e) => setForm((p) => ({ ...p, id_categoria: Number(e.target.value) }))}
-                    className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
+                    className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20 dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5]"
                   />
                 </div>
               )}
               {form.alcance === "productor" && (
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">id_productor</label>
+                  <label className="mb-1 block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80">id_productor</label>
                   <input
                     type="number"
                     required
                     value={form.id_productor ?? ""}
                     onChange={(e) => setForm((p) => ({ ...p, id_productor: Number(e.target.value) }))}
-                    className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
+                    className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20 dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5]"
                   />
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">Porcentaje (decimal, ej. 0.15 = 15%)</label>
+                <label className="mb-1 block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80">Porcentaje (decimal, ej. 0.15 = 15%)</label>
                 <input
                   required
                   value={form.porcentaje}
                   onChange={(e) => setForm((p) => ({ ...p, porcentaje: e.target.value }))}
-                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
+                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20 dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5]"
                   placeholder="0.1500"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">Prioridad (menor = más específica)</label>
+                <label className="mb-1 block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80">Prioridad (menor = más específica)</label>
                 <input
                   type="number"
                   value={form.prioridad ?? 100}
                   onChange={(e) => setForm((p) => ({ ...p, prioridad: Number(e.target.value) }))}
-                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20"
+                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none focus:ring-1 focus:ring-[#3D6B3F]/20 dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5]"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -445,7 +445,7 @@ export default function ComisionesAdminPage() {
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="rounded-xl border border-[#C5CFB0] px-4 py-2 text-sm text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200"
+                  className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-4 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60 transition-all duration-200"
                 >
                   Cancelar
                 </button>

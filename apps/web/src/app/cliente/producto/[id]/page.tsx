@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { getMediaUrl } from "@/lib/media";
-import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap, ExternalLink, Package } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Star, MapPin, Heart, Truck, Zap, ExternalLink, Package, BadgeCheck } from "lucide-react";
 import { api } from "@/lib/api";
 import type { ProductItem } from "@/types/producer";
 import { useCarrito } from "@/context/CarritoContext";
@@ -45,6 +45,7 @@ interface LoteData {
   };
 }
 
+// Une nombre + apellidos en un nombre completo (omite los vacíos).
 function nombreCompleto(usuario?: { nombre?: string; apellido_paterno?: string; apellido_materno?: string } | null): string | undefined {
   if (!usuario?.nombre) return undefined;
   return [usuario.nombre, usuario.apellido_paterno, usuario.apellido_materno].filter(Boolean).join(" ");
@@ -118,7 +119,11 @@ export default function ProductoDetallePage() {
     try {
       const data = await api.productos.getOne(id as string);
       setProducto(data as Producto);
+
+      // Mostrar stock desde la respuesta del producto de inmediato
       if ((data as any).stock !== undefined) setStock((data as any).stock);
+
+      // Actualizar stock desde inventario (más preciso, no bloquea la carga principal)
       api.inventario.getByProducto(id as string)
         .then((inv) => { if (inv?.stock !== undefined) setStock(inv.stock); })
         .catch(() => {});
@@ -201,6 +206,9 @@ export default function ProductoDetallePage() {
     null;
   const sitio = strFromApi(datosApi.sitio) || loteData?.sitio;
   const gradoAlcohol = datosApi.grado_alcohol ? Number(datosApi.grado_alcohol) : loteData?.grado_alcohol;
+  // La API de trazabilidad casi siempre devuelve fecha_elaboracion = null;
+  // caemos a la columna, luego a datos_api y por último a fecha_registro
+  // (fecha en que se registró el lote, el dato de fecha realmente disponible).
   const fechaElaboracionRaw =
     loteData?.fecha_elaboracion ??
     datosApi.fecha_elaboracion ??
@@ -216,6 +224,7 @@ export default function ProductoDetallePage() {
     (typeof datosApi.url_trazabilidad === "string" ? datosApi.url_trazabilidad : null) ||
     null;
 
+  // Ficha técnica — datos clave en lista plana (sin acordeón)
   const fichaTecnica = [
     { label: t("Maestro mezcalero"), value: producto?.maestro_mezcalero || nombreProductor },
     { label: t("Sitio"), value: sitio },
@@ -225,7 +234,7 @@ export default function ProductoDetallePage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8" style={{ backgroundColor: "var(--bio-color-fondo)", minHeight: "100vh" }}>
+      <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8">
         <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-green-600 dark:border-gray-700 dark:border-t-green-500" />
           <div className="text-center">
@@ -239,7 +248,7 @@ export default function ProductoDetallePage() {
 
   if (error || !producto) {
     return (
-      <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8" style={{ backgroundColor: "var(--bio-color-fondo)", minHeight: "100vh" }}>
+      <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8">
         <div className="flex min-h-[400px] flex-col items-center justify-center gap-6">
           <div className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950 p-6 max-w-md text-center">
             <p className="mb-2 text-sm font-semibold text-red-800 dark:text-red-200">{t("Producto no disponible")}</p>
@@ -251,7 +260,7 @@ export default function ProductoDetallePage() {
             <button
               onClick={() => router.back()}
               className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-              style={{ border: "1px solid var(--bio-color-borde, #ddd8c4)", color: "var(--bio-color-boton)" }}
+              style={{ border: "1px solid #ddd8c4", color: "#306B3F" }}
             >
               <ArrowLeft size={18} />
               {t("Volver")}
@@ -259,7 +268,7 @@ export default function ProductoDetallePage() {
             <Link
               href="/cliente/producto"
               className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-              style={{ backgroundColor: "var(--bio-color-titulo)" }}
+              style={{ backgroundColor: "#1F3A2E" }}
             >
               {t("Ver catálogo")}
             </Link>
@@ -277,7 +286,7 @@ export default function ProductoDetallePage() {
   return (
     <div
       className="mx-auto max-w-screen-xl px-4 py-8 md:px-8"
-      style={{ backgroundColor: "var(--bio-color-fondo)", minHeight: "100vh" }}
+      style={{ backgroundColor: "#F4F0E3", minHeight: "100vh" }}
     >
       <AgeGate
         edadMinima={edadMinimaProducto}
@@ -291,7 +300,7 @@ export default function ProductoDetallePage() {
       <button
         onClick={() => router.back()}
         className="mb-8 flex items-center gap-2 hover:opacity-70 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-lg p-2 -ml-2"
-        style={{ color: "var(--bio-color-boton)" }}
+        style={{ color: "#306B3F" }}
         aria-label={t("Volver a productos")}
       >
         <ArrowLeft size={20} />
@@ -303,18 +312,19 @@ export default function ProductoDetallePage() {
 
         {/* Columna izquierda — Galería de imágenes */}
         <div className="space-y-6">
+          {/* Galería: miniaturas a la izquierda + imagen principal a la derecha */}
           <div data-tour="product-gallery" className="flex gap-3">
 
-            {/* Tira de miniaturas */}
+            {/* Tira de miniaturas — vertical a la izquierda cuando hay varias imágenes */}
             {todasImagenes.length > 1 && (
               <div className="flex flex-col gap-2 flex-shrink-0" style={{ width: "76px" }}>
                 {todasImagenes.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setImagenSeleccionada(idx)}
-                    className="relative h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-lg border-2 bg-gray-50 dark:bg-gray-800 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 hover:opacity-100 duration-150"
+                    className="relative h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-lg border-2 bg-gray-50 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 hover:opacity-100 duration-150"
                     style={{
-                      borderColor: idx === imagenSeleccionada ? "var(--bio-color-boton)" : "transparent",
+                      borderColor: idx === imagenSeleccionada ? "#306B3F" : "transparent",
                       opacity: idx === imagenSeleccionada ? 1 : 0.55,
                     }}
                     aria-label={`Ver imagen ${idx + 1} de ${todasImagenes.length}`}
@@ -356,31 +366,33 @@ export default function ProductoDetallePage() {
                 </div>
               )}
 
+              {/* Contador flotante */}
               {todasImagenes.length > 1 && (
                 <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm text-white px-2 py-1 rounded-md text-xs font-semibold">
                   {imagenSeleccionada + 1} / {todasImagenes.length}
                 </div>
               )}
 
+              {/* Flechas de navegación */}
               {todasImagenes.length > 1 && (
                 <>
                   <button
                     onClick={() => setImagenSeleccionada((prev) => (prev === 0 ? todasImagenes.length - 1 : prev - 1))}
                     className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-700 rounded-full p-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 z-10"
-                    style={{ outlineColor: "var(--bio-color-precio)" }}
+                    style={{ outlineColor: "var(--bio-color-precio, #8b6914)" }}
                     aria-label="Imagen anterior"
                   >
-                    <svg className="w-4 h-4 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
                   <button
                     onClick={() => setImagenSeleccionada((prev) => (prev === todasImagenes.length - 1 ? 0 : prev + 1))}
                     className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-700 rounded-full p-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 z-10"
-                    style={{ outlineColor: "var(--bio-color-precio)" }}
+                    style={{ outlineColor: "var(--bio-color-precio, #8b6914)" }}
                     aria-label="Imagen siguiente"
                   >
-                    <svg className="w-4 h-4 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
@@ -394,35 +406,38 @@ export default function ProductoDetallePage() {
             <div data-tour="product-trazabilidad" className="rounded-lg p-5 sm:p-6">
               <h2
                 className="text-lg sm:text-xl font-semibold mb-3"
-                style={{ fontFamily: "var(--bio-fuente-titulo)", color: "var(--bio-color-titulo)" }}
+                style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
               >
                 {t("Rastreo y Autenticidad")}
               </h2>
-              <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">
-                {t("Verifica que este mezcal es auténtico escaneando el código QR. Desde dónde se produjo hasta tu mano.")}
-              </p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">{t("Verifica que este mezcal es auténtico escaneando el código QR. Desde dónde se produjo hasta tu mano.")}</p>
               {urlTrazabilidad ? (
                 <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
+                  {/* QR Code */}
                   <div className="flex-shrink-0">
                     <div className="rounded-lg bg-white p-4 shadow-sm">
                       <QRCode value={urlTrazabilidad} size={140} level="H" />
                     </div>
                   </div>
+
+                  {/* Info + CTA */}
                   <div className="flex-1 space-y-4">
                     {codigoLote && (
                       <div className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">{t("Tu código de lote")}</p>
                         <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">{t("Abre el portal oficial con el botón de abajo o escanea el QR con tu teléfono para ver todos los detalles: productor, región, procedencia.")}</p>
                         <p className="text-sm font-medium text-gray-900 dark:text-white break-words font-mono">{codigoLote}</p>
+                        
                       </div>
                     )}
                     <div>
+                        
                       <a
                         href={urlTrazabilidad}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-all duration-200 hover:shadow-md hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-                        style={{ backgroundColor: "var(--bio-color-titulo)" }}
+                        style={{ backgroundColor: "#1F3A2E" }}
                       >
                         {t("Verifica aquí")}
                         <span>→</span>
@@ -440,13 +455,13 @@ export default function ProductoDetallePage() {
             </div>
           )}
 
-          {/* Ficha técnica */}
+          {/* Ficha técnica — lista plana de datos clave */}
           <div className="space-y-3 mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">{t("Ficha técnica")}</p>
             {fichaTecnica.length > 0 ? (
               <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden">
                 {fichaTecnica.map((spec) => (
-                  <div key={spec.label} className="flex justify-between items-start gap-4 px-4 py-3 bg-white dark:bg-gray-800/50">
+                  <div key={spec.label} className="flex justify-between items-start gap-4 px-4 py-3">
                     <span className="text-sm font-medium text-gray-900 dark:text-white flex-shrink-0">{spec.label}</span>
                     <span className="text-sm text-gray-700 dark:text-gray-300 text-right break-words">{spec.value}</span>
                   </div>
@@ -469,33 +484,39 @@ export default function ProductoDetallePage() {
           <div className="space-y-2">
             <h1
               className="text-3xl sm:text-4xl font-bold break-words leading-tight"
-              style={{ fontFamily: "var(--bio-fuente-titulo)", color: "var(--bio-color-titulo)" }}
+              style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
             >
               {producto.nombre}
             </h1>
             <p
               data-tour="product-price"
               className="text-2xl sm:text-3xl font-bold"
-              style={{ fontFamily: "var(--bio-fuente-titulo)", color: "var(--bio-color-precio)" }}
+              style={{ fontFamily: "var(--bio-fuente-titulo, Georgia, serif)", color: "var(--bio-color-precio, #8b6914)" }}
             >
               {convertPrice(Number(producto.precio_base || 0))}
             </p>
 
-            {producto.categorias && producto.categorias.length > 0 && (
+            {/* Categorías + badge Verificado si tiene lote */}
+            {((producto.categorias && producto.categorias.length > 0) || producto.lotes) && (
               <div className="flex flex-wrap gap-2 pt-1">
-                {producto.categorias.map((cat) => (
+                {producto.categorias?.map((cat) => (
                   <span
                     key={cat}
                     className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium cursor-default"
-                    style={{
-                      backgroundColor: "var(--bio-color-tarjeta, #e5eedc)",
-                      color: "var(--bio-color-boton)",
-                      border: "1px solid var(--bio-color-borde, #c8ddb8)",
-                    }}
+                    style={{ backgroundColor: "#e5eedc", color: "#306B3F", border: "1px solid #c8ddb8" }}
                   >
                     {cat}
                   </span>
                 ))}
+                {producto.lotes && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold cursor-default"
+                    style={{ backgroundColor: "#dbeafe", color: "#1d4ed8", border: "1px solid #93c5fd" }}
+                  >
+                    <BadgeCheck size={13} />
+                    Verificado
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -534,26 +555,18 @@ export default function ProductoDetallePage() {
                 <div data-tour="quantity-selector" className="flex items-center gap-3">
                   <button
                     onClick={() => setCantidad(Math.max(1, cantidad - 1))}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:opacity-80 transition-all duration-150 active:scale-95"
-                    style={{
-                      border: "1px solid var(--bio-color-borde, #ddd8c4)",
-                      backgroundColor: "var(--bio-color-tarjeta, #e5eedc)",
-                      color: "var(--bio-color-titulo)",
-                    }}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 active:scale-95"
+                    style={{ border: "1px solid #ddd8c4", backgroundColor: "#e5eedc", color: "#1F3A2E" }}
                     title="Disminuir cantidad"
                     aria-label="Restar una botella"
                   >
                     −
                   </button>
-                  <span className="w-10 text-center font-semibold text-base" style={{ color: "var(--bio-color-titulo)" }}>{cantidad}</span>
+                  <span className="w-10 text-center font-semibold text-base" style={{ color: "#1F3A2E" }}>{cantidad}</span>
                   <button
                     onClick={() => setCantidad(cantidad + 1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:opacity-80 transition-all duration-150 active:scale-95"
-                    style={{
-                      border: "1px solid var(--bio-color-borde, #ddd8c4)",
-                      backgroundColor: "var(--bio-color-tarjeta, #e5eedc)",
-                      color: "var(--bio-color-titulo)",
-                    }}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 active:scale-95"
+                    style={{ border: "1px solid #ddd8c4", backgroundColor: "#e5eedc", color: "#1F3A2E" }}
                     title="Aumentar cantidad"
                     aria-label="Agregar una botella"
                   >
@@ -564,16 +577,10 @@ export default function ProductoDetallePage() {
             </div>
 
             {/* Envío */}
-            <div
-              className="rounded-lg p-3 sm:p-4"
-              style={{
-                border: "1px solid var(--bio-color-borde, #e8dcc8)",
-                backgroundColor: "var(--bio-color-tarjeta, #fdf7ee)",
-              }}
-            >
+            <div className="rounded-lg p-3 sm:p-4" style={{ border: "1px solid #e8dcc8", backgroundColor: "#fdf7ee" }}>
               <div className="flex items-center gap-2 mb-2">
-                <Truck size={16} style={{ color: "var(--bio-color-precio)" }} />
-                <span className="text-sm font-semibold" style={{ color: "var(--bio-color-titulo)" }}>{t("Envío")}</span>
+                <Truck size={16} style={{ color: "var(--bio-color-precio, #8b6914)" }} />
+                <span className="text-sm font-semibold" style={{ color: "var(--bio-color-titulo, #5c3d1e)" }}>{t("Envío")}</span>
               </div>
               <p className="text-sm text-gray-700 dark:text-gray-300">
                 {t("Te mostraremos el costo cuando ingreses tu dirección. Enviamos a todo el país.")}
@@ -604,12 +611,13 @@ export default function ProductoDetallePage() {
                   }}
                   className="flex items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-medium transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px] active:scale-95"
                   style={{
-                    backgroundColor: isInWishlist(producto.id_producto) ? "var(--bio-color-tarjeta, #edf5e5)" : "transparent",
-                    color: isInWishlist(producto.id_producto) ? "var(--bio-color-boton)" : "var(--bio-color-titulo)",
-                    border: "1px solid var(--bio-color-borde, #ddd8c4)",
+                    backgroundColor: isInWishlist(producto.id_producto) ? "#edf5e5" : "transparent",
+                    color: isInWishlist(producto.id_producto) ? "#306B3F" : "#1F3A2E",
+                    border: "1px solid #ddd8c4",
                   }}
                   aria-label={isInWishlist(producto.id_producto) ? "Remover de mi lista" : "Agregar a mi lista"}
                   aria-pressed={isInWishlist(producto.id_producto)}
+                  title={isInWishlist(producto.id_producto) ? "Remover de mi lista" : "Guarda este mezcal para luego"}
                 >
                   <Heart size={20} fill={isInWishlist(producto.id_producto) ? "currentColor" : "none"} aria-hidden="true" />
                   <span className="hidden sm:inline">{isInWishlist(producto.id_producto) ? t("En mi lista") : t("Mi lista")}</span>
@@ -620,7 +628,7 @@ export default function ProductoDetallePage() {
                   onClick={handleAgregar}
                   disabled={agregado || stockDisponible === 0}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-medium transition-all duration-200 text-white hover:shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-                  style={{ backgroundColor: stockDisponible === 0 ? "#9ca3af" : "var(--bio-color-titulo)" }}
+                  style={{ backgroundColor: stockDisponible === 0 ? "#9ca3af" : "#1F3A2E" }}
                   aria-busy={agregado}
                 >
                   <ShoppingCart size={20} aria-hidden="true" />
@@ -633,7 +641,8 @@ export default function ProductoDetallePage() {
                   data-tour="buy-now-btn"
                   onClick={handleComprarAhora}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 sm:px-6 font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px]"
-                  style={{ backgroundColor: "var(--bio-color-boton)" }}
+                  style={{ backgroundColor: "#306B3F" }}
+                  title="Ir al carrito y completar tu compra"
                 >
                   <Zap size={20} aria-hidden="true" />
                   <span className="hidden sm:inline">{t("Comprar ahora")}</span>
@@ -645,6 +654,7 @@ export default function ProductoDetallePage() {
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 rounded px-4 py-3 sm:px-6 font-semibold transition-all duration-200 hover:shadow-lg active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px] border-2"
                   style={{ backgroundColor: "#ffffff", color: "#131921", borderColor: "#FF9900" }}
+                  title="Buscar en Amazon"
                 >
                   <img src="/images/amazon-icon.png" alt="Amazon" className="w-6 h-6 object-contain" aria-hidden="true" />
                   <span className="hidden sm:inline">{t("Comprar en Amazon")}</span>
@@ -654,29 +664,31 @@ export default function ProductoDetallePage() {
             </div>
           </div>
 
-          {/* Productor + Tienda */}
+          {/* Producer + Store info - side by side */}
           <div className="pt-5 pb-6 border-b border-gray-200 dark:border-gray-700">
             <div className="grid grid-cols-2 gap-6">
+              {/* Maestro Productor */}
               {(productor || nombreProductor) && (
                 <div className="space-y-2">
                   <h3
                     className="text-sm font-semibold"
-                    style={{ fontFamily: "var(--bio-fuente-titulo)", color: "var(--bio-color-titulo)" }}
+                    style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
                   >
                     {t("Maestro Productor")}
                   </h3>
                   <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                    <p className="font-medium" style={{ color: "var(--bio-color-boton)" }}>{nombreProductor}</p>
+                    <p className="font-medium" style={{ color: "#306B3F" }}>{nombreProductor}</p>
                     {productor?.biografia && <p className="text-xs text-gray-600 dark:text-gray-400">{productor.biografia}</p>}
                   </div>
                 </div>
               )}
 
+              {/* Tienda */}
               {tiendaData && (
                 <div className="space-y-2">
                   <h3
                     className="text-sm font-semibold"
-                    style={{ fontFamily: "var(--bio-fuente-titulo)", color: "var(--bio-color-titulo)" }}
+                    style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1F3A2E" }}
                   >
                     {t("Tienda")}
                   </h3>
@@ -685,7 +697,7 @@ export default function ProductoDetallePage() {
                       <Link
                         href={`/cliente/tienda/${producto.id_tienda}`}
                         className="font-medium hover:opacity-70 transition-opacity block"
-                        style={{ color: "var(--bio-color-boton)" }}
+                        style={{ color: "#306B3F" }}
                       >
                         {tiendaData.nombre} →
                       </Link>
@@ -711,6 +723,8 @@ export default function ProductoDetallePage() {
               {producto.descripcion || t("Sin descripción disponible")}
             </p>
           </div>
+
+
         </div>
       </div>
 

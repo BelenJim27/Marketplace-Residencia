@@ -96,28 +96,28 @@ export default function AsociacionesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Asociaciones de Productores</h1>
-        <p className="mt-0.5 text-sm text-[#3D6B3F]/70">
+        <h1 className="text-2xl font-bold tracking-tight text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Asociaciones de Productores</h1>
+        <p className="mt-0.5 text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">
           Gestiona la lista de asociaciones disponibles en el formulario de solicitud.
         </p>
       </div>
 
       {notice && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-2xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           {notice.message}
         </div>
       )}
 
       {/* Add new */}
-      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-        <p className="mb-3 text-sm font-semibold text-[#1F3A2E]">Agregar nueva asociación</p>
+      <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <p className="mb-3 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">Agregar nueva asociación</p>
         <div className="flex gap-3">
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             placeholder="Nombre de la asociación..."
-            className="flex-1 rounded-xl border border-[#C5CFB0] bg-white px-4 py-3 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/40 outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20"
+            className="flex-1 rounded-xl border border-[#C5CFB0] bg-white px-4 py-3 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/40 outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5] dark:placeholder-[#A8C26B]/30"
           />
           <button
             type="button"
@@ -132,16 +132,16 @@ export default function AsociacionesPage() {
       </div>
 
       {/* List */}
-      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1a2a1f] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         {loading ? (
-          <p className="p-10 text-center text-sm text-[#3D6B3F]/70">Cargando asociaciones...</p>
+          <p className="p-10 text-center text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/50">Cargando asociaciones...</p>
         ) : asociaciones.length === 0 ? (
-          <p className="p-10 text-center text-sm text-[#3D6B3F]/70">No hay asociaciones registradas.</p>
+          <p className="p-10 text-center text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/50">No hay asociaciones registradas.</p>
         ) : (
-          <ul className="divide-y divide-[#C5CFB0]/50">
+          <ul className="divide-y divide-[#C5CFB0]/50 dark:divide-[#3D6B3F]/20">
             {asociaciones.map((a, idx) => (
               <li key={a} className="flex items-center justify-between px-6 py-4">
-                <span className="text-sm font-medium text-[#1F3A2E]">{a}</span>
+                <span className="text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{a}</span>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
@@ -178,14 +178,14 @@ export default function AsociacionesPage() {
           onClick={() => setEditingIdx(null)}
         >
           <div
-            className="w-full max-w-md overflow-hidden rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] shadow-[0_24px_48px_rgba(31,58,46,0.25)]"
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#0f1a10] shadow-[0_24px_48px_rgba(31,58,46,0.25)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Franja superior */}
             <div className="h-1 bg-gradient-to-r from-[#3D6B3F] to-[#A8C26B]" />
 
             <div className="px-6 pt-6 pb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
+              <h2 className="text-lg font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">
                 Editar asociación
               </h2>
               <button
@@ -199,14 +199,14 @@ export default function AsociacionesPage() {
 
             <div className="px-6 pb-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[#1F3A2E] mb-1">Nombre de la asociación</label>
+                <label className="block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80 mb-1">Nombre de la asociación</label>
                 <input
                   type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleEditSave()}
                   autoFocus
-                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-4 py-3 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/40 outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20"
+                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-4 py-3 text-sm text-[#1F3A2E] placeholder-[#3D6B3F]/40 outline-none transition-all focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5] dark:placeholder-[#A8C26B]/30"
                 />
               </div>
 
@@ -214,7 +214,7 @@ export default function AsociacionesPage() {
                 <button
                   type="button"
                   onClick={() => setEditingIdx(null)}
-                  className="rounded-xl border border-[#C5CFB0] px-4 py-2 text-sm font-medium text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200"
+                  className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-4 py-2 text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5] hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60 transition-all duration-200"
                 >
                   Cancelar
                 </button>

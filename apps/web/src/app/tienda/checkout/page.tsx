@@ -115,14 +115,13 @@ const US_STATES = [
   { code: "DC", name: "Washington D.C." },
 ];
 
-// Estados con restricciones conocidas para envío de bebidas alcohólicas importadas
+// Estados de EE.UU. que prohíben o bloquean en la práctica el envío DTC de spirits
+// importados (mezcal). Criterio: prohíbe DTC, es control state, o requiere licencia
+// estatal que un exportador mexicano no puede obtener.
 const ALCOHOL_RESTRICTED_STATES = new Set([
-  "AL", // Control estatal, sin envío directo al consumidor
-  "AR", // Prohíbe envío directo de spirits importados
-  "KS", // Prohíbe envío directo de alcohol
-  "MS", // Estado parcialmente "seco", sin envío directo
-  "OK", // Requiere licencia estatal específica
-  "UT", // Control estatal estricto
+  "AL", "AR", "DE", "GA", "ID", "IA", "IN", "KS", "KY", "MA",
+  "MI", "MN", "MS", "MT", "NC", "ND", "NH", "OH", "OK", "PA",
+  "RI", "SC", "SD", "TN", "TX", "UT", "VA", "WA", "WV", "WY",
 ]);
 
 export default function CheckoutPage() {
@@ -427,6 +426,7 @@ export default function CheckoutPage() {
                   handleUsarGPS={handleUsarGPS}
                   gpsLoading={gpsLoading}
                   gpsError={gpsError}
+                  tieneAlcohol={tieneAlcohol}
                 />
               </div>
             )}
@@ -969,6 +969,7 @@ function DireccionStep({
   handleUsarGPS,
   gpsLoading,
   gpsError,
+  tieneAlcohol,
 }: any) {
   const { t } = useLocale();
   const COLOR_PALETTE = usePalette();
@@ -1192,9 +1193,9 @@ function DireccionStep({
                     ))}
                   </select>
                   {formErrors.estado && <p aria-live="polite" role="alert" className="mt-1 text-xs text-red-500">{formErrors.estado}</p>}
-                  {nuevaDireccion.estado && ALCOHOL_RESTRICTED_STATES.has(nuevaDireccion.estado) && (
-                    <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
-                      ⚠️ {nuevaDireccion.estado} {t("tiene restricciones legales para el envío de bebidas alcohólicas.")}
+                  {nuevaDireccion.estado && ALCOHOL_RESTRICTED_STATES.has(nuevaDireccion.estado) && tieneAlcohol && (
+                    <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                      🚫 No podemos enviar bebidas alcohólicas a {nuevaDireccion.estado} por restricciones legales de ese estado. Por favor selecciona otro estado de destino.
                     </p>
                   )}
                 </div>
@@ -1410,7 +1411,8 @@ function DireccionStep({
           <div className="flex gap-3 pt-2">
             <button
               onClick={handleGuardar}
-              className="rounded-xl bg-green-600 px-6 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-green-700 active:bg-green-800 shadow-sm hover:shadow-md"
+              disabled={!!(nuevaDireccion.pais_iso2 === "US" && tieneAlcohol && nuevaDireccion.estado && ALCOHOL_RESTRICTED_STATES.has(nuevaDireccion.estado))}
+              className="rounded-xl bg-green-600 px-6 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-green-700 active:bg-green-800 shadow-sm hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40"
             >
               {t("address_form_save_button")}
             </button>

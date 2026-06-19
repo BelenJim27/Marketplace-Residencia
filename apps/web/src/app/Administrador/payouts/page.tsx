@@ -11,13 +11,13 @@ import { AlertService } from "@/shared/alerts/alert.service";
 type Notice = { type: "success" | "error"; message: string };
 const ESTADOS = ["pendiente", "en_proceso", "procesado", "pagado", "fallido", "agotado", "cancelado"] as const;
 const ESTADO_BADGE: Record<string, string> = {
-  pendiente: "bg-[#C97A3E]/15 text-[#C97A3E] border border-[#C97A3E]/30",
-  en_proceso: "bg-[#3D6B3F]/10 text-[#3D6B3F] border border-[#3D6B3F]/20",
-  procesado: "bg-[#A8C26B]/20 text-[#3D6B3F] border border-[#A8C26B]/40",
-  pagado: "bg-[#A8C26B]/25 text-[#3D6B3F] border border-[#A8C26B]/50",
-  fallido: "bg-[#C97A3E]/20 text-[#C97A3E] border border-[#C97A3E]/40",
-  agotado: "bg-red-100 text-red-700 border border-red-200",
-  cancelado: "bg-[#C5CFB0]/30 text-[#3D6B3F]/70 border border-[#C5CFB0]",
+  pendiente: "bg-[#C97A3E]/15 dark:bg-[#C97A3E]/20 text-[#C97A3E] dark:text-[#E8A87C] border border-[#C97A3E]/30",
+  en_proceso: "bg-[#3D6B3F]/10 dark:bg-[#3D6B3F]/20 text-[#3D6B3F] dark:text-[#A8C26B] border border-[#3D6B3F]/20",
+  procesado: "bg-[#A8C26B]/20 dark:bg-[#A8C26B]/15 text-[#3D6B3F] dark:text-[#A8C26B] border border-[#A8C26B]/40",
+  pagado: "bg-[#A8C26B]/25 dark:bg-[#A8C26B]/15 text-[#3D6B3F] dark:text-[#A8C26B] border border-[#A8C26B]/50",
+  fallido: "bg-[#C97A3E]/20 dark:bg-[#C97A3E]/25 text-[#C97A3E] dark:text-[#E8A87C] border border-[#C97A3E]/40",
+  agotado: "bg-red-100 dark:bg-red-950/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/30",
+  cancelado: "bg-[#C5CFB0]/30 dark:bg-[#3D6B3F]/10 text-[#3D6B3F]/70 dark:text-[#A8C26B]/50 border border-[#C5CFB0] dark:border-[#3D6B3F]/30",
 };
 
 const ESTADOS_MANUALES = ["pendiente", "en_proceso", "procesado", "pagado", "fallido", "cancelado"] as const;
@@ -203,8 +203,8 @@ export default function PayoutsAdminPage() {
         <div
           className={`flex items-center gap-2 rounded-md border px-4 py-2 text-sm ${
             notice.type === "success"
-              ? "border-[#A8C26B]/40 bg-[#A8C26B]/10 text-[#3D6B3F]"
-              : "border-red-300 bg-red-50 text-red-800"
+              ? "border-[#A8C26B]/40 dark:border-[#A8C26B]/30 bg-[#A8C26B]/10 dark:bg-[#A8C26B]/15 text-[#3D6B3F] dark:text-[#A8C26B]"
+              : "border-red-300 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-400"
           }`}
         >
           {notice.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
@@ -234,45 +234,45 @@ export default function PayoutsAdminPage() {
       )}
 
       {/* Información de retención configurable */}
-      <section className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <section className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="flex gap-3">
-          <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#3D6B3F]" />
-          <div className="flex-1 text-sm text-[#1F3A2E]">
-            <p className="font-medium text-[#1F3A2E]">Período de retención activo</p>
-            <p className="mt-1 text-xs text-[#3D6B3F]/70">Los pagos se retienen hasta la entrega confirmada + período configurado para proteger contra disputas y chargebacks. Usa la sección de generación para liberar pagos manuales cuando sea necesario.</p>
+          <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#3D6B3F] dark:text-[#A8C26B]" />
+          <div className="flex-1 text-sm text-[#1F3A2E] dark:text-[#E8E3D5]">
+            <p className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">Período de retención activo</p>
+            <p className="mt-1 text-xs text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Los pagos se retienen hasta la entrega confirmada + período configurado para proteger contra disputas y chargebacks. Usa la sección de generación para liberar pagos manuales cuando sea necesario.</p>
           </div>
         </div>
       </section>
 
       {/* Generar payouts */}
-      <section className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-        <h2 className="mb-3 text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Generar payouts por periodo</h2>
+      <section className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <h2 className="mb-3 text-lg font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Generar payouts por periodo</h2>
         <form onSubmit={handleGenerar} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm text-[#1F3A2E]">Desde</label>
+            <label className="mb-1 block text-sm text-[#1F3A2E] dark:text-[#A8C26B]/80">Desde</label>
             <input
               type="date"
               value={genForm.desde}
               onChange={(e) => setGenForm((p) => ({ ...p, desde: e.target.value }))}
-              className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none"
+              className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] focus:border-[#3D6B3F] focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-[#1F3A2E]">Hasta</label>
+            <label className="mb-1 block text-sm text-[#1F3A2E] dark:text-[#A8C26B]/80">Hasta</label>
             <input
               type="date"
               value={genForm.hasta}
               onChange={(e) => setGenForm((p) => ({ ...p, hasta: e.target.value }))}
-              className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none"
+              className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] focus:border-[#3D6B3F] focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-[#1F3A2E]">Proveedor (opcional)</label>
+            <label className="mb-1 block text-sm text-[#1F3A2E] dark:text-[#A8C26B]/80">Proveedor (opcional)</label>
             <input
               value={genForm.proveedor}
               onChange={(e) => setGenForm((p) => ({ ...p, proveedor: e.target.value }))}
               placeholder="stripe_connect / spei / ach"
-              className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none"
+              className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] placeholder:text-[#3D6B3F]/40 dark:placeholder:text-[#A8C26B]/30 focus:border-[#3D6B3F] focus:outline-none"
             />
           </div>
           <button
@@ -285,7 +285,7 @@ export default function PayoutsAdminPage() {
           </button>
         </form>
         {genResultado && (
-          <div className="mt-3 rounded-xl border border-[#C5CFB0] bg-white p-3 text-sm text-[#1F3A2E]">
+          <div className="mt-3 rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] p-3 text-sm text-[#1F3A2E] dark:text-[#E8E3D5]">
             <div className="font-medium">Resultado: {genResultado.creados} payouts</div>
             {genResultado.payouts.length > 0 && (
               <ul className="mt-2 list-disc pl-5">
@@ -301,20 +301,20 @@ export default function PayoutsAdminPage() {
       </section>
 
       {/* Pendientes por productor */}
-      <section className="rounded-md border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-        <h2 className="mb-3 text-lg font-medium">Pendientes por distribuir</h2>
+      <section className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <h2 className="mb-3 text-lg font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Pendientes por distribuir</h2>
         {resumenLoading ? (
           <div className="flex justify-center py-6">
-            <Loader2 className="animate-spin" size={20} />
+            <Loader2 className="animate-spin text-[#3D6B3F]" size={20} />
           </div>
         ) : resumenPendientes.length === 0 ? (
-          <div className="rounded-md bg-gray-50 p-6 text-center text-gray-500 dark:bg-gray-800">
+          <div className="rounded-xl bg-white dark:bg-[#0f1a10] p-6 text-center text-[#3D6B3F]/60 dark:text-[#A8C26B]/50 border border-[#C5CFB0] dark:border-[#3D6B3F]/30">
             No hay pagos pendientes de distribuir
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-gray-200 dark:border-gray-700">
-            <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+          <div className="overflow-x-auto rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40">
+            <table className="min-w-full divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20 text-sm">
+              <thead className="bg-[#1F3A2E] text-white text-[11px] font-bold uppercase tracking-wider">
                 <tr>
                   <th className="px-3 py-2 text-left">Productor</th>
                   <th className="px-3 py-2 text-left">Moneda</th>
@@ -326,35 +326,35 @@ export default function PayoutsAdminPage() {
                   <th className="px-3 py-2 text-right">Acción</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20">
                 {resumenPendientes.flatMap((productor) =>
                   productor.resumen_por_moneda.map((moneda, idx) => (
-                    <tr key={`${productor.id_productor}-${moneda.moneda}-${idx}`}>
+                    <tr key={`${productor.id_productor}-${moneda.moneda}-${idx}`} className="odd:bg-white dark:odd:bg-[#0f1a10] even:bg-[#F4F0E3]/40 dark:even:bg-[#1a2a1f] hover:bg-[#C5CFB0]/20 dark:hover:bg-[#2d4a2e]/40 transition-all duration-150">
                       {idx === 0 && (
                         <td className="px-3 py-2" rowSpan={productor.resumen_por_moneda.length}>
-                          <span className="font-medium">{productor.nombre}</span>
-                          <span className="ml-2 text-gray-500">#{productor.id_productor}</span>
+                          <span className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{productor.nombre}</span>
+                          <span className="ml-2 text-[#3D6B3F]/50 dark:text-[#A8C26B]/50">#{productor.id_productor}</span>
                         </td>
                       )}
-                      <td className="px-3 py-2">{moneda.moneda}</td>
-                      <td className="px-3 py-2 text-center">{moneda.pedidos_pendientes}</td>
-                      <td className="px-3 py-2 text-right">{formatMXN(moneda.monto_bruto_total)}</td>
-                      <td className="px-3 py-2 text-right text-orange-600">{formatMXN(moneda.comision_total)}</td>
-                      <td className="px-3 py-2 text-right font-medium">{formatMXN(moneda.monto_neto_total)}</td>
+                      <td className="px-3 py-2 text-[#1F3A2E] dark:text-[#D4CEBF]">{moneda.moneda}</td>
+                      <td className="px-3 py-2 text-center text-[#1F3A2E] dark:text-[#D4CEBF]">{moneda.pedidos_pendientes}</td>
+                      <td className="px-3 py-2 text-right text-[#1F3A2E] dark:text-[#D4CEBF]">{formatMXN(moneda.monto_bruto_total)}</td>
+                      <td className="px-3 py-2 text-right text-[#C97A3E] dark:text-[#E8A87C]">{formatMXN(moneda.comision_total)}</td>
+                      <td className="px-3 py-2 text-right font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{formatMXN(moneda.monto_neto_total)}</td>
                       <td className="px-3 py-2">
                         <div className="flex gap-1">
                           {productor.metodos_disponibles.stripe && (
-                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                            <span className="rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 text-xs text-blue-800 dark:text-blue-300">
                               ● Stripe
                             </span>
                           )}
                           {productor.metodos_disponibles.paypal && (
-                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                            <span className="rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-300">
                               ● PayPal
                             </span>
                           )}
                           {!productor.metodos_disponibles.stripe && !productor.metodos_disponibles.paypal && (
-                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            <span className="rounded-full bg-[#C5CFB0]/30 dark:bg-[#3D6B3F]/10 px-2 py-0.5 text-xs text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">
                               ○ Sin método
                             </span>
                           )}
@@ -362,7 +362,7 @@ export default function PayoutsAdminPage() {
                       </td>
                       <td className="px-3 py-2 text-right">
                         {!productor.metodos_disponibles.stripe && !productor.metodos_disponibles.paypal ? (
-                          <span className="text-xs text-gray-500">Sin método</span>
+                          <span className="text-xs text-[#3D6B3F]/50 dark:text-[#A8C26B]/40">Sin método</span>
                         ) : (
                           <select
                             defaultValue=""
@@ -387,7 +387,7 @@ export default function PayoutsAdminPage() {
                                 setGenerando(false);
                               }
                             }}
-                            className="rounded-md border border-gray-300 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800"
+                            className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-2 py-1 text-xs text-[#1F3A2E] dark:text-[#E8E3D5]"
                           >
                             <option value="">Pagar con...</option>
                             {productor.metodos_disponibles.stripe && <option value="stripe">Stripe</option>}
@@ -405,13 +405,13 @@ export default function PayoutsAdminPage() {
       </section>
 
       {/* Listado */}
-      <section className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <section className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="mb-3 flex flex-wrap items-center gap-3">
-          <h2 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Listado</h2>
+          <h2 className="text-lg font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Listado</h2>
           <select
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
-            className="rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E]"
+            className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5]"
           >
             <option value="">Todos los estados</option>
             {ESTADOS.map((e) => (
@@ -426,28 +426,28 @@ export default function PayoutsAdminPage() {
               placeholder="id_productor"
               value={filtroProductor}
               onChange={(e) => setFiltroProductor(e.target.value)}
-              className="rounded-xl border border-[#C5CFB0] bg-white py-2 pl-9 pr-3 text-sm text-[#1F3A2E]"
+              className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] py-2 pl-9 pr-3 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] placeholder:text-[#3D6B3F]/40 dark:placeholder:text-[#A8C26B]/30"
             />
           </div>
         </div>
 
         <div className="mb-3 grid grid-cols-3 gap-3 text-sm">
-          <div className="rounded-xl border border-[#C5CFB0] bg-white p-3">
-            <div className="text-[#3D6B3F]/70">Total bruto</div>
-            <div className="font-medium">{formatPrice(totales.bruto)}</div>
+          <div className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] p-3">
+            <div className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Total bruto</div>
+            <div className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{formatPrice(totales.bruto)}</div>
           </div>
-          <div className="rounded-xl border border-[#C5CFB0] bg-white p-3">
-            <div className="text-[#3D6B3F]/70">Total comisión</div>
-            <div className="font-medium">{formatPrice(totales.comision)}</div>
+          <div className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] p-3">
+            <div className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Total comisión</div>
+            <div className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{formatPrice(totales.comision)}</div>
           </div>
-          <div className="rounded-xl border border-[#C5CFB0] bg-white p-3">
-            <div className="text-[#3D6B3F]/70">Total neto</div>
-            <div className="font-medium">{formatPrice(totales.neto)}</div>
+          <div className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] p-3">
+            <div className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Total neto</div>
+            <div className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{formatPrice(totales.neto)}</div>
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-          <table className="min-w-full divide-y divide-[#C5CFB0]/30 text-sm">
+        <div className="overflow-x-auto rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <table className="min-w-full divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20 text-sm">
             <thead className="bg-[#1F3A2E] text-white text-[11px] font-bold uppercase tracking-wider">
               <tr>
                 <th className="px-3 py-2 text-left">ID</th>
@@ -461,39 +461,39 @@ export default function PayoutsAdminPage() {
                 <th className="px-3 py-2 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#C5CFB0]/30">
+            <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20">
               {loading && (
                 <tr>
-                  <td colSpan={9} className="px-3 py-6 text-center">
-                    <Loader2 className="mx-auto animate-spin" size={20} />
+                  <td colSpan={9} className="px-3 py-6 text-center bg-white dark:bg-[#0f1a10]">
+                    <Loader2 className="mx-auto animate-spin text-[#3D6B3F]" size={20} />
                   </td>
                 </tr>
               )}
               {!loading && payouts.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-3 py-6 text-center text-[#3D6B3F]/70 bg-white">
+                  <td colSpan={9} className="px-3 py-6 text-center text-[#3D6B3F]/70 dark:text-[#A8C26B]/50 bg-white dark:bg-[#0f1a10]">
                     Sin payouts
                   </td>
                 </tr>
               )}
               {!loading &&
                 paginatedPayouts.map((p) => (
-                  <tr key={p.id_payout} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-all duration-200">
-                    <td className="px-3 py-2">#{p.id_payout}</td>
-                    <td className="px-3 py-2">
+                  <tr key={p.id_payout} className="odd:bg-white dark:odd:bg-[#0f1a10] even:bg-[#F4F0E3]/40 dark:even:bg-[#1a2a1f] hover:bg-[#C5CFB0]/20 dark:hover:bg-[#2d4a2e]/40 transition-all duration-200">
+                    <td className="px-3 py-2 text-[#1F3A2E] dark:text-[#D4CEBF]">#{p.id_payout}</td>
+                    <td className="px-3 py-2 text-[#1F3A2E] dark:text-[#D4CEBF]">
                       {p.productores?.razon_social ?? `Productor #${p.id_productor}`}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">
                       {new Date(p.periodo_desde).toLocaleDateString()} →{" "}
                       {new Date(p.periodo_hasta).toLocaleDateString()}
                     </td>
-                    <td className="px-3 py-2 text-right">{formatMXN(p.monto_bruto)}</td>
-                    <td className="px-3 py-2 text-right">{formatMXN(p.monto_comision)}</td>
-                    <td className="px-3 py-2 text-right font-medium">{formatMXN(p.monto_neto)}</td>
-                    <td className="px-3 py-2">{p.moneda}</td>
+                    <td className="px-3 py-2 text-right text-[#1F3A2E] dark:text-[#D4CEBF]">{formatMXN(p.monto_bruto)}</td>
+                    <td className="px-3 py-2 text-right text-[#1F3A2E] dark:text-[#D4CEBF]">{formatMXN(p.monto_comision)}</td>
+                    <td className="px-3 py-2 text-right font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{formatMXN(p.monto_neto)}</td>
+                    <td className="px-3 py-2 text-[#1F3A2E] dark:text-[#D4CEBF]">{p.moneda}</td>
                     <td className="px-3 py-2">
                       <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs ${ESTADO_BADGE[p.estado] ?? "bg-gray-100"}`}
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs ${ESTADO_BADGE[p.estado] ?? "bg-[#C5CFB0]/20 dark:bg-[#3D6B3F]/10 text-[#3D6B3F]/60 dark:text-[#A8C26B]/50"}`}
                       >
                         {p.estado}
                       </span>
@@ -503,7 +503,7 @@ export default function PayoutsAdminPage() {
                         <button
                           onClick={() => handleReembolsar(p)}
                           disabled={reembolsando === p.id_payout}
-                          className="mr-2 inline-flex items-center gap-1 rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100 disabled:opacity-50"
+                          className="mr-2 inline-flex items-center gap-1 rounded-md border border-red-300 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-2 py-1 text-xs text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/40 disabled:opacity-50"
                         >
                           {reembolsando === p.id_payout ? (
                             <Loader2 size={12} className="animate-spin" />
@@ -515,13 +515,13 @@ export default function PayoutsAdminPage() {
                       )}
                       <button
                         onClick={() => openDetalle(p)}
-                        className="mr-2 inline-flex items-center gap-1 rounded-lg border border-[#C5CFB0] px-2 py-1 text-xs text-[#1F3A2E] hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] transition-all duration-200"
+                        className="mr-2 inline-flex items-center gap-1 rounded-lg border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-2 py-1 text-xs text-[#1F3A2E] dark:text-[#E8E3D5] hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] dark:hover:bg-[#1F3A2E]/60 transition-all duration-200"
                       >
                         <Eye size={12} /> Detalle
                       </button>
                       <button
                         onClick={() => openEstado(p)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-[#C5CFB0] bg-[#F4F0E3] px-2 py-1 text-xs text-[#3D6B3F] hover:bg-[#C5CFB0]/30 transition-all duration-200"
+                        className="inline-flex items-center gap-1 rounded-lg border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/40 px-2 py-1 text-xs text-[#3D6B3F] dark:text-[#A8C26B] hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60 transition-all duration-200"
                       >
                         Cambiar estado
                       </button>
@@ -534,20 +534,20 @@ export default function PayoutsAdminPage() {
 
         {/* Paginación */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 mt-4 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-            <p className="text-sm text-[#1F3A2E]">
+          <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-4 py-3 mt-4 bg-white dark:bg-[#1a2a1f] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+            <p className="text-sm text-[#1F3A2E] dark:text-[#E8E3D5]">
               Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, payouts.length)}</span> de <span className="font-semibold">{payouts.length}</span> payouts
             </p>
             <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
               <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
-                className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+                className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50">
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+              <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40">
                 Página {currentPage} de {totalPages}
               </span>
               <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
-                className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+                className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50">
                 <ChevronRight className="h-5 w-5" />
               </button>
             </nav>
@@ -557,20 +557,20 @@ export default function PayoutsAdminPage() {
 
       {estadoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] p-6">
+          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] dark:bg-[#0f1a10] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_24px_48px_rgba(31,58,46,0.25)] p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Payout #{estadoModal.id_payout}</h2>
-              <button onClick={() => setEstadoModal(null)} aria-label="Cerrar">
+              <h2 className="text-lg font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Payout #{estadoModal.id_payout}</h2>
+              <button onClick={() => setEstadoModal(null)} aria-label="Cerrar" className="text-[#1F3A2E] dark:text-[#E8E3D5]">
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleEstadoSubmit} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">Estado</label>
+                <label className="mb-1 block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80">Estado</label>
                 <select
                   value={estadoForm.estado}
                   onChange={(e) => setEstadoForm((p) => ({ ...p, estado: e.target.value }))}
-                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none"
+                  className="w-full rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] focus:border-[#3D6B3F] focus:outline-none"
                 >
                   {ESTADOS_MANUALES.map((e) => (
                     <option key={e} value={e}>
@@ -578,31 +578,31 @@ export default function PayoutsAdminPage() {
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-[#3D6B3F]/60">El estado "agotado" se asigna automáticamente tras 5 intentos fallidos.</p>
+                <p className="mt-1 text-xs text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">El estado "agotado" se asigna automáticamente tras 5 intentos fallidos.</p>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">Referencia externa</label>
+                <label className="mb-1 block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80">Referencia externa</label>
                 <input
                   value={estadoForm.referencia_externa}
                   onChange={(e) => setEstadoForm((p) => ({ ...p, referencia_externa: e.target.value }))}
                   placeholder="ID transferencia / payout Stripe"
-                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none"
+                  className="w-full rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] placeholder:text-[#3D6B3F]/40 dark:placeholder:text-[#A8C26B]/30 focus:border-[#3D6B3F] focus:outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-[#1F3A2E]">Notas</label>
+                <label className="mb-1 block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80">Notas</label>
                 <textarea
                   value={estadoForm.notas}
                   onChange={(e) => setEstadoForm((p) => ({ ...p, notas: e.target.value }))}
                   rows={3}
-                  className="w-full rounded-xl border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] focus:border-[#3D6B3F] focus:outline-none"
+                  className="w-full rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] focus:border-[#3D6B3F] focus:outline-none"
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setEstadoModal(null)}
-                  className="rounded-xl border border-[#C5CFB0] px-4 py-2 text-sm text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200"
+                  className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-4 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60 transition-all duration-200"
                 >
                   Cancelar
                 </button>
@@ -628,54 +628,54 @@ export default function PayoutsAdminPage() {
 
       {detalleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] p-6">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[#F4F0E3] dark:bg-[#0f1a10] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_24px_48px_rgba(31,58,46,0.25)] p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Detalle payout #{detalleModal.id_payout}</h2>
-              <button onClick={() => setDetalleModal(null)} aria-label="Cerrar">
+              <h2 className="text-lg font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Detalle payout #{detalleModal.id_payout}</h2>
+              <button onClick={() => setDetalleModal(null)} aria-label="Cerrar" className="text-[#1F3A2E] dark:text-[#E8E3D5]">
                 <X size={20} />
               </button>
             </div>
-            <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
+            <div className="mb-4 grid grid-cols-2 gap-3 text-sm text-[#1F3A2E] dark:text-[#E8E3D5]">
               <div>
-                <span className="text-[#3D6B3F]/70">Productor:</span>{" "}
+                <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Productor:</span>{" "}
                 {detalleModal.productores?.razon_social ?? `#${detalleModal.id_productor}`}
               </div>
               <div>
-                <span className="text-[#3D6B3F]/70">Moneda:</span> {detalleModal.moneda}
+                <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Moneda:</span> {detalleModal.moneda}
               </div>
               <div>
-                <span className="text-[#3D6B3F]/70">Bruto:</span> {formatMXN(detalleModal.monto_bruto)}
+                <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Bruto:</span> {formatMXN(detalleModal.monto_bruto)}
               </div>
               <div>
-                <span className="text-[#3D6B3F]/70">Comisión:</span> {formatMXN(detalleModal.monto_comision)}
+                <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Comisión:</span> {formatMXN(detalleModal.monto_comision)}
               </div>
               <div>
-                <span className="text-[#3D6B3F]/70">Neto:</span>{" "}
+                <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Neto:</span>{" "}
                 <strong>{formatMXN(detalleModal.monto_neto)}</strong>
               </div>
               <div>
-                <span className="text-[#3D6B3F]/70">Estado:</span>{" "}
-                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${ESTADO_BADGE[detalleModal.estado] ?? "bg-gray-100"}`}>
+                <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Estado:</span>{" "}
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${ESTADO_BADGE[detalleModal.estado] ?? "bg-[#C5CFB0]/20 dark:bg-[#3D6B3F]/10"}`}>
                   {detalleModal.estado}
                 </span>
               </div>
               {(detalleModal.estado === "fallido" || detalleModal.estado === "agotado") && (
-                <div className="col-span-2 rounded-xl border border-[#C97A3E]/30 bg-[#C97A3E]/8 p-3">
-                  <div className="mb-2 text-sm font-medium text-[#C97A3E]">Diagnóstico de error</div>
+                <div className="col-span-2 rounded-xl border border-[#C97A3E]/30 dark:border-[#C97A3E]/20 bg-[#C97A3E]/8 dark:bg-[#C97A3E]/10 p-3">
+                  <div className="mb-2 text-sm font-medium text-[#C97A3E] dark:text-[#E8A87C]">Diagnóstico de error</div>
                   <div className="space-y-1 text-xs">
-                    <div>
-                      <span className="text-[#3D6B3F]/70">Intentos: </span>
+                    <div className="text-[#1F3A2E] dark:text-[#D4CEBF]">
+                      <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Intentos: </span>
                       <span className="font-medium">{detalleModal.intentos ?? 0}/5</span>
                     </div>
                     {detalleModal.ultimo_error && (
                       <div>
-                        <span className="text-[#3D6B3F]/70">Último error: </span>
+                        <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Último error: </span>
                         <span className="font-mono text-red-700 dark:text-red-400">{detalleModal.ultimo_error}</span>
                       </div>
                     )}
                     {detalleModal.proximo_reintento && (
-                      <div>
-                        <span className="text-[#3D6B3F]/70">Próximo reintento: </span>
+                      <div className="text-[#1F3A2E] dark:text-[#D4CEBF]">
+                        <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Próximo reintento: </span>
                         <span className="font-medium">
                           {new Date(detalleModal.proximo_reintento).toLocaleString("es-MX", {
                             day: "2-digit",
@@ -696,12 +696,12 @@ export default function PayoutsAdminPage() {
                 </div>
               )}
             </div>
-            <h3 className="mb-2 text-sm font-bold text-[#1F3A2E]">Pedidos incluidos</h3>
-            <div className="mb-3 rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] p-3 text-xs text-[#3D6B3F]/70">
-              <p className="font-medium">Desglose transparente de ingresos:</p>
+            <h3 className="mb-2 text-sm font-bold text-[#1F3A2E] dark:text-[#E8E3D5]">Pedidos incluidos</h3>
+            <div className="mb-3 rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1a2a1f] p-3 text-xs text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">
+              <p className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">Desglose transparente de ingresos:</p>
               <p className="mt-1">El subtotal bruto incluye: items del producto + IVA prorrateado + envío prorrateado. La comisión se aplica sobre este monto total para garantizar transparencia en el cálculo.</p>
             </div>
-            <table className="min-w-full divide-y divide-[#C5CFB0]/30 text-sm">
+            <table className="min-w-full divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20 text-sm">
               <thead className="bg-[#1F3A2E] text-white">
                 <tr>
                   <th className="px-3 py-2 text-left">Pedido</th>
@@ -711,14 +711,14 @@ export default function PayoutsAdminPage() {
                   <th className="px-3 py-2 text-right">Neto</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#C5CFB0]/30">
+              <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20">
                 {detalleModal.pedido_productor.map((pp) => (
-                  <tr key={`${pp.id_pedido}-${pp.id_productor}`}>
-                    <td className="px-3 py-2">#{pp.id_pedido}</td>
-                    <td className="px-3 py-2">{pp.estado}</td>
-                    <td className="px-3 py-2 text-right font-medium">{pp.subtotal_bruto ? formatMXN(pp.subtotal_bruto) : "—"}</td>
-                    <td className="px-3 py-2 text-right">{pp.comision_marketplace ? formatMXN(pp.comision_marketplace) : "—"}</td>
-                    <td className="px-3 py-2 text-right font-medium">{pp.monto_neto_productor ? formatMXN(pp.monto_neto_productor) : "—"}</td>
+                  <tr key={`${pp.id_pedido}-${pp.id_productor}`} className="odd:bg-white dark:odd:bg-[#0f1a10] even:bg-[#F4F0E3]/40 dark:even:bg-[#1a2a1f]">
+                    <td className="px-3 py-2 text-[#1F3A2E] dark:text-[#D4CEBF]">#{pp.id_pedido}</td>
+                    <td className="px-3 py-2 text-[#1F3A2E] dark:text-[#D4CEBF]">{pp.estado}</td>
+                    <td className="px-3 py-2 text-right font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{pp.subtotal_bruto ? formatMXN(pp.subtotal_bruto) : "—"}</td>
+                    <td className="px-3 py-2 text-right text-[#1F3A2E] dark:text-[#D4CEBF]">{pp.comision_marketplace ? formatMXN(pp.comision_marketplace) : "—"}</td>
+                    <td className="px-3 py-2 text-right font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{pp.monto_neto_productor ? formatMXN(pp.monto_neto_productor) : "—"}</td>
                   </tr>
                 ))}
               </tbody>

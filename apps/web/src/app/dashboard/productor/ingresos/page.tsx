@@ -17,13 +17,13 @@ type ConnectStatus = {
 };
 
 const ESTADO_BADGE: Record<string, string> = {
-  pendiente: "bg-[#C5CFB0]/30 text-[#1F3A2E]",
-  en_proceso: "bg-blue-100 text-blue-800",
-  procesado: "bg-[#A8C26B]/20 text-[#3D6B3F]",
-  pagado: "bg-[#A8C26B]/30 text-[#1F3A2E]",
-  fallido: "bg-[#C97A3E]/15 text-[#C97A3E]",
-  agotado: "bg-red-100 text-red-700",
-  cancelado: "bg-[#C5CFB0]/20 text-[#3D6B3F]/60",
+  pendiente: "bg-[#C5CFB0]/30 dark:bg-[#3D6B3F]/20 text-[#1F3A2E] dark:text-[#A8C26B]",
+  en_proceso: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300",
+  procesado: "bg-[#A8C26B]/20 dark:bg-[#A8C26B]/15 text-[#3D6B3F] dark:text-[#A8C26B]",
+  pagado: "bg-[#A8C26B]/30 dark:bg-[#A8C26B]/20 text-[#1F3A2E] dark:text-[#A8C26B]",
+  fallido: "bg-[#C97A3E]/15 dark:bg-[#C97A3E]/20 text-[#C97A3E] dark:text-[#E8A87C]",
+  agotado: "bg-red-100 dark:bg-red-950/20 text-red-700 dark:text-red-400",
+  cancelado: "bg-[#C5CFB0]/20 dark:bg-[#3D6B3F]/10 text-[#3D6B3F]/60 dark:text-[#A8C26B]/50",
 };
 
 type RangoPeriodo = "mes_actual" | "mes_anterior" | "personalizado";
@@ -139,18 +139,18 @@ export default function IngresosProductorPage() {
     );
   }
 
-  const inputCls = "rounded-xl border border-[#C5CFB0] bg-transparent px-4 py-2.5 text-sm text-[#1F3A2E] outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20";
+  const inputCls = "rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-transparent dark:bg-[#0f1a10] px-4 py-2.5 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20";
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-        <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Mis Ingresos</h1>
-        <p className="text-sm text-[#3D6B3F]/70">Consulta tus payouts y el estado de tus pagos.</p>
+      <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <h1 className="text-2xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Mis Ingresos</h1>
+        <p className="text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Consulta tus payouts y el estado de tus pagos.</p>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 p-4 text-sm text-red-700 dark:text-red-400">
           <AlertCircle size={16} className="shrink-0" />
           {error}
         </div>
@@ -194,7 +194,7 @@ export default function IngresosProductorPage() {
       )}
 
       {/* Selector de periodo */}
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <select value={rango} onChange={(e) => setRango(e.target.value as RangoPeriodo)} className={inputCls}>
           <option value="mes_actual">Este mes</option>
           <option value="mes_anterior">Mes anterior</option>
@@ -253,10 +253,10 @@ export default function IngresosProductorPage() {
       </div>
 
       {/* Payouts table */}
-      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-        <div className="border-b border-[#C5CFB0]/50 bg-[#F4F0E3] p-5">
-          <h2 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Mis payouts</h2>
-          <p className="text-sm text-[#3D6B3F]/70">Cada payout agrupa los pedidos liberados de un periodo.</p>
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <div className="border-b border-[#C5CFB0]/50 dark:border-[#3D6B3F]/30 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-5">
+          <h2 className="text-xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Mis payouts</h2>
+          <p className="text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Cada payout agrupa los pedidos liberados de un periodo.</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left text-sm">
@@ -274,60 +274,60 @@ export default function IngresosProductorPage() {
                 <th className="px-4 py-4">Acciones</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20">
               {loading && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center">
+                  <td colSpan={10} className="px-4 py-8 text-center bg-white dark:bg-[#0f1a10]">
                     <Loader2 className="mx-auto animate-spin text-[#3D6B3F]" size={20} />
                   </td>
                 </tr>
               )}
               {!loading && filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-10 text-center text-[#3D6B3F]/60">
+                  <td colSpan={10} className="px-4 py-10 text-center text-[#3D6B3F]/60 dark:text-[#A8C26B]/50 bg-white dark:bg-[#0f1a10]">
                     Aún no tienes payouts en este periodo.
                   </td>
                 </tr>
               )}
               {!loading && paginatedPayouts.map((p) => (
                 <tr key={p.id_payout}
-                  className="border-t border-[#C5CFB0]/30 bg-white transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20">
-                  <td className="px-4 py-3 font-medium text-[#1F3A2E]">#{p.id_payout}</td>
-                  <td className="px-4 py-3 text-[#3D6B3F]/70">
+                  className="transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 dark:odd:bg-[#0f1a10] dark:even:bg-[#1a2a1f] dark:hover:bg-[#2d4a2e]/40">
+                  <td className="px-4 py-3 font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">#{p.id_payout}</td>
+                  <td className="px-4 py-3 text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">
                     {new Date(p.periodo_desde).toLocaleDateString()} → {new Date(p.periodo_hasta).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3 text-right text-[#3D6B3F]/70">{formatMXN(p.monto_bruto)}</td>
-                  <td className="px-4 py-3 text-right text-[#3D6B3F]/70">{formatMXN(p.monto_comision)}</td>
-                  <td className="px-4 py-3 text-right font-medium text-[#1F3A2E]">{formatMXN(p.monto_neto)}</td>
-                  <td className="px-4 py-3 text-[#3D6B3F]/70">{p.moneda}</td>
+                  <td className="px-4 py-3 text-right text-[#3D6B3F]/70 dark:text-[#D4CEBF]">{formatMXN(p.monto_bruto)}</td>
+                  <td className="px-4 py-3 text-right text-[#3D6B3F]/70 dark:text-[#D4CEBF]">{formatMXN(p.monto_comision)}</td>
+                  <td className="px-4 py-3 text-right font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{formatMXN(p.monto_neto)}</td>
+                  <td className="px-4 py-3 text-[#3D6B3F]/70 dark:text-[#D4CEBF]">{p.moneda}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_BADGE[p.estado] ?? "bg-[#C5CFB0]/30 text-[#1F3A2E]"}`}
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_BADGE[p.estado] ?? "bg-[#C5CFB0]/30 dark:bg-[#3D6B3F]/20 text-[#1F3A2E] dark:text-[#E8E3D5]"}`}
                       title={p.estado === "agotado" ? "Falló 5 veces — contacta a soporte" : p.estado === "fallido" ? "Se reintentará automáticamente" : undefined}>
                       {p.estado}
                     </span>
                     {p.estado === "fallido" && p.proximo_reintento && (
-                      <div className="mt-1 text-xs text-[#C97A3E]">
+                      <div className="mt-1 text-xs text-[#C97A3E] dark:text-[#E8A87C]">
                         Se reintentará el {new Date(p.proximo_reintento).toLocaleString("es-MX", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                       </div>
                     )}
                     {p.estado === "agotado" && (
-                      <div className="mt-1 text-xs text-red-600">
+                      <div className="mt-1 text-xs text-red-600 dark:text-red-400">
                         {p.ultimo_error && <span className="block truncate">{p.ultimo_error}</span>}
                         <a href="mailto:soporte@marketplace.com?subject=Ayuda%20con%20payout%20agotado"
-                          className="mt-1 inline-flex items-center gap-1 text-[#3D6B3F] hover:underline">
+                          className="mt-1 inline-flex items-center gap-1 text-[#3D6B3F] dark:text-[#A8C26B] hover:underline">
                           <HelpCircle size={12} /> Contactar soporte
                         </a>
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-[#3D6B3F]/60">{p.referencia_externa ?? "—"}</td>
-                  <td className="px-4 py-3 text-[#3D6B3F]/60">
+                  <td className="px-4 py-3 text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">{p.referencia_externa ?? "—"}</td>
+                  <td className="px-4 py-3 text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">
                     {p.procesado_en ? new Date(p.procesado_en).toLocaleDateString() : "—"}
                   </td>
                   <td className="px-4 py-3">
                     {p.pedido_productor && p.pedido_productor.length > 0 && (
                       <button onClick={() => setDetalleModal(p)}
-                        className="inline-flex items-center gap-1 rounded-xl border border-[#C5CFB0] px-3 py-1.5 text-xs font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/20">
+                        className="inline-flex items-center gap-1 rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-3 py-1.5 text-xs font-medium text-[#1F3A2E] dark:text-[#E8E3D5] transition hover:bg-[#C5CFB0]/20 dark:hover:bg-[#1F3A2E]/40">
                         <Eye size={12} /> Ver pedidos
                       </button>
                     )}
@@ -341,20 +341,20 @@ export default function IngresosProductorPage() {
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-          <p className="text-sm text-[#1F3A2E]">
+        <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-4 py-3 bg-white dark:bg-[#0f1a10] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <p className="text-sm text-[#1F3A2E] dark:text-[#D4CEBF]">
             Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, filtrados.length)}</span> de <span className="font-semibold">{filtrados.length}</span> payouts
           </p>
           <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
             <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
-              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/40 disabled:opacity-50">
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40">
               Página {currentPage} de {totalPages}
             </span>
             <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
-              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/40 disabled:opacity-50">
               <ChevronRight className="h-5 w-5" />
             </button>
           </nav>
@@ -364,54 +364,54 @@ export default function IngresosProductorPage() {
       {/* Detail modal */}
       {detalleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#0f1a10] p-6 shadow-xl">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
+              <h2 className="text-xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">
                 Detalle payout #{detalleModal.id_payout}
               </h2>
               <button onClick={() => setDetalleModal(null)} aria-label="Cerrar"
-                className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-[#C5CFB0]/20 hover:text-[#1F3A2E]">
+                className="rounded-lg p-2 text-[#3D6B3F]/50 dark:text-[#A8C26B]/50 hover:bg-[#C5CFB0]/20 dark:hover:bg-[#1F3A2E]/40 hover:text-[#1F3A2E] dark:hover:text-[#E8E3D5]">
                 <X size={20} />
               </button>
             </div>
 
-            <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
-              <div><span className="text-[#3D6B3F]/70">Periodo:</span>{" "}{new Date(detalleModal.periodo_desde).toLocaleDateString()} → {new Date(detalleModal.periodo_hasta).toLocaleDateString()}</div>
-              <div><span className="text-[#3D6B3F]/70">Moneda:</span> {detalleModal.moneda}</div>
-              <div><span className="text-[#3D6B3F]/70">Bruto:</span> {formatMXN(detalleModal.monto_bruto)}</div>
-              <div><span className="text-[#3D6B3F]/70">Comisión:</span> {formatMXN(detalleModal.monto_comision)}</div>
-              <div><span className="text-[#3D6B3F]/70">Neto:</span> <strong className="text-[#1F3A2E]">{formatMXN(detalleModal.monto_neto)}</strong></div>
+            <div className="mb-4 grid grid-cols-2 gap-3 text-sm text-[#1F3A2E] dark:text-[#E8E3D5]">
+              <div><span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Periodo:</span>{" "}{new Date(detalleModal.periodo_desde).toLocaleDateString()} → {new Date(detalleModal.periodo_hasta).toLocaleDateString()}</div>
+              <div><span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Moneda:</span> {detalleModal.moneda}</div>
+              <div><span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Bruto:</span> {formatMXN(detalleModal.monto_bruto)}</div>
+              <div><span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Comisión:</span> {formatMXN(detalleModal.monto_comision)}</div>
+              <div><span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Neto:</span> <strong className="text-[#1F3A2E] dark:text-[#E8E3D5]">{formatMXN(detalleModal.monto_neto)}</strong></div>
               <div>
-                <span className="text-[#3D6B3F]/70">Estado:</span>{" "}
-                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_BADGE[detalleModal.estado] ?? "bg-[#C5CFB0]/30 text-[#1F3A2E]"}`}>
+                <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Estado:</span>{" "}
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_BADGE[detalleModal.estado] ?? "bg-[#C5CFB0]/30 dark:bg-[#3D6B3F]/20 text-[#1F3A2E] dark:text-[#E8E3D5]"}`}>
                   {detalleModal.estado}
                 </span>
               </div>
               {detalleModal.referencia_externa && (
                 <div className="col-span-2">
-                  <span className="text-[#3D6B3F]/70">Referencia Stripe:</span>{" "}
-                  <span className="font-mono text-xs text-[#1F3A2E]">{detalleModal.referencia_externa}</span>
+                  <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Referencia Stripe:</span>{" "}
+                  <span className="font-mono text-xs text-[#1F3A2E] dark:text-[#E8E3D5]">{detalleModal.referencia_externa}</span>
                 </div>
               )}
               {(detalleModal.estado === "fallido" || detalleModal.estado === "agotado") && (
-                <div className="col-span-2 rounded-xl border border-[#C97A3E]/30 bg-[#C97A3E]/5 p-3">
-                  <div className="mb-2 text-sm font-semibold text-[#C97A3E]">Diagnóstico de error</div>
+                <div className="col-span-2 rounded-xl border border-[#C97A3E]/30 bg-[#C97A3E]/5 dark:bg-[#C97A3E]/10 p-3">
+                  <div className="mb-2 text-sm font-semibold text-[#C97A3E] dark:text-[#E8A87C]">Diagnóstico de error</div>
                   <div className="space-y-1 text-xs">
-                    <div><span className="text-[#3D6B3F]/70">Intentos: </span><span className="font-medium text-[#1F3A2E]">{detalleModal.intentos ?? 0}/5</span></div>
+                    <div><span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Intentos: </span><span className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{detalleModal.intentos ?? 0}/5</span></div>
                     {detalleModal.ultimo_error && (
-                      <div><span className="text-[#3D6B3F]/70">Último error: </span><span className="font-mono text-red-600">{detalleModal.ultimo_error}</span></div>
+                      <div><span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Último error: </span><span className="font-mono text-red-600 dark:text-red-400">{detalleModal.ultimo_error}</span></div>
                     )}
                     {detalleModal.proximo_reintento && (
                       <div>
-                        <span className="text-[#3D6B3F]/70">Próximo reintento: </span>
-                        <span className="font-medium text-[#1F3A2E]">
+                        <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Próximo reintento: </span>
+                        <span className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">
                           {new Date(detalleModal.proximo_reintento).toLocaleString("es-MX", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                         </span>
-                        {detalleModal.estado === "agotado" && <span className="ml-2 text-red-600">(Agotado — requiere intervención)</span>}
+                        {detalleModal.estado === "agotado" && <span className="ml-2 text-red-600 dark:text-red-400">(Agotado — requiere intervención)</span>}
                       </div>
                     )}
                     {detalleModal.estado === "agotado" && !detalleModal.proximo_reintento && (
-                      <div className="text-red-600">Sin reintentos programados</div>
+                      <div className="text-red-600 dark:text-red-400">Sin reintentos programados</div>
                     )}
                   </div>
                 </div>
@@ -420,12 +420,12 @@ export default function IngresosProductorPage() {
 
             {detalleModal.pedido_productor && detalleModal.pedido_productor.length > 0 && (
               <>
-                <h3 className="mb-2 mt-4 text-sm font-semibold text-[#1F3A2E]">Pedidos incluidos</h3>
-                <div className="mb-3 flex items-start gap-2 rounded-xl border border-[#A8C26B]/40 bg-[#A8C26B]/10 p-3 text-xs text-[#3D6B3F]">
+                <h3 className="mb-2 mt-4 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">Pedidos incluidos</h3>
+                <div className="mb-3 flex items-start gap-2 rounded-xl border border-[#A8C26B]/40 dark:border-[#A8C26B]/30 bg-[#A8C26B]/10 dark:bg-[#A8C26B]/10 p-3 text-xs text-[#3D6B3F] dark:text-[#A8C26B]">
                   <Info size={14} className="mt-0.5 shrink-0" />
                   <p>El subtotal bruto incluye: tus productos + tu parte del IVA (prorrateado) + tu parte del envío (prorrateado).</p>
                 </div>
-                <div className="overflow-hidden rounded-xl border border-[#C5CFB0]">
+                <div className="overflow-hidden rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40">
                   <table className="w-full min-w-[400px] text-sm">
                     <thead className="bg-[#1F3A2E]">
                       <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white">
@@ -436,17 +436,17 @@ export default function IngresosProductorPage() {
                         <th className="px-4 py-3 text-right">Neto</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20">
                       {detalleModal.pedido_productor.map((pp) => (
                         <tr key={pp.id_pedido}
-                          className="border-t border-[#C5CFB0]/30 bg-white odd:bg-white even:bg-[#F4F0E3]/40">
-                          <td className="px-4 py-2.5 font-medium text-[#1F3A2E]">#{pp.id_pedido}</td>
+                          className="odd:bg-white even:bg-[#F4F0E3]/40 dark:odd:bg-[#0f1a10] dark:even:bg-[#1a2a1f]">
+                          <td className="px-4 py-2.5 font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">#{pp.id_pedido}</td>
                           <td className="px-4 py-2.5">
-                            <span className="inline-flex rounded-full bg-[#A8C26B]/20 px-2 py-0.5 text-xs font-medium text-[#3D6B3F]">{pp.estado}</span>
+                            <span className="inline-flex rounded-full bg-[#A8C26B]/20 dark:bg-[#A8C26B]/15 px-2 py-0.5 text-xs font-medium text-[#3D6B3F] dark:text-[#A8C26B]">{pp.estado}</span>
                           </td>
-                          <td className="px-4 py-2.5 text-right font-medium text-[#1F3A2E]">{pp.subtotal_bruto ? formatMXN(pp.subtotal_bruto) : "—"}</td>
-                          <td className="px-4 py-2.5 text-right text-[#3D6B3F]/70">{pp.comision_marketplace ? formatMXN(pp.comision_marketplace) : "—"}</td>
-                          <td className="px-4 py-2.5 text-right font-medium text-[#3D6B3F]">{pp.monto_neto_productor ? formatMXN(pp.monto_neto_productor) : "—"}</td>
+                          <td className="px-4 py-2.5 text-right font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{pp.subtotal_bruto ? formatMXN(pp.subtotal_bruto) : "—"}</td>
+                          <td className="px-4 py-2.5 text-right text-[#3D6B3F]/70 dark:text-[#D4CEBF]">{pp.comision_marketplace ? formatMXN(pp.comision_marketplace) : "—"}</td>
+                          <td className="px-4 py-2.5 text-right font-medium text-[#3D6B3F] dark:text-[#A8C26B]">{pp.monto_neto_productor ? formatMXN(pp.monto_neto_productor) : "—"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -471,16 +471,16 @@ function SummaryCard({
   tooltip?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-      <div className="mb-2 flex items-center gap-2 text-sm text-[#3D6B3F]/70">
+    <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/40 p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="mb-2 flex items-center gap-2 text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">
         <span className="[&_svg]:h-4 [&_svg]:w-4">{icon}</span>
         <span>{label}</span>
         {tooltip && (
-          <span className="ml-1 text-[#3D6B3F]/40" title={tooltip}><HelpCircle size={12} className="inline" /></span>
+          <span className="ml-1 text-[#3D6B3F]/40 dark:text-[#A8C26B]/40" title={tooltip}><HelpCircle size={12} className="inline" /></span>
         )}
       </div>
-      <div className={`text-2xl font-bold ${colorClass}`}>{value}</div>
-      {tooltip && <p className="mt-2 text-[10px] text-[#3D6B3F]/50">{tooltip}</p>}
+      <div className={`text-2xl font-bold ${colorClass} dark:text-[#E8E3D5]`}>{value}</div>
+      {tooltip && <p className="mt-2 text-[10px] text-[#3D6B3F]/50 dark:text-[#A8C26B]/40">{tooltip}</p>}
     </div>
   );
 }

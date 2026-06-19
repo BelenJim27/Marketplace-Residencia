@@ -223,14 +223,14 @@ export default function RolesPermisosPage() {
     sin_rol: usuarios.filter((u) => getUserRoles(u).length === 0).length,
   };
 
-  const inputCls      = "w-full rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] text-[#1F3A2E] p-3 text-sm outline-none focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 placeholder-[#3D6B3F]/40";
-  const labelCls      = "mb-2 block text-sm font-medium text-[#1F3A2E]";
+  const inputCls      = "w-full rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] text-[#1F3A2E] p-3 text-sm outline-none focus:border-[#3D6B3F] focus:ring-2 focus:ring-[#3D6B3F]/20 placeholder-[#3D6B3F]/40 dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5] dark:placeholder-[#A8C26B]/30 dark:focus:border-[#A8C26B]/60";
+  const labelCls      = "mb-2 block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80";
   const modalWrapCls  = "fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm";
-  const modalBoxCls   = "w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)]";
-  const modalHdrCls   = "flex items-center justify-between border-b border-[#C5CFB0] bg-[#1F3A2E] p-6";
-  const checkboxRowCls= (active: boolean) => `flex cursor-pointer items-center rounded-xl border p-3 transition-colors ${active ? "border-[#3D6B3F] bg-[#A8C26B]/10" : "border-[#C5CFB0] hover:bg-[#F4F0E3]"}`;
-  const checkboxBoxCls= (active: boolean) => `mr-3 flex h-5 w-5 items-center justify-center rounded-md ${active ? "bg-[#3D6B3F] text-white" : "bg-[#C5CFB0]/30"}`;
-  const btnCancel     = "flex-1 rounded-xl border border-[#C5CFB0] py-3 font-medium text-[#1F3A2E] transition-colors hover:bg-[#C5CFB0]/30";
+  const modalBoxCls   = "w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] dark:bg-[#0f1a10] dark:border-[#3D6B3F]/40";
+  const modalHdrCls   = "flex items-center justify-between border-b border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#1F3A2E] p-6";
+  const checkboxRowCls= (active: boolean) => `flex cursor-pointer items-center rounded-xl border p-3 transition-colors ${active ? "border-[#3D6B3F] bg-[#A8C26B]/10 dark:bg-[#A8C26B]/10" : "border-[#C5CFB0] hover:bg-[#F4F0E3] dark:border-[#3D6B3F]/40 dark:hover:bg-[#1F3A2E]/60"}`;
+  const checkboxBoxCls= (active: boolean) => `mr-3 flex h-5 w-5 items-center justify-center rounded-md ${active ? "bg-[#3D6B3F] text-white" : "bg-[#C5CFB0]/30 dark:bg-[#3D6B3F]/20"}`;
+  const btnCancel     = "flex-1 rounded-xl border border-[#C5CFB0] py-3 font-medium text-[#1F3A2E] transition-colors hover:bg-[#C5CFB0]/30 dark:border-[#3D6B3F]/40 dark:text-[#E8E3D5] dark:hover:bg-[#1F3A2E]/60";
   const btnSave       = "flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#3D6B3F] py-3 font-medium text-white transition-colors hover:bg-[#1F3A2E] disabled:opacity-50";
 
   if (loading) return <div className="flex min-h-[400px] items-center justify-center"><Loader2 className="animate-spin text-[#3D6B3F]" size={40} /></div>;
@@ -243,24 +243,24 @@ export default function RolesPermisosPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Gestión de Roles y Permisos</h1>
-          <p className="mt-0.5 text-sm text-[#3D6B3F]/70">Administra roles, permisos y usuarios del sistema</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Gestión de Roles y Permisos</h1>
+          <p className="mt-0.5 text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Administra roles, permisos y usuarios del sistema</p>
         </div>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 dark:border-red-900/30 dark:bg-red-950/20 p-4 text-sm text-red-700 dark:text-red-400">
           {error} <button onClick={() => setError(null)} className="ml-2 underline">cerrar</button>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-1 rounded-xl bg-[#1F3A2E]/8 p-1 border border-[#C5CFB0]">
+      <div className="mb-6 flex gap-1 rounded-xl bg-[#1F3A2E]/8 p-1 border border-[#C5CFB0] dark:border-[#3D6B3F]/40 dark:bg-[#1F3A2E]/20">
         {([["roles","Roles",Shield],["permisos","Permisos",Key]/* ,["usuarios","Usuarios",User] */] as const).map(([key, label, Icon]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex flex-1 items-center justify-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors ${tab === key ? "bg-[#F4F0E3] text-[#3D6B3F] shadow-sm" : "text-[#3D6B3F]/60 hover:text-[#3D6B3F]"}`}
+            className={`flex flex-1 items-center justify-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors ${tab === key ? "bg-[#F4F0E3] text-[#3D6B3F] shadow-sm dark:bg-[#1F3A2E]/60 dark:text-[#A8C26B]" : "text-[#3D6B3F]/60 hover:text-[#3D6B3F] dark:text-[#A8C26B]/50 dark:hover:text-[#A8C26B]"}`}
           >
             <Icon size={16} /> {label}
           </button>
@@ -279,7 +279,7 @@ export default function RolesPermisosPage() {
             </button>
           </div>
 
-          <div className="hidden md:block overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <div className="hidden md:block overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
             <table className="w-full border-collapse text-left">
               <thead className="bg-[#1F3A2E] text-[10px] font-bold uppercase tracking-widest text-white">
                 <tr>
@@ -289,22 +289,22 @@ export default function RolesPermisosPage() {
                   <th className="px-6 py-4 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#C5CFB0]/30">
+              <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20">
                 {roles.length === 0 ? (
-                  <tr><td colSpan={4} className="p-10 text-center text-sm text-[#3D6B3F]/70 bg-white">No hay roles registrados. Usa el botón "Nuevo Rol" para crear uno.</td></tr>
+                  <tr><td colSpan={4} className="p-10 text-center text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/50 bg-white dark:bg-[#0f1a10]">No hay roles registrados. Usa el botón "Nuevo Rol" para crear uno.</td></tr>
                 ) : roles.map((rol) => (
-                  <tr key={rol.id_rol} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 transition-colors">
+                  <tr key={rol.id_rol} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 dark:odd:bg-[#0f1a10] dark:even:bg-[#1a2a1f] dark:hover:bg-[#2d4a2e]/40 transition-colors">
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-sm font-semibold ${getRoleColor(rol.nombre)}`}>
                         <Shield size={14} className="mr-2" />{rol.nombre}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${rol.estado === "activo" ? "border-[#A8C26B]/40 bg-[#A8C26B]/20 text-[#3D6B3F]" : "border-[#C5CFB0] bg-[#C5CFB0]/30 text-[#3D6B3F]/60"}`}>{rol.estado}</span>
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${rol.estado === "activo" ? "border-[#A8C26B]/40 bg-[#A8C26B]/20 text-[#3D6B3F] dark:bg-[#A8C26B]/15 dark:text-[#A8C26B]" : "border-[#C5CFB0] bg-[#C5CFB0]/30 text-[#3D6B3F]/60 dark:border-[#3D6B3F]/30 dark:bg-[#3D6B3F]/10 dark:text-[#A8C26B]/50"}`}>{rol.estado}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
-                        {rol.rol_permiso?.length ? rol.rol_permiso.map((rp, i) => <span key={i} className="rounded-full bg-[#3D6B3F]/10 px-2 py-0.5 text-xs font-medium text-[#3D6B3F]">{rp.permisos.nombre}</span>) : <span className="text-sm text-[#3D6B3F]/50">Sin permisos</span>}
+                        {rol.rol_permiso?.length ? rol.rol_permiso.map((rp, i) => <span key={i} className="rounded-full bg-[#3D6B3F]/10 px-2 py-0.5 text-xs font-medium text-[#3D6B3F] dark:bg-[#A8C26B]/10 dark:text-[#A8C26B]">{rp.permisos.nombre}</span>) : <span className="text-sm text-[#3D6B3F]/50 dark:text-[#A8C26B]/40">Sin permisos</span>}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -322,29 +322,29 @@ export default function RolesPermisosPage() {
 
           <div className="md:hidden space-y-3">
             {roles.length === 0 ? (
-              <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-8 text-center text-sm text-[#3D6B3F]/70">
+              <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/40 p-8 text-center text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/50">
                 No hay roles registrados.
               </div>
             ) : roles.map((rol) => (
-              <div key={rol.id_rol} className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+              <div key={rol.id_rol} className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1a2a1f] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
                 <div className="flex items-center justify-between mb-3">
                   <span className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-sm font-semibold ${getRoleColor(rol.nombre)}`}>
                     <Shield size={14} className="mr-2" />{rol.nombre}
                   </span>
-                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${rol.estado === "activo" ? "border-[#A8C26B]/40 bg-[#A8C26B]/20 text-[#3D6B3F]" : "border-[#C5CFB0] bg-[#C5CFB0]/30 text-[#3D6B3F]/60"}`}>
+                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${rol.estado === "activo" ? "border-[#A8C26B]/40 bg-[#A8C26B]/20 text-[#3D6B3F] dark:bg-[#A8C26B]/15 dark:text-[#A8C26B]" : "border-[#C5CFB0] bg-[#C5CFB0]/30 text-[#3D6B3F]/60 dark:border-[#3D6B3F]/30 dark:bg-[#3D6B3F]/10 dark:text-[#A8C26B]/50"}`}>
                     {rol.estado}
                   </span>
                 </div>
                 <div className="mb-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#3D6B3F]/50 mb-2">Permisos</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#3D6B3F]/50 dark:text-[#A8C26B]/40 mb-2">Permisos</p>
                   <div className="flex flex-wrap gap-1">
-                    {rol.rol_permiso?.length ? rol.rol_permiso.map((rp, i) => <span key={i} className="rounded-full bg-[#3D6B3F]/10 px-2 py-0.5 text-xs font-medium text-[#3D6B3F]">{rp.permisos.nombre}</span>) : <span className="text-sm text-[#3D6B3F]/50">Sin permisos</span>}
+                    {rol.rol_permiso?.length ? rol.rol_permiso.map((rp, i) => <span key={i} className="rounded-full bg-[#3D6B3F]/10 px-2 py-0.5 text-xs font-medium text-[#3D6B3F] dark:bg-[#A8C26B]/10 dark:text-[#A8C26B]">{rp.permisos.nombre}</span>) : <span className="text-sm text-[#3D6B3F]/50 dark:text-[#A8C26B]/40">Sin permisos</span>}
                   </div>
                 </div>
-                <div className="flex gap-2 border-t border-[#C5CFB0] pt-3">
-                  <button onClick={() => openAsignarPermisos(rol)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#C5CFB0] py-2 text-xs font-medium text-[#1F3A2E] transition-colors hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F]"><Key size={14} /> Permisos</button>
-                  <button onClick={() => { setEditingRol(rol); setFormDataRol({ nombre: rol.nombre }); setShowModalRol(true); }} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#C5CFB0] py-2 text-xs font-medium text-[#1F3A2E] transition-colors hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F]"><Pencil size={14} /> Editar</button>
-                  <button onClick={() => handleDeleteRol(rol.id_rol, rol.nombre)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#C5CFB0] py-2 text-xs font-medium text-[#1F3A2E] transition-colors hover:bg-red-50 hover:text-red-600 hover:border-red-200"><Trash2 size={14} /> Eliminar</button>
+                <div className="flex gap-2 border-t border-[#C5CFB0] dark:border-[#3D6B3F]/30 pt-3">
+                  <button onClick={() => openAsignarPermisos(rol)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 py-2 text-xs font-medium text-[#1F3A2E] dark:text-[#E8E3D5] transition-colors hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] dark:hover:bg-[#A8C26B]/10"><Key size={14} /> Permisos</button>
+                  <button onClick={() => { setEditingRol(rol); setFormDataRol({ nombre: rol.nombre }); setShowModalRol(true); }} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 py-2 text-xs font-medium text-[#1F3A2E] dark:text-[#E8E3D5] transition-colors hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] dark:hover:bg-[#A8C26B]/10"><Pencil size={14} /> Editar</button>
+                  <button onClick={() => handleDeleteRol(rol.id_rol, rol.nombre)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 py-2 text-xs font-medium text-[#1F3A2E] dark:text-[#E8E3D5] transition-colors hover:bg-red-50 hover:text-red-600 hover:border-red-200"><Trash2 size={14} /> Eliminar</button>
                 </div>
               </div>
             ))}
@@ -362,16 +362,16 @@ export default function RolesPermisosPage() {
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {permisos.map((permiso) => (
-              <div key={permiso.id_permiso} className="group rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 transition-shadow hover:shadow-[0_8px_24px_rgba(61,107,63,0.15)]">
+              <div key={permiso.id_permiso} className="group rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1a2a1f] p-5 transition-shadow hover:shadow-[0_8px_24px_rgba(61,107,63,0.15)]">
                 <div className="flex items-start justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#3D6B3F]/10 text-[#3D6B3F]"><Key size={20} /></div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#3D6B3F]/10 dark:bg-[#A8C26B]/10 text-[#3D6B3F] dark:text-[#A8C26B]"><Key size={20} /></div>
                   <div className="flex gap-1">
                     <button onClick={() => { setEditingPermiso(permiso); setFormDataPermiso({ nombre: permiso.nombre }); setShowModalPermiso(true); }} className="rounded-lg p-2 text-[#C5CFB0] opacity-0 transition-colors hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] group-hover:opacity-100"><Pencil size={16} /></button>
                     <button onClick={() => handleDeletePermiso(permiso.id_permiso, permiso.nombre)} className="rounded-lg p-2 text-[#C5CFB0] opacity-0 transition-colors hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"><Trash2 size={16} /></button>
                   </div>
                 </div>
-                <h3 className="mt-3 text-sm font-bold text-[#1F3A2E]">{permiso.nombre}</h3>
-                <p className="mt-1 text-xs text-[#3D6B3F]/50">ID: #{permiso.id_permiso}</p>
+                <h3 className="mt-3 text-sm font-bold text-[#1F3A2E] dark:text-[#E8E3D5]">{permiso.nombre}</h3>
+                <p className="mt-1 text-xs text-[#3D6B3F]/50 dark:text-[#A8C26B]/40">ID: #{permiso.id_permiso}</p>
               </div>
             ))}
           </div>
@@ -595,7 +595,7 @@ export default function RolesPermisosPage() {
       {/* ══════════════════════ MODAL: ASIGNAR PERMISOS A ROL ══════════════════ */}
       {showModalPermisosRol && selectedRol && (
         <div className={modalWrapCls}>
-          <div className="w-full max-w-lg rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] flex flex-col">
+          <div className="w-full max-w-lg rounded-2xl bg-[#F4F0E3] dark:bg-[#0f1a10] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] flex flex-col">
             <div className={modalHdrCls}>
               <div className="flex items-center gap-3">
                 <Key size={20} className="text-[#A8C26B]" />
@@ -608,7 +608,7 @@ export default function RolesPermisosPage() {
             </div>
             <div className="p-6 space-y-2 overflow-y-auto flex-1">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-[#1F3A2E]/70">{selectedPermisos.length} de {permisos.length} seleccionados</span>
+                <span className="text-sm text-[#1F3A2E]/70 dark:text-[#A8C26B]/70">{selectedPermisos.length} de {permisos.length} seleccionados</span>
                 <button type="button" onClick={handleSelectAllPermisos} className="text-xs font-semibold text-[#3D6B3F] hover:underline">
                   {selectAllPermisos ? "Deseleccionar todos" : "Seleccionar todos"}
                 </button>
@@ -618,13 +618,13 @@ export default function RolesPermisosPage() {
                 return (
                   <label key={p.id_permiso} className={checkboxRowCls(active)}>
                     <span className={checkboxBoxCls(active)}>{active && <Check size={12} />}</span>
-                    <span className="text-sm font-medium text-[#1F3A2E]">{p.nombre}</span>
+                    <span className="text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{p.nombre}</span>
                     <input type="checkbox" className="sr-only" checked={active} onChange={() => togglePermiso(p.id_permiso)} />
                   </label>
                 );
               })}
             </div>
-            <div className="flex gap-3 p-6 border-t border-[#C5CFB0]">
+            <div className="flex gap-3 p-6 border-t border-[#C5CFB0] dark:border-[#3D6B3F]/30">
               <button onClick={() => setShowModalPermisosRol(false)} className={btnCancel}>Cancelar</button>
               <button onClick={handleSavePermisosRol} disabled={saving} className={btnSave}>
                 {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
@@ -638,7 +638,7 @@ export default function RolesPermisosPage() {
       {/* ══════════════════════ MODAL: NUEVO / EDITAR USUARIO ══════════════════ */}
       {showModalUsuario && (
         <div className={modalWrapCls}>
-          <div className="w-full max-w-xl rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] flex flex-col">
+          <div className="w-full max-w-xl rounded-2xl bg-[#F4F0E3] dark:bg-[#0f1a10] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] flex flex-col">
             <div className={modalHdrCls}>
               <div className="flex items-center gap-3">
                 <User size={20} className="text-[#A8C26B]" />
@@ -701,7 +701,7 @@ export default function RolesPermisosPage() {
       {/* ══════════════════════ MODAL: ASIGNAR ROLES A USUARIO ═════════════════ */}
       {showModalAsignarRoles && selectedUser && (
         <div className={modalWrapCls}>
-          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] flex flex-col">
+          <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] dark:bg-[#0f1a10] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] flex flex-col">
             <div className={modalHdrCls}>
               <div className="flex items-center gap-3">
                 <Shield size={20} className="text-[#A8C26B]" />
@@ -718,13 +718,13 @@ export default function RolesPermisosPage() {
                 return (
                   <label key={rol.id_rol} className={checkboxRowCls(active)}>
                     <span className={checkboxBoxCls(active)}>{active && <Check size={12} />}</span>
-                    <span className="text-sm font-medium text-[#1F3A2E]">{rol.nombre}</span>
+                    <span className="text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{rol.nombre}</span>
                     <input type="checkbox" className="sr-only" checked={active} onChange={() => toggleUserRole(rol.id_rol)} />
                   </label>
                 );
               })}
             </div>
-            <div className="flex gap-3 p-6 border-t border-[#C5CFB0]">
+            <div className="flex gap-3 p-6 border-t border-[#C5CFB0] dark:border-[#3D6B3F]/30">
               <button onClick={() => setShowModalAsignarRoles(false)} className={btnCancel}>Cancelar</button>
               <button onClick={handleSaveUserRoles} disabled={saving} className={btnSave}>
                 {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}

@@ -79,7 +79,7 @@ export function TiendasPage() {
   if (error) {
     return (
       <div className="mx-auto w-full max-w-[800px]">
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">{error}</div>
+        <div className="rounded-2xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 p-6 text-sm text-red-700 dark:text-red-400">{error}</div>
       </div>
     );
   }
@@ -87,10 +87,10 @@ export function TiendasPage() {
   if (!tienda) {
     return (
       <div className="mx-auto w-full max-w-[800px]">
-        <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-12 text-center shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-          <Store size={48} className="mx-auto mb-4 text-[#C5CFB0]" />
-          <h2 className="text-xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Sin tienda registrada</h2>
-          <p className="mt-2 text-sm text-[#3D6B3F]/60">Aún no tienes una tienda asociada a tu cuenta de productor.</p>
+        <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-12 text-center shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <Store size={48} className="mx-auto mb-4 text-[#C5CFB0] dark:text-[#3D6B3F]/40" />
+          <h2 className="text-xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Sin tienda registrada</h2>
+          <p className="mt-2 text-sm text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">Aún no tienes una tienda asociada a tu cuenta de productor.</p>
         </div>
       </div>
     );
@@ -103,11 +103,11 @@ export function TiendasPage() {
     <div className="mx-auto w-full max-w-[800px] space-y-5">
 
       {/* Header */}
-      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Mi Tienda</h1>
-            <p className="mt-0.5 text-sm text-[#3D6B3F]/60">Información y configuración de tu tienda</p>
+            <h1 className="text-2xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Mi Tienda</h1>
+            <p className="mt-0.5 text-sm text-[#3D6B3F]/60 dark:text-[#A8C26B]/60">Información y configuración de tu tienda</p>
           </div>
           <div data-tour="btn-editar-tienda" className="flex gap-2 shrink-0">
             <button
@@ -131,7 +131,7 @@ export function TiendasPage() {
       </div>
 
       {/* Tarjeta principal */}
-      <div data-tour="tienda-card" className="overflow-hidden rounded-2xl border border-[#C5CFB0] bg-white shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div data-tour="tienda-card" className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
 
         {/* Banner + nombre */}
         <div className="bg-[#1F3A2E] px-6 py-8">
@@ -150,15 +150,15 @@ export function TiendasPage() {
         </div>
 
         {/* Descripción */}
-        <div className="border-b border-[#C5CFB0]/40 px-6 py-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#3D6B3F]/50">Descripción</p>
-          <p className="mt-1.5 text-sm leading-relaxed text-[#1F3A2E]">
-            {tienda.descripcion || <span className="text-[#3D6B3F]/40 italic">Sin descripción</span>}
+        <div className="border-b border-[#C5CFB0]/40 dark:border-[#3D6B3F]/30 px-6 py-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#3D6B3F]/50 dark:text-[#A8C26B]/50">Descripción</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-[#1F3A2E] dark:text-[#E8E3D5]">
+            {tienda.descripcion || <span className="text-[#3D6B3F]/40 dark:text-[#A8C26B]/40 italic">Sin descripción</span>}
           </p>
         </div>
 
         {/* Grid de datos */}
-        <div className="grid grid-cols-2 gap-px bg-[#C5CFB0]/20 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-px bg-[#C5CFB0]/20 dark:bg-[#3D6B3F]/10 sm:grid-cols-3">
           <InfoCell
             label="País de operación"
             value={paisLabel}
@@ -206,12 +206,12 @@ export function TiendasPage() {
 
 function InfoCell({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
   return (
-    <div className="bg-white px-5 py-4">
-      <div className="flex items-center gap-1.5 text-[#3D6B3F]/50">
+    <div className="bg-white dark:bg-[#0f1a10] px-5 py-4">
+      <div className="flex items-center gap-1.5 text-[#3D6B3F]/50 dark:text-[#A8C26B]/50">
         {icon}
         <p className="text-[10px] font-semibold uppercase tracking-[0.1em]">{label}</p>
       </div>
-      <p className="mt-1 text-sm font-semibold text-[#1F3A2E]">{value || "—"}</p>
+      <p className="mt-1 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">{value || "—"}</p>
     </div>
   );
 }

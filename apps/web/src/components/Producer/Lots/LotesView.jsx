@@ -22,7 +22,7 @@ const CLASES = ["Joven", "Reposado", "Añejo", "Extra Añejo", "Abocado con", "D
 const CLASES_CON_COMPLEMENTO = ["Abocado con", "Destilado con"];
 
 const inputCls =
-  "w-full rounded-lg border border-[#C5CFB0] bg-white px-3 py-2 text-sm text-[#1F3A2E] placeholder:text-[#3D6B3F]/40 focus:outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20";
+  "w-full rounded-lg border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] placeholder:text-[#3D6B3F]/40 dark:placeholder:text-[#A8C26B]/30 focus:outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20";
 
 // ─── Componentes Auxiliares ───────────────────────────────────────────────────
 
@@ -45,13 +45,13 @@ function Toast({ msg, type = "success", onClose }) {
 
 function StatCard({ title, value, icon }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1F3A2E]/10 text-[#3D6B3F]">
+    <div className="flex items-center gap-4 rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/40 p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1F3A2E]/10 dark:bg-[#A8C26B]/10 text-[#3D6B3F] dark:text-[#A8C26B]">
         {icon}
       </div>
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#3D6B3F]/60">{title}</p>
-        <p className="text-2xl font-bold text-[#1F3A2E]">{value}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#3D6B3F]/60 dark:text-[#A8C26B]/60">{title}</p>
+        <p className="text-2xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5]">{value}</p>
       </div>
     </div>
   );
@@ -313,15 +313,15 @@ export default function LotesView() {
     <div data-tour="lotes-section" className="mx-auto w-full max-w-[1200px] space-y-5">
 
       {/* Header */}
-      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Mis Lotes</h1>
-          <p className="text-sm text-[#3D6B3F]/70">Gestión de producción y existencias</p>
+          <h1 className="text-2xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Mis Lotes</h1>
+          <p className="text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Gestión de producción y existencias</p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={sincronizarLotes} disabled={sincronizando}
-            className="flex items-center gap-2 rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-medium text-[#3D6B3F] transition hover:bg-[#C5CFB0]/30 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-4 py-2 text-sm font-medium text-[#3D6B3F] dark:text-[#A8C26B] transition hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${sincronizando ? "animate-spin" : ""}`} />
             Sincronizar
@@ -338,7 +338,7 @@ export default function LotesView() {
       </div>
 
       {/* Filtros */}
-      <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr_1fr_auto]">
           <input value={search} onChange={(e) => setSearch(e.target.value)} className={inputCls} placeholder="Buscar lote, producto..." />
           <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
@@ -352,7 +352,7 @@ export default function LotesView() {
           </select>
           <button
             onClick={() => { setSearch(""); setStatus("Todos"); setYear("Todos"); }}
-            className="rounded-xl border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-medium text-[#3D6B3F]/70 transition hover:bg-[#C5CFB0]/30"
+            className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-4 py-2 text-sm font-medium text-[#3D6B3F]/70 dark:text-[#A8C26B]/70 transition hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60"
           >
             Limpiar
           </button>
@@ -360,7 +360,7 @@ export default function LotesView() {
       </div>
 
       {/* Tabla */}
-      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] text-left">
             <thead className="bg-[#1F3A2E]">
@@ -370,27 +370,27 @@ export default function LotesView() {
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20">
               {filteredLotes.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center bg-white">
-                    <FlaskConical size={32} className="mx-auto mb-2 text-[#C5CFB0]" />
-                    <span className="text-sm text-[#3D6B3F]/60">No se encontraron lotes.</span>
+                  <td colSpan={7} className="px-5 py-12 text-center bg-white dark:bg-[#0f1a10]">
+                    <FlaskConical size={32} className="mx-auto mb-2 text-[#C5CFB0] dark:text-[#3D6B3F]/40" />
+                    <span className="text-sm text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">No se encontraron lotes.</span>
                   </td>
                 </tr>
               ) : (
                 paginatedLotes.map((item) => (
                   <tr
                     key={item.id_lote}
-                    className="border-t border-[#C5CFB0]/30 text-sm transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20"
+                    className="text-sm transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 dark:odd:bg-[#0f1a10] dark:even:bg-[#1a2a1f] dark:hover:bg-[#2d4a2e]/40"
                   >
-                    <td className="px-5 py-4 font-medium text-[#1F3A2E] whitespace-nowrap">{item.lote}</td>
-                    <td className="px-5 py-4 text-[#3D6B3F]/80">{item.marca}</td>
-                    <td className="px-5 py-4 text-[#3D6B3F]/80">{item.producto}</td>
-                    <td className="px-5 py-4 text-[#3D6B3F]/80">{item.grado_alcohol}</td>
-                    <td className="px-5 py-4 text-[#3D6B3F]/80">{item.cantidad}</td>
+                    <td className="px-5 py-4 font-medium text-[#1F3A2E] dark:text-[#E8E3D5] whitespace-nowrap">{item.lote}</td>
+                    <td className="px-5 py-4 text-[#3D6B3F]/80 dark:text-[#D4CEBF]">{item.marca}</td>
+                    <td className="px-5 py-4 text-[#3D6B3F]/80 dark:text-[#D4CEBF]">{item.producto}</td>
+                    <td className="px-5 py-4 text-[#3D6B3F]/80 dark:text-[#D4CEBF]">{item.grado_alcohol}</td>
+                    <td className="px-5 py-4 text-[#3D6B3F]/80 dark:text-[#D4CEBF]">{item.cantidad}</td>
                     <td className="px-5 py-4">
-                      <span className="inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold bg-[#A8C26B]/20 text-[#3D6B3F]">
+                      <span className="inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold bg-[#A8C26B]/20 dark:bg-[#A8C26B]/15 text-[#3D6B3F] dark:text-[#A8C26B]">
                         {item.estado}
                       </span>
                     </td>
@@ -411,20 +411,20 @@ export default function LotesView() {
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-          <p className="text-sm text-[#1F3A2E]">
+        <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-4 py-3 bg-white dark:bg-[#0f1a10] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <p className="text-sm text-[#1F3A2E] dark:text-[#D4CEBF]">
             Mostrando <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-semibold">{Math.min(currentPage * itemsPerPage, filteredLotes.length)}</span> de <span className="font-semibold">{filteredLotes.length}</span> lotes
           </p>
           <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
             <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
-              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/40 disabled:opacity-50">
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40">
               Página {currentPage} de {totalPages}
             </span>
             <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
-              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+              className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/40 disabled:opacity-50">
               <ChevronRight className="h-5 w-5" />
             </button>
           </nav>
@@ -475,19 +475,19 @@ export default function LotesView() {
 function ModalLote({ title, subtitle, onClose, onSubmit, form, setForm, footerActionLabel, loading, categorias }) {
   const f = (key, val) => setForm({ ...form, [key]: val });
   const necesitaComplemento = CLASES_CON_COMPLEMENTO.includes(form.clase);
-  const labelCls = "mb-1 block text-xs font-semibold uppercase tracking-wide text-[#3D6B3F]/70";
+  const labelCls = "mb-1 block text-xs font-semibold uppercase tracking-wide text-[#3D6B3F]/70 dark:text-[#A8C26B]/60";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-lg rounded-2xl bg-[#F4F0E3] dark:bg-[#0f1a10] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
 
         {/* Cabecera */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#C5CFB0]/50">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#C5CFB0]/50 dark:border-[#3D6B3F]/30">
           <div>
-            <h2 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">{title}</h2>
-            <p className="text-xs text-[#3D6B3F]/60 mt-0.5">{subtitle}</p>
+            <h2 className="text-lg font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">{title}</h2>
+            <p className="text-xs text-[#3D6B3F]/60 dark:text-[#A8C26B]/50 mt-0.5">{subtitle}</p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1 text-[#3D6B3F]/50 hover:bg-[#C5CFB0]/30">
+          <button onClick={onClose} className="rounded-lg p-1 text-[#3D6B3F]/50 dark:text-[#A8C26B]/50 hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60">
             <X size={20} />
           </button>
         </div>
@@ -560,8 +560,8 @@ function ModalLote({ title, subtitle, onClose, onSubmit, form, setForm, footerAc
             <textarea value={form.descripcion} onChange={(e) => f("descripcion", e.target.value)} className={`${inputCls} h-20 resize-none`} placeholder="Notas de producción, sabor, proceso..." />
           </div>
 
-          <div className="flex justify-end gap-3 pt-2 border-t border-[#C5CFB0]/50">
-            <button type="button" onClick={onClose} className="rounded-xl border border-[#C5CFB0] px-4 py-2 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/30">
+          <div className="flex justify-end gap-3 pt-2 border-t border-[#C5CFB0]/50 dark:border-[#3D6B3F]/30">
+            <button type="button" onClick={onClose} className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-4 py-2 text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5] transition hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60">
               Cancelar
             </button>
             <button disabled={loading} type="submit" className="flex items-center gap-2 rounded-xl bg-[#3D6B3F] px-6 py-2 text-sm font-bold text-white transition hover:bg-[#1F3A2E] disabled:opacity-50">
@@ -593,26 +593,26 @@ function DetalleLoteModal({ lote, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="px-6 pt-6 pb-4 border-b border-[#C5CFB0]/50">
-          <h2 className="text-lg font-semibold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Detalles: {lote.lote}</h2>
+      <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] dark:bg-[#0f1a10] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="px-6 pt-6 pb-4 border-b border-[#C5CFB0]/50 dark:border-[#3D6B3F]/30">
+          <h2 className="text-lg font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Detalles: {lote.lote}</h2>
         </div>
         <div className="px-6 py-5 grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
           {rows.map(([label, value]) => (
             <div key={label}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3D6B3F]/50">{label}</p>
-              <p className="mt-0.5 font-medium text-[#1F3A2E]">{value || "—"}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3D6B3F]/50 dark:text-[#A8C26B]/50">{label}</p>
+              <p className="mt-0.5 font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{value || "—"}</p>
             </div>
           ))}
-          <div className="col-span-2 mt-2 border-t border-[#C5CFB0]/50 pt-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3D6B3F]/50">Descripción</p>
-            <p className="mt-0.5 text-sm text-[#3D6B3F]/80">
+          <div className="col-span-2 mt-2 border-t border-[#C5CFB0]/50 dark:border-[#3D6B3F]/30 pt-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3D6B3F]/50 dark:text-[#A8C26B]/50">Descripción</p>
+            <p className="mt-0.5 text-sm text-[#3D6B3F]/80 dark:text-[#D4CEBF]">
               {lote.originalData?.descripcion || lote.originalData?.datos_api?.descripcion || "Sin notas adicionales."}
             </p>
           </div>
         </div>
         <div className="px-6 pb-6">
-          <button onClick={onClose} className="w-full rounded-xl border border-[#C5CFB0] py-2.5 text-sm font-semibold text-[#1F3A2E] transition hover:bg-[#C5CFB0]/30">
+          <button onClick={onClose} className="w-full rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 py-2.5 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] transition hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60">
             Cerrar
           </button>
         </div>
@@ -626,16 +626,16 @@ function DetalleLoteModal({ lote, onClose }) {
 function EliminarLoteModal({ lote, onClose, onConfirm, loading }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-2xl bg-[#F4F0E3] border border-[#C5CFB0] shadow-[0_24px_48px_rgba(31,58,46,0.25)] p-6 text-center" onClick={(e) => e.stopPropagation()}>
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+      <div className="w-full max-w-sm rounded-2xl bg-[#F4F0E3] dark:bg-[#0f1a10] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_24px_48px_rgba(31,58,46,0.25)] p-6 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400">
           <Trash2 size={24} />
         </div>
-        <h3 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">¿Eliminar lote?</h3>
-        <p className="mt-1 text-sm text-[#3D6B3F]/70">
+        <h3 className="text-lg font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">¿Eliminar lote?</h3>
+        <p className="mt-1 text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">
           Esta acción borrará el lote <b>{lote.lote}</b> de forma permanente.
         </p>
-        <div className="mt-6 flex gap-3 border-t border-[#C5CFB0]/50 pt-4">
-          <button onClick={onClose} className="flex-1 rounded-xl border border-[#C5CFB0] py-2.5 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/30">
+        <div className="mt-6 flex gap-3 border-t border-[#C5CFB0]/50 dark:border-[#3D6B3F]/30 pt-4">
+          <button onClick={onClose} className="flex-1 rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 py-2.5 text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5] transition hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60">
             Cancelar
           </button>
           <button onClick={onConfirm} disabled={loading} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-50">

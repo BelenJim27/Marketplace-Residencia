@@ -9,9 +9,9 @@ import type { ProductItem, StoreItem } from "@/hooks/useProductos";
 
 export function ProductoStatCard({ title, value }: { title: string; value: number | string }) {
   return (
-    <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-      <p className="text-sm text-[#3D6B3F]/70">{title}</p>
-      <div className="mt-2 text-2xl font-bold text-[#1F3A2E]">{value}</div>
+    <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/40 p-5 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <p className="text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">{title}</p>
+      <div className="mt-2 text-2xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5]">{value}</div>
     </div>
   );
 }
@@ -32,11 +32,11 @@ export function ProductoHeader({
   syncMessage?: { text: string; type: "success" | "error" } | null;
 }) {
   return (
-    <div className="mb-6 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+    <div className="mb-6 rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Gestión de productos</h1>
-          <p className="text-sm text-[#3D6B3F]/70">Solo se muestran productos de tus tiendas</p>
+          <h1 className="text-2xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Gestión de productos</h1>
+          <p className="text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Solo se muestran productos de tus tiendas</p>
         </div>
         <div className="flex items-center gap-3">
           {onSync && (
@@ -44,7 +44,7 @@ export function ProductoHeader({
               onClick={onSync}
               disabled={syncing}
               title="Importar productos desde tus lotes registrados"
-              className="inline-flex items-center gap-2 rounded-xl border border-[#C5CFB0] bg-white px-4 py-2.5 text-sm font-medium text-[#3D6B3F] transition hover:bg-[#C5CFB0]/30 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] px-4 py-2.5 text-sm font-medium text-[#3D6B3F] dark:text-[#A8C26B] transition hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
               {syncing ? "Sincronizando…" : "Sincronizar desde lotes"}
@@ -64,15 +64,15 @@ export function ProductoHeader({
       {syncMessage && (
         <p className={`mt-3 rounded-lg border px-4 py-2 text-sm ${
           syncMessage.type === "error"
-            ? "border-red-200 bg-red-50 text-red-700"
-            : "border-[#A8C26B]/40 bg-[#A8C26B]/10 text-[#3D6B3F]"
+            ? "border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400"
+            : "border-[#A8C26B]/40 dark:border-[#A8C26B]/30 bg-[#A8C26B]/10 dark:bg-[#A8C26B]/15 text-[#3D6B3F] dark:text-[#A8C26B]"
         }`}>
           {syncMessage.text}
         </p>
       )}
 
       {disableNew && (
-        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
+        <p className="mt-3 rounded-lg border border-amber-200 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-900/20 px-4 py-2 text-sm text-amber-700 dark:text-amber-300">
           ⚠️ Necesitas <a href="/dashboard/productor/tienda" className="font-semibold underline">crear una tienda</a> antes de poder registrar productos.
         </p>
       )}
@@ -106,11 +106,11 @@ export function ProductoFiltros({
   stores,
   onClear,
 }: FiltrosProps) {
-  const input = "w-full rounded-lg border border-[#C5CFB0] bg-transparent px-3 py-2 text-sm text-[#1F3A2E] outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20 placeholder:text-[#3D6B3F]/40";
-  const lbl = "mb-1 block text-xs font-medium text-[#1F3A2E]/70";
+  const input = "w-full rounded-lg border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] outline-none focus:border-[#3D6B3F] focus:ring-1 focus:ring-[#3D6B3F]/20 placeholder:text-[#3D6B3F]/40 dark:placeholder:text-[#A8C26B]/30";
+  const lbl = "mb-1 block text-xs font-medium text-[#1F3A2E]/70 dark:text-[#A8C26B]/60";
 
   return (
-    <div className="mb-5 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-3 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+    <div className="mb-5 rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-3 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
       {/* Search row */}
       <input
         value={query}
@@ -152,7 +152,7 @@ export function ProductoFiltros({
         </label>
 
         <button type="button" onClick={onClear}
-          className="shrink-0 rounded-lg border border-[#C5CFB0] px-3 py-2 text-xs font-medium text-[#1F3A2E] transition hover:bg-[#C5CFB0]/20">
+          className="shrink-0 rounded-lg border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-3 py-2 text-xs font-medium text-[#1F3A2E] dark:text-[#E8E3D5] transition hover:bg-[#C5CFB0]/20 dark:hover:bg-[#1F3A2E]/40">
           Limpiar
         </button>
       </div>
@@ -174,8 +174,8 @@ export function ProductoSeleccion({
   onDeleteSelected: () => void;
 }) {
   return (
-    <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)] md:flex-row md:items-center md:justify-between">
-      <label className="inline-flex items-center gap-3 text-sm font-medium text-[#1F3A2E]">
+    <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)] md:flex-row md:items-center md:justify-between">
+      <label className="inline-flex items-center gap-3 text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">
         <input
           type="checkbox"
           checked={selectionEnabled}
@@ -255,20 +255,20 @@ export function ProductoPaginacion({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 mt-4 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-      <p className="text-sm text-[#1F3A2E]">
+    <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-4 py-3 mt-4 bg-white dark:bg-[#1a2a1f] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <p className="text-sm text-[#1F3A2E] dark:text-[#E8E3D5]">
         {totalItems === 0 ? "Sin resultados" : <>Mostrando <span className="font-semibold">{from}</span>–<span className="font-semibold">{to}</span> de <span className="font-semibold">{totalItems}</span> producto{totalItems !== 1 ? "s" : ""}</>}
       </p>
       <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
         <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}
-          className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+          className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50">
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+        <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40">
           Página {currentPage} de {totalPages}
         </span>
         <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages || totalPages === 0}
-          className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+          className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50">
           <ChevronRight className="h-5 w-5" />
         </button>
       </nav>
@@ -302,7 +302,7 @@ export function ProductoTabla({
   onDelete,
 }: TablaProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+    <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[800px] text-left">
           <thead className="bg-[#1F3A2E]">
@@ -332,7 +332,7 @@ export function ProductoTabla({
               return (
                 <tr
                   key={product.id_producto}
-                  className="border-t border-[#C5CFB0]/30 bg-white text-sm transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20"
+                  className="border-t border-[#C5CFB0]/30 dark:border-[#3D6B3F]/20 text-sm transition-colors odd:bg-white dark:odd:bg-[#0f1a10] even:bg-[#F4F0E3]/40 dark:even:bg-[#1a2a1f] hover:bg-[#C5CFB0]/20 dark:hover:bg-[#2d4a2e]/40"
                 >
                   {selectionEnabled && (
                     <td className="px-4 py-4 text-center">
@@ -346,7 +346,7 @@ export function ProductoTabla({
                   )}
 
                   {/* ── Nombre + badge precio pendiente ── */}
-                  <td className="px-5 py-4 font-medium text-[#1F3A2E]">
+                  <td className="px-5 py-4 font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">
                     <div className="flex items-center gap-3">
                       <ProductoThumbnail src={product.imagen_url} alt={product.nombre} />
                       <div className="flex flex-col gap-1">
@@ -367,14 +367,14 @@ export function ProductoTabla({
                         $0.00 ⚠
                       </span>
                     ) : (
-                      <span className="text-[#1F3A2E]">{formatMXN(product.precio_base || 0)}</span>
+                      <span className="text-[#1F3A2E] dark:text-[#E8E3D5]">{formatMXN(product.precio_base || 0)}</span>
                     )}
                   </td>
 
-                  <td className="px-5 py-4 text-[#3D6B3F]/70">{product.moneda_base || "MXN"}</td>
+                  <td className="px-5 py-4 text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">{product.moneda_base || "MXN"}</td>
 
                   <td className="px-5 py-4">
-                    <span className="rounded-full bg-[#A8C26B]/20 px-3 py-1 text-xs font-medium text-[#3D6B3F]">
+                    <span className="rounded-full bg-[#A8C26B]/20 dark:bg-[#A8C26B]/15 px-3 py-1 text-xs font-medium text-[#3D6B3F] dark:text-[#A8C26B]">
                       {product.status || "activo"}
                     </span>
                   </td>
@@ -384,17 +384,17 @@ export function ProductoTabla({
                       const stock = product.stock ?? 0;
                       const minimo = product.stock_minimo ?? 0;
                       if (stock === 0) return (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 dark:bg-red-950/20 px-2 py-1 text-xs font-semibold text-red-700 dark:text-red-400">
                           ⚠ Sin stock
                         </span>
                       );
                       if (minimo > 0 && stock <= minimo) return (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/20 px-2 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
                           ⚠ {stock}
                         </span>
                       );
                       return (
-                        <span className="rounded-full bg-[#C5CFB0]/30 px-2 py-1 text-xs font-medium text-[#1F3A2E]">
+                        <span className="rounded-full bg-[#C5CFB0]/30 dark:bg-[#3D6B3F]/20 px-2 py-1 text-xs font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">
                           {stock}
                         </span>
                       );
@@ -405,7 +405,7 @@ export function ProductoTabla({
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => onView(product)}
-                        className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] transition-colors"
+                        className="rounded-lg p-2 text-[#3D6B3F]/50 dark:text-[#A8C26B]/50 hover:bg-[#A8C26B]/20 dark:hover:bg-[#A8C26B]/15 hover:text-[#3D6B3F] dark:hover:text-[#A8C26B] transition-colors"
                       >
                         <Eye size={16} />
                       </button>
@@ -413,8 +413,8 @@ export function ProductoTabla({
                         onClick={() => onEdit(product)}
                         className={`rounded-lg p-2 transition-colors ${
                           sinPrecio
-                            ? "bg-amber-50 text-amber-600 hover:bg-amber-100"
-                            : "text-[#3D6B3F]/50 hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F]"
+                            ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                            : "text-[#3D6B3F]/50 dark:text-[#A8C26B]/50 hover:bg-[#A8C26B]/20 dark:hover:bg-[#A8C26B]/15 hover:text-[#3D6B3F] dark:hover:text-[#A8C26B]"
                         }`}
                         title={sinPrecio ? "Editar — precio pendiente" : "Editar"}
                       >
@@ -422,7 +422,7 @@ export function ProductoTabla({
                       </button>
                       <button
                         onClick={() => onDelete(product)}
-                        className="rounded-lg p-2 text-[#3D6B3F]/50 hover:bg-red-50 hover:text-red-600 transition-colors"
+                        className="rounded-lg p-2 text-[#3D6B3F]/50 dark:text-[#A8C26B]/50 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -436,7 +436,7 @@ export function ProductoTabla({
               <tr>
                 <td
                   colSpan={selectionEnabled ? 7 : 6}
-                  className="px-5 py-10 text-center text-[#3D6B3F]/60"
+                  className="px-5 py-10 text-center text-[#3D6B3F]/60 dark:text-[#A8C26B]/50 bg-white dark:bg-[#0f1a10]"
                 >
                   No hay productos para mostrar
                 </td>

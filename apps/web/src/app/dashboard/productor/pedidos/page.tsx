@@ -92,12 +92,12 @@ function PackingInstructions({ carrierName, isAlcohol }: { carrierName: string |
   const rules = matched ? matched[1] : null;
 
   return (
-    <div className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3]/60 p-4">
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E]">
-        <Package className="h-4 w-4 text-[#3D6B3F]" />
+    <div className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3]/60 dark:bg-[#1a2a1f] p-4">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">
+        <Package className="h-4 w-4 text-[#3D6B3F] dark:text-[#A8C26B]" />
         Instrucciones de Empaque
         {rules && (
-          <span className="ml-auto rounded-full bg-[#3D6B3F]/10 px-2.5 py-0.5 text-xs font-medium text-[#3D6B3F]">
+          <span className="ml-auto rounded-full bg-[#3D6B3F]/10 dark:bg-[#A8C26B]/15 px-2.5 py-0.5 text-xs font-medium text-[#3D6B3F] dark:text-[#A8C26B]">
             {rules.titulo}
           </span>
         )}
@@ -105,8 +105,8 @@ function PackingInstructions({ carrierName, isAlcohol }: { carrierName: string |
 
       <ol className="space-y-1.5">
         {(rules?.pasos ?? PACKING_GENERAL).map((paso, i) => (
-          <li key={i} className="flex gap-2 text-sm text-[#1F3A2E]/80">
-            <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#3D6B3F]/10 text-xs font-bold text-[#3D6B3F]">
+          <li key={i} className="flex gap-2 text-sm text-[#1F3A2E]/80 dark:text-[#D4CEBF]">
+            <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#3D6B3F]/10 dark:bg-[#A8C26B]/15 text-xs font-bold text-[#3D6B3F] dark:text-[#A8C26B]">
               {i + 1}
             </span>
             {paso}
@@ -115,11 +115,11 @@ function PackingInstructions({ carrierName, isAlcohol }: { carrierName: string |
       </ol>
 
       {isAlcohol && (
-        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3">
-          <p className="mb-1.5 text-xs font-semibold text-amber-800">Requisitos adicionales — Bebidas alcohólicas</p>
+        <div className="mt-3 rounded-lg border border-amber-200 dark:border-amber-900/30 bg-amber-50/80 dark:bg-amber-900/20 p-3">
+          <p className="mb-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">Requisitos adicionales — Bebidas alcohólicas</p>
           <ul className="space-y-1">
             {ALCOHOL_EXTRA.map((item, i) => (
-              <li key={i} className="flex gap-1.5 text-xs text-amber-700">
+              <li key={i} className="flex gap-1.5 text-xs text-amber-700 dark:text-amber-400">
                 <span className="flex-shrink-0">•</span>
                 {item}
               </li>
@@ -183,12 +183,12 @@ const PRIORIDAD_ESTADO: Record<string, number> = {
 
 function estadoBadgeCls(estado: string) {
   switch (estado) {
-    case "entregado":  return "bg-[#A8C26B]/20 text-[#3D6B3F]";
-    case "enviado":    return "bg-blue-100 text-blue-800";
-    case "preparando": return "bg-amber-100 text-amber-800";
-    case "confirmado": return "bg-[#C5CFB0]/40 text-[#1F3A2E]";
-    case "cancelado":  return "bg-red-50 text-red-700";
-    default:           return "bg-[#C97A3E]/15 text-[#C97A3E]";
+    case "entregado":  return "bg-[#A8C26B]/20 dark:bg-[#A8C26B]/15 text-[#3D6B3F] dark:text-[#A8C26B]";
+    case "enviado":    return "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300";
+    case "preparando": return "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300";
+    case "confirmado": return "bg-[#C5CFB0]/40 dark:bg-[#3D6B3F]/20 text-[#1F3A2E] dark:text-[#E8E3D5]";
+    case "cancelado":  return "bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400";
+    default:           return "bg-[#C97A3E]/15 dark:bg-[#C97A3E]/20 text-[#C97A3E] dark:text-[#E8A87C]";
   }
 }
 
@@ -473,16 +473,16 @@ function DetalleModal({
           className="fixed inset-0 z-[60] flex items-center justify-center p-4"
           style={{ backgroundColor: 'rgba(31,58,46,0.6)', backdropFilter: 'blur(4px)' }}
         >
-          <div className="w-full max-w-md rounded-2xl border border-[#C5CFB0] bg-[#FDFBF5] p-6 shadow-2xl">
-            <h3 className="mb-1 text-base font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">
+          <div className="w-full max-w-md rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#FDFBF5] dark:bg-[#0f1a10] p-6 shadow-2xl">
+            <h3 className="mb-1 text-base font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">
               {t(hsModalProactivo ? 'envio_hs_confirmar_titulo' : 'envio_hs_modal_titulo')}
             </h3>
-            <p className="mb-4 text-xs text-[#3D6B3F]/70">
+            <p className="mb-4 text-xs text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">
               {t(hsModalProactivo ? 'envio_hs_confirmar_desc' : 'envio_hs_modal_desc')}
             </p>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-medium text-[#3D6B3F]/70">
+                <label className="mb-1 block text-xs font-medium text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">
                   {t('envio_hs_label')} <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -490,19 +490,19 @@ function DetalleModal({
                   value={internacionalConfig.codigo_hs}
                   onChange={(e) => setInternacionalConfig((p) => ({ ...p, codigo_hs: e.target.value }))}
                   placeholder="2208.907200"
-                  className="w-full rounded-lg border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#1F3A2E] focus:outline-none focus:ring-2 focus:ring-[#3D6B3F]/30"
+                  className="w-full rounded-lg border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1a2a1f] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] focus:outline-none focus:ring-2 focus:ring-[#3D6B3F]/30"
                 />
-                <p className="mt-1 text-xs text-[#3D6B3F]/60">{t('envio_hs_ayuda')}</p>
+                <p className="mt-1 text-xs text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">{t('envio_hs_ayuda')}</p>
               </div>
             </div>
             {error && (
-              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+              <div className="mt-3 rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>
             )}
             <div className="mt-5 flex gap-3">
               <button
                 onClick={() => { setShowInternacionalModal(false); setError(null); }}
                 disabled={guardandoConfig}
-                className="flex-1 rounded-lg border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#F4F0E3] disabled:opacity-50"
+                className="flex-1 rounded-lg border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] px-4 py-2 text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5] transition hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50"
               >
                 {t('envio_hs_cancelar')}
               </button>
@@ -519,9 +519,9 @@ function DetalleModal({
           </div>
         </div>
       )}
-      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[#C5CFB0] bg-[#FDFBF5] shadow-2xl">
+      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#FDFBF5] dark:bg-[#0f1a10] shadow-2xl">
         {/* Header modal */}
-        <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-[#C5CFB0] bg-[#1F3A2E] px-6 py-4">
+        <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#1F3A2E] px-6 py-4">
           <div>
             <h2 className="text-lg font-bold text-white [font-family:'Playfair_Display',serif]">
               Detalle del Pedido #{pedidoId}
@@ -543,13 +543,13 @@ function DetalleModal({
         <div className="p-6 space-y-5">
           {/* Alertas */}
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+            <div className="rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>
           )}
           {success && (
-            <div className="rounded-xl border border-[#A8C26B]/40 bg-[#A8C26B]/10 px-4 py-3 text-sm text-[#3D6B3F]">{success}</div>
+            <div className="rounded-xl border border-[#A8C26B]/40 dark:border-[#A8C26B]/30 bg-[#A8C26B]/10 dark:bg-[#A8C26B]/15 px-4 py-3 text-sm text-[#3D6B3F] dark:text-[#A8C26B]">{success}</div>
           )}
           {guiaPendiente && (
-            <div className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-xl border border-amber-300 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 sm:flex-row sm:items-center sm:justify-between">
               <span>{t('envio_guia_pendiente_ayuda')}</span>
               <button
                 onClick={handleRefrescarGuia}
@@ -572,23 +572,23 @@ function DetalleModal({
               {/* Grid: cliente + cambiar estado */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* Cliente */}
-                <div className="rounded-xl border border-[#C5CFB0] bg-white p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E]">
-                    <User className="h-4 w-4 text-[#3D6B3F]" /> Cliente
+                <div className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">
+                    <User className="h-4 w-4 text-[#3D6B3F] dark:text-[#A8C26B]" /> Cliente
                   </div>
-                  <div className="font-medium text-[#1F3A2E]">{orden.pedido?.usuarios?.nombre ?? "—"}</div>
-                  <div className="text-xs text-[#3D6B3F]/60">{orden.pedido?.usuarios?.email ?? ""}</div>
+                  <div className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{orden.pedido?.usuarios?.nombre ?? "—"}</div>
+                  <div className="text-xs text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">{orden.pedido?.usuarios?.email ?? ""}</div>
                 </div>
 
                 {/* Cambiar estado */}
-                <div className="rounded-xl border border-[#C5CFB0] bg-white p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E]">
-                    <Package className="h-4 w-4 text-[#3D6B3F]" /> Cambiar Estado
+                <div className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">
+                    <Package className="h-4 w-4 text-[#3D6B3F] dark:text-[#A8C26B]" /> Cambiar Estado
                   </div>
                   <select
                     value={nuevoEstado}
                     onChange={(e) => setNuevoEstado(e.target.value)}
-                    className="mb-2 w-full rounded-lg border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#1F3A2E] focus:outline-none focus:ring-2 focus:ring-[#3D6B3F]/30"
+                    className="mb-2 w-full rounded-lg border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#0f1a10] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] focus:outline-none focus:ring-2 focus:ring-[#3D6B3F]/30"
                   >
                     <option value="pendiente">Pendiente</option>
                     <option value="confirmado">Confirmado</option>
@@ -607,14 +607,14 @@ function DetalleModal({
               </div>
 
               {/* Productos */}
-              <div className="rounded-xl border border-[#C5CFB0] bg-white p-4">
-                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E]">
-                  <Package className="h-4 w-4 text-[#3D6B3F]" /> Productos
+              <div className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">
+                  <Package className="h-4 w-4 text-[#3D6B3F] dark:text-[#A8C26B]" /> Productos
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-[#C5CFB0] text-[11px] font-semibold uppercase tracking-wide text-[#3D6B3F]/70">
+                      <tr className="border-b border-[#C5CFB0] dark:border-[#3D6B3F]/30 text-[11px] font-semibold uppercase tracking-wide text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">
                         <th className="pb-2 text-left">Producto</th>
                         <th className="pb-2 text-center">Cant.</th>
                         <th className="pb-2 text-right">P. Unitario</th>
@@ -623,11 +623,11 @@ function DetalleModal({
                     </thead>
                     <tbody>
                       {(orden.detalles ?? []).map((detalle) => (
-                        <tr key={detalle.id_detalle} className="border-b border-[#C5CFB0]/30 last:border-0">
-                          <td className="py-2 text-[#1F3A2E]">{detalle.productos?.nombre}</td>
-                          <td className="py-2 text-center text-[#3D6B3F]">{detalle.cantidad}</td>
-                          <td className="py-2 text-right text-[#1F3A2E]">{formatMXN(detalle.precio_compra)}</td>
-                          <td className="py-2 text-right font-medium text-[#1F3A2E]">
+                        <tr key={detalle.id_detalle} className="border-b border-[#C5CFB0]/30 dark:border-[#3D6B3F]/20 last:border-0">
+                          <td className="py-2 text-[#1F3A2E] dark:text-[#D4CEBF]">{detalle.productos?.nombre}</td>
+                          <td className="py-2 text-center text-[#3D6B3F] dark:text-[#A8C26B]">{detalle.cantidad}</td>
+                          <td className="py-2 text-right text-[#1F3A2E] dark:text-[#D4CEBF]">{formatMXN(detalle.precio_compra)}</td>
+                          <td className="py-2 text-right font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">
                             {formatMXN(Number(detalle.precio_compra) * detalle.cantidad)}
                           </td>
                         </tr>
@@ -639,33 +639,33 @@ function DetalleModal({
 
               {/* Desglose */}
               {orden.desglose && (
-                <div className="rounded-xl border border-[#C5CFB0] bg-white p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E]">
-                    <BarChart3 className="h-4 w-4 text-[#3D6B3F]" /> Desglose para mi tienda
+                <div className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">
+                    <BarChart3 className="h-4 w-4 text-[#3D6B3F] dark:text-[#A8C26B]" /> Desglose para mi tienda
                   </div>
                   <div className="space-y-2 text-sm">
-                    <div className="flex justify-between border-b border-[#C5CFB0]/40 pb-2">
-                      <span className="text-[#3D6B3F]/70">Subtotal bruto</span>
-                      <span className="font-medium text-[#1F3A2E]">
+                    <div className="flex justify-between border-b border-[#C5CFB0]/40 dark:border-[#3D6B3F]/30 pb-2">
+                      <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Subtotal bruto</span>
+                      <span className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">
                         {orden.desglose.subtotal_bruto
                           ? formatMXN(orden.desglose.subtotal_bruto)
                           : "—"}
                       </span>
                     </div>
-                    <div className="flex justify-between border-b border-[#C5CFB0]/40 pb-2">
-                      <span className="text-red-600/80">
+                    <div className="flex justify-between border-b border-[#C5CFB0]/40 dark:border-[#3D6B3F]/30 pb-2">
+                      <span className="text-red-600/80 dark:text-red-400/80">
                         Comisión marketplace
                         {orden.desglose.subtotal_bruto && Number(orden.desglose.subtotal_bruto) > 0 && (
-                          <span className="ml-1 text-xs text-[#3D6B3F]/50">
+                          <span className="ml-1 text-xs text-[#3D6B3F]/50 dark:text-[#A8C26B]/40">
                             ({((Number(orden.desglose.comision_marketplace) / Number(orden.desglose.subtotal_bruto)) * 100).toFixed(2)}%)
                           </span>
                         )}
                       </span>
-                      <span className="text-red-600">
+                      <span className="text-red-600 dark:text-red-400">
                         − {formatMXN(orden.desglose.comision_marketplace)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-base font-semibold text-[#3D6B3F]">
+                    <div className="flex justify-between text-base font-semibold text-[#3D6B3F] dark:text-[#A8C26B]">
                       <span>Neto a recibir</span>
                       <span>
                         {orden.desglose.monto_neto_productor
@@ -673,7 +673,7 @@ function DetalleModal({
                           : "—"}
                       </span>
                     </div>
-                    <div className="flex justify-between pt-1 text-xs text-[#3D6B3F]/60">
+                    <div className="flex justify-between pt-1 text-xs text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">
                       <span>Estado del pago</span>
                       <span>
                         {orden.desglose.id_payout
@@ -686,19 +686,19 @@ function DetalleModal({
               )}
 
               {/* Rastreo */}
-              <div className="rounded-xl border border-[#C5CFB0] bg-white p-4">
-                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E]">
-                  <Truck className="h-4 w-4 text-[#3D6B3F]" /> Información de Envío
+              <div className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">
+                  <Truck className="h-4 w-4 text-[#3D6B3F] dark:text-[#A8C26B]" /> Información de Envío
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-[#3D6B3F]/70">Número de Rastreo</label>
+                    <label className="mb-1 block text-xs font-medium text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">Número de Rastreo</label>
                     <input
                       type="text"
                       value={numeroRastreo}
                       onChange={(e) => setNumeroRastreo(e.target.value)}
                       placeholder="Ingresa el número de guía"
-                      className="w-full rounded-lg border border-[#C5CFB0] bg-[#F4F0E3] px-3 py-2 text-sm text-[#1F3A2E] focus:outline-none focus:ring-2 focus:ring-[#3D6B3F]/30"
+                      className="w-full rounded-lg border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#0f1a10] px-3 py-2 text-sm text-[#1F3A2E] dark:text-[#E8E3D5] placeholder:text-[#3D6B3F]/40 dark:placeholder:text-[#A8C26B]/30 focus:outline-none focus:ring-2 focus:ring-[#3D6B3F]/30"
                     />
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -713,17 +713,17 @@ function DetalleModal({
                       <button
                         onClick={handleGenerarGuia}
                         disabled={generandoGuia || saving}
-                        className="rounded-lg border border-[#C5CFB0] bg-white px-4 py-2 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#F4F0E3] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-lg border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-4 py-2 text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5] transition hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/40 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {generandoGuia ? "Generando guía..." : "Generar Guía"}
                       </button>
                     )}
                   </div>
                   {orden.envio?.numero_rastreo && orden.envio?.id_envio && (
-                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm space-y-3">
+                    <div className="rounded-lg border border-blue-200 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/20 p-3 text-sm space-y-3">
                       <div>
-                        <div className="text-xs text-blue-600/70">Rastreo registrado:</div>
-                        <div className="font-medium text-blue-800 font-mono">{orden.envio.numero_rastreo}</div>
+                        <div className="text-xs text-blue-600/70 dark:text-blue-400/60">Rastreo registrado:</div>
+                        <div className="font-medium text-blue-800 dark:text-blue-300 font-mono">{orden.envio.numero_rastreo}</div>
                       </div>
                       <a
                         href={`/envios/${orden.envio.id_envio}/guia/download`}
@@ -751,7 +751,7 @@ function DetalleModal({
                       >
                         Descargar etiqueta PDF
                       </a>
-                      <p className="text-xs text-blue-600/70">
+                      <p className="text-xs text-blue-600/70 dark:text-blue-400/60">
                         Imprime esta etiqueta y pégala en el paquete antes de enviarlo.
                       </p>
                     </div>
@@ -769,11 +769,11 @@ function DetalleModal({
 
               {/* Dirección */}
               {orden.pedido?.direccion_envio_snapshot && (
-                <div className="rounded-xl border border-[#C5CFB0] bg-white p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E]">
-                    <MapPin className="h-4 w-4 text-[#3D6B3F]" /> Dirección de Envío
+                <div className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1a2a1f] p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">
+                    <MapPin className="h-4 w-4 text-[#3D6B3F] dark:text-[#A8C26B]" /> Dirección de Envío
                   </div>
-                  <div className="space-y-0.5 text-sm text-[#1F3A2E]">
+                  <div className="space-y-0.5 text-sm text-[#1F3A2E] dark:text-[#D4CEBF]">
                     {orden.pedido.direccion_envio_snapshot.calle && (
                       <div>{orden.pedido.direccion_envio_snapshot.calle} {orden.pedido.direccion_envio_snapshot.numero}</div>
                     )}
@@ -787,7 +787,7 @@ function DetalleModal({
                       </div>
                     )}
                     {orden.pedido.direccion_envio_snapshot.codigo_postal && (
-                      <div className="text-[#3D6B3F]/60">CP {orden.pedido.direccion_envio_snapshot.codigo_postal}</div>
+                      <div className="text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">CP {orden.pedido.direccion_envio_snapshot.codigo_postal}</div>
                     )}
                   </div>
                 </div>
@@ -873,13 +873,13 @@ export default function PedidosProductor() {
       )}
 
       {/* Header */}
-      <div data-tour="pedidos-stats" className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-        <h1 className="text-2xl font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">Mis Pedidos</h1>
-        <p className="text-sm text-[#3D6B3F]/70">Gestiona y consulta los pedidos de tus tiendas.</p>
+      <div data-tour="pedidos-stats" className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <h1 className="text-2xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Mis Pedidos</h1>
+        <p className="text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Gestiona y consulta los pedidos de tus tiendas.</p>
       </div>
 
       {/* Filtros de estado */}
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
         {ESTADOS.map((estado) => (
           <button
             key={estado}
@@ -890,8 +890,8 @@ export default function PedidosProductor() {
                   ? "bg-red-600 text-white"
                   : "bg-[#3D6B3F] text-white"
                 : estado === "cancelado"
-                  ? "border border-red-200 text-red-600 hover:bg-red-50"
-                  : "border border-[#C5CFB0] text-[#1F3A2E] hover:bg-[#C5CFB0]/20"
+                  ? "border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+                  : "border border-[#C5CFB0] dark:border-[#3D6B3F]/40 text-[#1F3A2E] dark:text-[#E8E3D5] hover:bg-[#C5CFB0]/20 dark:hover:bg-[#1F3A2E]/40"
             }`}
           >
             {estado === "cancelado" ? "Cancelados (auditoría)" : estado.charAt(0).toUpperCase() + estado.slice(1)}
@@ -900,7 +900,7 @@ export default function PedidosProductor() {
       </div>
 
       {filtroEstado === "cancelado" && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-600">
+        <p className="rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-4 py-2 text-xs text-red-600 dark:text-red-400">
           Pedidos cancelados — no se generará guía de envío para ninguno de estos pedidos. Consulta el detalle para ver el historial.
         </p>
       )}
@@ -910,7 +910,7 @@ export default function PedidosProductor() {
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#C5CFB0] border-t-[#3D6B3F]" />
         </div>
       ) : pedidosFiltrados.length === 0 ? (
-        <div className="rounded-2xl border border-[#C5CFB0] bg-[#F4F0E3] px-5 py-10 text-center text-[#3D6B3F]/60">
+        <div className="rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 px-5 py-10 text-center text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">
           {filtroEstado === "todos"
             ? "No tienes pedidos aún"
             : filtroEstado === "cancelado"
@@ -919,7 +919,7 @@ export default function PedidosProductor() {
         </div>
       ) : (
         <>
-          <div data-tour="pedidos-tabla" className="overflow-hidden rounded-2xl border border-[#C5CFB0] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+          <div data-tour="pedidos-tabla" className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px] text-left">
                 <thead className="bg-[#1F3A2E]">
@@ -936,16 +936,16 @@ export default function PedidosProductor() {
                 <tbody>
                   {pedidosPaginados.map((pedido) => (
                     <tr key={pedido.id_pedido}
-                      className="border-t border-[#C5CFB0]/30 bg-white text-sm transition-colors odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20">
-                      <td className="px-5 py-4 font-medium text-[#1F3A2E]">#{pedido.id_pedido}</td>
+                      className="border-t border-[#C5CFB0]/30 dark:border-[#3D6B3F]/20 text-sm transition-colors odd:bg-white dark:odd:bg-[#0f1a10] even:bg-[#F4F0E3]/40 dark:even:bg-[#1a2a1f] hover:bg-[#C5CFB0]/20 dark:hover:bg-[#2d4a2e]/40">
+                      <td className="px-5 py-4 font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">#{pedido.id_pedido}</td>
                       <td className="px-5 py-4">
-                        <div className="font-medium text-[#1F3A2E]">{pedido.cliente.nombre}</div>
-                        <div className="text-xs text-[#3D6B3F]/60">{pedido.cliente.email}</div>
+                        <div className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{pedido.cliente.nombre}</div>
+                        <div className="text-xs text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">{pedido.cliente.email}</div>
                       </td>
-                      <td className="px-5 py-4 text-[#3D6B3F]/70">
+                      <td className="px-5 py-4 text-[#3D6B3F]/70 dark:text-[#A8C26B]/60">
                         {pedido.detalles.length} producto{pedido.detalles.length !== 1 ? "s" : ""}
                       </td>
-                      <td className="px-5 py-4 font-medium text-[#1F3A2E]">
+                      <td className="px-5 py-4 font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">
                         {formatMXN(pedido.total_parcial)}
                       </td>
                       <td className="px-5 py-4">
@@ -953,13 +953,13 @@ export default function PedidosProductor() {
                           {estadoEfectivo(pedido)}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-[#3D6B3F]/60">
+                      <td className="px-5 py-4 text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">
                         {new Date(pedido.fecha_creacion).toLocaleDateString("es-MX")}
                       </td>
                       <td className="px-5 py-4 text-right">
                         <button
                           onClick={() => setPedidoSeleccionado(pedido.id_pedido)}
-                          className="rounded-xl border border-[#C5CFB0] px-3 py-1.5 text-sm font-medium text-[#1F3A2E] transition hover:bg-[#3D6B3F] hover:text-white hover:border-[#3D6B3F]"
+                          className="rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-3 py-1.5 text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5] transition hover:bg-[#3D6B3F] hover:text-white hover:border-[#3D6B3F]"
                         >
                           Ver detalle
                         </button>
@@ -972,20 +972,20 @@ export default function PedidosProductor() {
           </div>
 
           {/* Paginación */}
-          <div className="flex items-center justify-between border border-[#C5CFB0] px-4 py-3 bg-white rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-            <p className="text-sm text-[#1F3A2E]">
+          <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-4 py-3 bg-white dark:bg-[#1a2a1f] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+            <p className="text-sm text-[#1F3A2E] dark:text-[#E8E3D5]">
               Mostrando <span className="font-semibold">{from}</span>–<span className="font-semibold">{to}</span> de <span className="font-semibold">{pedidosFiltrados.length}</span> pedido{pedidosFiltrados.length !== 1 ? "s" : ""}
             </p>
             <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
               <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}
-                className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+                className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50">
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] ring-1 ring-inset ring-[#C5CFB0]">
+              <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40">
                 Página {currentPage} de {totalPages}
               </span>
               <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
-                className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] ring-1 ring-inset ring-[#C5CFB0] hover:bg-[#F4F0E3] disabled:opacity-50">
+                className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50">
                 <ChevronRight className="h-5 w-5" />
               </button>
             </nav>

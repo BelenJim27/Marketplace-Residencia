@@ -13,14 +13,40 @@ require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Estados que NO permiten envío directo de spirits importados (mezcal)
+// Estados que NO permiten envío directo de spirits importados (mezcal).
+// Criterio: (a) prohíbe DTC de spirits, (b) es "control state" y exige compra en
+// tiendas gubernamentales, o (c) requiere licencia estatal que un exportador MX no puede obtener.
 const ESTADOS_BLOQUEADOS = [
-  { codigo: 'AL', nombre: 'Alabama',      motivo: 'Estado de control. Prohíbe importación directa sin licencia ABCA estatal.' },
-  { codigo: 'AR', nombre: 'Arkansas',     motivo: 'Prohíbe envío directo de spirits al consumidor.' },
-  { codigo: 'KS', nombre: 'Kansas',       motivo: 'Prohíbe la recepción de alcohol enviado directamente desde fuera del estado.' },
-  { codigo: 'MS', nombre: 'Mississippi',  motivo: 'Estado parcialmente seco. Sin envío directo de spirits importados.' },
-  { codigo: 'OK', nombre: 'Oklahoma',     motivo: 'Requiere licencia estatal de importación que exportadores MX no pueden obtener.' },
-  { codigo: 'UT', nombre: 'Utah',         motivo: 'Estado de control estricto (DABC). Todo alcohol pasa por el estado.' },
+  { codigo: 'AL', nombre: 'Alabama',        motivo: 'Control state (ABCA). Prohíbe importación directa de spirits al consumidor.' },
+  { codigo: 'AR', nombre: 'Arkansas',       motivo: 'Prohíbe envío directo de spirits al consumidor.' },
+  { codigo: 'DE', nombre: 'Delaware',       motivo: 'Prohíbe DTC de spirits importados sin licencia de distribuidor local.' },
+  { codigo: 'GA', nombre: 'Georgia',        motivo: 'Prohíbe envío directo de spirits al consumidor (solo vino con licencia).' },
+  { codigo: 'ID', nombre: 'Idaho',          motivo: 'Control state (ISLD). Todo spirits pasa por el estado.' },
+  { codigo: 'IA', nombre: 'Iowa',           motivo: 'Control state (IDALC). Prohíbe DTC de spirits.' },
+  { codigo: 'IN', nombre: 'Indiana',        motivo: 'Prohíbe envío directo de spirits al consumidor.' },
+  { codigo: 'KS', nombre: 'Kansas',         motivo: 'Prohíbe la recepción de alcohol enviado directamente desde fuera del estado.' },
+  { codigo: 'KY', nombre: 'Kentucky',       motivo: 'Prohíbe DTC de spirits; paradójicamente restrictivo para un estado productor.' },
+  { codigo: 'MA', nombre: 'Massachusetts',  motivo: 'Prohíbe DTC de spirits importados sin licencia de importador local.' },
+  { codigo: 'MI', nombre: 'Michigan',       motivo: 'Control state. Prohíbe DTC de spirits (solo DTC de vino con licencia).' },
+  { codigo: 'MN', nombre: 'Minnesota',      motivo: 'Prohíbe envío directo de spirits al consumidor.' },
+  { codigo: 'MS', nombre: 'Mississippi',    motivo: 'Estado parcialmente seco. Sin envío directo de spirits importados.' },
+  { codigo: 'MT', nombre: 'Montana',        motivo: 'Control state. Todo spirits pasa por el estado (MLCC).' },
+  { codigo: 'NC', nombre: 'North Carolina', motivo: 'Control state (NCLC). Prohíbe DTC de spirits.' },
+  { codigo: 'ND', nombre: 'North Dakota',   motivo: 'Prohíbe envío directo de spirits al consumidor.' },
+  { codigo: 'NH', nombre: 'New Hampshire',  motivo: 'Control state (NHLC). Todos los spirits pasan por el estado.' },
+  { codigo: 'OH', nombre: 'Ohio',           motivo: 'Control state (DLC). Prohíbe DTC de spirits.' },
+  { codigo: 'OK', nombre: 'Oklahoma',       motivo: 'Requiere licencia estatal de importación que exportadores MX no pueden obtener.' },
+  { codigo: 'PA', nombre: 'Pennsylvania',   motivo: 'Control state (PLCB). Solo venta en Fine Wine & Good Spirits del estado.' },
+  { codigo: 'RI', nombre: 'Rhode Island',   motivo: 'Prohíbe envío directo de spirits al consumidor.' },
+  { codigo: 'SC', nombre: 'South Carolina', motivo: 'Prohíbe DTC de spirits importados.' },
+  { codigo: 'SD', nombre: 'South Dakota',   motivo: 'Prohíbe envío directo de spirits al consumidor.' },
+  { codigo: 'TN', nombre: 'Tennessee',      motivo: 'Prohíbe DTC de spirits; mayoría de condados secos.' },
+  { codigo: 'TX', nombre: 'Texas',          motivo: 'Prohíbe DTC de spirits importados al consumidor final.' },
+  { codigo: 'UT', nombre: 'Utah',           motivo: 'Control state estricto (DABC). Todo alcohol pasa por el estado.' },
+  { codigo: 'VA', nombre: 'Virginia',       motivo: 'Control state (ABC). Solo venta en tiendas gubernamentales.' },
+  { codigo: 'WA', nombre: 'Washington',     motivo: 'Prohíbe DTC de spirits importados al consumidor.' },
+  { codigo: 'WV', nombre: 'West Virginia',  motivo: 'Control state. Todo spirits pasa por el estado (WVABCA).' },
+  { codigo: 'WY', nombre: 'Wyoming',        motivo: 'Control state. Todo spirits pasa por el estado.' },
 ];
 
 async function main() {

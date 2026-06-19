@@ -49,12 +49,12 @@ interface Pedido {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  pendiente:  "bg-[#C97A3E]/15 text-[#C97A3E] border-[#C97A3E]/30",
-  confirmado: "bg-[#3D6B3F]/10 text-[#3D6B3F] border-[#3D6B3F]/20",
-  preparando: "bg-[#1F3A2E]/10 text-[#1F3A2E] border-[#1F3A2E]/20",
-  enviado:    "bg-[#A8C26B]/20 text-[#3D6B3F] border-[#A8C26B]/40",
-  entregado:  "bg-[#A8C26B]/25 text-[#3D6B3F] border-[#A8C26B]/50",
-  cancelado:  "bg-red-50 text-red-600 border-red-100",
+  pendiente:  "bg-[#C97A3E]/15 text-[#C97A3E] border-[#C97A3E]/30 dark:bg-[#C97A3E]/20 dark:text-[#E8A87C]",
+  confirmado: "bg-[#3D6B3F]/10 text-[#3D6B3F] border-[#3D6B3F]/20 dark:bg-[#3D6B3F]/20 dark:text-[#A8C26B]",
+  preparando: "bg-[#1F3A2E]/10 text-[#1F3A2E] border-[#1F3A2E]/20 dark:bg-[#1F3A2E]/40 dark:text-[#A8C26B]",
+  enviado:    "bg-[#A8C26B]/20 text-[#3D6B3F] border-[#A8C26B]/40 dark:bg-[#A8C26B]/15 dark:text-[#A8C26B]",
+  entregado:  "bg-[#A8C26B]/25 text-[#3D6B3F] border-[#A8C26B]/50 dark:bg-[#A8C26B]/20 dark:text-[#A8C26B]",
+  cancelado:  "bg-red-50 text-red-600 border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30",
 };
 
 const AVATAR_COLORS = [
@@ -235,8 +235,8 @@ export default function Pedidos() {
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-2xl">
-        <p className="text-red-600">{error}</p>
+      <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 rounded-2xl">
+        <p className="text-red-600 dark:text-red-400">{error}</p>
         <button onClick={fetchPedidos} className="mt-2 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 text-sm font-medium">
           Reintentar
         </button>
@@ -248,10 +248,10 @@ export default function Pedidos() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-[#1F3A2E] tracking-tight [font-family:'Playfair_Display',serif]">
+        <h1 className="text-xl sm:text-2xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5] tracking-tight [font-family:'Playfair_Display',serif]">
           Gestión de Pedidos
         </h1>
-        <p className="text-[#3D6B3F]/70 text-sm mt-0.5">
+        <p className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70 text-sm mt-0.5">
           Administra y gestiona las órdenes de compra de mezcal
         </p>
       </div>
@@ -259,30 +259,30 @@ export default function Pedidos() {
       {/* Stats */}
       <div data-tour="pedidos-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
-          { label: "Total Pedidos",  value: counts.total,      color: "text-[#1F3A2E] dark:text-[#B8DCA8]" },
+          { label: "Total Pedidos",  value: counts.total,      color: "text-[#1F3A2E]" },
           { label: "Pendientes",     value: counts.pendiente,  color: "text-[#C97A3E]" },
-          { label: "Enviados",       value: counts.enviado,    color: "text-[#3D6B3F] dark:text-[#7FBB7F]" },
-          { label: "Completados",    value: counts.completado, color: "text-[#3D6B3F] dark:text-[#7FBB7F]" },
-          { label: "Cancelados",     value: counts.cancelado,  color: "text-red-500 dark:text-red-400" },
+          { label: "Enviados",       value: counts.enviado,    color: "text-[#3D6B3F]" },
+          { label: "Completados",    value: counts.completado, color: "text-[#3D6B3F]" },
+          { label: "Cancelados",     value: counts.cancelado,  color: "text-red-500"   },
         ].map((s) => (
-          <div key={s.label} className="bg-[#F4F0E3] dark:bg-[#111C16] p-5 rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-            <p className="text-sm font-semibold text-[#3D6B3F]/70 dark:text-[#7A9E6E] uppercase tracking-wider">{s.label}</p>
-            <h2 className={`text-2xl font-bold mt-1 [font-family:'DM_Sans',sans-serif] ${s.color}`}>{s.value.toLocaleString()}</h2>
+          <div key={s.label} className="bg-[#F4F0E3] dark:bg-[#1F3A2E]/40 p-5 rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+            <p className="text-sm font-semibold text-[#3D6B3F]/70 dark:text-[#A8C26B]/60 uppercase tracking-wider">{s.label}</p>
+            <h2 className={`text-2xl font-bold mt-1 [font-family:'DM_Sans',sans-serif] ${s.color} dark:text-[#E8E3D5]`}>{s.value.toLocaleString()}</h2>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div data-tour="pedidos-filtros" className="bg-[#F4F0E3] dark:bg-[#111C16] rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 space-y-3">
+      <div data-tour="pedidos-filtros" className="bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 space-y-3">
         <div className="flex flex-wrap gap-3 items-center">
           {/* Búsqueda */}
           <div className="relative flex-grow min-w-[220px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#3D6B3F]/40 dark:text-[#7A9E6E]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#3D6B3F]/40 dark:text-[#A8C26B]/40" />
             <input
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); resetPage(); }}
               placeholder="Buscar por ID, cliente o estado..."
-              className="w-full border border-[#C5CFB0] dark:border-[#2A4830] pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent transition-all bg-white dark:bg-[#0F1A13] text-[#1F3A2E] dark:text-[#B8DCA8] placeholder-[#3D6B3F]/50 dark:placeholder-[#5A8060]/70"
+              className="w-full border border-[#C5CFB0] dark:border-[#3D6B3F]/40 pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#3D6B3F] focus:border-transparent transition-all bg-white dark:bg-[#0f1a10] text-[#1F3A2E] dark:text-[#E8E3D5] placeholder-[#3D6B3F]/50 dark:placeholder-[#A8C26B]/30"
             />
           </div>
 
@@ -290,7 +290,7 @@ export default function Pedidos() {
           <select
             value={productorFilter}
             onChange={(e) => { setProductorFilter(e.target.value); resetPage(); }}
-            className="border border-[#C5CFB0] dark:border-[#2A4830] bg-white dark:bg-[#0F1A13] px-4 py-2.5 rounded-xl text-sm text-[#1F3A2E] dark:text-[#B8DCA8] outline-none focus:ring-2 focus:ring-[#3D6B3F] transition-all min-w-[200px]"
+            className="border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-4 py-2.5 rounded-xl text-sm text-[#1F3A2E] dark:text-[#E8E3D5] outline-none focus:ring-2 focus:ring-[#3D6B3F] transition-all min-w-[200px]"
           >
             <option value="">Todos los productores</option>
             {productores.map((p) => (
@@ -303,7 +303,7 @@ export default function Pedidos() {
           {/* Limpiar filtros */}
           <button
             onClick={clearFilters}
-            className="flex items-center gap-1.5 bg-white text-[#C97A3E] text-sm font-medium px-4 py-2.5 rounded-xl border border-[#C97A3E]/30 hover:bg-[#C97A3E]/10 transition-all duration-200"
+            className="flex items-center gap-1.5 bg-white dark:bg-[#0f1a10] text-[#C97A3E] text-sm font-medium px-4 py-2.5 rounded-xl border border-[#C97A3E]/30 hover:bg-[#C97A3E]/10 transition-all duration-200"
           >
             <FilterX size={15} />
             Limpiar filtros
@@ -311,14 +311,14 @@ export default function Pedidos() {
 
           <button
             onClick={handleExportCSV}
-            className="bg-[#F4F0E3] text-[#1F3A2E] text-sm font-medium px-4 py-2.5 rounded-xl border border-[#C5CFB0] hover:bg-[#C5CFB0]/30 transition-all duration-200"
+            className="bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 text-[#1F3A2E] dark:text-[#E8E3D5] text-sm font-medium px-4 py-2.5 rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60 transition-all duration-200"
           >
             Exportar CSV
           </button>
         </div>
 
         {/* Tabla */}
-        <div data-tour="pedidos-tabla" className="overflow-x-auto rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830]">
+        <div data-tour="pedidos-tabla" className="overflow-x-auto rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40">
           <table className="w-full min-w-[900px] text-left border-collapse">
             <thead className="bg-[#1F3A2E] text-xs font-semibold text-white uppercase tracking-wider">
               <tr>
@@ -331,10 +331,10 @@ export default function Pedidos() {
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#2A4830]/30">
+            <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20">
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-[#3D6B3F]/70 dark:text-[#7A9E6E] text-sm bg-white dark:bg-[#0F1A13]">
+                  <td colSpan={7} className="px-6 py-8 text-center text-[#3D6B3F]/70 dark:text-[#A8C26B]/50 text-sm bg-white dark:bg-[#0f1a10]">
                     <Package className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     No hay pedidos
                   </td>
@@ -352,16 +352,16 @@ export default function Pedidos() {
                     .filter((p): p is Productor => p !== undefined);
 
                   return (
-                    <tr key={pedido.id_pedido} className="odd:bg-white dark:odd:bg-[#0F1A13] even:bg-[#F4F0E3]/40 dark:even:bg-[#111C16]/60 hover:bg-[#C5CFB0]/20 dark:hover:bg-[#1A2E22]/40 transition-all duration-200">
+                    <tr key={pedido.id_pedido} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 dark:odd:bg-[#0f1a10] dark:even:bg-[#1a2a1f] dark:hover:bg-[#2d4a2e]/40 transition-all duration-200">
                       <td className="px-4 py-3">
-                        <span className="font-bold text-sm text-[#1F3A2E] dark:text-[#B8DCA8]">#{pedido.id_pedido}</span>
+                        <span className="font-bold text-sm text-[#1F3A2E] dark:text-[#E8E3D5]">#{pedido.id_pedido}</span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <span className={`w-8 h-8 rounded-full ${getAvatarColor(pedido.id_pedido)} flex items-center justify-center text-[10px] font-bold shrink-0`}>
                             {getInitials(pedido.usuarios?.nombre)}
                           </span>
-                          <span className="text-sm font-medium text-[#1F3A2E] dark:text-[#B8DCA8]">
+                          <span className="text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">
                             {pedido.usuarios?.nombre || "—"}
                           </span>
                         </div>
@@ -369,7 +369,7 @@ export default function Pedidos() {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {productoresEnPedido.length === 0 ? (
-                            <span className="text-sm text-[#3D6B3F]/50 dark:text-[#5A8060]">—</span>
+                            <span className="text-sm text-[#3D6B3F]/50 dark:text-[#A8C26B]/40">—</span>
                           ) : (
                             productoresEnPedido.map((pr) => (
                               <span
@@ -382,10 +382,10 @@ export default function Pedidos() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-[#3D6B3F]/70 dark:text-[#7A9E6E]">
+                      <td className="px-4 py-3 text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">
                         {pedido.fecha_creacion ? formatDate(pedido.fecha_creacion) : "—"}
                       </td>
-                      <td className="px-4 py-3 text-sm font-bold text-[#1F3A2E] dark:text-[#B8DCA8]">
+                      <td className="px-4 py-3 text-sm font-bold text-[#1F3A2E] dark:text-[#E8E3D5]">
                         {formatTotal(pedido.total)}
                       </td>
                       <td className="px-4 py-3">
@@ -395,7 +395,7 @@ export default function Pedidos() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end items-center gap-1">
-                          <button onClick={() => setDetalleModal(pedido)} title="Ver detalles" className="p-1.5 text-[#3D6B3F]/50 hover:text-[#3D6B3F] hover:bg-[#A8C26B]/20 dark:hover:bg-[#A8C26B]/10 rounded-lg transition-all duration-200">
+                          <button onClick={() => setDetalleModal(pedido)} title="Ver detalles" className="p-1.5 text-[#3D6B3F]/50 hover:text-[#3D6B3F] hover:bg-[#A8C26B]/20 rounded-lg transition-all duration-200">
                             <Eye size={16} />
                           </button>
                           <button onClick={() => setEditModal(pedido)} title="Editar estado" className="p-1.5 text-[#3D6B3F]/50 hover:text-[#C97A3E] hover:bg-[#C97A3E]/10 rounded-lg transition-all duration-200">
@@ -404,7 +404,7 @@ export default function Pedidos() {
                           <button
                             onClick={() => handleDelete(pedido)}
                             title="Eliminar"
-                            className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
+                            className="p-1.5 text-[#3D6B3F]/50 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -420,8 +420,8 @@ export default function Pedidos() {
 
         {/* Paginación */}
         {filtered.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#2A4830] px-4 py-3 bg-white dark:bg-[#0F1A13] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-            <p className="text-sm text-[#1F3A2E] dark:text-[#B8DCA8]">
+          <div className="flex items-center justify-between border border-[#C5CFB0] dark:border-[#3D6B3F]/40 px-4 py-3 bg-white dark:bg-[#0f1a10] rounded-2xl shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+            <p className="text-sm text-[#1F3A2E] dark:text-[#D4CEBF]">
               Mostrando <span className="font-semibold">{(page - 1) * PAGE_SIZE + 1}</span>–<span className="font-semibold">{Math.min(page * PAGE_SIZE, filtered.length)}</span> de <span className="font-semibold">{filtered.length}</span> pedidos
             </p>
             <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm">
@@ -429,18 +429,18 @@ export default function Pedidos() {
                 type="button"
                 disabled={page === 1}
                 onClick={() => setPage((p) => p - 1)}
-                className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#7A9E6E] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2A4830] hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] disabled:opacity-50"
+                className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/40 disabled:opacity-50"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#B8DCA8] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2A4830]">
+              <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40">
                 Página {page} de {totalPages}
               </span>
               <button
                 type="button"
                 disabled={page === totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#7A9E6E] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#2A4830] hover:bg-[#F4F0E3] dark:hover:bg-[#1A2E22] disabled:opacity-50"
+                className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-[#3D6B3F] dark:text-[#A8C26B] ring-1 ring-inset ring-[#C5CFB0] dark:ring-[#3D6B3F]/40 hover:bg-[#F4F0E3] dark:hover:bg-[#1F3A2E]/40 disabled:opacity-50"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
@@ -484,19 +484,19 @@ function ModalShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden border border-[#C5CFB0]"
+        className="bg-white dark:bg-[#0f1a10] rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden border border-[#C5CFB0] dark:border-[#3D6B3F]/40"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#C5CFB0] bg-[#F4F0E3]">
-          <h2 className="text-lg font-bold text-[#1F3A2E] [font-family:'Playfair_Display',serif]">{title}</h2>
-          <button onClick={onClose} className="p-1 text-[#3D6B3F]/60 hover:text-[#1F3A2E] rounded-lg transition-colors">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1a2a1f]">
+          <h2 className="text-lg font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">{title}</h2>
+          <button onClick={onClose} className="p-1 text-[#3D6B3F]/60 dark:text-[#A8C26B]/60 hover:text-[#1F3A2E] dark:hover:text-[#E8E3D5] rounded-lg transition-colors">
             <X size={20} />
           </button>
         </div>
         <div className="px-5 py-4 overflow-y-auto">{children}</div>
-        {footer && <div className="px-5 py-4 border-t border-[#C5CFB0] bg-[#F4F0E3]/60 flex justify-end gap-2">{footer}</div>}
+        {footer && <div className="px-5 py-4 border-t border-[#C5CFB0] dark:border-[#3D6B3F]/30 bg-[#F4F0E3]/60 dark:bg-[#1a2a1f]/60 flex justify-end gap-2">{footer}</div>}
       </div>
     </div>
   );
@@ -563,23 +563,23 @@ function DetallePedidoModal({
           {/* Resumen */}
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="font-semibold text-[#1F3A2E]">{data.usuarios?.nombre || "—"}</p>
-              {data.usuarios?.email && <p className="text-[#3D6B3F]/70">{data.usuarios.email}</p>}
-              <p className="text-[#3D6B3F]/70 mt-1">
+              <p className="font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">{data.usuarios?.nombre || "—"}</p>
+              {data.usuarios?.email && <p className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">{data.usuarios.email}</p>}
+              <p className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70 mt-1">
                 {data.fecha_creacion ? formatDate(data.fecha_creacion) : "—"}
               </p>
             </div>
             <EstadoBadge estado={data.estado} />
           </div>
 
-          <div className="flex justify-between border-y border-[#C5CFB0]/40 py-2">
-            <span className="text-[#3D6B3F]/70">Total</span>
-            <span className="font-bold text-[#1F3A2E]">{formatTotal(data.total)}</span>
+          <div className="flex justify-between border-y border-[#C5CFB0]/40 dark:border-[#3D6B3F]/30 py-2">
+            <span className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Total</span>
+            <span className="font-bold text-[#1F3A2E] dark:text-[#E8E3D5]">{formatTotal(data.total)}</span>
           </div>
 
           {/* Productos */}
           <div>
-            <p className="font-semibold text-[#1F3A2E] mb-2">Productos</p>
+            <p className="font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] mb-2">Productos</p>
             <ul className="space-y-2">
               {(data.detalle_pedido ?? []).map((d) => {
                 const pr = d.id_productor != null ? productoresMap.get(d.id_productor) : undefined;
@@ -588,45 +588,45 @@ function DetallePedidoModal({
                     ? Number(d.precio_compra) * d.cantidad
                     : null;
                 return (
-                  <li key={d.id_detalle} className="flex items-start justify-between gap-3 bg-[#F4F0E3]/50 rounded-xl px-3 py-2">
+                  <li key={d.id_detalle} className="flex items-start justify-between gap-3 bg-[#F4F0E3]/50 dark:bg-[#1F3A2E]/30 rounded-xl px-3 py-2">
                     <div>
-                      <p className="font-medium text-[#1F3A2E]">{d.productos?.nombre ?? `Producto #${d.id_detalle}`}</p>
-                      <p className="text-[#3D6B3F]/70 text-xs">
+                      <p className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{d.productos?.nombre ?? `Producto #${d.id_detalle}`}</p>
+                      <p className="text-[#3D6B3F]/70 dark:text-[#A8C26B]/70 text-xs">
                         {pr ? productorLabel(pr) : "—"}
                         {d.cantidad != null && ` · ${d.cantidad} u.`}
                       </p>
                     </div>
                     {subtotal != null && (
-                      <span className="font-semibold text-[#1F3A2E] whitespace-nowrap">{formatTotal(subtotal)}</span>
+                      <span className="font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] whitespace-nowrap">{formatTotal(subtotal)}</span>
                     )}
                   </li>
                 );
               })}
               {(data.detalle_pedido ?? []).length === 0 && (
-                <li className="text-[#3D6B3F]/60">Sin productos en este pedido.</li>
+                <li className="text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">Sin productos en este pedido.</li>
               )}
             </ul>
           </div>
 
           {/* Envío */}
           <div>
-            <p className="font-semibold text-[#1F3A2E] mb-1">Envío</p>
+            <p className="font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] mb-1">Envío</p>
             {!envio ? (
-              <p className="text-[#3D6B3F]/60">Aún no hay envío registrado.</p>
+              <p className="text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">Aún no hay envío registrado.</p>
             ) : (
-              <div className="text-[#3D6B3F]/80 space-y-0.5">
-                <p>Estado: <span className="font-medium text-[#1F3A2E]">{envio.estado}</span></p>
+              <div className="text-[#3D6B3F]/80 dark:text-[#A8C26B]/70 space-y-0.5">
+                <p>Estado: <span className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{envio.estado}</span></p>
                 {envio.transportistas?.nombre && (
-                  <p>Transportista: <span className="font-medium text-[#1F3A2E]">{envio.transportistas.nombre}</span></p>
+                  <p>Transportista: <span className="font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{envio.transportistas.nombre}</span></p>
                 )}
                 {envio.numero_rastreo && (
-                  <p>Rastreo: <span className="font-mono font-medium text-[#1F3A2E]">{envio.numero_rastreo}</span></p>
+                  <p>Rastreo: <span className="font-mono font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{envio.numero_rastreo}</span></p>
                 )}
               </div>
             )}
           </div>
 
-          <p className="text-[10px] text-[#3D6B3F]/50">Moneda: {moneda}</p>
+          <p className="text-[10px] text-[#3D6B3F]/50 dark:text-[#A8C26B]/40">Moneda: {moneda}</p>
         </div>
       ) : null}
     </ModalShell>
@@ -671,7 +671,7 @@ function EditarEstadoPedidoModal({
           <button
             onClick={onClose}
             disabled={saving}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-[#3D6B3F] border border-[#C5CFB0] hover:bg-[#C5CFB0]/30 disabled:opacity-50 transition-all"
+            className="px-4 py-2 rounded-xl text-sm font-medium text-[#3D6B3F] dark:text-[#E8E3D5] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50 transition-all"
           >
             Cancelar
           </button>
@@ -687,17 +687,17 @@ function EditarEstadoPedidoModal({
       }
     >
       <div className="space-y-3 text-sm">
-        <label className="block font-medium text-[#1F3A2E]">Estado del pedido</label>
+        <label className="block font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80">Estado del pedido</label>
         <select
           value={estado}
           onChange={(e) => setEstado(e.target.value)}
-          className="w-full border border-[#C5CFB0] bg-white px-4 py-2.5 rounded-xl text-[#1F3A2E] outline-none focus:ring-2 focus:ring-[#3D6B3F] transition-all capitalize"
+          className="w-full border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-4 py-2.5 rounded-xl text-[#1F3A2E] dark:text-[#E8E3D5] outline-none focus:ring-2 focus:ring-[#3D6B3F] transition-all capitalize"
         >
           {STATUS_OPTIONS.map((e) => (
             <option key={e} value={e}>{e}</option>
           ))}
         </select>
-        {error && <p className="text-red-600">{error}</p>}
+        {error && <p className="text-red-600 dark:text-red-400">{error}</p>}
       </div>
     </ModalShell>
   );
