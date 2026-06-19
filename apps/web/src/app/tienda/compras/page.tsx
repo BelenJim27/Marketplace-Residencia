@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { getMediaUrl } from "@/lib/media";
 import { useRouter } from "next/navigation";
 import { ChevronRight, ShoppingBag, Search, Package } from "lucide-react";
 import { api } from "@/lib/api";
@@ -89,7 +90,7 @@ function ProductCollage({ items }: { items: DetallePedido[] }) {
         position: "relative", width: "68px", height: "56px", flexShrink: 0,
         borderRadius: "10px", overflow: "hidden", background: C.cream, border: `1px solid ${C.border}`,
       }}>
-        <Image src={imgs[0]} alt="" fill sizes="68px" className="object-contain" />
+        <Image src={getMediaUrl(imgs[0])} alt="" fill sizes="68px" className="object-contain" />
       </div>
     );
   }
@@ -118,7 +119,7 @@ function ProductCollage({ items }: { items: DetallePedido[] }) {
             zIndex: i,
           }}
         >
-          <Image src={url} alt="" fill sizes={`${imgW}px`} className="object-contain" />
+          <Image src={getMediaUrl(url)} alt="" fill sizes={`${imgW}px`} className="object-contain" />
         </div>
       ))}
     </div>

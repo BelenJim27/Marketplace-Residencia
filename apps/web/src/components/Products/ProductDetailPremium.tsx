@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { getMediaUrl } from '@/lib/media';
 import Link from 'next/link';
 import { ArrowLeft, ShoppingCart, Heart, MapPin, Droplets, Flame, Leaf, Package } from 'lucide-react';
 import { useCarrito } from '@/context/CarritoContext';
@@ -101,7 +102,7 @@ export function ProductDetailPremium({ producto, stock = null, onBack }: Product
             >
               {imagenPrincipal && (
                 <Image
-                  src={imagenPrincipal}
+                  src={getMediaUrl(imagenPrincipal)}
                   alt={producto.nombre}
                   width={400}
                   height={400}

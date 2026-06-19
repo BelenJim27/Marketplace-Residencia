@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { getMediaUrl } from "@/lib/media";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -332,9 +333,9 @@ export default function CarritoPage() {
                   background: C.cream, border: `1px solid ${C.border}`,
                 }}>
                   {item.producto_imagenes?.[0] ? (
-                    <Image src={item.producto_imagenes[0].url} alt={item.nombre} fill sizes="64px" className="object-contain" />
+                    <Image src={getMediaUrl(item.producto_imagenes[0].url)} alt={item.nombre} fill sizes="64px" className="object-contain" />
                   ) : item.imagen_principal_url ? (
-                    <Image src={item.imagen_principal_url} alt={item.nombre} fill sizes="64px" className="object-contain" />
+                    <Image src={getMediaUrl(item.imagen_principal_url)} alt={item.nombre} fill sizes="64px" className="object-contain" />
                   ) : (
                     <div style={{
                       display: "flex", height: "100%",

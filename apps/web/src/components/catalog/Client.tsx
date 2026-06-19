@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import Image from "next/image";
+import { getMediaUrl } from "@/lib/media";
 import { ShoppingCart, X, Heart, ChevronRight, Sparkles, Filter } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -231,7 +232,7 @@ const ProductCard = memo(function ProductCard({
           <div className="relative w-full h-full flex items-center justify-center sm:h-60">
             {imagenUrl && (
               <Image
-                src={imagenUrl}
+                src={getMediaUrl(imagenUrl)}
                 alt={producto.nombre}
                 width={120}
                 height={280}

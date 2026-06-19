@@ -8,6 +8,7 @@ import { useCarrito } from '@/context/CarritoContext';
 import { useLocale } from '@/context/LocaleContext';
 import { api } from '@/lib/api';
 import Image from 'next/image';
+import { getMediaUrl } from '@/lib/media';
 
 interface ProductoHero {
   id_producto: number | bigint;
@@ -472,7 +473,7 @@ export function HeroMezcal() {
                   >
                     {imgSrc ? (
                       <Image
-                        src={imgSrc}
+                        src={getMediaUrl(imgSrc)}
                         alt={p.nombre}
                         fill
                         className="object-contain p-2"
