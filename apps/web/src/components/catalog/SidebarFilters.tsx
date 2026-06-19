@@ -253,11 +253,14 @@ export function SidebarFiltersComponent({
               <FilterCheckbox
                 key={cat.id_categoria}
                 label={cat.nombre}
-                active={selectedCategorias.includes(String(cat.id_categoria))}
-                onClick={() => handleCategoriaToggle(String(cat.id_categoria))}
+                active={false}
+                onClick={() => { }}
               />
             ))}
           </div>
+          <p className="text-[15px] px-2 pt-2 pb-1 italic" style={{ color: "#a71010" }}>
+            🌿 Filtro por categoría disponible próximamente
+          </p>
         </FilterSection>
       )}
 

@@ -249,7 +249,7 @@ export default function ClientePerfilPage() {
   return (
     <div style={{ paddingBottom: "64px", transition: "background 0.3s" }}>
       <div style={{ maxWidth: "820px", margin: "0 auto" }}>
-        
+
         <div style={{ marginBottom: "28px" }}>
           <p style={{ fontSize: "11px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#3D6B3F", marginBottom: "4px" }}>{t("Mi cuenta")}</p>
           <h1 style={{ fontFamily: "var(--font-family-store)", fontSize: "28px", fontWeight: 700, color: colors.textMain, margin: 0 }}>{t("Perfil")}</h1>
@@ -265,20 +265,25 @@ export default function ClientePerfilPage() {
           <div style={{ position: "relative", flexShrink: 0 }}>
             <div style={{ width: "88px", height: "88px", borderRadius: "50%", overflow: "hidden", background: isDark ? "#2D3731" : "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {uploadingFoto ? <Loader2 className="animate-spin text-green-700" size={32} /> :
-              user?.foto_url ? <img src={getMediaUrl(user.foto_url)} alt="foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : 
-              <span style={{ fontSize: "26px", fontWeight: 700, color: "#3D6B3F" }}>{initials || <User size={32} />}</span>}
+                user?.foto_url ? <img src={getMediaUrl(user.foto_url)} alt="foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> :
+                  <span style={{ fontSize: "26px", fontWeight: 700, color: "#3D6B3F" }}>{initials || <User size={32} />}</span>}
             </div>
             <button onClick={() => fileInputRef.current?.click()} disabled={uploadingFoto} style={{ position: "absolute", bottom: 0, right: 0, width: "28px", height: "28px", borderRadius: "50%", background: "#3D6B3F", border: "2px solid #fff", color: "#fff", cursor: uploadingFoto ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: uploadingFoto ? 0.6 : 1 }}>
-              {uploadingFoto ? <Loader2 className="animate-spin" size={13}/> : <Camera size={13} />}
+              {uploadingFoto ? <Loader2 className="animate-spin" size={13} /> : <Camera size={13} />}
             </button>
             <input ref={fileInputRef} type="file" style={{ display: "none" }} onChange={handleFotoChange} />
           </div>
           <div style={{ flex: 1, minWidth: "200px" }}>
-            <div style={{display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px"}}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
               <p style={{ fontSize: "20px", fontWeight: 700, color: colors.textMain, margin: 0 }}>{fullName || "—"}</p>
               <span style={{ background: isProfileComplete ? "rgba(209, 250, 229, 0.5)" : "rgba(254, 243, 199, 0.5)", border: `1px solid ${isDark ? "#333" : "#eee"}`, padding: "2px 8px", fontSize: "10px", fontWeight: "bold", textTransform: "uppercase", borderRadius: "999px", color: colors.textMain }}>
                 {isProfileComplete ? t("Completo") : t("Pendiente")}
               </span>
+              {!isProfileComplete && (
+                <p style={{ fontSize: "11px", color: "#92400e", background: "rgba(254,243,199,0.6)", border: "1px solid #fde68a", borderRadius: "8px", padding: "6px 10px", margin: "8px 0 0", display: "flex", alignItems: "center", gap: "5px" }}>
+                   Para completar tu cuenta agrega tu número de teléfono en <strong>Editar perfil</strong>.
+                </p>
+              )}
             </div>
             <p style={{ fontSize: "13px", color: colors.textSub, marginBottom: "10px" }}>{user?.email}</p>
             <button onClick={() => router.push("/tienda/compras")} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: "#3D6B3F", background: "rgba(26,93,59,0.08)", padding: "5px 14px", borderRadius: "999px", cursor: "pointer", border: "none" }}>
@@ -296,7 +301,7 @@ export default function ClientePerfilPage() {
         </div>
 
         <div style={{ background: colors.bgCard, borderRadius: "16px", border: `1px solid ${colors.border}`, padding: "28px 24px" }}>
-          
+
           {tab === "perfil" && (
             <div>
               <h2 style={{ fontSize: "18px", color: colors.textMain, marginBottom: "20px" }}>{t("Información personal")}</h2>
@@ -336,14 +341,14 @@ export default function ClientePerfilPage() {
                     </p>
                   )}
                 </div>
-                <div style={{gridColumn: "span 2"}}>
-                    <label style={{ fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" }}>{t("Correo electrónico")}</label>
-                    <input value={form.email} disabled style={{...inputStyle, opacity: 0.6, cursor: "not-allowed"}} />
+                <div style={{ gridColumn: "span 2" }}>
+                  <label style={{ fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" }}>{t("Correo electrónico")}</label>
+                  <input value={form.email} disabled style={{ ...inputStyle, opacity: 0.6, cursor: "not-allowed" }} />
                 </div>
               </div>
-              <div style={{display: "flex", justifyContent: "flex-end", marginTop: "24px"}}>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "24px" }}>
                 <button onClick={handleSavePerfil} disabled={savingProfile} style={{ background: savingProfile ? "#C5CFB0" : "#3D6B3F", color: "#fff", padding: "10px 24px", borderRadius: "8px", border: "none", cursor: savingProfile ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "14px", display: "inline-flex", gap: "8px", alignItems: "center" }}>
-                  {savingProfile ? <Loader2 className="animate-spin" size={15}/> : <Pencil size={15} />}
+                  {savingProfile ? <Loader2 className="animate-spin" size={15} /> : <Pencil size={15} />}
                   {savingProfile ? t("Guardando...") : t("Guardar cambios")}
                 </button>
               </div>
@@ -353,14 +358,14 @@ export default function ClientePerfilPage() {
           {tab === "seguridad" && (
             <div>
               <h2 style={{ fontSize: "18px", color: colors.textMain, marginBottom: "10px" }}>{t("Seguridad")}</h2>
-              <p style={{fontSize: "14px", color: colors.textSub, marginBottom: "24px"}}>{t("Tu nueva contraseña debe tener al menos 8 caracteres")}</p>
+              <p style={{ fontSize: "14px", color: colors.textSub, marginBottom: "24px" }}>{t("Tu nueva contraseña debe tener al menos 8 caracteres")}</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "400px" }}>
                 <div style={{ position: "relative" }}>
                   <input
                     type={showPwActual ? "text" : "password"}
                     placeholder={t("Contraseña actual")}
                     value={pwForm.actual}
-                    onChange={(e) => setPwForm({...pwForm, actual: e.target.value})}
+                    onChange={(e) => setPwForm({ ...pwForm, actual: e.target.value })}
                     style={{ ...inputStyle, paddingRight: "44px" }}
                   />
                   <button type="button" onClick={() => setShowPwActual(!showPwActual)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: colors.textSub, display: "flex", alignItems: "center" }}>
@@ -372,7 +377,7 @@ export default function ClientePerfilPage() {
                     type={showPwNueva ? "text" : "password"}
                     placeholder={t("Nueva contraseña")}
                     value={pwForm.nueva}
-                    onChange={(e) => setPwForm({...pwForm, nueva: e.target.value})}
+                    onChange={(e) => setPwForm({ ...pwForm, nueva: e.target.value })}
                     style={{ ...inputStyle, paddingRight: "44px" }}
                   />
                   <button type="button" onClick={() => setShowPwNueva(!showPwNueva)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: colors.textSub, display: "flex", alignItems: "center" }}>
@@ -384,7 +389,7 @@ export default function ClientePerfilPage() {
                     type={showPwConfirmar ? "text" : "password"}
                     placeholder={t("Confirmar")}
                     value={pwForm.confirmar}
-                    onChange={(e) => setPwForm({...pwForm, confirmar: e.target.value})}
+                    onChange={(e) => setPwForm({ ...pwForm, confirmar: e.target.value })}
                     style={{ ...inputStyle, paddingRight: "44px" }}
                   />
                   <button type="button" onClick={() => setShowPwConfirmar(!showPwConfirmar)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: colors.textSub, display: "flex", alignItems: "center" }}>
@@ -392,10 +397,10 @@ export default function ClientePerfilPage() {
                   </button>
                 </div>
               </div>
-              <div style={{display: "flex", justifyContent: "flex-end", marginTop: "24px"}}>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "24px" }}>
                 <button onClick={handleSavePassword} disabled={savingPassword} style={{ background: savingPassword ? "#C5CFB0" : "#3D6B3F", color: "#fff", padding: "10px 24px", borderRadius: "8px", border: "none", cursor: savingPassword ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: "14px", display: "inline-flex", gap: "8px", alignItems: "center" }}>
-                    {savingPassword ? <Loader2 className="animate-spin" size={15}/> : <Lock size={15} />}
-                    {savingPassword ? t("Guardando...") : t("Cambiar contraseña")}
+                  {savingPassword ? <Loader2 className="animate-spin" size={15} /> : <Lock size={15} />}
+                  {savingPassword ? t("Guardando...") : t("Cambiar contraseña")}
                 </button>
               </div>
             </div>

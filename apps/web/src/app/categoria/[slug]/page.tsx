@@ -122,6 +122,7 @@ export default function CategoriaPage() {
     return filtered;
   }, [productos, tipoMezcalFilter, precioMin, precioMax]);
 
+
   const toggleWishlist = (producto: ProductoPublico) => {
     if (!isAuthenticated) {
       router.push(`/auth/sign-in?redirect=${encodeURIComponent(pathname)}`);

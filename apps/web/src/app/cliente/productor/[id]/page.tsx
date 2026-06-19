@@ -48,7 +48,7 @@ interface Filtros {
 }
 
 const FILTROS_VACIOS: Filtros = { busqueda: "", maguey: [], precio_min: "", precio_max: "" };
-const TIPOS_MAGUEY = ["Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueño", "Cuishe", "Coyote", "Litrea", "Garabatillo"];
+const TIPOS_MAGUEY = ["Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueño", "Cuishe", "Coyote", "Litrea", "Garabatillo", "Tepeztate"];
 const POR_PAGINA = 9;
 
 // ─── StarRating ───────────────────────────────────────────────────────────────
@@ -251,42 +251,56 @@ export default function ProductorPage() {
 
   // Filtrado + ordenamiento
   const productosFiltrados = useMemo(() => {
-    let result = [...productos];
+  const normalizar = (str: string) =>
+    str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
-    if (filtros.busqueda.trim()) {
-      const q = filtros.busqueda.toLowerCase();
-      result = result.filter((p) =>
-        p.nombre.toLowerCase().includes(q) ||
-        p.descripcion?.toLowerCase().includes(q) ||
-        p.lotes?.datos_api?.maguey?.toLowerCase().includes(q)
+  let result = [...productos];
+
+  if (filtros.busqueda.trim()) {
+    const q = normalizar(filtros.busqueda);
+    result = result.filter((p) =>
+      normalizar(p.nombre).includes(q) ||
+      normalizar(p.descripcion ?? "").includes(q) ||
+      normalizar(p.lotes?.datos_api?.maguey ?? "").includes(q)
+    );
+  }
+
+  if (filtros.maguey.length > 0) {
+    result = result.filter((p) => {
+      const camposMaguey = [
+        p.lotes?.datos_api?.maguey,
+        p.lotes?.datos_api?.tipo_mezcal,
+        p.lotes?.datos_api?.agave,
+        p.nombre,
+        p.descripcion,
+      ]
+        .filter(Boolean)
+        .map((v) => normalizar(v!));
+
+      return filtros.maguey.some((f) =>
+        camposMaguey.some((campo) => campo.includes(normalizar(f)))
       );
-    }
-
-    if (filtros.maguey.length > 0) {
-      result = result.filter((p) => {
-        const m = p.lotes?.datos_api?.maguey?.toLowerCase() ?? "";
-        return filtros.maguey.some((f) => m.includes(f.toLowerCase()));
-      });
-    }
-
-    if (filtros.precio_min !== "") {
-      const min = Number(filtros.precio_min);
-      result = result.filter((p) => Number(p.precio_base) >= min);
-    }
-    if (filtros.precio_max !== "") {
-      const max = Number(filtros.precio_max);
-      result = result.filter((p) => Number(p.precio_base) <= max);
-    }
-
-    result.sort((a, b) => {
-      if (orden === "precio_asc") return Number(a.precio_base) - Number(b.precio_base);
-      if (orden === "precio_desc") return Number(b.precio_base) - Number(a.precio_base);
-      if (orden === "popular") return (Number(b.promedio_calificacion ?? 0)) - (Number(a.promedio_calificacion ?? 0));
-      return a.nombre.localeCompare(b.nombre);
     });
+  }
 
-    return result;
-  }, [productos, filtros, orden]);
+  if (filtros.precio_min !== "") {
+    const min = Number(filtros.precio_min);
+    result = result.filter((p) => Number(p.precio_base) >= min);
+  }
+  if (filtros.precio_max !== "") {
+    const max = Number(filtros.precio_max);
+    result = result.filter((p) => Number(p.precio_base) <= max);
+  }
+
+  result.sort((a, b) => {
+    if (orden === "precio_asc") return Number(a.precio_base) - Number(b.precio_base);
+    if (orden === "precio_desc") return Number(b.precio_base) - Number(a.precio_base);
+    if (orden === "popular") return (Number(b.promedio_calificacion ?? 0)) - (Number(a.promedio_calificacion ?? 0));
+    return a.nombre.localeCompare(b.nombre);
+  });
+
+  return result;
+}, [productos, filtros, orden]);
 
   const totalPaginas = Math.max(1, Math.ceil(productosFiltrados.length / POR_PAGINA));
   const productosPagina = productosFiltrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);

@@ -150,7 +150,7 @@ function getUserIdFromAccessToken(token: string) {
 
 @Injectable()
 export class ProductosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // Cache en memoria del catálogo público sin filtros (el caso más frecuente).
   // Se invalida en create/update/remove o expira por TTL.
@@ -214,10 +214,15 @@ export class ProductosService {
       }
     }
 
+    const normalizar = (str: string) =>
+      str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
     const matchesFilter = (filterValue: string | undefined, dataValue: string | undefined): boolean => {
       if (!filterValue) return true;
-      const values = filterValue.split(',').map(v => v.trim()).filter(Boolean);
-      return values.length === 0 || values.includes(dataValue ?? '');
+      const values = filterValue.split(',').map(v => normalizar(v)).filter(Boolean);
+      if (values.length === 0) return true;
+      const normalData = normalizar(dataValue ?? '');
+      return values.some(v => normalData.includes(v) || v.includes(normalData));
     };
 
     const applyFiltersToProductos = (productos: any[]) => {
@@ -262,9 +267,9 @@ export class ProductosService {
       const ids = stores.map((store) => store.id_tienda);
       const productos = ids.length
         ? await this.prisma.productos.findMany({
-            where: { ...where, id_tienda: { in: ids } },
-            include: productoInclude as any,
-          })
+          where: { ...where, id_tienda: { in: ids } },
+          include: productoInclude as any,
+        })
         : [];
 
       return serializeBigInts(
@@ -892,7 +897,7 @@ export class ProductosService {
     if (filename) {
       try {
         unlinkSync(join(__dirname, '../../..', 'uploads', 'productos', filename));
-      } catch {}
+      } catch { }
     }
 
     this.invalidatePublicCatalogCache();

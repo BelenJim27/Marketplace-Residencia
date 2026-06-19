@@ -69,14 +69,14 @@ const FILTROS_VACIOS: Filtros = {
 };
 
 const TIPOS_MEZCAL = ["Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueño", "Cuishe", "Coyote", "Litrea", "Garabatillo", "Anejo"];
-const TIPOS_MAGUEY = ["Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueño", "Cuishe", "Coyote", "Litrea", "Garabatillo"];
+const TIPOS_MAGUEY = ["Espadín", "Tobalá", "Peñata", "Madrecuixe", "Arroqueño", "Cuishe", "Coyote", "Litrea", "Garabatillo", "Tepeztate"];
 
 
 // Two-color strategy (Restrained): neutrals + brand accent
 // Use index % 2 to alternate: 0 = neutral (default), 1 = brand (featured)
 // Keeping most cards neutral maintains Restrained strategy
 const CARD_COLORS = [
-  { bg: "var(--catalog-card-bg, #FFFFFF)",          text: "var(--catalog-text-primary, #1F3A2E)" },
+  { bg: "var(--catalog-card-bg, #FFFFFF)",          text: "var(--catalog-text-primary, #06693d)" },
   { bg: "var(--catalog-card-featured-bg, #C97A3E)", text: "var(--catalog-card-bg, #FFFFFF)" },
 ];
 
@@ -240,7 +240,7 @@ const ProductCard = memo(function ProductCard({
             )}
           </div>
           <div
-            className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 right-2 sm:right-3 text-white text-center text-xs font-bold uppercase tracking-wider p-1 sm:p-1.5 rounded"
+            className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 right-2 sm:right-3 text-black text-center text-xs font-bold uppercase tracking-wider p-1 sm:p-1.5 rounded"
             style={{
               background: "rgba(0, 0, 0, 0.15)",
               backdropFilter: "blur(4px)",
@@ -268,7 +268,7 @@ const ProductCard = memo(function ProductCard({
 
             {/* Agave */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-widest text-gray-400 w-16 shrink-0">
+              <span className="text-xs font-bold uppercase tracking-widest text-black w-16 shrink-0">
                 {t("product_card_agave")}
               </span>
               <span className="text-sm font-medium text-gray-800">{maguey}</span>
@@ -281,7 +281,7 @@ const ProductCard = memo(function ProductCard({
             >
               {/* Alcohol */}
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                <span className="text-xs font-bold uppercase tracking-wider text-black">
                   {t("product_card_alcohol")}
                 </span>
                 <span className="text-sm font-bold text-amber-700">{alcohol}%</span>
@@ -448,6 +448,8 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
   onAddCart,
   isAdded,
   onViewDetails,
+  t: tFunc,
+  convertPrice: convertPriceFunc,
 }: {
   producto: Producto;
   index: number;
@@ -456,7 +458,13 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
   onAddCart: () => void;
   isAdded: boolean;
   onViewDetails: () => void;
+  t?: (key: string) => string;
+  convertPrice?: (price: number) => string;
 }) {
+  const { t: contextT, convertPrice: contextConvertPrice } = useLocale();
+  const t = tFunc || contextT;
+  const convertPrice = convertPriceFunc || contextConvertPrice;
+  
   const imagenUrl = producto.imagen_principal_url ?? producto.producto_imagenes?.[0]?.url;
   const cardColor = CARD_COLORS[index % CARD_COLORS.length];
   const maguey = producto.lotes?.datos_api?.maguey || "";
@@ -611,7 +619,7 @@ const ProductCardPlaceholder = memo(function ProductCardPlaceholder({
             className="w-full flex items-center justify-center rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 hover:opacity-80 active:scale-95 py-1 sm:py-1.5 text-[8px] sm:text-[9px] font-semibold"
             style={{
               backgroundColor: cardColor.bg === hexFallbacks.bgSecondary ? `${hexFallbacks.brand}1f` : "rgba(255,255,255,0.15)",
-              color: cardColor.bg === hexFallbacks.bgSecondary ? hexFallbacks.brand : "white",
+              color: "black",
               "--tw-ring-color": hexFallbacks.brand,
             } as React.CSSProperties}
             onClick={(e) => {
@@ -936,13 +944,35 @@ export default function ProductCatalogEnhanced() {
     setPrecioMaxLocal("");
   };
 
-  const productosMostrados = useMemo(() => {
-    const sorted = [...productos];
-    if (ordenar === "precio_asc") sorted.sort((a, b) => parseFloat(a.precio_base) - parseFloat(b.precio_base));
-    if (ordenar === "precio_desc") sorted.sort((a, b) => parseFloat(b.precio_base) - parseFloat(a.precio_base));
-    if (ordenar === "nombre_az") sorted.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
-    return sorted;
-  }, [productos, ordenar]);
+const productosMostrados = useMemo(() => {
+  const normalizar = (str: string) =>
+    str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+  let sorted = [...productos];
+
+  // Filtro local de maguey (por si el backend no lo resuelve)
+  if (filtros.maguey.length > 0) {
+    sorted = sorted.filter((p) => {
+      const campos = [
+        p.lotes?.datos_api?.maguey,
+        p.lotes?.datos_api?.tipo_mezcal,
+        p.lotes?.datos_api?.agave,
+        p.nombre,
+        p.descripcion,
+      ]
+        .filter(Boolean)
+        .map((v) => normalizar(v!));
+      return filtros.maguey.some((f) =>
+        campos.some((c) => c.includes(normalizar(f)))
+      );
+    });
+  }
+
+  if (ordenar === "precio_asc") sorted.sort((a, b) => parseFloat(a.precio_base) - parseFloat(b.precio_base));
+  if (ordenar === "precio_desc") sorted.sort((a, b) => parseFloat(b.precio_base) - parseFloat(a.precio_base));
+  if (ordenar === "nombre_az") sorted.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  return sorted;
+}, [productos, ordenar, filtros.maguey]);
 
   const totalPaginas = Math.max(1, Math.ceil(productosMostrados.length / PRODUCTOS_POR_PAGINA));
   const productosPagina = productosMostrados.slice(

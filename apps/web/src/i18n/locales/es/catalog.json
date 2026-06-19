@@ -19,7 +19,7 @@
   "filters_maximum": "Máximo:",
   "filters_apply": "Aplicar",
   "filters_min_greater_than_max": "El precio mínimo debe ser menor al máximo. Ajusta los valores.",
-  "filters_search_placeholder": "Buscar por nombre, región, tipo...",
+  "filters_search_placeholder": "Buscar por nombre...",
   "trust_card_traceability_title": "Trazabilidad Verificada",
   "trust_card_traceability_description": "Cada producto cuenta su historia completa",
   "trust_card_fair_trade_title": "Comercio Justo",
