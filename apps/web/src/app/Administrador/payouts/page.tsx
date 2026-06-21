@@ -579,7 +579,7 @@ export default function PayoutsAdminPage() {
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">El estado "agotado" se asigna automáticamente tras 5 intentos fallidos.</p>
+                <p className="mt-1 text-xs text-[#3D6B3F]/60 dark:text-[#A8C26B]/50">El estado &ldquo;agotado&rdquo; se asigna automáticamente tras 5 intentos fallidos.</p>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-[#1F3A2E] dark:text-[#A8C26B]/80">Referencia externa</label>

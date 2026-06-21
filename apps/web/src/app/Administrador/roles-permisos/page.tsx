@@ -288,7 +288,7 @@ export default function RolesPermisosPage() {
               </thead>
               <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#3D6B3F]/20">
                 {roles.length === 0 ? (
-                  <tr><td colSpan={4} className="p-10 text-center text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/50 bg-white dark:bg-[#0f1a10]">No hay roles registrados. Usa el botón "Nuevo Rol" para crear uno.</td></tr>
+                  <tr><td colSpan={4} className="p-10 text-center text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/50 bg-white dark:bg-[#0f1a10]">No hay roles registrados. Usa el botón &ldquo;Nuevo Rol&rdquo; para crear uno.</td></tr>
                 ) : roles.map((rol) => (
                   <tr key={rol.id_rol} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 dark:odd:bg-[#0f1a10] dark:even:bg-[#1a2a1f] dark:hover:bg-[#2d4a2e]/40 transition-colors">
                     <td className="px-6 py-4">

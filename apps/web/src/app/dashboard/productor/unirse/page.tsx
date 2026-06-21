@@ -185,7 +185,7 @@ function ProductorLandingContent() {
                 fontSize: "clamp(22px, 3vw, 32px)", lineHeight: 1.15,
                 margin: 0, color: C.cream,
               }}>
-                "Cada botella es un mapa<br />de su tierra."
+                &ldquo;Cada botella es un mapa<br />de su tierra.&rdquo;
               </blockquote>
               <cite style={{
                 display: "block", marginTop: "12px",

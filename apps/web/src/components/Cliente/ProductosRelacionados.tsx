@@ -34,7 +34,7 @@ function MiniStars({ promedio }: { promedio: number }) {
 }
 
 function ProductoMiniCard({ producto }: { producto: ProductoCard }) {
-  const { convertPrice } = useLocale();
+  const { convertPrice, t } = useLocale();
   return (
     <Link
       href={`/cliente/producto/${producto.id_producto}`}
@@ -50,7 +50,7 @@ function ProductoMiniCard({ producto }: { producto: ProductoCard }) {
             className="object-contain"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-gray-300 text-xs">{useLocale().t("catalog_no_image")}</div>
+          <div className="flex h-full items-center justify-center text-gray-300 text-xs">{t("catalog_no_image")}</div>
         )}
       </div>
       <div className="p-2 sm:p-3 space-y-1">

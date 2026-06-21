@@ -42,7 +42,7 @@ export default function TermsPage() {
 
       <LegalSection heading="Limitación de responsabilidad">
         <LegalP>
-          El servicio se ofrece "tal cual". No somos responsables por daños indirectos,
+          El servicio se ofrece &ldquo;tal cual&rdquo;. No somos responsables por daños indirectos,
           consecuentes o punitivos derivados del uso del sitio.
         </LegalP>
       </LegalSection>
@@ -50,7 +50,7 @@ export default function TermsPage() {
       <LegalSection heading="Cambios a estos términos">
         <LegalP>
           Podemos actualizar estos términos. La versión vigente es la publicada en esta
-          página, con la fecha de "Última actualización".
+          página, con la fecha de &ldquo;Última actualización&rdquo;.
         </LegalP>
       </LegalSection>
     </LegalShell>

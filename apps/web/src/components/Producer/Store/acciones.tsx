@@ -313,7 +313,7 @@ export function ModalEliminar({ isOpen, onClose, tienda, onSuccess }) {
     <ModalShell isOpen={isOpen} onClose={onClose} title="Eliminar Tienda" subtitle={tienda?.nombre || ""} maxWidth="max-w-sm">
       <div className="p-6">
         <p className="text-sm leading-6 text-gray-600 dark:text-gray-3">
-          ¿Estás seguro que deseas eliminar "{tienda?.nombre || "esta tienda"}"? Esta acción no se puede deshacer.
+          ¿Estás seguro que deseas eliminar &ldquo;{tienda?.nombre || "esta tienda"}&rdquo;? Esta acción no se puede deshacer.
         </p>
 
         {error ? <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}

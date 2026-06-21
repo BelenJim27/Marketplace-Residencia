@@ -40,7 +40,7 @@ export default function AlcoholDisclaimerPage() {
       <LegalSection heading="Restricciones por estado (EE.UU.)">
         <LegalP>
           La venta y envío de bebidas alcohólicas está prohibida o severamente restringida
-          en algunos estados ("dry states") y condados. No enviamos bebidas alcohólicas a
+          en algunos estados (&ldquo;dry states&rdquo;) y condados. No enviamos bebidas alcohólicas a
           esos destinos; nuestro sistema bloqueará el pedido durante el checkout.
         </LegalP>
       </LegalSection>

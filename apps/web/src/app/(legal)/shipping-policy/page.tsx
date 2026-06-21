@@ -38,7 +38,7 @@ export default function ShippingPolicyPage() {
 
       <LegalSection heading="Estados de EE.UU. con restricciones">
         <LegalP>
-          No enviamos bebidas alcohólicas a estados "dry" o con leyes restrictivas. Si tu
+          No enviamos bebidas alcohólicas a estados &ldquo;dry&rdquo; o con leyes restrictivas. Si tu
           dirección se encuentra en uno de estos estados (AL, MS, UT, AR, KS, KY, OK, TN,
           entre otros), el sistema bloqueará el pedido al momento del checkout.
         </LegalP>
@@ -47,7 +47,7 @@ export default function ShippingPolicyPage() {
       <LegalSection heading="Seguimiento">
         <LegalP>
           Recibirás un número de guía por correo cuando el pedido salga de nuestro
-          almacén. También puedes consultarlo en tu sección "Mis Pedidos".
+          almacén. También puedes consultarlo en tu sección &ldquo;Mis Pedidos&rdquo;.
         </LegalP>
       </LegalSection>
     </LegalShell>

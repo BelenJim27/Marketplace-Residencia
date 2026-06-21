@@ -37,8 +37,8 @@ export default function ReturnsPolicyPage() {
 
       <LegalSection heading="Cancelaciones">
         <LegalP>
-          Puedes cancelar un pedido sin costo mientras esté en estado "pendiente" o
-          "preparando". Una vez que la guía de envío fue generada, aplica nuestra política de
+          Puedes cancelar un pedido sin costo mientras esté en estado &ldquo;pendiente&rdquo; o
+          &ldquo;preparando&rdquo;. Una vez que la guía de envío fue generada, aplica nuestra política de
           devolución.
         </LegalP>
       </LegalSection>
