@@ -332,6 +332,20 @@ export function useCheckout() {
     };
   }, []);
 
+  const totalEnvioMXN = Object.values(seleccionados).reduce((sum, q) => {
+    const moneda = (q.moneda ?? 'MXN').toUpperCase();
+    const enMXN = moneda !== 'MXN' && ratesMXN[moneda as keyof typeof ratesMXN]
+      ? q.precioTotal / ratesMXN[moneda as keyof typeof ratesMXN]!
+      : q.precioTotal;
+    return sum + enMXN;
+  }, 0);
+
+  const costoProteccionEstimadoMXN = nivelKey
+    ? (opcionesAgregadas.find(o => o.key === nivelKey)?.totalProteccionEstimadaMXN ?? 0)
+    : 0;
+
+  const totalConEnvio = precioTotal + totalEnvioMXN + (solicitarProteccion ? costoProteccionEstimadoMXN : 0);
+
   const prepararPago = useCallback(async () => {
     if (!user?.id_usuario || !direccionSeleccionada || !todosSeleccionados) return null;
     if (metodoPago === 'stripe' && clientSecret && pedidoIdCreado) {
@@ -598,20 +612,6 @@ export function useCheckout() {
       return false;
     }
   }, [user?.id_usuario, prepararPago]);
-
-  const totalEnvioMXN = Object.values(seleccionados).reduce((sum, q) => {
-    const moneda = (q.moneda ?? 'MXN').toUpperCase();
-    const enMXN = moneda !== 'MXN' && ratesMXN[moneda as keyof typeof ratesMXN]
-      ? q.precioTotal / ratesMXN[moneda as keyof typeof ratesMXN]!
-      : q.precioTotal;
-    return sum + enMXN;
-  }, 0);
-
-  const costoProteccionEstimadoMXN = nivelKey
-    ? (opcionesAgregadas.find(o => o.key === nivelKey)?.totalProteccionEstimadaMXN ?? 0)
-    : 0;
-
-  const totalConEnvio = precioTotal + totalEnvioMXN + (solicitarProteccion ? costoProteccionEstimadoMXN : 0);
 
   return {
     paso,
