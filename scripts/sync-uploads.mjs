@@ -15,7 +15,7 @@ function run(cmd) {
 // Verificar si hay archivos nuevos o modificados en uploads
 let status;
 try {
-  run('git add apps/api/uploads/');
+  run('git add -f apps/api/uploads/');
   status = run('git diff --cached --name-only -- apps/api/uploads/');
 } catch (e) {
   console.error('Error al verificar git status:', e.message);
