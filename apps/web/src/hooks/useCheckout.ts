@@ -600,8 +600,8 @@ export function useCheckout() {
     setErrorMensaje(null);
     try {
       await api.usuarios.update(token, user.id_usuario, { fecha_nacimiento: fechaNacimientoISO });
-      setDobRequired(null);
       const result = await prepararPago();
+      if (result) setDobRequired(null);
       return !!result;
     } catch (err) {
       if (err instanceof ApiError && err.code === "AGE_INSUFFICIENT") {

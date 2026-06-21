@@ -704,6 +704,7 @@ export default function CheckoutPage() {
                         edadRequerida={dobRequired.edadRequerida}
                         message={dobRequired.message}
                         onSubmit={submitDob}
+                        errorMensaje={errorMensaje}
                       />
                     )}
                     {isPaypalConfigured() && !dobRequired && !paypalOrderId && (
@@ -1492,10 +1493,12 @@ function DobCaptureForm({
   edadRequerida,
   message,
   onSubmit,
+  errorMensaje,
 }: {
   edadRequerida: number;
   message: string;
   onSubmit: (fechaISO: string) => Promise<boolean>;
+  errorMensaje?: string | null;
 }) {
   const { t } = useLocale();
   const COLOR_PALETTE = usePalette();
@@ -1531,6 +1534,7 @@ function DobCaptureForm({
           required
         />
         {localError && <p aria-live="polite" role="alert" className="text-xs text-red-600 dark:text-red-400">{localError}</p>}
+        {errorMensaje && !localError && <p aria-live="polite" role="alert" className="text-xs text-red-600 dark:text-red-400">{errorMensaje}</p>}
         <button
           type="submit"
           disabled={submitting}
