@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { 
@@ -35,21 +35,10 @@ export default function AuditoriaUI() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
-  const getToken = () => (typeof window !== "undefined" ? (getCookie("token") ?? "") : "");
-
-  useEffect(() => {
-    fetchAuditoria();
-  }, []);
-
-  // Reiniciar a la página 1 cuando se cambian los filtros
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterAccion, filterTabla]);
-
-  const fetchAuditoria = async () => {
+  const fetchAuditoria = useCallback(async () => {
     try {
       setLoading(true);
-      const token = getToken();
+      const token = typeof window !== "undefined" ? (getCookie("token") ?? "") : "";
       const data = await api.auditoria.getAll() as any;
       const list = Array.isArray(data) ? data : (data?.items ?? []);
       setAuditoria(list as Auditoria[]);
@@ -58,7 +47,16 @@ export default function AuditoriaUI() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAuditoria();
+  }, [fetchAuditoria]);
+
+  // Reiniciar a la página 1 cuando se cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterAccion, filterTabla]);
 
   const accionesUnicas = [...new Set(auditoria.map((a) => a.accion))];
   const tablasUnicas = [...new Set(auditoria.map((a) => a.tabla_afectada))];

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Save, ChevronDown, ChevronUp, Type, Upload, Image as ImageIcon, Palette, Film, BookOpen, Images, BarChart2, QrCode, Package, ImagePlus } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
+import Image from "next/image";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -209,7 +210,7 @@ function ImageUpload({ label, name, value, onUploaded }: {
       <div className="flex gap-3 items-start">
         <div className="relative w-24 h-20 rounded-lg overflow-hidden border border-[#C5CFB0] bg-[#C5CFB0]/20 flex-shrink-0">
           {value ? (
-            <img src={value} alt={label} className="w-full h-full object-cover"
+            <Image src={value} alt={label} width={0} height={0} sizes="100vw" className="w-full h-full object-cover"
               onError={(e) => { (e.target as HTMLImageElement).src = "/fotos/16.jpg"; }} />
           ) : (
             <div className="w-full h-full flex items-center justify-center">

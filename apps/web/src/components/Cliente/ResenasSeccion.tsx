@@ -240,7 +240,7 @@ export default function ResenasSeccion({ productoId }: Props) {
     } finally {
       setCargando(false);
     }
-  }, [productoId, filtro, pagina, recargar]);
+  }, [productoId, filtro, pagina]);
 
   useEffect(() => { cargar(); }, [cargar]);
 

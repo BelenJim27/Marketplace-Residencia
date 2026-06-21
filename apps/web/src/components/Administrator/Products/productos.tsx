@@ -11,6 +11,7 @@ import { SUCCESS_ALERT_CONFIG } from "@/config/success-alerts";
 import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { SuccessToast } from "@/components/ui/SuccessToast";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
+import Image from "next/image";
 
 interface Producto {
     id_producto: number;
@@ -216,10 +217,11 @@ export default function ProductosAdmin() {
                                     <td className="px-4 py-3 text-[#1F3A2E] dark:text-[#E8E3D5]">
                                         <div className="flex items-center gap-3">
                                             {p.imagen_url ? (
-                                                <img
+                                                <Image
                                                     src={p.imagen_url}
                                                     alt={p.nombre}
-                                                    className="w-10 h-10 rounded-lg object-contain bg-[#F4F0E3] dark:bg-[#1F3A2E]/40 border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shrink-0"
+                                                    width={40} height={40}
+                                                    className="rounded-lg object-contain bg-[#F4F0E3] dark:bg-[#1F3A2E]/40 border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shrink-0"
                                                 />
                                             ) : (
                                                 <div className="w-10 h-10 rounded-lg bg-[#C5CFB0]/30 dark:bg-[#3D6B3F]/20 flex items-center justify-center shrink-0">

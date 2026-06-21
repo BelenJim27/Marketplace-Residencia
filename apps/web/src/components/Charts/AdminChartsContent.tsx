@@ -593,7 +593,7 @@ export function AdminChartsContent() {
     } finally {
       setLoading(false);
     }
-  }, [token, ventasPeriod, usuariosPeriod]);
+  }, [token, usuariosPeriod]);
 
   useEffect(() => { loadCharts(); }, [loadCharts]);
 

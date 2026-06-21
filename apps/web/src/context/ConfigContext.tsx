@@ -208,7 +208,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         color_acento: defaultAccent,
       });
     }
-  }, [loading]);
+  }, [loading, config]);
 
   useEffect(() => {
     // Lazy init: only load from localStorage on mount, fetch API later if needed

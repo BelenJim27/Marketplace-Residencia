@@ -558,6 +558,7 @@ export function useCheckout() {
     pedidoIdCreado,
     metodoPago,
     solicitarProteccion,
+    costoProteccionEstimadoMXN,
   ]);
 
   const capturePaypalOrder = useCallback(async (orderId: string) => {

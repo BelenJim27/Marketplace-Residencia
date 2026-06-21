@@ -641,7 +641,7 @@ export default function ProductoDetallePage() {
                   style={{ backgroundColor: "#ffffff", color: "#131921", borderColor: "#FF9900" }}
                   title="Buscar en Amazon"
                 >
-                  <img src="/images/amazon-icon.png" alt="Amazon" className="w-6 h-6 object-contain" aria-hidden="true" />
+                  <Image src="/images/amazon-icon.png" alt="Amazon" width={24} height={24} className="object-contain" aria-hidden="true" />
                   <span className="hidden sm:inline">{t("Comprar en Amazon")}</span>
                   <span className="sm:hidden">Amazon</span>
                 </a>

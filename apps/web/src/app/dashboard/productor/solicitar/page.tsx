@@ -202,7 +202,7 @@ export default function SolicitarPage() {
       }
     };
     init();
-  }, [isAuthenticated, authLoading, router, session, user]);
+  }, [isAuthenticated, authLoading, router, session, user, t]);
 
   /* ── file upload ──────────────────────────────────────────────────────── */
   const uploadFile = async (file: File) => {

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../../../lib/api";
 import { getCookie } from "../../../lib/cookies";
 import { AlertService } from "../../../shared/alerts/alert.service";
+import Image from "next/image";
 
 export type ProductorAdmin = {
   id: number;
@@ -321,7 +322,7 @@ export function ProductoresForm({
               )}
               {productor?.foto_url && !form.foto && (
                 <div className="overflow-hidden rounded-lg border border-[#C5CFB0]">
-                  <img src={productor.foto_url} alt="Foto actual" className="h-24 sm:h-32 w-full object-cover" />
+                  <Image src={productor.foto_url} alt="Foto actual" width={0} height={0} sizes="(max-width: 640px) 100vw, 50vw" className="h-24 sm:h-32 w-full object-cover" />
                   <p className="bg-[#F4F0E3] px-2 py-1 sm:px-3 sm:py-2 text-xs text-[#3D6B3F]/70">Foto actual del productor</p>
                 </div>
               )}

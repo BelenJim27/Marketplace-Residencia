@@ -156,7 +156,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
         console.error("Error syncing cart on user change:", e);
       }
     })();
-  }, [mounted, currentUserId]);  // react to both mount and explicit user-id changes
+  }, [mounted, currentUserId, isStaff]);  // react to both mount and explicit user-id changes
 
   // Save cart whenever items change
   useEffect(() => {
@@ -194,7 +194,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
         setSyncing(false);
       }
     }, 1000);
-  }, [currentUserId, items, syncing]);
+  }, [currentUserId, items, syncing, isStaff]);
 
   const agregarProducto = useCallback((producto: { [key: string]: any }): AgregarProductoResult => {
     if (isStaff) {
@@ -215,7 +215,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     });
     syncToBackend();
     return { ok: true };
-  }, [syncToBackend]);
+  }, [syncToBackend, isStaff]);
 
   const eliminarProducto = useCallback((id_producto: number | bigint) => {
     setItems((prev) => prev.filter((item) => item.id_producto !== id_producto));

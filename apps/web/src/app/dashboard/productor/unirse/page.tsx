@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "next-themes";
 import { CheckCircle2, FileText, CreditCard, Building2, User, ArrowRight } from "lucide-react";
 import { Suspense } from "react";
+import Image from "next/image";
 
 /* ── Biodiversity stripe stages ──────────────────────────────────────────── */
 const STAGES = [
@@ -131,14 +132,12 @@ function ProductorLandingContent() {
             style={{ position: "relative", overflow: "hidden", background: C.green, minHeight: "500px" }}
           >
             {/* Photo */}
-            <img
+            <Image
               src="/fotos/persona.jpeg"
               alt="Maestra mezcalera"
-              style={{
-                position: "absolute", inset: 0,
-                width: "100%", height: "100%",
-                objectFit: "cover", objectPosition: "center top",
-              }}
+              fill
+              className="object-cover"
+              style={{ objectPosition: "center top" }}
             />
 
             {/* Gradient overlay */}

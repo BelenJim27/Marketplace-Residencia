@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
@@ -91,10 +91,10 @@ export function useProductos() {
   // user?.id_productor  /  user?.productor?.id_productor  /  user?.productor_id
   const idProductor: number | null = user?.id_productor ?? null;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (authLoading) return;
-    const idProductor = user?.id_productor;
-    if (!idProductor) {
+    const pid = user?.id_productor;
+    if (!pid) {
       setError("No se pudo identificar el productor autenticado.");
       setLoading(false);
       return;
@@ -105,11 +105,11 @@ export function useProductos() {
 
     try {
       const [producerData, productsData, storesData, categoriasData, lotesData] = await Promise.all([
-        api.productores.getOne(idProductor),
-        api.productos.getMine(token, idProductor),
-        api.tiendas.getByProductor(idProductor, token),
+        api.productores.getOne(pid),
+        api.productos.getMine(token, pid),
+        api.tiendas.getByProductor(pid, token),
         api.categorias.getAll(),
-        api.lotes.getByProductor(idProductor),
+        api.lotes.getByProductor(pid),
       ]);
 
       setProducer(producerData as ProducerDetail);
@@ -137,11 +137,11 @@ export function useProductos() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading, token, user?.id_productor]);
 
   useEffect(() => {
     loadData();
-  }, [authLoading, token, user?.id_productor]);
+  }, [loadData]);
 
   const storeMap = useMemo(
     () => new Map(stores.map((s) => [s.id_tienda, s.nombre])),
@@ -171,7 +171,7 @@ export function useProductos() {
         (max === null || Number.isNaN(max) || price <= max)
       );
     });
-  }, [products, query, storeMap, statusFilter, storeFilter, minPrice, maxPrice, unidadFilter]);
+  }, [products, query, storeMap, statusFilter, storeFilter, minPrice, maxPrice]);
 
   const activeProductsCount = useMemo(
     () =>

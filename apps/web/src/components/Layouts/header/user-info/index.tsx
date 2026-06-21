@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { MapPin, Moon, Sun } from "lucide-react";
+import Image from "next/image";
 
 /* ─── Role badges ─────────────────────────────────────────────────────────── */
 const ROLE_LABELS: Record<string, { label: string; subtitle: string; className: string }> = {
@@ -39,9 +40,10 @@ function getRoleBadge(roles: string[] | undefined) {
 function Avatar({ photo, initials, size = 48 }: { photo: string | null; initials: string; size?: number }) {
   if (photo) {
     return (
-      <img
+      <Image
         src={photo}
-        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
+        width={size} height={size}
+        style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
         alt=""
         role="presentation"
         referrerPolicy="no-referrer"

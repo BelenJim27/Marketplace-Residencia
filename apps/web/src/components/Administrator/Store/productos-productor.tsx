@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { formatMXN } from "@/lib/format-number";
 import { getCookie } from "@/lib/cookies";
+import Image from "next/image";
 
 type ProductosProductorProps = {
   idProductor: number;
@@ -458,7 +459,7 @@ function ProductThumbnail({ src, alt }: { src: string | null; alt: string }) {
       </div>
     );
   }
-  return <img src={src} alt={alt} className="h-12 w-12 rounded-xl bg-[#F4F0E3] object-contain" />;
+  return <Image src={src} alt={alt} width={48} height={48} className="rounded-xl bg-[#F4F0E3] object-contain" />;
 }
 
 function StatusBadge({ status }: { status: string }) {

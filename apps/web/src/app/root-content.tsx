@@ -51,7 +51,7 @@ export function RootContent({ children }: PropsWithChildren) {
     if (needsAgeGate && !ageVerified) {
       setAgeVerified(isGlobalAgeVerified());
     }
-  }, [needsAgeGate, pathname]);
+  }, [needsAgeGate, pathname, ageVerified]);
 
   if (loading) {
     if (user && (isAdmin || isProductor)) {

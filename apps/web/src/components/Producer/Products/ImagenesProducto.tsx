@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { api } from "@/lib/api";
 import { getImagenProductoUrl } from "@/components/Producer/Products/ImagenProducto";
 
@@ -43,7 +44,7 @@ export function ImagenesProducto({
     setImages(imagenesExistentes);
     setPreviews([]);
     onFilesChange([]);
-  }, [id_producto]);
+  }, [id_producto, imagenesExistentes, onFilesChange]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -103,10 +104,12 @@ export function ImagenesProducto({
         <div className="flex flex-wrap gap-2">
           {images.map((img) => (
             <div key={img.id_imagen} className="relative">
-              <img
+              <Image
                 src={getImagenProductoUrl(img.url)}
                 alt="Imagen del producto"
-                className="h-20 w-20 rounded-lg object-contain bg-gray-50 border border-stroke"
+                width={80}
+                height={80}
+                className="rounded-lg object-contain bg-gray-50 border border-stroke"
               />
               <button
                 type="button"
@@ -127,10 +130,12 @@ export function ImagenesProducto({
         <div className="flex flex-wrap gap-2">
           {previews.map((p, i) => (
             <div key={p.url} className="relative">
-              <img
+              <Image
                 src={p.url}
                 alt="Vista previa"
-                className="h-20 w-20 rounded-lg object-contain bg-gray-100 border border-dashed border-primary/40"
+                width={80}
+                height={80}
+                className="rounded-lg object-contain bg-gray-100 border border-dashed border-primary/40"
               />
               <button
                 type="button"

@@ -347,7 +347,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user?.id_usuario, user?.id_productor, productorResolved]);
+  }, [user?.id_usuario, user?.id_productor, productorResolved, router, user]);
 
   // Cuando api.ts no puede refrescar el token, limpia la sesión OAuth también
   useEffect(() => {

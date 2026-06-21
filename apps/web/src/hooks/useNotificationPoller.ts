@@ -86,5 +86,5 @@ export function useNotificationPoller() {
     poll();
     const id = setInterval(poll, POLL_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [isAuthenticated, user?.id_usuario]);
+  }, [isAuthenticated, user?.id_usuario, user]);
 }

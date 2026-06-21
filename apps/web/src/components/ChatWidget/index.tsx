@@ -103,7 +103,7 @@ export function ChatWidget() {
         email: prev.email || user.email || "",
       }));
     }
-  }, [user?.nombre, user?.email]);
+  }, [user?.nombre, user?.email, user]);
 
   // Auto-scroll en chat
   useEffect(() => {

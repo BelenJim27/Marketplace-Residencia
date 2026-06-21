@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { 
   Loader2, Plus, Pencil, Trash2, Shield, Key, User, X, Check, 
@@ -72,7 +72,19 @@ export default function RolesPermisosPage() {
 
   const getToken = () => typeof window !== "undefined" ? (getCookie("token") ?? "") : "";
 
-  useEffect(() => { fetchData(); }, []);
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const token = typeof window !== "undefined" ? (getCookie("token") ?? "") : "";
+      const [rolesRes, permisosRes, usuariosRes] = await Promise.all([api.roles.getAll(token), api.permisos.getAll(token), api.usuarios.getAll(token)]);
+      setRoles(rolesRes as Rol[]); setPermisos(permisosRes as Permiso[]); setUsuarios(usuariosRes as Usuario[]);
+    } catch (err) { setError(err instanceof Error ? err.message : "Error al cargar datos"); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
   useEffect(() => {
     if (selectedRol) setSelectedPermisos(selectedRol.rol_permiso?.map((rp) => rp.permisos.id_permiso) || []);
   }, [selectedRol]);
@@ -81,16 +93,6 @@ export default function RolesPermisosPage() {
   useEffect(() => {
     setCurrentUserPage(1);
   }, [rolFilter]);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const token = getToken();
-      const [rolesRes, permisosRes, usuariosRes] = await Promise.all([api.roles.getAll(token), api.permisos.getAll(token), api.usuarios.getAll(token)]);
-      setRoles(rolesRes as Rol[]); setPermisos(permisosRes as Permiso[]); setUsuarios(usuariosRes as Usuario[]);
-    } catch (err) { setError(err instanceof Error ? err.message : "Error al cargar datos"); }
-    finally { setLoading(false); }
-  };
 
   const handleCreateRol = async (e: React.FormEvent) => {
     e.preventDefault();

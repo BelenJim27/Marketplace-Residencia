@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Edit2, X, Loader2, AlertCircle, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { api, type Comision, type ComisionInput } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
@@ -40,7 +40,7 @@ export default function ComisionesAdminPage() {
   const deleteAlert  = useDeleteAlert("comision");
   const successToast = useSuccessToast("comision");
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await api.comisiones.list(token);
@@ -50,11 +50,11 @@ export default function ComisionesAdminPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   useEffect(() => { setCurrentPage(1); }, [search, filtroAlcance]);
 

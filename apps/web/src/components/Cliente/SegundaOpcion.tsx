@@ -8,6 +8,7 @@ import { useLandingStats } from "@/hooks/useLandingStats";
 import { useMasVendidos } from "@/hooks/useMasVendidos";
 import { useTrazabilidadCarousel } from "@/hooks/useTrazabilidadCarousel";
 import type { ProductoTrazabilidad } from "@/hooks/useTrazabilidadCarousel";
+import Image from "next/image";
 
 // ─── HOOK: detecta ancho de ventana ──────────────────────────────────────────
 function useWindowWidth(): number {
@@ -109,9 +110,12 @@ function TrazaSlide({ producto, isMobile, t }: { producto: ProductoTrazabilidad;
 
       {/* ── Card imagen ── */}
       <div style={{ borderRadius: "16px", overflow: "hidden", position: "relative", flexShrink: 0 }}>
-        <img
+        <Image
           src={imgSrc}
           alt={producto.nombre}
+          width={0}
+          height={0}
+          sizes="100vw"
           style={{ width: "100%", height: isMobile ? "220px" : "340px", objectFit: "cover", display: "block" }}
           onError={(e) => { (e.target as HTMLImageElement).src = "/fotos/28.1.png"; }}
         />
@@ -220,7 +224,7 @@ function TrazaFallback({ isMobile, t, cfg }: { isMobile: boolean; t: (s: string)
   return (
     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "300px 1fr", gap: isMobile ? "24px" : "48px", alignItems: "start" }}>
       <div style={{ borderRadius: "16px", overflow: "hidden", position: "relative" }}>
-        <img src="/fotos/28.1.png" alt="Mezcal" style={{ width: "100%", height: isMobile ? "220px" : "340px", objectFit: "cover", display: "block" }} />
+        <Image src="/fotos/28.1.png" alt="Mezcal" width={0} height={0} sizes="100vw" style={{ width: "100%", height: isMobile ? "220px" : "340px", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(22,34,24,0.92) 35%, transparent 65%)" }} />
         <div style={{ position: "absolute", bottom: "16px", left: "16px", right: "16px" }}>
           <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "19px", fontWeight: 700, color: "#F4F0E3", margin: 0 }}>Mezcal Artesanal</p>
@@ -622,19 +626,19 @@ export default function LandingPageOaxaca() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
             {/* img 1 — fila 1 completa */}
             <div style={{ gridColumn: "1/3", height: "150px", overflow: "hidden", borderRadius: "10px" }}>
-              <img src={cfg.landing_sobre_img_1} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <Image src={cfg.landing_sobre_img_1} alt="" width={0} height={0} sizes="100vw" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
             {/* img 2 */}
             <div style={{ height: "120px", overflow: "hidden", borderRadius: "10px" }}>
-              <img src={cfg.landing_sobre_img_2} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <Image src={cfg.landing_sobre_img_2} alt="" width={0} height={0} sizes="100vw" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
             {/* img 3 */}
             <div style={{ height: "120px", overflow: "hidden", borderRadius: "10px" }}>
-              <img src={cfg.landing_sobre_img_3} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <Image src={cfg.landing_sobre_img_3} alt="" width={0} height={0} sizes="100vw" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
             {/* img 4 */}
             <div style={{ height: "150px", overflow: "hidden", borderRadius: "10px", position: "relative" }}>
-              <img src={cfg.landing_sobre_img_4} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <Image src={cfg.landing_sobre_img_4} alt="" width={0} height={0} sizes="100vw" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(31,58,46,0.5) 20%, transparent 55%)" }} />
               <span style={{ position: "absolute", bottom: "10px", left: "10px", fontSize: "12px", color: "#F4F0E3", fontWeight: 600, letterSpacing: "0.06em" }}>
                 {t("Proceso artesanal")}
@@ -642,7 +646,7 @@ export default function LandingPageOaxaca() {
             </div>
             {/* img 5 */}
             <div style={{ height: "150px", overflow: "hidden", borderRadius: "10px", position: "relative" }}>
-              <img src={cfg.landing_sobre_img_5} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <Image src={cfg.landing_sobre_img_5} alt="" width={0} height={0} sizes="100vw" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "3px", background: "#C97A3E" }} />
             </div>
           </div>
@@ -661,16 +665,19 @@ export default function LandingPageOaxaca() {
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "10px", height: "110px" }}>
                 <div style={{ overflow: "hidden", borderRadius: "12px" }}>
-                  <img src={cfg.landing_sobre_img_1} alt="Paisaje"
+                  <Image src={cfg.landing_sobre_img_1} alt="Paisaje"
+                    width={0} height={0} sizes="100vw"
                     style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </div>
                 <div style={{ overflow: "hidden", borderRadius: "12px" }}>
-                  <img src={cfg.landing_sobre_img_2} alt="Piñas"
+                  <Image src={cfg.landing_sobre_img_2} alt="Piñas"
+                    width={0} height={0} sizes="100vw"
                     style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </div>
               </div>
               <div style={{ height: "210px", overflow: "hidden", borderRadius: "12px" }}>
-                <img src={cfg.landing_sobre_img_3} alt="Valle"
+                <Image src={cfg.landing_sobre_img_3} alt="Valle"
+                  width={0} height={0} sizes="100vw"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               </div>
             </div>
@@ -678,7 +685,8 @@ export default function LandingPageOaxaca() {
             {/* ── Derecha: img4 220px + img5 100px ── */}
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div style={{ height: "220px", overflow: "hidden", borderRadius: "12px", position: "relative" }}>
-                <img src={cfg.landing_sobre_img_4} alt="Proceso artesanal"
+                <Image src={cfg.landing_sobre_img_4} alt="Proceso artesanal"
+                  width={0} height={0} sizes="100vw"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 <div style={{
                   position: "absolute", inset: 0,
@@ -692,7 +700,8 @@ export default function LandingPageOaxaca() {
                 </div>
               </div>
               <div style={{ height: "100px", overflow: "hidden", borderRadius: "12px", position: "relative" }}>
-                <img src={cfg.landing_sobre_img_5} alt="Piñas con humo"
+                <Image src={cfg.landing_sobre_img_5} alt="Piñas con humo"
+                  width={0} height={0} sizes="100vw"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "3px", background: "#C97A3E" }} />
               </div>
@@ -1020,9 +1029,12 @@ export default function LandingPageOaxaca() {
                   className="categoria-card"
                   onClick={() => router.push(href)}
                 >
-                  <img
+                  <Image
                     src={imgSrc}
                     alt={nombre}
+                    width={0}
+                    height={0}
+                    sizes="100vw"
                     onError={(e) => {
                       const img = e.target as HTMLImageElement;
                       if (!img.dataset.err) { img.dataset.err = "1"; img.src = cfg[cfgKey] as string; }

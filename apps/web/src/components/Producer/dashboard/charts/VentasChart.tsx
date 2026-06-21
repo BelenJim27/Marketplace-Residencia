@@ -112,9 +112,8 @@ export function VentasChart({ periodo, onPeriodoChange, data, isLoading, error, 
   const axisColor = isDark ? "#9dc49e" : "#3D6B3F";
   const gridColor = isDark ? "rgba(45,74,53,0.5)" : "rgba(197,207,176,0.5)";
 
-  const rawData = data?.ventas ?? [];
-
   const { chartData, metrics } = useMemo(() => {
+    const rawData = data?.ventas ?? [];
     const labeled = rawData.map((r) => ({ ...r, xLabel: formatXLabel(r.x) }));
 
     if (!labeled.length) return { chartData: labeled, metrics: null };
@@ -128,7 +127,7 @@ export function VentasChart({ periodo, onPeriodoChange, data, isLoading, error, 
       chartData: labeled,
       metrics: { total, avg, peak, noSales },
     };
-  }, [rawData]);
+  }, [data]);
 
   return (
     <div id="export-ventas-chart" className="rounded-2xl border border-[#C5CFB0] dark:border-[#2d4a35] bg-white dark:bg-[#1a2a1e] shadow-[0_2px_8px_rgba(61,107,63,0.08)] p-5 w-full">

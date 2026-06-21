@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getCookie } from "@/lib/cookies";
@@ -70,23 +70,13 @@ export default function DireccionesPage() {
     tipo: "hogar",
   });
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!isAuthenticated || !user?.id_usuario) {
-      router.push("/auth/sign-in");
-      return;
-    }
-    cargarDirecciones();
-  }, [isAuthenticated, authLoading, user?.id_usuario, router]);
-
-  const cargarDirecciones = async () => {
+  const cargarDirecciones = useCallback(async () => {
     if (!user?.id_usuario) return;
     try {
       setLoading(true);
       const token = getCookie("token") || "";
       const data = await api.direcciones.getByUsuario(user.id_usuario, token);
       const lista = Array.isArray(data) ? data : [];
-      // Filtrar para no mostrar dirección fiscal ni de producción
       const filtradas = lista.filter((d) => !["facturacion", "produccion"].includes(d.tipo || ""));
       setDirecciones(filtradas);
       setError(null);
@@ -95,7 +85,16 @@ export default function DireccionesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id_usuario]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated || !user?.id_usuario) {
+      router.push("/auth/sign-in");
+      return;
+    }
+    cargarDirecciones();
+  }, [isAuthenticated, authLoading, user?.id_usuario, router, cargarDirecciones]);
 
   const resetForm = () => {
     setFormData({

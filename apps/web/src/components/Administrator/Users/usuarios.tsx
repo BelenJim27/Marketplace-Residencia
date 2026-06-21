@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { Loader2, Plus, Pencil, Trash2, Mail, ShieldCheck, X, User, ChevronLeft, ChevronRight } from "lucide-react";
@@ -9,6 +9,7 @@ import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
 import { SuccessToast } from "@/components/ui/SuccessToast";
 import { AlertService } from "@/shared/alerts";
+import Image from "next/image";
 
 interface Rol { id_rol: number; nombre: string }
 
@@ -61,25 +62,27 @@ export default function UsuariosUI() {
 
   const getToken = () => typeof window !== "undefined" ? (getCookie("token") ?? "") : "";
 
-  useEffect(() => { fetchUsuarios(); fetchRoles(); }, []);
-
-  const fetchUsuarios = async () => {
+  const fetchUsuarios = useCallback(async () => {
     try {
       setLoading(true);
-      const token = getToken();
+      const token = typeof window !== "undefined" ? (getCookie("token") ?? "") : "";
       const data = await api.usuarios.getAll(token);
       setUsuarios(data as Usuario[]);
     } catch (err) { setError(err instanceof Error ? err.message : "Error al cargar usuarios"); }
     finally { setLoading(false); }
-  };
+  }, []);
 
-  const fetchRoles = async () => {
-    try {
-      const token = getToken();
-      const data = await api.roles.getAll(token);
-      setRoles(data as Rol[]);
-    } catch { /* roles no críticos */ }
-  };
+  useEffect(() => {
+    fetchUsuarios();
+    const fetchRoles = async () => {
+      try {
+        const token = typeof window !== "undefined" ? (getCookie("token") ?? "") : "";
+        const data = await api.roles.getAll(token);
+        setRoles(data as Rol[]);
+      } catch { /* roles no críticos */ }
+    };
+    fetchRoles();
+  }, [fetchUsuarios]);
 
   const closeModal = () => { setShowModal(false); setEditingUsuario(null); setSelectedFotoFile(null); setUserFormData(DEFAULT_FORM); };
 
@@ -252,7 +255,7 @@ export default function UsuariosUI() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {user.foto_url ? (
-                          <img src={user.foto_url} alt={user.nombre} className="w-10 h-10 rounded-full object-cover shadow-sm" />
+                          <Image src={user.foto_url} alt={user.nombre} width={40} height={40} className="rounded-full object-cover shadow-sm" />
                         ) : (
                           <div className={`w-10 h-10 rounded-full ${getColor(user.nombre)} flex items-center justify-center font-bold text-xs shadow-sm`}>{getInitials(user.nombre)}</div>
                         )}
@@ -379,7 +382,7 @@ export default function UsuariosUI() {
                 <div className="flex items-center gap-4">
                   {userFormData.foto_url || selectedFotoFile ? (
                     <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-green-500">
-                      <img src={selectedFotoFile ? URL.createObjectURL(selectedFotoFile) : userFormData.foto_url} alt="Preview" className="h-full w-full object-cover" />
+                      <Image src={selectedFotoFile ? URL.createObjectURL(selectedFotoFile) : userFormData.foto_url} alt="Preview" width={0} height={0} sizes="100vw" className="h-full w-full object-cover" />
                       <button type="button" onClick={() => { setSelectedFotoFile(null); setUserFormData({ ...userFormData, foto_url: "" }); }} className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"><X size={12} /></button>
                     </div>
                   ) : (

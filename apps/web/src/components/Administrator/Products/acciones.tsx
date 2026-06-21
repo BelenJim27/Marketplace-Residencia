@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
 import { AlertService } from "@/shared/alerts/alert.service";
+import Image from "next/image";
 
 interface Categoria {
     id_categoria: number;
@@ -173,9 +174,10 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                                     <div className="relative w-full h-40 rounded-xl overflow-hidden border-2 border-dashed border-[#C5CFB0] hover:border-[#3D6B3F] transition-all duration-200 bg-[#F4F0E3] group-hover:bg-[#A8C26B]/10">
                                         {imagenPreview ? (
                                             <>
-                                                <img
+                                                <Image
                                                     src={imagenPreview}
                                                     alt="Preview"
+                                                    width={0} height={0} sizes="100vw"
                                                     className="w-full h-full object-contain"
                                                 />
                                                 <div className="absolute inset-0 bg-[#1F3A2E]/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -203,9 +205,10 @@ export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefr
                             ) : (
                                 // Altura reducida de h-40 a h-28 si solo se está visualizando
                                 imagenPreview ? (
-                                    <img
+                                    <Image
                                         src={imagenPreview}
                                         alt={producto.nombre}
+                                        width={0} height={112} sizes="100vw"
                                         className="w-full h-28 object-contain rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] transition-all duration-300"
                                     />
                                 ) : (

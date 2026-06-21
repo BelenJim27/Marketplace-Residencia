@@ -20,6 +20,7 @@ import {
 import { getCookie } from "@/lib/cookies";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
 import { SuccessToast } from "@/components/ui/SuccessToast";
+import Image from "next/image";
 
 interface SolicitudProductor {
   id_productor: number;
@@ -58,7 +59,7 @@ function CertificadoPreview({ url }: { url?: string }) {
     <div className="space-y-3">
       {isImage && (
         <div className="overflow-hidden rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#0f1a10]">
-          <img src={url} alt="Documento de solicitud" className="max-h-72 w-full object-contain" />
+          <Image src={url} alt="Documento de solicitud" width={0} height={0} sizes="100vw" className="max-h-72 w-full object-contain" />
         </div>
       )}
       {isPDF && (

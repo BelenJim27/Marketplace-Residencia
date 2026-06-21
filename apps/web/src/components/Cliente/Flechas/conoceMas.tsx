@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/context/LocaleContext";
+import Image from "next/image";
 
 interface Slide {
   id: number;
@@ -127,9 +128,10 @@ export default function ConoceMas() {
             className="relative rounded-3xl overflow-hidden h-80 md:h-96 shadow-lg group"
             style={{ boxShadow: "0 8px 40px rgba(200,100,20,0.25)" }}
           >
-            <img
+            <Image
               src={slide.imagen}
               alt={`Slide ${actual + 1}`}
+              width={0} height={0} sizes="100vw"
               className="w-full h-full object-contain"
               style={{
                 opacity: visible ? 1 : 0,
@@ -179,7 +181,7 @@ export default function ConoceMas() {
                     className="w-36 h-36 rounded-full overflow-hidden flex-shrink-0"
                     style={{ border: "3px solid rgba(200,169,122,0.5)", boxShadow: "0 4px 20px rgba(200,100,20,0.3)" }}
                   >
-                    <img src={item.imagen} alt={item.etiqueta ? t(item.etiqueta) : `Imagen ${i + 1}`} className="w-full h-full object-cover" />
+                    <Image src={item.imagen} alt={item.etiqueta ? t(item.etiqueta) : `Imagen ${i + 1}`} width={0} height={0} sizes="100vw" className="w-full h-full object-cover" />
                   </div>
                   {item.etiqueta && (
                     <p

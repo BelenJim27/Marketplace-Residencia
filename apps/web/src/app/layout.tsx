@@ -1,6 +1,19 @@
+import { Playfair_Display, DM_Sans } from "next/font/google";
 import "@/css/satoshi.css";
 import "@/css/style.css";
 import "driver.js/dist/driver.css";
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "900"],
+  variable: "--font-playfair",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-dm-sans",
+});
 
 import type { Metadata } from "next";
 import NextTopLoader from "nextjs-toploader";
@@ -75,15 +88,12 @@ export default function RootLayout({ children }: PropsWithChildren) {
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body>
+      <body className={`${playfair.variable} ${dmSans.variable}`}>
         <Providers>
           <NextTopLoader color="#5750F1" showSpinner={false} />
           <RootContent>{children}</RootContent>

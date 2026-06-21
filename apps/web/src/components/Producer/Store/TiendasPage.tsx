@@ -45,26 +45,26 @@ export function TiendasPage() {
   const [tienda, setTienda] = useState<Tienda | null>(null);
   const [activeModal, setActiveModal] = useState<"edit" | "delete" | null>(null);
 
-  const loadTienda = async () => {
-    if (authLoading || !user?.id_productor) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await api.tiendas.getByProductor(user.id_productor, token);
-      // El endpoint devuelve { items: Tienda[], paginacion: {...} }
-      const list: Tienda[] = (data as { items?: Tienda[] }).items ?? (Array.isArray(data) ? data : []);
-      const first = list[0] ?? null;
-      setTienda(first ? { ...first, stock: Number((first as { stock?: number }).stock ?? 0) } : null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible cargar la tienda");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const loadTienda = async () => {
+      if (authLoading || !user?.id_productor) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await api.tiendas.getByProductor(user.id_productor, token);
+        // El endpoint devuelve { items: Tienda[], paginacion: {...} }
+        const list: Tienda[] = (data as { items?: Tienda[] }).items ?? (Array.isArray(data) ? data : []);
+        const first = list[0] ?? null;
+        setTienda(first ? { ...first, stock: Number((first as { stock?: number }).stock ?? 0) } : null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No fue posible cargar la tienda");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (!authLoading) loadTienda();
-  }, [authLoading, user?.id_productor]);
+  }, [authLoading, user?.id_productor, token]);
 
   const closeModal = () => setActiveModal(null);
 

@@ -93,9 +93,8 @@ export function ProductosChart({ periodo, onPeriodoChange, data, isLoading, erro
   const labelColor = isDark ? "#9dc49e" : "#64748b";
   const cursorColor = isDark ? "rgba(45,74,53,0.25)" : "rgba(197,207,176,0.15)";
 
-  const rawData = data?.productos ?? [];
-
   const { chartData, metrics } = useMemo(() => {
+    const rawData = data?.productos ?? [];
     const sorted = [...rawData].sort((a, b) => b.y - a.y);
     const total = sorted.reduce((s, d) => s + d.y, 0);
 
@@ -116,7 +115,7 @@ export function ProductosChart({ periodo, onPeriodoChange, data, isLoading, erro
       chartData: enriched,
       metrics: { total, leader, top2Pct, lowRotation },
     };
-  }, [rawData]);
+  }, [data]);
 
   // Altura dinámica: al menos 320px, 52px por producto
   const chartHeight = Math.max(320, chartData.length * 52);

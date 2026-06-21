@@ -14,6 +14,7 @@ import {
   Pencil, AlertCircle, Loader2, MapPin,
   Building2,
 } from "lucide-react";
+import Image from "next/image";
 
 interface StoredUser {
   id_usuario: string;
@@ -131,7 +132,7 @@ export default function ClientePerfilPage() {
       setForm({ nombre: u.nombre ?? "", apellido_paterno: u.apellido_paterno ?? "", apellido_materno: u.apellido_materno ?? "", email: u.email ?? "", telefono: u.telefono ?? "" });
     }
     cargarPerfil();
-  }, [authUser?.id_usuario, cargarPerfil]);
+  }, [authUser?.id_usuario, cargarPerfil, authUser]);
 
   const cargarDirecciones = async () => {
     const token = getCookie("token") ?? "";
@@ -333,7 +334,7 @@ export default function ClientePerfilPage() {
           <div style={{ position: "relative", flexShrink: 0 }}>
             <div style={{ width: "88px", height: "88px", borderRadius: "50%", overflow: "hidden", background: isDark ? "#2D3731" : "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {uploadingFoto ? <Loader2 className="animate-spin text-green-700" size={32} /> :
-                user?.foto_url ? <img src={getMediaUrl(user.foto_url)} alt="foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> :
+                user?.foto_url ? <Image src={getMediaUrl(user.foto_url)} alt="foto" width={0} height={0} sizes="100vw" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> :
                   <span style={{ fontSize: "26px", fontWeight: 700, color: "#3D6B3F" }}>{initials || <User size={32} />}</span>}
             </div>
             <button onClick={() => fileInputRef.current?.click()} disabled={uploadingFoto} style={{ position: "absolute", bottom: 0, right: 0, width: "28px", height: "28px", borderRadius: "50%", background: "#3D6B3F", border: "2px solid #fff", color: "#fff", cursor: uploadingFoto ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: uploadingFoto ? 0.6 : 1 }}>

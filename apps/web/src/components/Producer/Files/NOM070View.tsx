@@ -6,6 +6,7 @@ import { FileText, ExternalLink, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
+import Image from "next/image";
 
 export default function NOM070View() {
   const { user, loading: authLoading } = useAuth();
@@ -98,9 +99,10 @@ export default function NOM070View() {
           {/* Vista previa imagen */}
           {isImage && (
             <div className="overflow-hidden rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#0f1a10]">
-              <img
+              <Image
                 src={certificadoUrl}
                 alt="Certificado de solicitud"
+                width={0} height={0} sizes="100vw"
                 className="max-h-80 w-full object-contain"
               />
             </div>
