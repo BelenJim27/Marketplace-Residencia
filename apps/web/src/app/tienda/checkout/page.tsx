@@ -731,7 +731,7 @@ export default function CheckoutPage() {
                           orderId={paypalOrderId}
                           onCapture={async (orderId: string) => {
                             if (facturaData.solicitarFactura && pedidoIdCreado) {
-                              localStorage.setItem('checkout_factura', JSON.stringify({ ...facturaData, pedidoId: pedidoIdCreado }));
+                              sessionStorage.setItem('checkout_factura', JSON.stringify({ ...facturaData, pedidoId: pedidoIdCreado }));
                             }
                             await capturePaypalOrder(orderId);
                           }}
@@ -1986,7 +1986,7 @@ function PagoYResumen({
 
     // Guardar en localStorage como respaldo para tarjetas con 3DS (Stripe redirige externamente)
     if (facturaData?.solicitarFactura && pedidoId) {
-      localStorage.setItem('checkout_factura', JSON.stringify({ ...facturaData, pedidoId }));
+      sessionStorage.setItem('checkout_factura', JSON.stringify({ ...facturaData, pedidoId }));
     }
 
     const { error } = await stripe.confirmCardPayment(clientSecret, {
@@ -2013,7 +2013,7 @@ function PagoYResumen({
           if (facturaData.nombre_razon_social) payload.nombre_razon_social = facturaData.nombre_razon_social;
           if (facturaData.email_factura)       payload.email_factura       = facturaData.email_factura;
           await api.pedidos.addFactura(token, pedidoId, payload);
-          localStorage.removeItem('checkout_factura'); // limpiar respaldo
+          sessionStorage.removeItem('checkout_factura'); // limpiar respaldo
         } catch {
           // si falla, pago-exitoso lo reintenta desde localStorage
         }

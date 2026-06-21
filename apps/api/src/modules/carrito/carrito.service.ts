@@ -59,4 +59,32 @@ export class CarritoService {
   }
   async remove(id: string) { await this.prisma.carrito_item.delete({ where: { id_item: toBigIntId(id) } }); return { message: 'Item eliminado' }; }
   async clearByUser(id_usuario: string) { await this.prisma.carrito_item.deleteMany({ where: { id_usuario } }); return { message: 'Carrito limpiado' }; }
+
+  async validarStock(id_usuario: string) {
+    const items = await this.prisma.carrito_item.findMany({
+      where: { id_usuario },
+      include: { productos: { select: { nombre: true } } },
+    });
+
+    const itemsSinStock: { id_producto: number; nombre: string; disponible: number; solicitado: number }[] = [];
+
+    for (const item of items) {
+      const inventario = await this.prisma.inventario.findFirst({
+        where: { id_producto: item.id_producto },
+        select: { stock: true },
+      });
+      const disponible = inventario ? Number(inventario.stock) : 0;
+      const solicitado = Number(item.cantidad);
+      if (solicitado > disponible) {
+        itemsSinStock.push({
+          id_producto: Number(item.id_producto),
+          nombre: (item.productos as any)?.nombre ?? `Producto #${item.id_producto}`,
+          disponible,
+          solicitado,
+        });
+      }
+    }
+
+    return { valido: itemsSinStock.length === 0, items_sin_stock: itemsSinStock };
+  }
 }

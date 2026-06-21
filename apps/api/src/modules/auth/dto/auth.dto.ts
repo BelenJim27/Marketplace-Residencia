@@ -82,13 +82,15 @@ export class LoginAuthDto {
 }
 
 export class RefreshAuthDto {
+  @IsOptional()
   @IsString()
-  refresh_token!: string;
+  refresh_token?: string;
 }
 
 export class LogoutAuthDto {
+  @IsOptional()
   @IsString()
-  refresh_token!: string;
+  refresh_token?: string;
 }
 
 export class RequestPasswordResetDto {

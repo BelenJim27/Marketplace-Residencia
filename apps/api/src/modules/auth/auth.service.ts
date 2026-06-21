@@ -170,6 +170,7 @@ export class AuthService {
   }
 
   async refresh(dto: RefreshAuthDto): Promise<AuthResponseDto> {
+    if (!dto.refresh_token) throw new UnauthorizedException('Refresh token requerido');
     const payload = verifyJwt<RefreshTokenPayload>(dto.refresh_token, REFRESH_TOKEN_SECRET);
 
     if (payload.token_type !== 'refresh') {
@@ -215,6 +216,7 @@ export class AuthService {
   }
 
   async logout(dto: LogoutAuthDto): Promise<{ message: string }> {
+    if (!dto.refresh_token) throw new UnauthorizedException('Refresh token requerido');
     const payload = verifyJwt<RefreshTokenPayload>(dto.refresh_token, REFRESH_TOKEN_SECRET);
 
     const tokenHash = hashToken(dto.refresh_token);

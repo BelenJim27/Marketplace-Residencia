@@ -48,7 +48,7 @@ function PagoExitosoContent() {
 
   useEffect(() => {
     limpiarCarrito();
-    localStorage.removeItem("checkout_factura");
+    sessionStorage.removeItem("checkout_factura");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -7,7 +7,6 @@ import { useSession } from "next-auth/react";
 import { getPostLoginUrl } from "@/lib/get-post-login-url";
 
 export const dynamic = 'force-dynamic';
-export const prerender = false;
 
 function AuthCallbackContent() {
   const router = useRouter();
@@ -32,9 +31,13 @@ function AuthCallbackContent() {
           return res.json();
         })
         .then(({ access_token, refresh_token }) => {
+          // Backend already set HttpOnly cookies via Set-Cookie on exchange-code response.
+          // These setCookie calls are kept for backward compat; for HttpOnly sessions the
+          // browser silently ignores them (HttpOnly cannot be overwritten by JS).
           setCookie("token", access_token, 7);
           setCookie("refresh_token", refresh_token, 30);
           return fetch(`/auth/me`, {
+            credentials: "include",
             headers: { Authorization: `Bearer ${access_token}` },
           }).then((r) => r.json());
         })

@@ -28,6 +28,13 @@ export class CarritoController {
     return this.service.findAll();
   }
 
+  // Must be before /:id_usuario to avoid NestJS routing it as a param
+  @UseGuards(AuthGuard)
+  @Get('validar-stock')
+  validarStock(@Req() req: any) {
+    return this.service.validarStock(req.user.id_usuario);
+  }
+
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('cliente', 'administrador')
   @Get(':id_usuario')

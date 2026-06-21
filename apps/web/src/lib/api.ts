@@ -45,27 +45,34 @@ const headers = (token?: string, isFormData = false) => ({
 // Singleton para deduplicar refreshes concurrentes: si múltiples requests
 // fallan con 401 al mismo tiempo, todas esperan el mismo refresh en lugar de
 // hacer N requests (el segundo invalidaría el token del primero).
-let pendingRefresh: Promise<string> | null = null;
+let pendingRefresh: Promise<string | null> | null = null;
 
-async function refreshAccessToken(): Promise<string> {
-  const refreshToken = getCookie("refresh_token");
-  if (!refreshToken) throw new Error("No refresh token");
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = getCookie("refresh_token"); // null when using HttpOnly cookies
 
+  // Send with credentials so the HttpOnly refresh_token cookie is included automatically.
+  // Also send body for backward compat with old non-HttpOnly sessions.
   const res = await fetch(endpoint("/auth/refresh"), {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: refreshToken }),
+    ...(refreshToken ? { body: JSON.stringify({ refresh_token: refreshToken }) } : {}),
   });
 
   if (!res.ok) throw new Error("Refresh failed");
 
   const data = await res.json();
-  const newAccess: string = data.tokens.access_token;
-  setCookie("token", newAccess, 7);
-  if (data.tokens.refresh_token) {
-    setCookie("refresh_token", data.tokens.refresh_token, 30);
+  const newAccess: string | undefined = data.tokens?.access_token;
+
+  // For old non-HttpOnly sessions: persist new tokens to JS-readable cookies.
+  // For new HttpOnly sessions: setCookie is silently ignored by browser (HttpOnly cannot be overwritten by JS).
+  if (newAccess) {
+    setCookie("token", newAccess, 7);
+    if (data.tokens?.refresh_token) {
+      setCookie("refresh_token", data.tokens.refresh_token, 30);
+    }
   }
-  return newAccess;
+  return newAccess ?? null;
 }
 
 async function fetchJson<T>(
@@ -73,8 +80,11 @@ async function fetchJson<T>(
   options?: RequestInit & { next?: { revalidate?: number }; silent?: boolean },
 ): Promise<T> {
   let response: Response;
+  // credentials: 'include' sends HttpOnly cookies automatically for cross-origin requests.
+  // CORS on the API already allows credentials (credentials: true in main.ts).
+  const fetchOptions: RequestInit = { credentials: "include", ...options };
   try {
-    response = await fetch(url, options);
+    response = await fetch(url, fetchOptions);
   } catch (networkError) {
     if (!options?.silent) {
       console.error("Network error fetching", url, networkError);
@@ -88,7 +98,7 @@ async function fetchJson<T>(
     console.warn(" 401 detectado, intentando refresh de token...");
 
     // Paso 1: refrescar el token. Solo un fallo AQUÍ significa sesión expirada.
-    let newAccessToken: string;
+    let newAccessToken: string | null;
     try {
       if (!pendingRefresh) {
         pendingRefresh = refreshAccessToken().finally(() => {
@@ -98,12 +108,12 @@ async function fetchJson<T>(
       newAccessToken = await pendingRefresh;
       console.warn(" Token refrescado, reintentando request...");
     } catch (refreshErr) {
-      // Limpiar cookies
+      // Clear JS-readable cookies. HttpOnly cookies can only be cleared by the server.
       console.warn(" Refresh falló, limpiando cookies...");
       const cookies = document.cookie.split(";");
       cookies.forEach((cookie) => {
         const name = cookie.split("=")[0].trim();
-        if (["token", "refresh_token", "usuario"].includes(name)) {
+        if (["token", "refresh_token", "usuario", "session"].includes(name)) {
           document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
         }
       });
@@ -112,14 +122,17 @@ async function fetchJson<T>(
       throw new Error("Sesión expirada. Por favor inicia sesión de nuevo.");
     }
 
-    // Paso 2: reintentar el request original. Un fallo aquí es un error real del
-    // backend (no sesión expirada) → se propaga como ApiError con status/mensaje real.
-    const newHeaders = { ...options?.headers } as Record<string, string>;
-    newHeaders["Authorization"] = `Bearer ${newAccessToken}`;
+    // Paso 2: reintentar el request original con credentials (HttpOnly cookie ya fue renovada
+    // por el backend). Si también tenemos el nuevo token en la variable, lo incluimos en
+    // Authorization para backward compat con sesiones antiguas (no-HttpOnly).
+    const newHeaders = { ...(fetchOptions.headers ?? {}) } as Record<string, string>;
+    if (newAccessToken) {
+      newHeaders["Authorization"] = `Bearer ${newAccessToken}`;
+    }
 
     let retryResponse: Response;
     try {
-      retryResponse = await fetch(url, { ...options, headers: newHeaders });
+      retryResponse = await fetch(url, { ...fetchOptions, headers: newHeaders });
     } catch (networkError) {
       if (!options?.silent) {
         console.error("Network error retrying", url, networkError);
@@ -210,11 +223,11 @@ export const api = {
         headers: headers(),
         body: JSON.stringify({ refresh_token }),
       }),
-    logout: (refresh_token: string) =>
+    logout: (refresh_token?: string) =>
       fetchJson(endpoint("/auth/logout"), {
         method: "POST",
         headers: headers(),
-        body: JSON.stringify({ refresh_token }),
+        ...(refresh_token ? { body: JSON.stringify({ refresh_token }) } : {}),
         silent: true,
       }),
     googleLogin: () => {
@@ -927,6 +940,12 @@ export const api = {
         method: "DELETE",
         headers: headers(token),
       }),
+    // Verifica stock de todos los ítems del carrito justo antes de pagar.
+    validarStock: (token: string) =>
+      fetchJson<{ valido: boolean; items_sin_stock: { id_producto: number; nombre: string; disponible: number; solicitado: number }[] }>(
+        endpoint("/carrito/validar-stock"),
+        { headers: headers(token) },
+      ),
   },
 
   inventario: {

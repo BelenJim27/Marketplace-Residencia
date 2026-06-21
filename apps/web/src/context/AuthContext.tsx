@@ -123,7 +123,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Restaurar usuario si hay perfil guardado Y al menos uno de los tokens es válido.
     // Cuando token expira pero refresh_token sigue activo, la llamada API obtiene un
     // nuevo access_token automáticamente (via api.ts), sin forzar un re-login.
-    if (usuarioStr && (token || refreshToken)) {
+    // Accept session with old non-HttpOnly token OR new HttpOnly session indicator cookie
+    if (usuarioStr && (getCookie("session") === "active" || token || refreshToken)) {
       try {
         const usuario = JSON.parse(usuarioStr);
         // Sanea el id contra el `sub` del access token (fuente del backend). Si la
@@ -166,13 +167,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (loading) return;
     if (session?.user) return;  // NextAuth lo maneja
     if (!user) return;          // sin usuario, el otro effect se encarga
-    if (getCookie("token")) return;  // token vigente, nada que hacer
+    // With HttpOnly cookies we can't check token presence; api.ts handles 401→refresh transparently
+    if (getCookie("token") || getCookie("session") === "active") return;
 
+    // Backward compat: old sessions with non-HttpOnly refresh token
     const refreshToken = getCookie("refresh_token");
     if (!refreshToken) return;
 
     fetch("/auth/refresh", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: refreshToken }),
     })
@@ -192,20 +196,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user !== null) return;  // ya hay sesión, nada que hacer
     if (session?.user) return;  // NextAuth maneja la sesión
 
+    // Can recover session via HttpOnly cookie (session indicator) or old non-HttpOnly refresh token
     const refreshToken = getCookie("refresh_token");
-    if (!refreshToken) return;
+    const hasSession = getCookie("session") === "active";
+    if (!refreshToken && !hasSession) return;
 
     let cancelled = false;
     setLoading(true);
 
     fetch("/auth/refresh", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken }),
+      ...(refreshToken ? { body: JSON.stringify({ refresh_token: refreshToken }) } : {}),
     })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled || !data) return;
+        // HttpOnly cookies are set automatically by the backend response.
+        // Only persist JS-readable tokens for backward compat (silently ignored for HttpOnly sessions).
         if (data.tokens?.access_token) {
           setCookie("token", data.tokens.access_token, 7);
         }
@@ -287,19 +296,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (estadoProductor === "aprobado" && !rolesActualizados) {
           const refreshToken = getCookie("refresh_token");
-          if (refreshToken) {
+          const hasSession = getCookie("session") === "active";
+          if (refreshToken || hasSession) {
             try {
               const refreshRes = await fetch(`/auth/refresh`, {
                 method: "POST",
+                credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ refresh_token: refreshToken }),
+                ...(refreshToken ? { body: JSON.stringify({ refresh_token: refreshToken }) } : {}),
               });
               if (refreshRes.ok) {
                 const refreshData = await refreshRes.json();
-                setCookie("token", refreshData.tokens.access_token, 7);
-                if (refreshData.tokens.refresh_token) {
-                  setCookie("refresh_token", refreshData.tokens.refresh_token, 30);
-                }
+                // Backend sets HttpOnly cookies; setCookie is silently ignored for HttpOnly sessions
+                if (refreshData.tokens?.access_token) setCookie("token", refreshData.tokens.access_token, 7);
+                if (refreshData.tokens?.refresh_token) setCookie("refresh_token", refreshData.tokens.refresh_token, 30);
                 const nextUser: Usuario = {
                   ...user,
                   ...refreshData.user,
@@ -360,6 +370,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback((token: string, usuario: Usuario, refreshToken: string, rememberMe = false) => {
+    // Backend already set HttpOnly cookies on login response; setCookie calls are silently
+    // ignored by the browser for HttpOnly cookies. Kept for backward compat with old sessions.
     setCookie("token", token, rememberMe ? 7 : 1);
     setCookie("refresh_token", refreshToken, 30);
     const normalizedUser: Usuario = {
@@ -385,6 +397,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     removeCookie("token");
     removeCookie("refresh_token");
+    removeCookie("session");
     removeCookie("usuario");
     setUser(null);
     setProductorResolved(false);

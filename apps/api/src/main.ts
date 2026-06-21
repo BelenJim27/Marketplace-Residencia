@@ -7,6 +7,7 @@ import { join, resolve } from 'path';
 import { SanitizeBodyInterceptor } from './common/interceptors/sanitize.interceptor';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { static as expressStatic } from 'express';
+import * as cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 dotenv.config({ path: resolve(process.cwd(), 'apps/api/.env'), override: true });
@@ -69,6 +70,7 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     rawBody: true,
   });
+  app.use(cookieParser());
   app.use('/uploads', expressStatic(join(__dirname, '..', 'uploads')));
 
   // Request ID para trazabilidad: reutiliza X-Request-ID entrante (de un proxy/LB) o

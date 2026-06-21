@@ -349,12 +349,18 @@ export function useCheckout() {
     let pedidoRecienCreado = false;
 
     try {
+      // Fallback exchange rate when backend rate is unavailable (1 USD ≈ 17 MXN)
+      const FALLBACK_MXN_PER_USD = 17;
+      const getRate = (moneda: string): number | null => ratesMXN[moneda as keyof typeof ratesMXN];
+
       // Sum all per-producer shipping quotes, converting each to MXN
       const costoEnvioMXN = parseFloat(
         Object.values(seleccionados).reduce((sum, q) => {
           const moneda = (q.moneda ?? 'MXN').toUpperCase();
-          const enMXN = moneda !== 'MXN' && ratesMXN[moneda as keyof typeof ratesMXN]
-            ? q.precioTotal / ratesMXN[moneda as keyof typeof ratesMXN]!
+          const rate = getRate(moneda);
+          // rate is in [MXN per foreign unit], so divide to get MXN
+          const enMXN = moneda !== 'MXN'
+            ? q.precioTotal / (rate ?? (1 / FALLBACK_MXN_PER_USD))
             : q.precioTotal;
           return sum + enMXN;
         }, 0).toFixed(2),
@@ -369,13 +375,27 @@ export function useCheckout() {
         return null;
       } else {
         isCreatingPedidoRef.current = true;
+
+        // Validate stock before creating the pedido to prevent race conditions where
+        // another buyer purchased the last unit between cart add and checkout.
+        try {
+          const stockCheck = await api.carrito.validarStock(token);
+          if (stockCheck && !stockCheck.valido && stockCheck.items_sin_stock?.length > 0) {
+            const nombres = stockCheck.items_sin_stock.map((i: any) => i.nombre || `Producto #${i.id_producto}`).join(', ');
+            throw new Error(`Sin stock suficiente para: ${nombres}. Actualiza tu carrito.`);
+          }
+        } catch (stockErr) {
+          if (stockErr instanceof Error && stockErr.message.includes('Sin stock')) throw stockErr;
+          // If stock endpoint unavailable, continue — backend will reject the order anyway
+        }
+
         const pedido = await api.pedidos.create(token, {
           id_usuario: user.id_usuario,
           estado: "pendiente",
           total: totalConEnvio.toString(),  // siempre en MXN
           moneda: 'MXN',
-          tipo_cambio: currency !== 'MXN' && ratesMXN[currency as keyof typeof ratesMXN]
-            ? String(ratesMXN[currency as keyof typeof ratesMXN])
+          tipo_cambio: currency !== 'MXN'
+            ? String(getRate(currency) ?? (1 / FALLBACK_MXN_PER_USD))
             : undefined,
           moneda_referencia: currency !== 'MXN' ? currency : undefined,
           pais_destino_iso2: direccionSeleccionada.pais_iso2 ?? (direccionSeleccionada.ubicacion as any)?.pais ?? "MX",

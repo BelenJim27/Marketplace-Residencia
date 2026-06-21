@@ -147,12 +147,19 @@ export class OAuthController {
   // Canjea un código OAuth temporal por los tokens reales. Un solo uso.
   @Post('exchange-code')
   @HttpCode(200)
-  exchangeOAuthCode(@Body() body: { code: string }) {
+  exchangeOAuthCode(@Body() body: { code: string }, @Res({ passthrough: true }) res: any) {
     const entry = pendingOAuthCodes.get(body?.code ?? '');
     if (!entry || entry.expires < Date.now()) {
       throw new UnauthorizedException('Código OAuth inválido o expirado');
     }
     pendingOAuthCodes.delete(body.code);
+    // Set HttpOnly cookies so the browser stores auth tokens securely
+    const isProd = process.env.NODE_ENV === 'production';
+    const base = { httpOnly: true, secure: isProd, sameSite: 'lax' as const, path: '/' };
+    res.cookie('token', entry.access_token, { ...base, maxAge: 15 * 60 * 1000 });
+    res.cookie('refresh_token', entry.refresh_token, { ...base, maxAge: 30 * 24 * 60 * 60 * 1000 });
+    res.cookie('session', 'active', { secure: isProd, sameSite: 'lax', path: '/', maxAge: 30 * 24 * 60 * 60 * 1000 });
+    // Also return in body for backward compat (auth/callback/page.tsx reads them)
     return { access_token: entry.access_token, refresh_token: entry.refresh_token };
   }
 }
