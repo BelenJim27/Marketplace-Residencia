@@ -8,8 +8,6 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/guards/roles.decorator';
 import { Throttle } from '@nestjs/throttler';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const fileType = require('file-type');
 
 const FILE_SIZE_LIMIT = 5 * 1024 * 1024; // 5 MB
 // Subida de archivos es costosa (I/O + disco): límite por usuario más estricto que el global.
@@ -110,28 +108,33 @@ function ensureAllowedFile(fileName: string) {
   }
 }
 
-const ALLOWED_MIMES: Record<string, string[]> = {
-  '.pdf': ['application/pdf'],
-  '.png': ['image/png'],
-  '.jpg': ['image/jpeg'],
-  '.jpeg': ['image/jpeg'],
-  '.webp': ['image/webp'],
+type MagicSig = readonly number[];
+
+const MAGIC_SIGNATURES: Record<string, MagicSig[]> = {
+  '.pdf': [[0x25, 0x50, 0x44, 0x46]],
+  '.png': [[0x89, 0x50, 0x4E, 0x47]],
+  '.jpg': [[0xFF, 0xD8, 0xFF]],
+  '.jpeg': [[0xFF, 0xD8, 0xFF]],
+  '.webp': [[0x52, 0x49, 0x46, 0x46]],
 };
 
-async function ensureAllowedMime(buffer: Buffer, fileName: string): Promise<void> {
-  let detected: { mime: string } | undefined;
-  try {
-    detected = await fileType.fromBuffer(buffer);
-  } catch {
-    // file-type may not recognize all valid files (e.g. some PDFs); allow pass-through
-    return;
+function matchesMagic(buffer: Buffer, sig: MagicSig): boolean {
+  if (buffer.length < sig.length) return false;
+  for (let i = 0; i < sig.length; i++) {
+    if (buffer[i] !== sig[i]) return false;
   }
-  if (!detected) return; // unknown binary format; extension check above already guards us
+  return true;
+}
+
+async function ensureAllowedMime(buffer: Buffer, fileName: string): Promise<void> {
   const ext = normalizeExtension(fileName);
-  const allowed = ALLOWED_MIMES[ext] ?? [];
-  if (!allowed.includes(detected.mime)) {
+  const sigs = MAGIC_SIGNATURES[ext];
+  if (!sigs) return;
+
+  const ok = sigs.some(sig => matchesMagic(buffer, sig));
+  if (!ok) {
     throw new BadRequestException(
-      `El contenido del archivo no coincide con su extensión (detectado: ${detected.mime})`,
+      `El contenido del archivo no coincide con su extensión`,
     );
   }
 }
