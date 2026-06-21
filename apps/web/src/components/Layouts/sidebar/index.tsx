@@ -10,7 +10,6 @@ import { useSidebarContext } from "@/context/SidebarContext";
 import { useAuth } from "@/context/AuthContext";
 import { ChevronDown, LogOut } from "lucide-react";
 import { useProductorCategorias } from "../../../hooks/useProductorCategorias";
-import { getCookie } from "@/lib/cookies";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -31,8 +30,7 @@ export function Sidebar() {
     return menus;
   });
 
-  const token = getCookie("token") ?? "";
-  const { tieneLotes } = useProductorCategorias(token, isAdmin);
+  const { tieneLotes } = useProductorCategorias(isAdmin);
   const navData = getNavData(isProductor, isAdmin, tieneLotes);
 
   const isFilesRoute = pathname.startsWith("/dashboard/productor/archivos");

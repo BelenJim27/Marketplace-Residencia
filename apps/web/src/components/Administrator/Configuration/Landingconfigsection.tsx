@@ -280,7 +280,7 @@ export default function LandingConfigSection() {
         clave, valor,
         tipo: COLOR_KEYS.includes(clave as LandingKey) ? "color" : "texto",
       }));
-      await api.configuracion.bulkUpsert(token, items);
+      await api.configuracion.bulkUpsert(token ?? "", items);
       setMessage({ type: "success", text: "¡Página de inicio actualizada! Recarga la landing para ver los cambios." });
     } catch (err) {
       setMessage({ type: "error", text: err instanceof Error ? err.message : "Error al guardar" });

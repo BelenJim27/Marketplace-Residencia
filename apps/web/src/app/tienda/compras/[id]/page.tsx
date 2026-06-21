@@ -298,7 +298,7 @@ function DetallePedidoContent() {
         tipo_persona: facturaPersona,
         codigo_postal: facturaCp,
       };
-      await api.pedidos.addFactura(token, pedidoId, payload);
+      await api.pedidos.addFactura(token ?? "", pedidoId, payload);
       setFacturaEstado("ok");
       // Cerrar modal y mostrar toast de éxito
       setTimeout(() => {
