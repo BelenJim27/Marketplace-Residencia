@@ -195,7 +195,7 @@ function ImageUpload({ label, name, value, onUploaded }: {
       fd.append("archivo", file);
       fd.append("entidad_tipo", "landing");
       fd.append("entidad_id", "0");
-      const res = await api.archivos.upload(token, fd);
+      const res = await api.archivos.upload(token ?? "", fd);
       const url: string = (res?.url || res?.ruta || res?.path || "") as string;
       if (!url) throw new Error("No se recibió URL");
       onUploaded(name, url);
