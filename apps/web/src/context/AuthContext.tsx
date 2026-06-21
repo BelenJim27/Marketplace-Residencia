@@ -9,6 +9,7 @@ import {
   useMemo,
   ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
 import { api } from "@/lib/api";
 import { getCookie, setCookie, removeCookie } from "@/lib/cookies";
@@ -37,6 +38,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   isProductor: boolean;
+  isCliente: boolean;
   login: (token: string, usuario: Usuario, refreshToken: string, rememberMe?: boolean) => void;
   logout: () => void;
   refreshAuth: () => void;
@@ -45,6 +47,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
   const [productorResolved, setProductorResolved] = useState(false);
@@ -308,6 +311,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setCookie("usuario", JSON.stringify(nextUser), 7);
                 setUser(nextUser);
                 setProductorResolved(true);
+                router.push("/dashboard/productor");
                 return;
               }
             } catch {
@@ -406,6 +410,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   );
 
+  const isCliente = useMemo(
+    () => !!user && !isAdmin && !isProductor,
+    [user, isAdmin, isProductor],
+  );
+
   const value = useMemo(
     () => ({
       user,
@@ -413,11 +422,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       isAdmin,
       isProductor,
+      isCliente,
       login,
       logout,
       refreshAuth,
     }),
-    [user, loading, sessionStatus, isAdmin, isProductor, login, logout, refreshAuth],
+    [user, loading, sessionStatus, isAdmin, isProductor, isCliente, login, logout, refreshAuth],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

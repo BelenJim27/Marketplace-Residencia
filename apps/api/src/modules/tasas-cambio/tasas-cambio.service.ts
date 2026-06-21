@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { Cron } from '@nestjs/schedule';
 import { Moneda, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { serializeBigInts } from '../shared/serialize';
+import { serializeBigInts } from '../../common/utilities/serialize';
 import { CreateTasaCambioDto } from './dto/tasas-cambio.dto';
 
 // Last-resort static fallback rates. Used ONLY when the DB has no active rate

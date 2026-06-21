@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Moneda, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { serializeBigInts } from '../shared/serialize';
+import { serializeBigInts } from '../../common/utilities/serialize';
 import { CreateComisionDto, ResolverComisionQueryDto, UpdateComisionDto } from './dto/comisiones.dto';
 
 export interface ComisionResuelta {

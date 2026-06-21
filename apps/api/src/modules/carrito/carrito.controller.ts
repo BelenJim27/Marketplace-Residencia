@@ -14,6 +14,8 @@ import {
 import { CreateCarritoItemDto, UpdateCarritoItemDto } from './dto/carrito.dto';
 import { CarritoService } from './carrito.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
+import { RolesGuard } from '../auth/guards/rbac.guard';
+import { Roles } from '../auth/guards/roles.decorator';
 
 @Controller('carrito')
 export class CarritoController {
@@ -26,7 +28,8 @@ export class CarritoController {
     return this.service.findAll();
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Get(':id_usuario')
   findByUser(@Param('id_usuario', ParseUUIDPipe) id_usuario: string, @Req() req: any) {
     if (!isAdmin(req.user) && req.user.id_usuario !== id_usuario) {
@@ -35,7 +38,8 @@ export class CarritoController {
     return this.service.findByUser(id_usuario);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Post()
   create(@Body() dto: CreateCarritoItemDto, @Req() req: any) {
     // Anclar al usuario del token: un no-admin siempre escribe en su propio
@@ -47,7 +51,8 @@ export class CarritoController {
     return this.service.create(dto);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateCarritoItemDto) {
     return this.service.update(id, dto);
@@ -55,13 +60,15 @@ export class CarritoController {
 
   // Vacía el carrito del usuario autenticado (derivado del token). El cliente no
   // envía ningún id, evitando desajustes con la cookie `usuario`.
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Delete('mi-carrito')
   clearMine(@Req() req: any) {
     return this.service.clearByUser(req.user.id_usuario);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.service.remove(id);
@@ -69,7 +76,8 @@ export class CarritoController {
 
   // Solo admin: vaciar el carrito de un usuario arbitrario. Los no-admin usan
   // `DELETE /carrito/mi-carrito` (clearMine).
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Delete('usuario/:id_usuario')
   clearByUser(@Param('id_usuario', ParseUUIDPipe) id_usuario: string, @Req() req: any) {
     if (!isAdmin(req.user) && req.user.id_usuario !== id_usuario) {

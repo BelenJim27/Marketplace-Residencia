@@ -6,7 +6,7 @@ import { ComisionesService } from '../comisiones/comisiones.service';
 import { EmailService } from '../email/email.service';
 import { EnviosService } from '../envios/envios.service';
 import { calcularEdadEnAnios } from '../productos/edad.helper';
-import { serializeBigInts, toBigIntId } from '../shared/serialize';
+import { serializeBigInts, toBigIntId } from '../../common/utilities/serialize';
 import { TasasCambioService } from '../tasas-cambio/tasas-cambio.service';
 import { CreatePagoDto, CreateStripeIntentDto, UpdatePagoDto, CreatePaypalOrderDto, CapturePaypalOrderDto } from './dto/pagos.dto';
 import { PaypalService } from './paypal.service';

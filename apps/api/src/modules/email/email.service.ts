@@ -1447,4 +1447,35 @@ export class EmailService {
       html: `<p style="font-family:monospace;white-space:pre-wrap;">${body.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`,
     });
   }
+
+  async sendContactoEmail(dto: { nombre: string; email: string; asunto: string; categoria: string; mensaje: string }): Promise<void> {
+    const adminEmail = process.env.ADMIN_EMAIL || this.fromEmail;
+    const categoriasLabel: Record<string, string> = {
+      pedido: 'Pedido',
+      producto: 'Producto',
+      pago: 'Pago',
+      envio: 'Envío',
+      otro: 'Otro',
+    };
+    const categoriaLabel = categoriasLabel[dto.categoria] ?? dto.categoria;
+    const safe = (s: string) => s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    await this.sendEmail({
+      to: adminEmail,
+      subject: `[Soporte] ${categoriaLabel} — ${safe(dto.asunto)}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+          <h2 style="color:#2E4A33;border-bottom:2px solid #2E4A33;padding-bottom:8px">Nuevo mensaje de contacto</h2>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+            <tr style="background:#f5f5f5"><td style="padding:10px 12px;font-weight:600;color:#555;width:110px">De:</td><td style="padding:10px 12px">${safe(dto.nombre)} &lt;${safe(dto.email)}&gt;</td></tr>
+            <tr><td style="padding:10px 12px;font-weight:600;color:#555">Categoría:</td><td style="padding:10px 12px">${safe(categoriaLabel)}</td></tr>
+            <tr style="background:#f5f5f5"><td style="padding:10px 12px;font-weight:600;color:#555">Asunto:</td><td style="padding:10px 12px">${safe(dto.asunto)}</td></tr>
+          </table>
+          <div style="background:#fafafa;border-left:4px solid #2E4A33;padding:16px 20px;border-radius:4px">
+            <p style="margin:0;white-space:pre-wrap;color:#333">${safe(dto.mensaje)}</p>
+          </div>
+          <p style="color:#999;font-size:12px;margin-top:24px">© ${new Date().getFullYear()} Marketplace Mezcal · Mensaje recibido vía formulario de soporte</p>
+        </div>
+      `,
+    });
+  }
 }

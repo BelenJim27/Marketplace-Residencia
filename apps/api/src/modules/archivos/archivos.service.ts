@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { serializeBigInts } from '../shared/serialize';
+import { serializeBigInts } from '../../common/utilities/serialize';
 import { CreateArchivoDto, UpdateArchivoDto } from './dto/archivos.dto';
 import { unlinkSync, existsSync } from 'fs';
 import { writeFile, mkdir } from 'fs/promises';

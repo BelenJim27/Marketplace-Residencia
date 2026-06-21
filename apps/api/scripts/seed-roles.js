@@ -199,6 +199,40 @@ async function main() {
       }
     }
 
+    console.log('\n=== Assigning Permisos to Cliente Role ===');
+    const clienteRole = await prisma.roles.findUnique({ where: { nombre: 'cliente' } });
+    const PERMISOS_CLIENTE = [
+      'ver_productos',
+      'agregar_carrito',
+      'crear_pedido',
+      'ver_pedido',
+      'pagar',
+    ];
+
+    if (clienteRole) {
+      for (const nombrePerm of PERMISOS_CLIENTE) {
+        let permiso = await prisma.permisos.findUnique({ where: { nombre: nombrePerm } });
+        if (!permiso) {
+          permiso = await prisma.permisos.create({ data: { nombre: nombrePerm } });
+          console.log(`  ✓ Created permiso: ${nombrePerm}`);
+        } else {
+          console.log(`  ✓ Permiso already exists: ${nombrePerm}`);
+        }
+
+        const existing = await prisma.rol_permiso.findUnique({
+          where: { id_rol_id_permiso: { id_rol: clienteRole.id_rol, id_permiso: permiso.id_permiso } },
+        });
+        if (existing) {
+          console.log(`  ✓ Already linked: cliente → ${nombrePerm}`);
+        } else {
+          await prisma.rol_permiso.create({
+            data: { id_rol: clienteRole.id_rol, id_permiso: permiso.id_permiso },
+          });
+          console.log(`  ✓ Linked: cliente → ${nombrePerm}`);
+        }
+      }
+    }
+
     console.log('\n✅ Roles seed completed successfully!');
   } catch (error) {
     console.error('\n❌ Error during seed:', error);

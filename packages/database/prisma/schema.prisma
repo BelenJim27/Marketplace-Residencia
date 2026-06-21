@@ -270,22 +270,6 @@ model facturas {
   @@index([id_pedido], map: "idx_facturas_pedido")
 }
 
-model integraciones_envio {
-  id_integracion     Int            @id @default(autoincrement())
-  id_transportista   Int
-  entorno            String         @default("produccion") @db.VarChar(20)
-  api_url            String?        @db.VarChar(500)
-  api_key            Bytes?
-  api_secret         Bytes?
-  credenciales_extra Json           @default("{}")
-  activo             Boolean        @default(true)
-  creado_en          DateTime       @default(now()) @db.Timestamptz(6)
-  actualizado_en     DateTime       @default(now()) @db.Timestamptz(6)
-  transportistas     transportistas @relation(fields: [id_transportista], references: [id_transportista], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([id_transportista, entorno])
-}
-
 model inventario {
   id_inventario          BigInt                   @id @default(autoincrement())
   id_producto            BigInt
@@ -298,20 +282,6 @@ model inventario {
 
   @@index([id_producto], map: "idx_inventario_producto")
   @@index([id_producto, stock], map: "idx_inventario_producto_stock")
-}
-
-model lote_atributos {
-  id_atributo     BigInt   @id @default(autoincrement())
-  id_lote         Int
-  clave           String   @db.VarChar(100)
-  valor           String?
-  unidad          String?  @db.VarChar(50)
-  fuente          String   @default("manual") @db.VarChar(50)
-  fecha_obtencion DateTime @default(now()) @db.Timestamptz(6)
-  lotes           lotes    @relation(fields: [id_lote], references: [id_lote], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([id_lote, clave])
-  @@index([id_lote], map: "idx_lote_atributos_lote")
 }
 
 model lotes {
@@ -338,7 +308,6 @@ model lotes {
   botellas_350ml    Int?             @default(0)
   botellas_750ml    Int?             @default(0)
   url_trazabilidad  String?          @db.VarChar(500)
-  lote_atributos    lote_atributos[]
   productores       productores      @relation(fields: [id_productor], references: [id_productor], onUpdate: NoAction)
   regiones          regiones?        @relation(fields: [id_region], references: [id_region], onDelete: Restrict, onUpdate: NoAction)
   productos         productos[]
@@ -540,13 +509,6 @@ model productores {
   asociacion                  String?               @db.VarChar(150)
   nombre_marca                String?               @db.VarChar(150)
   certificado_url             String?               @db.VarChar(500)
-  // DEPRECATED: bodega_* reemplazados por id_direccion_bodega → direcciones
-  bodega_calle                String?               @db.VarChar(200)
-  bodega_ciudad               String?               @db.VarChar(100)
-  bodega_estado               String?               @db.VarChar(100)
-  bodega_codigo_postal        String?               @db.VarChar(20)
-  bodega_pais_iso2            String?               @default("MX") @db.Char(2)
-  bodega_telefono             String?               @db.VarChar(30)
   id_direccion_bodega         BigInt?
   comisiones                  comisiones[]
   detalle_pedido              detalle_pedido[]
@@ -763,7 +725,6 @@ model transportistas {
   envio_eventos       envio_eventos[]
   envio_guias         envio_guias[]
   envios              envios[]
-  integraciones_envio integraciones_envio[]
   servicios_envio     servicios_envio[]
 }
 
@@ -986,18 +947,6 @@ model refunds {
   @@index([id_pago], map: "idx_refunds_pago")
   @@index([id_pedido], map: "idx_refunds_pedido")
   @@index([estado], map: "idx_refunds_estado")
-}
-
-model traducciones {
-  entidad_tipo   String    @db.VarChar(30)
-  entidad_id     Int
-  idioma         String    @db.VarChar(10)
-  nombre         String?   @db.VarChar(200)
-  descripcion    String?
-  actualizado_en DateTime? @db.Timestamptz(6)
-
-  @@id([entidad_tipo, entidad_id, idioma])
-  @@index([entidad_tipo, entidad_id], map: "idx_traducciones_entidad")
 }
 
 model restricciones_envio_categoria {

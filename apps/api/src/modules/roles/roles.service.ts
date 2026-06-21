@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { serializeBigInts } from '../shared/serialize';
+import { serializeBigInts } from '../../common/utilities/serialize';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import {
   AssignPermisoDto,

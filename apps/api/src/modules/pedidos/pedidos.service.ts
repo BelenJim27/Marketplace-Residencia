@@ -8,7 +8,7 @@ import { EmailService } from "../email/email.service";
 import { SkydropxService } from "../envios/skydropx.service";
 import { PaypalService } from "../pagos/paypal.service";
 import { StripeService } from "../pagos/stripe.service";
-import { serializeBigInts, toBigIntId } from "../shared/serialize";
+import { serializeBigInts, toBigIntId } from "../../common/utilities/serialize";
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import {
   CreateDetallePedidoDto,
@@ -76,7 +76,16 @@ export class PedidosService {
             },
           },
         },
-        envios: true,
+        envios: {
+          include: {
+            transportistas: true,
+            envio_guias: {
+              where: { eliminado_en: null },
+              orderBy: { fecha_creacion: 'desc' },
+              take: 1,
+            },
+          },
+        },
         facturas: true,
         usuarios: true,
         pedido_productor: {

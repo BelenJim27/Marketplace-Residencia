@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { serializeBigInts, toBigIntId } from '../shared/serialize';
+import { serializeBigInts, toBigIntId } from '../../common/utilities/serialize';
 import { CreateAuditoriaDto, UpdateAuditoriaDto, ListAuditoriaQueryDto } from './dto/auditoria.dto';
 
 @Injectable()

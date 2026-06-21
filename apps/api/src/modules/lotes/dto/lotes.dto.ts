@@ -18,11 +18,3 @@ export class CreateLoteDto {
 }
 export class UpdateLoteDto extends PartialType(CreateLoteDto) {}
 
-export class CreateLoteAtributoDto {
-  @IsInt() @Type(() => Number) id_lote!: number;
-  @IsString() @MaxLength(100) clave!: string;
-  @IsOptional() @IsString() valor?: string;
-  @IsOptional() @IsString() @MaxLength(50) unidad?: string;
-  @IsOptional() @IsString() @MaxLength(50) fuente?: string;
-}
-export class UpdateLoteAtributoDto extends PartialType(CreateLoteAtributoDto) {}

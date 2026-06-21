@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaypalService } from '../pagos/paypal.service';
 import { StripeService } from '../pagos/stripe.service';
-import { serializeBigInts, toBigIntId } from '../shared/serialize';
+import { serializeBigInts, toBigIntId } from '../../common/utilities/serialize';
 import { GenerarPayoutsDto, ListPayoutsQueryDto, UpdatePayoutEstadoDto } from './dto/payouts.dto';
 
 const ESTADOS_LIBERADOS_DEFAULT = ['entregado', 'liberado'];

@@ -45,7 +45,6 @@ const LANDING_DEFAULTS = {
   landing_stat_label_1:    "Productores registrados",
   landing_stat_label_2:    "Comunidades participantes",
   landing_stat_label_3:    "Productos trazables",
-  landing_stat_label_4:    "Ingresos generados",
   // ── Trazabilidad ──
   landing_traza_eyebrow:   "Cada botella, una historia",
   landing_traza_heading:   "Escanea, descubre,",
@@ -407,7 +406,6 @@ export default function LandingConfigSection() {
             <Campo label="Etiqueta stat 1 (Productores)" name="landing_stat_label_1" value={formData.landing_stat_label_1} onChange={handleChange} />
             <Campo label="Etiqueta stat 2 (Comunidades)" name="landing_stat_label_2" value={formData.landing_stat_label_2} onChange={handleChange} />
             <Campo label="Etiqueta stat 3 (Productos)" name="landing_stat_label_3" value={formData.landing_stat_label_3} onChange={handleChange} />
-            <Campo label="Etiqueta stat 4 (Ingresos)" name="landing_stat_label_4" value={formData.landing_stat_label_4} onChange={handleChange} />
           </div>
           <p className="text-xs text-[#3D6B3F]/70 bg-[#3D6B3F]/5 rounded-lg p-3 border border-[#3D6B3F]/10">
             Los números se calculan automáticamente desde la base de datos.

@@ -48,7 +48,7 @@ Ayudar a clientes, visitantes y productores con preguntas sobre la plataforma. R
 - También es posible ver el historial completo de eventos de envío en el detalle del pedido.
 
 ## Devoluciones y soporte
-- Para reclamaciones o devoluciones: contactar soporte desde la sección "Mis pedidos" de la cuenta o al correo de la tienda.
+- Para reclamaciones o devoluciones: contactar soporte desde la sección "Contacto" dentro de esta ventana.
 - Cada caso se evalúa individualmente. Los reembolsos son gestionados por el equipo de Mezcales.
 
 ## Cuentas de usuario y roles

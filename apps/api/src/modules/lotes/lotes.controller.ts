@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
-import { CreateLoteAtributoDto, CreateLoteDto, UpdateLoteAtributoDto, UpdateLoteDto } from './dto/lotes.dto';
+import { CreateLoteDto, UpdateLoteDto } from './dto/lotes.dto';
 import { LotesService } from './lotes.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/rbac.guard';
@@ -96,30 +96,4 @@ export class LotesController {
     return this.service.sincronizarProductoUnico(id);
   }
 
-  @Post(':id/atributos')
-  @UseGuards(...WRITE_GUARDS)
-  @Roles('productor', 'administrador')
-  addAtributo(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: CreateLoteAtributoDto,
-  ) {
-    return this.service.addAtributo({ ...dto, id_lote: id });
-  }
-
-  @Patch('atributos/:id_atributo')
-  @UseGuards(...WRITE_GUARDS)
-  @Roles('productor', 'administrador')
-  updateAtributo(
-    @Param('id_atributo') id_atributo: string,
-    @Body() dto: UpdateLoteAtributoDto,
-  ) {
-    return this.service.updateAtributo(id_atributo, dto);
-  }
-
-  @Delete('atributos/:id_atributo')
-  @UseGuards(...WRITE_GUARDS)
-  @Roles('productor', 'administrador')
-  removeAtributo(@Param('id_atributo') id_atributo: string) {
-    return this.service.removeAtributo(id_atributo);
-  }
 }

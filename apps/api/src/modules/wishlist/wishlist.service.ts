@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { serializeBigInts, toBigIntId } from '../shared/serialize';
+import { serializeBigInts, toBigIntId } from '../../common/utilities/serialize';
 
 @Injectable()
 export class WishlistService {

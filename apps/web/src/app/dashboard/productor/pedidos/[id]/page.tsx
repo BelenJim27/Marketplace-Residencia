@@ -37,6 +37,8 @@ export default function DetalleOrdenProductor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generandoGuia, setGenerandoGuia] = useState(false);
+  const [refrescandoGuia, setRefrescandoGuia] = useState(false);
+  const [guiaPendiente, setGuiaPendiente] = useState(false);
   const [nuevoEstado, setNuevoEstado] = useState("");
   const [numeroRastreo, setNumeroRastreo] = useState("");
   const [tieneGuia, setTieneGuia] = useState(false);
@@ -110,18 +112,50 @@ export default function DetalleOrdenProductor() {
     try {
       const token = getCookie("token") || "";
       const guia = await api.envios.crearGuia(token, String(orden.envio.id_envio));
-      setSuccess(`Guía generada: ${guia.numero_guia}. Ya puedes descargar la etiqueta.`);
-      setNumeroRastreo(guia.numero_guia);
-      setTieneGuia(true);
-      // Actualizar estado local para que el botón desaparezca correctamente
-      setOrden((prev) =>
-        prev ? { ...prev, envio: { ...prev.envio, numero_rastreo: guia.numero_guia, tiene_guia: true } } : prev
-      );
+      if ((guia as any)?.pendiente) {
+        setGuiaPendiente(true);
+        setSuccess("La paquetería aceptó el envío y está generando la etiqueta. Puede tardar unos minutos; usa \"Refrescar\" para comprobar si ya está lista.");
+      } else {
+        setGuiaPendiente(false);
+        setSuccess(`Guía generada: ${guia.numero_guia}. Ya puedes descargar la etiqueta.`);
+        setNumeroRastreo(guia.numero_guia);
+        setTieneGuia(true);
+        setOrden((prev) =>
+          prev ? { ...prev, envio: { ...prev.envio, numero_rastreo: guia.numero_guia, tiene_guia: true } } : prev
+        );
+      }
     } catch (err: any) {
       const msg = err?.details?.message || err?.message || "Error al generar la guía";
       setError(msg);
     } finally {
       setGenerandoGuia(false);
+    }
+  };
+
+  const handleRefrescarGuia = async () => {
+    if (!orden?.envio?.id_envio) return;
+    setRefrescandoGuia(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const token = getCookie("token") || "";
+      const guia = await api.envios.refrescarGuia(token, String(orden.envio.id_envio));
+      if ((guia as any)?.pendiente) {
+        setSuccess("La etiqueta todavía se está generando. Intenta de nuevo en unos minutos.");
+      } else {
+        setGuiaPendiente(false);
+        setSuccess(`¡Guía lista! Número de rastreo: ${guia.numero_guia}. Ya puedes descargar la etiqueta.`);
+        setNumeroRastreo(guia.numero_guia);
+        setTieneGuia(true);
+        setOrden((prev) =>
+          prev ? { ...prev, envio: { ...prev.envio, numero_rastreo: guia.numero_guia, tiene_guia: true } } : prev
+        );
+      }
+    } catch (err: any) {
+      const msg = err?.details?.message || err?.message || "Error al refrescar la guía";
+      setError(msg);
+    } finally {
+      setRefrescandoGuia(false);
     }
   };
 
@@ -315,13 +349,22 @@ export default function DetalleOrdenProductor() {
               >
                 {saving ? "Guardando..." : "Guardar Tracking"}
               </button>
-              {orden.envio?.id_envio && !tieneGuia && (
+              {orden.envio?.id_envio && !tieneGuia && !guiaPendiente && (
                 <button
                   onClick={handleGenerarGuia}
                   disabled={generandoGuia || saving}
                   className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400"
                 >
                   {generandoGuia ? "Generando guía..." : "Generar Guía"}
+                </button>
+              )}
+              {guiaPendiente && (
+                <button
+                  onClick={handleRefrescarGuia}
+                  disabled={refrescandoGuia}
+                  className="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 disabled:bg-gray-400"
+                >
+                  {refrescandoGuia ? "Consultando..." : "Refrescar guía"}
                 </button>
               )}
             </div>

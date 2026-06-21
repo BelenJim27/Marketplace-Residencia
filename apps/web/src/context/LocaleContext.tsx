@@ -11,6 +11,8 @@ import checkoutES from "@/i18n/locales/es/checkout.json";
 import checkoutEN from "@/i18n/locales/en/checkout.json";
 import legalES from "@/i18n/locales/es/legal.json";
 import legalEN from "@/i18n/locales/en/legal.json";
+import soporteES from "@/i18n/locales/es/soporte.json";
+import soporteEN from "@/i18n/locales/en/soporte.json";
 
 export type Currency = "MXN" | "USD";
 
@@ -34,12 +36,14 @@ const translations: Record<string, Record<string, string>> = {
     ...catalogES,
     ...checkoutES,
     ...legalES,
+    ...soporteES,
   },
   en: {
     ...commonEN,
     ...catalogEN,
     ...checkoutEN,
     ...legalEN,
+    ...soporteEN,
   },
 };
 

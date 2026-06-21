@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Moneda } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { serializeBigInts, toBigIntId } from '../shared/serialize';
+import { serializeBigInts, toBigIntId } from '../../common/utilities/serialize';
 import { CreateCarritoItemDto, UpdateCarritoItemDto } from './dto/carrito.dto';
 
 @Injectable()

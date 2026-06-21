@@ -167,7 +167,7 @@ export function ProductoModal({
                   value={form.id_lote ?? ""}
                   onChange={handleLoteChange}
                   disabled={mode === "view"}
-                  placeholder="Sin lote asignado"
+                  placeholder="Selecciona un lote (obligatorio)"
                   options={lotes.map((l) => ({
                     label: `${l.codigo_lote}${l.nombre_comun ? ` · ${l.nombre_comun}` : ""}${l.marca ? ` · ${l.marca}` : ""}`,
                     value: String(l.id_lote),

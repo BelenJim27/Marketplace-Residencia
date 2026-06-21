@@ -48,6 +48,23 @@ export function persistAgeVerified(edadMinima: number): void {
   setCookieWithOptions(cookieName(edadMinima), "1", { days: COOKIE_DAYS });
 }
 
+export const GLOBAL_AGE_GATE_COOKIE = "age_gate_verified";
+
+const LS_KEY = "age_gate_verified_until";
+const DAYS_MS = COOKIE_DAYS * 24 * 60 * 60 * 1000;
+
+export function isGlobalAgeVerified(): boolean {
+  if (typeof window === "undefined") return false;
+  const val = localStorage.getItem(LS_KEY);
+  if (!val) return false;
+  return Date.now() < Number(val);
+}
+
+export function persistGlobalAgeVerified(): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(LS_KEY, String(Date.now() + DAYS_MS));
+}
+
 export function calcularEdadEnAnios(fechaNacimiento: Date | string, ref: Date = new Date()): number {
   const dob = typeof fechaNacimiento === "string" ? new Date(fechaNacimiento) : fechaNacimiento;
   let edad = ref.getFullYear() - dob.getFullYear();

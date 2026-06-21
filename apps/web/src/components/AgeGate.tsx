@@ -2,67 +2,85 @@
 
 import { useEffect, useState } from "react";
 import { Lock, AlertTriangle } from "lucide-react";
-import { calcularEdadEnAnios, isAgeVerified, persistAgeVerified } from "@/lib/edad";
+import {
+  calcularEdadEnAnios,
+  isAgeVerified,
+  persistAgeVerified,
+  isGlobalAgeVerified,
+  persistGlobalAgeVerified,
+} from "@/lib/edad";
 import { useLocale } from "@/context/LocaleContext";
 
+const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
 interface AgeGateProps {
-  /** Minimum age required by the product/category. null/0 => no gate. */
+  /** Minimum age required. null/0 => no gate (product mode only). */
   edadMinima: number | null | undefined;
-  /** When true, the gate is forced open even if the cookie exists (e.g. carrito add). */
+  /** "global": one-time gate for the whole tienda, managed by root-content. "product": per-product cookie. */
+  mode?: "global" | "product";
+  /** Force the gate open even if cookie exists (product mode only). */
   forceOpen?: boolean;
-  /** Called when user passes the gate. */
   onVerified?: () => void;
-  /** Called when user dismisses (clicks "Salir"). */
   onDeny?: () => void;
 }
 
-/**
- * Contextual age gate.
- *
- * Renders nothing when:
- *   - edadMinima is null/0 (product is unrestricted), or
- *   - the buyer already has the age_verified_{n} cookie (last 30 days).
- *
- * Otherwise mounts a blocking modal that asks for DOB, validates client-side, and
- * persists the cookie on success. The cookie is per-age-bracket so a single 21+
- * confirmation works for any 21+ product.
- */
-export function AgeGate({ edadMinima, forceOpen = false, onVerified, onDeny }: AgeGateProps) {
-  const { t } = useLocale();
-  const requires = typeof edadMinima === "number" && edadMinima > 0;
+export function AgeGate({ edadMinima, mode = "product", forceOpen = false, onVerified, onDeny }: AgeGateProps) {
+  const { t, locale } = useLocale();
+  const months = locale === "en" ? MONTHS_EN : MONTHS_ES;
+  const minAge = typeof edadMinima === "number" && edadMinima > 0 ? edadMinima : 18;
+  const requires = mode === "global" || (typeof edadMinima === "number" && edadMinima > 0);
+
   const [open, setOpen] = useState(false);
-  const [dob, setDob] = useState("");
+  const [day, setDay] = useState("");
+  const [month, setMonth] = useState("");
+  const [year, setYear] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!requires) {
-      setOpen(false);
+    if (mode === "global") {
+      // Parent (root-content) only renders this component when not yet verified
+      setOpen(true);
       return;
     }
-    if (forceOpen || !isAgeVerified(edadMinima)) {
-      setOpen(true);
-    }
-  }, [requires, edadMinima, forceOpen]);
+    if (!requires) { setOpen(false); return; }
+    if (forceOpen || !isAgeVerified(edadMinima as number)) setOpen(true);
+  }, [mode, requires, edadMinima, forceOpen]);
 
-  if (!requires || !open) return null;
+  if (!open) return null;
+
+  const currentYear = new Date().getFullYear();
+  const maxYear = currentYear - minAge;
+  const minYear = currentYear - 120;
+  const isFormFilled = !!day && !!month && !!year;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!dob) {
-      setError(t("Ingresa tu fecha de nacimiento."));
+    if (!isFormFilled) {
+      setError(t("Ingresa tu fecha de nacimiento completa."));
       return;
     }
-    const edad = calcularEdadEnAnios(dob);
-    if (Number.isNaN(edad) || edad < 0 || edad > 120) {
+    const d = Number(day), m = Number(month), y = Number(year);
+    const testDate = new Date(y, m - 1, d);
+    if (testDate.getFullYear() !== y || testDate.getMonth() !== m - 1 || testDate.getDate() !== d) {
+      setError(t("Fecha inválida. Verifica el día seleccionado."));
+      return;
+    }
+    const edad = calcularEdadEnAnios(testDate);
+    if (edad < minAge) {
+      setError(t("Debes tener al menos {n} años para acceder.").replace("{n}", String(minAge)));
+      return;
+    }
+    if (edad > 120) {
       setError(t("Fecha inválida."));
       return;
     }
-    if (edad < (edadMinima as number)) {
-      setError(t("Debes tener al menos {n} años para ver este producto.").replace("{n}", String(edadMinima)));
-      return;
+    if (mode === "global") {
+      persistGlobalAgeVerified();
+    } else {
+      persistAgeVerified(edadMinima as number);
     }
-    persistAgeVerified(edadMinima as number);
     setOpen(false);
     onVerified?.();
   };
@@ -72,6 +90,8 @@ export function AgeGate({ edadMinima, forceOpen = false, onVerified, onDeny }: A
     onDeny?.();
   };
 
+  const selectClass = "w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white";
+
   return (
     <div
       role="dialog"
@@ -79,35 +99,60 @@ export function AgeGate({ edadMinima, forceOpen = false, onVerified, onDeny }: A
       aria-labelledby="age-gate-title"
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4"
     >
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900">
         <div className="mb-3 flex items-center gap-2 text-amber-600 dark:text-amber-400">
           <AlertTriangle size={20} />
           <h2 id="age-gate-title" className="text-lg font-semibold">
             {t("Verifica tu edad")}
           </h2>
         </div>
-        <p className="mb-4 text-sm text-gray-700 dark:text-gray-300">
-          {(() => {
-            const [pre, post] = t("Este producto requiere que tengas al menos {n} años. Confirma tu fecha de nacimiento para continuar.").split("{n}");
-            return (<>{pre}<strong>{edadMinima}</strong>{post}</>);
-          })()}
+        <p className="mb-5 text-sm text-gray-700 dark:text-gray-300">
+          {t("Este sitio vende mezcal y bebidas de alto contenido alcohólico. Debes tener al menos {n} años para continuar.").replace("{n}", String(minAge))}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="age-gate-dob" className="mb-1 block text-sm text-gray-700 dark:text-gray-300">
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t("Fecha de nacimiento")}
             </label>
-            <input
-              id="age-gate-dob"
-              type="date"
-              value={dob}
-              onChange={(e) => setDob(e.target.value)}
-              max={new Date().toISOString().slice(0, 10)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-              autoFocus
-              required
-            />
+            <div className="grid grid-cols-3 gap-2">
+              <select
+                value={day}
+                onChange={(e) => setDay(e.target.value)}
+                className={selectClass}
+                aria-label={t("Día")}
+                autoFocus
+              >
+                <option value="">{t("Día")}</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>{String(d).padStart(2, "0")}</option>
+                ))}
+              </select>
+
+              <select
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className={selectClass}
+                aria-label={t("Mes")}
+              >
+                <option value="">{t("Mes")}</option>
+                {months.map((name, i) => (
+                  <option key={i + 1} value={i + 1}>{name}</option>
+                ))}
+              </select>
+
+              <select
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                className={selectClass}
+                aria-label={t("Año")}
+              >
+                <option value="">{t("Año")}</option>
+                {Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i).map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {error && (
@@ -126,7 +171,8 @@ export function AgeGate({ edadMinima, forceOpen = false, onVerified, onDeny }: A
             </button>
             <button
               type="submit"
-              className="flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+              disabled={!isFormFilled}
+              className="flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Lock size={14} />
               {t("Confirmar")}

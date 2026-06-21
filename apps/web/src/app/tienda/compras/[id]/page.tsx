@@ -39,6 +39,7 @@ interface Envio {
   costo_envio?: string;
   fecha_entrega_estimada?: string;
   transportistas?: { nombre: string };
+  envio_guias?: Array<{ payload_response?: Record<string, unknown> }>;
 }
 
 interface PedidoProductor {
@@ -952,6 +953,10 @@ function DetallePedidoContent() {
                     .map(d => d.productos?.nombre)
                     .filter(Boolean)
                 : [];
+              const carrierName =
+                (envio.envio_guias?.[0]?.payload_response as any)?.carrierName ??
+                envio.transportistas?.nombre ??
+                null;
               return (
                 <div key={id} style={{ marginBottom: envioIdx < enviosConGuia.length - 1 ? "20px" : "0" }}>
                   {/* Separador entre paquetes */}
@@ -994,7 +999,22 @@ function DetallePedidoContent() {
                       <Truck size={16} style={{ color: C.amber }} />
                     </div>
                     <div>
-                      <p style={{ fontSize: "12px", color: C.muted, margin: 0 }}>{t("Número de guía")}</p>
+                      <p style={{ fontSize: "12px", color: C.muted, margin: "0 0 4px 0" }}>{t("Número de guía")}</p>
+                      {carrierName && (
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", gap: "5px",
+                          fontSize: "12px", fontWeight: "700",
+                          padding: "3px 10px 3px 7px",
+                          borderRadius: "999px",
+                          background: "rgba(201,122,62,0.12)",
+                          color: C.copper,
+                          border: `1px solid rgba(201,122,62,0.30)`,
+                          marginBottom: "5px",
+                        }}>
+                          <Truck size={12} />
+                          {carrierName}
+                        </span>
+                      )}
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <p style={{ fontSize: "14px", fontWeight: "700", fontFamily: "monospace", color: C.text, margin: 0 }}>
                           {envio.numero_rastreo}

@@ -167,7 +167,7 @@ interface OrderDetail {
   };
 }
 
-const ESTADOS = ["todos", "pendiente", "confirmado", "preparando", "enviado", "entregado", "cancelado"];
+const ESTADOS = ["todos", "confirmado", "pendiente", "preparando", "enviado", "entregado", "cancelado"];
 const PAGE_SIZE = 10;
 
 const PRIORIDAD_ESTADO: Record<string, number> = {
@@ -804,7 +804,7 @@ export default function PedidosProductor() {
   const { user, isProductor } = useAuth();
   const [pedidos, setPedidos] = useState<PedidoProductor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtroEstado, setFiltroEstado] = useState("pendiente");
+  const [filtroEstado, setFiltroEstado] = useState("confirmado");
   const [currentPage, setCurrentPage] = useState(1);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<number | null>(null);
 

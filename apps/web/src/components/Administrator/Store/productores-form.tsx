@@ -2,7 +2,7 @@
 
 import { Loader2, Save, X } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../../../lib/api";
 import { getCookie } from "../../../lib/cookies";
 import { AlertService } from "../../../shared/alerts/alert.service";
@@ -77,6 +77,7 @@ export function ProductoresForm({
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [regiones, setRegiones] = useState<Region[]>([]);
+  const fotoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -287,21 +288,31 @@ export function ProductoresForm({
           <Field label="Foto del productor">
             <div className="space-y-2 sm:space-y-3">
               {!isReadOnly && (
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    if (file.size > 500 * 1024) {
-                      AlertService.showWarning("La imagen debe pesar menos de 500 KB.");
-                      event.target.value = "";
-                      return;
-                    }
-                    handleChange("foto", file);
-                  }}
-                  className="block w-full rounded-lg sm:rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] text-[#1F3A2E] px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm file:mr-2 sm:file:mr-4 file:rounded-md sm:file:rounded-lg file:border-0 file:bg-[#A8C26B]/20 file:px-2 sm:file:px-3 file:py-1 file:text-xs sm:file:text-sm file:font-semibold file:text-[#3D6B3F] hover:file:bg-[#A8C26B]/30"
-                />
+                <>
+                  <input
+                    ref={fotoInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 500 * 1024) {
+                        AlertService.showWarning("La imagen debe pesar menos de 500 KB.");
+                        event.target.value = "";
+                        return;
+                      }
+                      handleChange("foto", file);
+                    }}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fotoInputRef.current?.click()}
+                    className="rounded-lg sm:rounded-xl border border-[#C5CFB0] bg-[#A8C26B]/20 px-3 py-2 text-xs sm:text-sm font-semibold text-[#3D6B3F] hover:bg-[#A8C26B]/30 transition-colors"
+                  >
+                    Seleccionar imagen
+                  </button>
+                </>
               )}
               {form.foto && (
                 <div className="rounded-lg border border-[#C5CFB0] p-2 sm:p-3 bg-[#F4F0E3]">

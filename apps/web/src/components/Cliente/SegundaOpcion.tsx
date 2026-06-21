@@ -40,9 +40,8 @@ const STATS_ICONS = [
   <svg key="s1" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
   <svg key="s2" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
   <svg key="s3" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>,
-  <svg key="s4" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
 ];
-const STATS_KEYS = ["totalProductores", "totalRegiones", "totalProductos", "ingresosFormateado"] as const;
+const STATS_KEYS = ["totalProductores", "totalRegiones", "totalProductos"] as const;
 
 
 const BOTTLE_CARDS_STATIC = [
@@ -280,7 +279,6 @@ const LANDING_CFG_DEFAULTS = {
   landing_stat_label_1:    "Productores registrados",
   landing_stat_label_2:    "Comunidades participantes",
   landing_stat_label_3:    "Productos trazables",
-  landing_stat_label_4:    "Ingresos generados",
   // Trazabilidad
   landing_traza_eyebrow:  "Cada botella, una historia",
   landing_traza_heading:  "Escanea, descubre,",
@@ -329,6 +327,7 @@ export default function LandingPageOaxaca() {
   }, []);
 
   // ─── Config dinámica desde BD ─────────────────────────────────────────────
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [cfg, setCfg] = useState<LandingCfg>(LANDING_CFG_DEFAULTS);
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/configuracion/sistema/mapa`)
@@ -743,14 +742,14 @@ export default function LandingPageOaxaca() {
         {/* Cards */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr 1fr" : isTablet ? "1fr 1fr" : "repeat(4, 1fr)",
+          gridTemplateColumns: isMobile ? "1fr 1fr" : isTablet ? "1fr 1fr" : "repeat(3, 1fr)",
           gap: isMobile ? "12px" : "16px",
           width: "100%",
           maxWidth: "960px",
         }}>
           {STATS_KEYS.map((key, i) => {
             const valor = landingStats ? String(landingStats[key] ?? "—") : "…";
-            const label = [cfg.landing_stat_label_1, cfg.landing_stat_label_2, cfg.landing_stat_label_3, cfg.landing_stat_label_4][i];
+            const label = [cfg.landing_stat_label_1, cfg.landing_stat_label_2, cfg.landing_stat_label_3][i];
             return (
               <div key={i} style={{
                 display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
@@ -1073,6 +1072,79 @@ export default function LandingPageOaxaca() {
         </div>
       </div>
 
+
+      {/* ═══════════════════════════════════════════════════════════
+          FAQ + CONTACTO
+      ═══════════════════════════════════════════════════════════ */}
+      <section style={{ background: "#1F3A2E", padding: "64px 24px" }}>
+        <div style={{ maxWidth: "720px", margin: "0 auto" }}>
+          {/* Título */}
+          <p style={{ fontFamily: "Georgia, serif", color: "#A8C26B", fontSize: "12px", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "10px", textAlign: "center" }}>
+            {t("Ayuda")}
+          </p>
+          <h2 style={{ fontFamily: "Georgia, serif", fontSize: "clamp(24px,4vw,34px)", fontWeight: 700, color: "#F4F0E3", textAlign: "center", marginBottom: "40px" }}>
+            {t("soporte_faq_title")}
+          </h2>
+
+          {/* Acordeón FAQ */}
+          <div style={{ marginBottom: "32px" }}>
+            {([1, 2, 3, 4, 5, 6] as const).map((n) => (
+              <div key={n} style={{ borderBottom: "1px solid rgba(244,240,227,0.1)" }}>
+                <button
+                  onClick={() => setOpenFaq(openFaq === n ? null : n)}
+                  aria-expanded={openFaq === n}
+                  style={{
+                    display: "flex", width: "100%", alignItems: "center",
+                    justifyContent: "space-between", padding: "16px 0",
+                    background: "none", border: "none", cursor: "pointer",
+                    textAlign: "left", fontFamily: "Georgia, serif",
+                    fontSize: "15px", fontWeight: 600, color: "#F4F0E3",
+                  }}
+                >
+                  <span style={{ paddingRight: "16px", lineHeight: "1.4" }}>{t(`soporte_faq_q${n}`)}</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                    fill="none" stroke="#C97A3E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ flexShrink: 0, transition: "transform 0.2s", transform: openFaq === n ? "rotate(180deg)" : "rotate(0deg)" }}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                {openFaq === n && (
+                  <p style={{ paddingBottom: "16px", fontFamily: "Georgia, serif", fontSize: "14px", lineHeight: "1.7", color: "rgba(244,240,227,0.72)", margin: 0 }}>
+                    {t(`soporte_faq_a${n}`)}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* CTA Contacto */}
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", color: "rgba(244,240,227,0.6)", fontSize: "14px", marginBottom: "16px" }}>
+              {t("soporte_contact_subtitle")}
+            </p>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("open-chat-widget", { detail: { tab: "contacto" } }))}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: "8px",
+                padding: "12px 28px", borderRadius: "8px",
+                background: "#C97A3E", color: "#fff",
+                fontFamily: "Georgia, serif", fontSize: "14px", fontWeight: 600,
+                border: "none", cursor: "pointer", letterSpacing: "0.03em",
+                transition: "opacity 0.2s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+            >
+              {t("soporte_contact_title")}
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
 
           </main>
   );

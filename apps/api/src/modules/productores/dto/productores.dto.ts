@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsEmail, IsInt, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, ValidateNested } from 'class-validator';
 export class CreateProductorDto {
   @IsString() id_usuario!: string;
   @IsOptional() @IsInt() @Type(() => Number) id_region?: number;
@@ -86,7 +86,7 @@ export class ActualizarPerfilProductorDto {
   @IsOptional() @IsString() @MaxLength(13) rfc?: string;
   @IsOptional() @IsString() @MaxLength(200) razon_social?: string;
   @IsOptional() @IsString() datos_bancarios?: string;
-  @IsOptional() @IsString() @MaxLength(254) paypal_email?: string;
+  @IsOptional() @IsEmail() @MaxLength(254) paypal_email?: string;
   @IsOptional() @ValidateNested() @Type(() => DireccionFiscalDto) direccion_fiscal?: DireccionFiscalDto;
   @IsOptional() @ValidateNested() @Type(() => DireccionProduccionDto) direccion_produccion?: DireccionProduccionDto;
 }

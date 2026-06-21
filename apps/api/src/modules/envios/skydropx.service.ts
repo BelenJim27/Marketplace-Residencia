@@ -109,7 +109,10 @@ export class SkydropxService implements ICarrierService {
     } catch (err: any) {
       const status = err?.response?.status;
       const data = err?.response?.data;
-      this.logger.error(`POST ${path} [${status}]: ${JSON.stringify(data ?? err?.message)}`);
+      const snippet = typeof data === 'string'
+        ? data.replace(/<[^>]+>/g, '').trim().slice(0, 200)
+        : JSON.stringify(data ?? err?.message);
+      this.logger.error(`POST ${path} [${status}]: ${snippet}`);
       const errBody = data as any;
       const msg = errBody?.errors ?? errBody?.message ?? errBody?.error ?? err?.message ?? 'Error SkydropX';
       throw new HttpException(`SkydropX: ${msg}`, status ?? HttpStatus.BAD_GATEWAY);
@@ -128,7 +131,10 @@ export class SkydropxService implements ICarrierService {
     } catch (err: any) {
       const status = err?.response?.status;
       const data = err?.response?.data;
-      this.logger.error(`GET ${path} [${status}]: ${JSON.stringify(data ?? err?.message)}`);
+      const snippet = typeof data === 'string'
+        ? data.replace(/<[^>]+>/g, '').trim().slice(0, 200)
+        : JSON.stringify(data ?? err?.message);
+      this.logger.error(`GET ${path} [${status}]: ${snippet}`);
       const msg = (data as any)?.message ?? err?.message ?? 'Error SkydropX';
       throw new HttpException(`SkydropX: ${msg}`, status ?? HttpStatus.BAD_GATEWAY);
     }
@@ -161,17 +167,44 @@ export class SkydropxService implements ICarrierService {
   private buildShipperIdentity(productor?: {
     nombre_marca?: string | null;
     rfc?: string | null;
-    direccion_bodega?: { linea_1?: string | null; telefono?: string | null } | null;
+    usuarios?: { nombre?: string | null; email?: string | null } | null;
+    direccion_bodega?: {
+      linea_1?: string | null;
+      telefono?: string | null;
+      referencia?: string | null;
+    } | null;
   } | null) {
     return {
-      name: productor?.nombre_marca ?? this.shipperName,
-      company: '',
-      reference: productor?.nombre_marca ?? this.shipperName,
-      street1: productor?.direccion_bodega?.linea_1 ?? this.shipperStreet,
-      phone: productor?.direccion_bodega?.telefono ?? this.shipperPhone,
-      email: this.shipperEmail,
-      ...(productor?.rfc ? { tax_id: productor.rfc } : {}),
+      name:      this.trunc(productor?.usuarios?.nombre ?? productor?.nombre_marca ?? this.shipperName, 60),
+      company:   this.trunc(productor?.nombre_marca ?? this.shipperName, 60),
+      reference: this.trunc(productor?.direccion_bodega?.referencia, 30),
+      street1:   this.trunc(productor?.direccion_bodega?.linea_1 ?? this.shipperStreet, 60),
+      phone:     productor?.direccion_bodega?.telefono ?? this.shipperPhone,
+      email:     productor?.usuarios?.email ?? this.shipperEmail,
+      ...(productor?.rfc ? { tax_id_number: productor.rfc } : {}),
     };
+  }
+
+  private trunc(s: string | null | undefined, max: number): string {
+    return (s ?? '').slice(0, max);
+  }
+
+  /** Normalizes abbreviated Mexican state names to their full official names. */
+  private normalizeStateName(state: string): string {
+    const map: Record<string, string> = {
+      AGS: 'Aguascalientes', BC: 'Baja California', BCS: 'Baja California Sur',
+      CAMP: 'Campeche', CHIS: 'Chiapas', CHIH: 'Chihuahua',
+      CDMX: 'Ciudad de México', DF: 'Ciudad de México', COAH: 'Coahuila de Zaragoza',
+      COL: 'Colima', DGO: 'Durango', GTO: 'Guanajuato', GRO: 'Guerrero',
+      HGO: 'Hidalgo', JAL: 'Jalisco', MEX: 'Estado de México', MICH: 'Michoacán de Ocampo',
+      MOR: 'Morelos', NAY: 'Nayarit', NL: 'Nuevo León', OAX: 'Oaxaca',
+      PUE: 'Puebla', QRO: 'Querétaro', QROO: 'Quintana Roo',
+      SLP: 'San Luis Potosí', SIN: 'Sinaloa', SON: 'Sonora', TAB: 'Tabasco',
+      TAMPS: 'Tamaulipas', TLAX: 'Tlaxcala', VER: 'Veracruz de Ignacio de la Llave',
+      YUC: 'Yucatán', ZAC: 'Zacatecas',
+    };
+    const key = state.trim().toUpperCase().replace(/\./g, '');
+    return map[key] ?? state;
   }
 
   /** Builds the parcel object for quotation (Rails body key: parcel). */
@@ -180,14 +213,14 @@ export class SkydropxService implements ICarrierService {
     largo_cm?: number | null;
     ancho_cm?: number | null;
     alto_cm?: number | null;
-  }) {
+  }, consignmentCode: string) {
     return {
       weight: Number(dims.peso_kg ?? 1),
       length: Number(dims.largo_cm ?? 40),
       width: Number(dims.ancho_cm ?? 30),
       height: Number(dims.alto_cm ?? 20),
-      consignment_note: 'CP',
-      package_type: 'BX',
+      consignment_note: consignmentCode,
+      package_type: '4G',
     };
   }
 
@@ -213,19 +246,23 @@ export class SkydropxService implements ICarrierService {
   private buildShipmentPackages(
     dims: { peso_kg?: any; largo_cm?: any; ancho_cm?: any; alto_cm?: any },
     consignmentCode: string,
-    declaredValueUsd?: number,
+    declaredValueCarrier?: number,
+    products?: object[],
+    packageProtected = false,
   ) {
     return [{
-      package_number: 1,
+      package_number: '1',
+      ...(packageProtected ? { package_protected: true } : {}),
       weight: Number(dims.peso_kg ?? 1),
       length: Number(dims.largo_cm ?? 40),
       width: Number(dims.ancho_cm ?? 30),
       height: Number(dims.alto_cm ?? 20),
       consignment_note: consignmentCode,
       package_type: '4G',
-      ...(declaredValueUsd && declaredValueUsd > 0
-        ? { declared_value: String(Math.round(declaredValueUsd * 100) / 100) }
+      ...(declaredValueCarrier != null && declaredValueCarrier > 0
+        ? { declared_value: Math.round(declaredValueCarrier * 100) / 100 }
         : {}),
+      ...(products?.length ? { products } : {}),
     }];
   }
 
@@ -260,7 +297,8 @@ export class SkydropxService implements ICarrierService {
 
     const tipo: 'nacional' | 'internacional' = destPais === 'MX' ? 'nacional' : 'internacional';
 
-    const parcel = this.buildQuotationParcel(dto);
+    const consignmentCode = await this.getConsignmentNoteCode();
+    const parcel = this.buildQuotationParcel(dto, consignmentCode);
     const fromAddress = this.buildFromAddress(dto.shipper);
     this.logger.log(
       `[cotizarEnvio] payload → from CP=${fromAddress.postal_code} | to CP=${dto.destino.codigo_postal} país=${destPais} | ` +
@@ -351,6 +389,8 @@ export class SkydropxService implements ICarrierService {
           moneda: (rate.currency_code ?? rate.currency ?? rate.currency_local ?? 'MXN') as string,
           fechaEntregaEstimada: fechaEstimada,
           diasHabilesEstimados: dias,
+          skydropxQuotationId: String(completed.id),
+          skydropxRateId: String(rate.id ?? rate.rate_id),
         } satisfies ShippingQuote;
       })
       .filter((q) => q.precioTotal > 0)  // descartar tarifas sin precio confirmado
@@ -493,8 +533,11 @@ export class SkydropxService implements ICarrierService {
     const productor = (envio as any).productor as {
       nombre_marca?: string | null;
       rfc?: string | null;
+      usuarios?: { nombre?: string | null; email?: string | null } | null;
       direccion_bodega?: {
         linea_1?: string | null;
+        colonia?: string | null;
+        referencia?: string | null;
         ciudad?: string | null;
         estado?: string | null;
         codigo_postal?: string | null;
@@ -507,10 +550,13 @@ export class SkydropxService implements ICarrierService {
       codigo_postal: productor?.direccion_bodega?.codigo_postal,
       estado: productor?.direccion_bodega?.estado,
       ciudad: productor?.direccion_bodega?.ciudad,
-      colonia: (productor?.direccion_bodega as any)?.colonia,
+      colonia: productor?.direccion_bodega?.colonia,
     });
 
-    const valorDeclaradoUsd = Math.round((Number((envio as any).valor_declarado_usd) || 50) * 100) / 100;
+    const rawValorDeclarado = (envio as any).valor_declarado_usd;
+    const valorDeclaradoUsd: number | undefined = rawValorDeclarado != null
+      ? Math.round(Number(rawValorDeclarado) * 100) / 100
+      : undefined;
 
     // Fetch consignment note code once — reused in both quotation parcel and shipment packages
     // so that SkydropX prices both with identical packaging parameters.
@@ -542,7 +588,7 @@ export class SkydropxService implements ICarrierService {
       shipmentQuotationBody.products = [{
         description_en: 'Artisanal agave distillate mezcal from Oaxaca Mexico',
         quantity: 1,
-        price: valorDeclaradoUsd,
+        price: valorDeclaradoUsd ?? 50,
         weight: Number(envio.peso_kg ?? 1),
         hs_code: resolvedHsCode,
         // UNSPSC obligatorio para envíos internacionales (SkydropX: "Código de tipo de
@@ -552,21 +598,40 @@ export class SkydropxService implements ICarrierService {
         country_code: 'MX',
       }];
     }
-    let quotationRaw: any;
-    try {
-      quotationRaw = await this.post<any>('/quotations', { quotation: shipmentQuotationBody });
-    } catch (err: any) {
-      const body = (err as any)?.response?.data ?? {};
-      if (this.isHsCodeError(body)) {
-        this.logger.warn(`[createShipment] SkydropX rechazó el código HS "${resolvedHsCode}" al cotizar el envío internacional a ${destPais}.`);
-        this.throwHsCodeError(resolvedHsCode);
+    // Intentar reutilizar la cotización guardada en checkout para garantizar el mismo precio.
+    // Los IDs se guardan en envio_cotizaciones.payload_response y se pasan desde crearGuia().
+    const storedQuotationId: string | undefined = (envio as any).skydropx_quotation_id;
+    const storedRateId: string | undefined = (envio as any).skydropx_rate_id;
+
+    let quotation: any = null;
+    if (storedQuotationId) {
+      try {
+        const q = await this.get<any>(`/quotations/${storedQuotationId}`);
+        if (q.is_completed || this.hasSuccessfulRate(q)) {
+          quotation = q;
+          this.logger.log(`[createShipment] Reutilizando cotización guardada ${storedQuotationId} → precio garantizado`);
+        }
+      } catch {
+        this.logger.warn(`[createShipment] Cotización guardada ${storedQuotationId} expirada o inválida → re-cotizando`);
       }
-      throw err;
     }
 
-    const quotation = (quotationRaw.is_completed || this.hasSuccessfulRate(quotationRaw))
-      ? quotationRaw
-      : await this.pollQuotation(quotationRaw.id);
+    if (!quotation) {
+      let quotationRaw: any;
+      try {
+        quotationRaw = await this.post<any>('/quotations', { quotation: shipmentQuotationBody });
+      } catch (err: any) {
+        const body = (err as any)?.response?.data ?? {};
+        if (this.isHsCodeError(body)) {
+          this.logger.warn(`[createShipment] SkydropX rechazó el código HS "${resolvedHsCode}" al cotizar el envío internacional a ${destPais}.`);
+          this.throwHsCodeError(resolvedHsCode);
+        }
+        throw err;
+      }
+      quotation = (quotationRaw.is_completed || this.hasSuccessfulRate(quotationRaw))
+        ? quotationRaw
+        : await this.pollQuotation(quotationRaw.id);
+    }
 
     const quotationKeys = Object.keys(quotation).filter(k => k !== 'rates');
     this.logger.debug(`[createShipment] quotation keys=${quotationKeys.join(',')} packages=${JSON.stringify(quotation.packages ?? quotation.parcel ?? quotation.parcels ?? '?')}`);
@@ -596,20 +661,23 @@ export class SkydropxService implements ICarrierService {
       )}`,
     );
 
-    const matchedRate = rates.find((r) => {
-      const rProvider = (
-        r.provider_display_name ?? r.provider_name ?? r.carrier_name ?? r.provider ?? ''
-      ).toLowerCase();
-      const rService = (
-        r.provider_service_name ?? r.service ?? r.service_level_name ?? ''
-      ).toLowerCase();
-      return (
-        (preferred_provider &&
-          (rProvider.includes(preferred_provider) || preferred_provider.includes(rProvider))) ||
-        (preferred_service &&
-          (rService.includes(preferred_service) || preferred_service.includes(rService)))
-      );
-    });
+    // Prioridad: 1) rate_id exacto guardado, 2) nombre de proveedor/servicio
+    const matchedRate =
+      (storedRateId && rates.find(r => String(r.id ?? r.rate_id) === storedRateId)) ??
+      rates.find((r) => {
+        const rProvider = (
+          r.provider_display_name ?? r.provider_name ?? r.carrier_name ?? r.provider ?? ''
+        ).toLowerCase();
+        const rService = (
+          r.provider_service_name ?? r.service ?? r.service_level_name ?? ''
+        ).toLowerCase();
+        return (
+          (preferred_provider &&
+            (rProvider.includes(preferred_provider) || preferred_provider.includes(rProvider))) ||
+          (preferred_service &&
+            (rService.includes(preferred_service) || preferred_service.includes(rService)))
+        );
+      });
 
     const cheapestRate = [...rates].sort((a, b) =>
       parseFloat(a.total ?? a.price ?? '0') - parseFloat(b.total ?? b.price ?? '0'),
@@ -635,6 +703,14 @@ export class SkydropxService implements ICarrierService {
       shipment: {
         quotation_id: quotation.id,
         rate_id: selectedRate.id ?? selectedRate.rate_id,
+        auto_advance: false,
+        unique_shipment: false,
+        printing_format: 'thermal',
+        include_order_detail: false,
+        office_delivery: false,
+        office_pickup: false,
+        office_delivery_point_id: null,
+        office_pickup_point_id: null,
         address_from: {
           ...this.buildShipperIdentity(productor),
           postal_code: fromAddress.postal_code,
@@ -644,19 +720,25 @@ export class SkydropxService implements ICarrierService {
           area_level3: fromAddress.area_level3,
         },
         address_to: {
-          name: snap.nombre_destinatario ?? snap.nombre ?? 'Destinatario',
-          company: '',
-          reference: pedidoRef,
-          street1: snap.calle ?? snap.linea_1 ?? snap.direccion ?? '',
-          phone: snap.telefono ?? snap.phone ?? '0000000000',
-          email: snap.email || this.shipperEmail,
+          name:        this.trunc(snap.nombre_destinatario ?? snap.nombre ?? 'Destinatario', 60),
+          company:     '',
+          reference:   this.trunc(snap.referencia ?? snap.linea_2, 30),
+          street1:     this.trunc(snap.calle ?? snap.linea_1 ?? snap.direccion, 60),
+          phone:       snap.telefono ?? snap.phone ?? '0000000000',
+          email:       (envio as any).cliente_email ?? snap.email ?? this.shipperEmail,
           postal_code: snap.codigo_postal ?? '',
           country_code: destPais,
-          area_level1: snap.estado_codigo ?? snap.estado ?? '',
+          area_level1: this.normalizeStateName(snap.estado_codigo ?? snap.estado ?? ''),
           area_level2: snap.ciudad ?? '',
-          area_level3: snap.colonia ?? snap.ciudad ?? 'Centro',
+          area_level3: snap.colonia ?? 'Centro',
         },
-        packages: this.buildShipmentPackages(envio, consignmentNoteCode, valorDeclaradoUsd),
+        packages: this.buildShipmentPackages(
+          envio,
+          consignmentNoteCode,
+          valorDeclaradoUsd,
+          destPais !== 'MX' ? shipmentQuotationBody.products : undefined,
+          (envio as any).solicitar_proteccion === true,
+        ),
         ...(requiresAdultSignature ? {
           adult_signature: true,
           content_description: (envio as any).contenido_descripcion ?? 'Destilado de agave artesanal',
@@ -666,7 +748,6 @@ export class SkydropxService implements ICarrierService {
           // SkydropX Pro: valores permitidos `goods`, `documents`, `sample`,
           // `return_of_goods`, `gift`, `humanitarian_donation` (NO `commercial`).
           shipment_purpose: this.config.get('SKYDROPX_SHIPMENT_PURPOSE', 'goods'),
-          products: shipmentQuotationBody.products,
         } : {}),
       },
     };
@@ -693,7 +774,7 @@ export class SkydropxService implements ICarrierService {
     }
 
     let resolvedShipment = shipment;
-    for (let attempt = 0; attempt < 20; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
       await this.delay(2000);
       resolvedShipment = await this.get<any>(`/shipments/${shipmentId}`);
       const pkg = (resolvedShipment?.included ?? []).find(

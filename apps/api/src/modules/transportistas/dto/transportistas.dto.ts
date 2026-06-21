@@ -22,13 +22,3 @@ export class CreateServicioEnvioDto {
 }
 export class UpdateServicioEnvioDto extends PartialType(CreateServicioEnvioDto) {}
 
-export class CreateIntegracionEnvioDto {
-  @IsInt() @Type(() => Number) id_transportista!: number;
-  @IsOptional() @IsString() @MaxLength(20) entorno?: string;
-  @IsOptional() @IsString() api_url?: string;
-  @IsOptional() api_key?: string;
-  @IsOptional() api_secret?: string;
-  @IsOptional() credenciales_extra?: Record<string, unknown>;
-  @IsOptional() @IsBoolean() activo?: boolean;
-}
-export class UpdateIntegracionEnvioDto extends PartialType(CreateIntegracionEnvioDto) {}

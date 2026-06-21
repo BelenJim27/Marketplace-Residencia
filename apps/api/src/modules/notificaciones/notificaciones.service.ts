@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
-import { serializeBigInts, toBigIntId } from '../shared/serialize';
+import { serializeBigInts, toBigIntId } from '../../common/utilities/serialize';
 import { CreateNotificacionDto, UpdateNotificacionDto } from './dto/notificaciones.dto';
 
 @Injectable()

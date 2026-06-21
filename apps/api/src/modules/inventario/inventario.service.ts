@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { NotificacionesService } from "../notificaciones/notificaciones.service";
-import { serializeBigInts, toBigIntId } from "../shared/serialize";
+import { serializeBigInts, toBigIntId } from "../../common/utilities/serialize";
 import {
   CreateInventarioDto,
   CreateMovimientoInventarioDto,

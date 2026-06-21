@@ -13,8 +13,8 @@ import {
 import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
 import type { AgregarProductoResult, CarritoItem, CarritoContextType } from "@/types/carrito";
-import { getEdadMinima, isAgeVerified } from "@/lib/edad";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 function getToken(): string {
   return getCookie("token") || "";
@@ -196,13 +196,9 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
   }, [currentUserId, items, syncing]);
 
   const agregarProducto = useCallback((producto: { [key: string]: any }): AgregarProductoResult => {
-    if (isStaff) return { ok: false, reason: "not_allowed" as any };
-    // Trigger 2 — block age-restricted products unless cookie is set.
-    // Trigger 3 (server) is the authoritative check, but blocking here avoids polluting
-    // the carrito with items the buyer cannot legally check out with.
-    const edadRequerida = getEdadMinima(producto as any);
-    if (edadRequerida && !isAgeVerified(edadRequerida)) {
-      return { ok: false, reason: "age_required", edadRequerida };
+    if (isStaff) {
+      toast.error("Los productores no pueden realizar compras en la tienda");
+      return { ok: false, reason: "not_allowed" as any };
     }
 
     setItems((prev) => {

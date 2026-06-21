@@ -148,6 +148,12 @@ export function useProductos() {
     [stores],
   );
 
+  const lotesDisponibles = useMemo(() => {
+    if (mode !== "create") return lotes;
+    const usados = new Set(products.map((p) => String(p.id_lote)).filter(Boolean));
+    return lotes.filter((l) => !usados.has(String(l.id_lote)));
+  }, [lotes, products, mode]);
+
   const visibleProducts = useMemo(() => {
     const q = query.toLowerCase().trim();
     const min = minPrice === "" ? null : Number(minPrice);
@@ -362,11 +368,21 @@ export function useProductos() {
 
     if (!form.nombre.trim()) { setError("El nombre del producto es obligatorio."); return; }
     const precioNum = Number(form.precio_base);
-    if (!form.precio_base.trim() || isNaN(precioNum) || precioNum < 0) {
-      setError("El precio base es obligatorio y debe ser un número válido."); return;
+    if (!form.precio_base.trim() || isNaN(precioNum) || precioNum <= 0) {
+      setError("El precio base es obligatorio y debe ser mayor a cero."); return;
     }
     if (!form.id_tienda || Number(form.id_tienda) === 0) {
       setError("Debes seleccionar una tienda."); return;
+    }
+    if (!form.id_lote) { setError("Debes seleccionar un lote de trazabilidad."); return; }
+    if (!form.descripcion.trim()) { setError("La descripción es obligatoria."); return; }
+    if (!form.id_categoria) { setError("Debes seleccionar una categoría."); return; }
+    if (mode === "create") {
+      const loteEnUso = products.some((p) => String(p.id_lote) === form.id_lote);
+      if (loteEnUso) {
+        setError("Este lote ya tiene un producto asignado. Solo se permite un producto por lote.");
+        return;
+      }
     }
 
     setSaving(true);
@@ -549,6 +565,7 @@ export function useProductos() {
     openView,
     closeModal,
     handleLoteChange,
+    lotesDisponibles,
     handleSubmit,
     handleDelete,
     handleDeleteSelected,

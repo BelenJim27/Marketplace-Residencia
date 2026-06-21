@@ -201,8 +201,8 @@ export default function AuditoriaUI() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-[#C5CFB0] dark:border-[#2A4830] shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
+        <table className="w-full min-w-[700px] text-sm">
           <thead className="bg-[#1F3A2E] text-xs font-semibold text-white uppercase tracking-wider">
             <tr>
               <th className="px-4 py-3 text-left">

@@ -3,7 +3,7 @@ import { Moneda, Prisma, usuarios } from '@prisma/client';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
-import { serializeBigInts } from '../shared/serialize';
+import { serializeBigInts } from '../../common/utilities/serialize';
 import { AssignUsuarioRolDto, CreateUsuarioDto, UpdateUsuarioDto } from './dto/usuarios.dto';
 
 @Injectable()

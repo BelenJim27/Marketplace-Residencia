@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import type { PropsWithChildren } from "react";
 import { Header } from "@/components/Layouts/header";
 import { Sidebar } from "@/components/Layouts/sidebar";
@@ -9,9 +9,12 @@ import { SidebarProvider } from "@/context/SidebarContext";
 import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
 import { useAuth } from "@/context/AuthContext";
 import Footer from "@/components/Cliente/Footer";
+import AgeGate from "@/components/AgeGate";
+import { isGlobalAgeVerified } from "@/lib/edad";
 
 export function RootContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, loading, isAdmin, isProductor, isAuthenticated } = useAuth();
 
   const isLoggedIn = isAuthenticated && !!user && (user.roles.length > 0 || (user.permisos?.length ?? 0) > 0);
@@ -33,6 +36,22 @@ export function RootContent({ children }: PropsWithChildren) {
   const isClientOnlyRoute = p.startsWith("/tienda/") || p.startsWith("/cliente/");
   const isClientHome = p === "/cliente/inicio";
   const isSolicitarRoute = p === "/dashboard/productor/solicitar";
+
+  // Rutas que requieren verificación de edad global
+  const needsAgeGate =
+    p.startsWith("/tienda/") ||
+    p.startsWith("/cliente/producto") ||
+    pathname.startsWith("/producto/") ||
+    pathname === "/producto";
+
+  // Se inicializa en true (SSR-safe) y el efecto comprueba la cookie real en cliente
+  const [ageVerified, setAgeVerified] = useState(true);
+
+  useEffect(() => {
+    if (needsAgeGate && !ageVerified) {
+      setAgeVerified(isGlobalAgeVerified());
+    }
+  }, [needsAgeGate, pathname]);
 
   if (loading) {
     if (user && (isAdmin || isProductor)) {
@@ -108,6 +127,14 @@ export function RootContent({ children }: PropsWithChildren) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
+        {!ageVerified && needsAgeGate && (
+          <AgeGate
+            mode="global"
+            edadMinima={18}
+            onVerified={() => setAgeVerified(true)}
+            onDeny={() => router.push("/")}
+          />
+        )}
         <main className={`flex-1 w-full overflow-hidden ${isCatalogo ? "" : "mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10"}`}>
           {children}
         </main>
@@ -123,6 +150,14 @@ export function RootContent({ children }: PropsWithChildren) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
+        {!ageVerified && needsAgeGate && (
+          <AgeGate
+            mode="global"
+            edadMinima={18}
+            onVerified={() => setAgeVerified(true)}
+            onDeny={() => router.push("/")}
+          />
+        )}
         <main className="flex-1 mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
           {children}
         </main>

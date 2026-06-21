@@ -23,11 +23,16 @@ const C = {
 
 function PagoExitosoContent() {
   const searchParams = useSearchParams();
-  const pedidoId = searchParams.get("pedido");
+  const pedidoIdFromUrl = searchParams.get("pedido");
   const numeroOrden = searchParams.get("num");
+  // PayPal redirect-flow params (when browser blocks popup, PayPal does full redirect)
+  const paypalToken = searchParams.get("token");
+  const payerID = searchParams.get("PayerID");
   const { limpiarCarrito } = useCarrito();
   const { t } = useLocale();
 
+  const [pedidoId, setPedidoId] = useState<string | null>(pedidoIdFromUrl);
+  const [captureState, setCaptureState] = useState<"idle" | "capturing" | "done" | "error">("idle");
   const [numeroRastreo, setNumeroRastreo] = useState<string | null>(null);
   const [estadoEnvio, setEstadoEnvio] = useState<string | null>(null);
   const [mostrarFactura, setMostrarFactura] = useState(false);
@@ -46,6 +51,25 @@ function PagoExitosoContent() {
     localStorage.removeItem("checkout_factura");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Handle PayPal redirect flow: when popup is blocked, PayPal redirects here with
+  // ?token=<orderId>&PayerID=<id> instead of calling onApprove. We must capture manually.
+  useEffect(() => {
+    if (pedidoIdFromUrl) { setPedidoId(pedidoIdFromUrl); return; }
+    if (!paypalToken || !payerID || captureState !== "idle") return;
+    const authToken = getCookie("token");
+    if (!authToken) { setCaptureState("error"); return; }
+
+    setCaptureState("capturing");
+    api.pagos.paypal.captureOrder(authToken, { paypal_order_id: paypalToken })
+      .then((res: any) => {
+        const id = res?.id_pedido ?? res?.pedidos?.id_pedido;
+        if (id) setPedidoId(String(id));
+        setCaptureState("done");
+      })
+      .catch(() => setCaptureState("error"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedidoIdFromUrl, paypalToken, payerID]);
 
   useEffect(() => {
     if (!pedidoId) return;
@@ -158,6 +182,29 @@ function PagoExitosoContent() {
         border: `1px solid ${C.border}`, boxShadow: "0 8px 40px rgba(0,0,0,0.07)",
         animation: "fadeUp .5s ease both",
       }}>
+        {captureState === "capturing" && (
+          <div style={{ textAlign: "center", padding: "24px 0" }}>
+            <Loader2 size={40} className="animate-spin" style={{ color: C.green, margin: "0 auto 16px" }} />
+            <p style={{ color: C.muted, fontSize: "14px" }}>{t("Confirmando pago con PayPal…")}</p>
+          </div>
+        )}
+
+        {captureState === "error" && !pedidoId && (
+          <div style={{ textAlign: "center", padding: "24px 0" }}>
+            <p style={{ color: "#DC2626", fontSize: "14px", marginBottom: "16px" }}>
+              {t("Hubo un problema al confirmar el pago. Si se realizó el cargo, aparecerá en tu sección de compras en unos minutos.")}
+            </p>
+            <Link
+              href="/tienda/compras"
+              style={{ color: C.green, fontSize: "14px", fontWeight: "600", textDecoration: "underline" }}
+            >
+              {t("Ver mis compras")}
+            </Link>
+          </div>
+        )}
+
+        {captureState !== "capturing" && (captureState !== "error" || !!pedidoId) && (
+        <>
         {/* Icono éxito */}
         <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
           <div style={{
@@ -374,6 +421,8 @@ function PagoExitosoContent() {
             {t("Seguir comprando")}
           </Link>
         </div>
+        </>
+        )}
       </div>
     </main>
     </div>

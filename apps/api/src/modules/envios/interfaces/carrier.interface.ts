@@ -11,6 +11,9 @@ export interface ShippingQuote {
   moneda: string;
   fechaEntregaEstimada: string;
   diasHabilesEstimados: number;
+  /** IDs para reutilizar la cotización exacta en createShipment y evitar discrepancia de precio */
+  skydropxQuotationId?: string;
+  skydropxRateId?: string;
 }
 
 export interface TrackingEvent {

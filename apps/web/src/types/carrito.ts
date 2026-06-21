@@ -19,7 +19,6 @@ export interface CarritoItem extends ProductoCarrito {
 
 export type AgregarProductoResult =
   | { ok: true }
-  | { ok: false; reason: "age_required"; edadRequerida: number }
   | { ok: false; reason: "not_authenticated" };
 
 export interface CarritoContextType {

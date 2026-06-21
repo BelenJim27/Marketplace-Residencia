@@ -99,7 +99,6 @@ export class EstadisticasLandingService {
             imagen_principal_url: true,
             lotes: {
               include: {
-                lote_atributos: { orderBy: { fecha_obtencion: 'asc' } },
                 productores: { select: { nombre_marca: true } },
                 regiones: { select: { nombre: true } },
               },
@@ -147,12 +146,6 @@ export class EstadisticasLandingService {
                 url_foto_especie: lote.url_foto_especie ?? null,
                 productor: lote.productores?.nombre_marca ?? null,
                 region: lote.regiones?.nombre ?? null,
-                atributos: lote.lote_atributos.map((a: any) => ({
-                  clave: a.clave,
-                  valor: a.valor ?? null,
-                  unidad: a.unidad ?? null,
-                  fecha: a.fecha_obtencion,
-                })),
               }
             : null,
         });

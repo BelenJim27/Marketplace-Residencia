@@ -3,8 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
-import { serializeBigInts } from '../shared/serialize';
-import { CreateLoteAtributoDto, CreateLoteDto, UpdateLoteAtributoDto, UpdateLoteDto } from './dto/lotes.dto';
+import { serializeBigInts } from '../../common/utilities/serialize';
+import { CreateLoteDto, UpdateLoteDto } from './dto/lotes.dto';
 
 const API_TRAZABILIDAD = 'https://geoportal-trazabilidad-1.onrender.com/lotes/publico';
 
@@ -22,7 +22,7 @@ export class LotesService {
     const [items, total] = await Promise.all([
       this.prisma.lotes.findMany({
         where,
-        include: { lote_atributos: true, productores: true, regiones: true },
+        include: { productores: true, regiones: true },
         take: limite,
         skip,
       }),
@@ -36,7 +36,6 @@ export class LotesService {
       await this.prisma.lotes.findMany({
         where: { id_productor, eliminado_en: null },
         include: {
-          lote_atributos: true,
           productores: true,
           regiones: true,
           productos: {
@@ -117,7 +116,7 @@ export class LotesService {
   async findOne(id_lote: number) {
     const item = await this.prisma.lotes.findUnique({
       where: { id_lote },
-      include: { lote_atributos: true, productores: true, regiones: true },
+      include: { productores: true, regiones: true },
     });
     if (!item || item.eliminado_en) throw new NotFoundException('Lote no encontrado');
     return serializeBigInts(item);
@@ -633,44 +632,6 @@ export class LotesService {
 
     this.logger.log(`Sincronización completa: ${JSON.stringify(resultados)}`);
     return resultados;
-  }
-
-  // ─── ATRIBUTOS ────────────────────────────────────────────────────────────────
-
-  async addAtributo(dto: CreateLoteAtributoDto) {
-    return serializeBigInts(
-      await this.prisma.lote_atributos.create({
-        data: {
-          id_lote: dto.id_lote,
-          clave: dto.clave.trim(),
-          valor: dto.valor ?? null,
-          unidad: dto.unidad ?? null,
-          fuente: dto.fuente?.trim() ?? 'manual',
-        },
-      }),
-    );
-  }
-
-  async updateAtributo(id_atributo: string, dto: UpdateLoteAtributoDto) {
-    return serializeBigInts(
-      await this.prisma.lote_atributos.update({
-        where: { id_atributo: BigInt(id_atributo) },
-        data: {
-          id_lote: dto.id_lote,
-          clave: dto.clave?.trim(),
-          valor: dto.valor,
-          unidad: dto.unidad,
-          fuente: dto.fuente?.trim(),
-        },
-      }),
-    );
-  }
-
-  async removeAtributo(id_atributo: string) {
-    await this.prisma.lote_atributos.delete({
-      where: { id_atributo: BigInt(id_atributo) },
-    });
-    return { message: 'Atributo eliminado' };
   }
 
   // ─── SINCRONIZAR PRODUCTO DE UN LOTE ESPECÍFICO ──────────────────────────────

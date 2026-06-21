@@ -131,7 +131,7 @@ export default function ProductosPage() {
           selected={ctx.selected}
           stores={ctx.stores}
           categorias={ctx.categorias}
-          lotes={ctx.lotes}
+          lotes={ctx.lotesDisponibles}
           saving={ctx.saving}
           onSubmit={ctx.handleSubmit}
           onClose={ctx.closeModal}

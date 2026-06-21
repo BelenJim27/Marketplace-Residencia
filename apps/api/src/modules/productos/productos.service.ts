@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { join } from "path";
 import { unlinkSync } from "fs";
 import { PrismaService } from "../../prisma/prisma.service";
-import { serializeBigInts } from "../shared/serialize";
+import { serializeBigInts } from "../../common/utilities/serialize";
 import { CreateProductoDto, UpdateProductoDto } from "./dto/productos.dto";
 
 /** Usuario autenticado resuelto por AuthGuard desde el JWT. */
@@ -509,6 +509,18 @@ export class ProductosService {
       });
       if (!tienda) throw new NotFoundException('Tienda no encontrada');
       this.ensureCanManage(tienda.id_productor, user);
+    }
+
+    if (dto.id_lote) {
+      const loteOcupado = await this.prisma.productos.findFirst({
+        where: { id_lote: dto.id_lote },
+        select: { id_producto: true },
+      });
+      if (loteOcupado) {
+        throw new BadRequestException(
+          'Este lote ya tiene un producto asignado. Solo se permite un producto por lote.',
+        );
+      }
     }
 
     const data: any = {

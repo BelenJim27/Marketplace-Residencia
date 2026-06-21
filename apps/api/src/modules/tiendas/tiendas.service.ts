@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
-import { serializeBigInts } from '../shared/serialize';
+import { serializeBigInts } from '../../common/utilities/serialize';
 import { CreateTiendaDto, UpdateTiendaDto } from './dto/tiendas.dto';
 
 @Injectable()

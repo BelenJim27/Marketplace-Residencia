@@ -15,7 +15,6 @@ import { useLocale } from "@/context/LocaleContext";
 const ResenasSeccion = lazy(() => import("@/components/Cliente/ResenasSeccion"));
 const ProductosSimilares = lazy(() => import("@/components/Cliente/ProductosRelacionados").then(m => ({ default: m.ProductosSimilares })));
 const TambienCompraron = lazy(() => import("@/components/Cliente/ProductosRelacionados").then(m => ({ default: m.TambienCompraron })));
-import AgeGate from "@/components/AgeGate";
 import CategoryDisclaimer from "@/components/CategoryDisclaimer";
 import { getEdadMinima } from "@/lib/edad";
 import QRCode from "react-qr-code";
@@ -108,7 +107,6 @@ export default function ProductoDetallePage() {
   const [imagenSeleccionada, setImagenSeleccionada] = useState(0);
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
-  const [forceAgeGate, setForceAgeGate] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   const fetchProducto = useCallback(async () => {
@@ -149,7 +147,6 @@ export default function ProductoDetallePage() {
       cantidad,
     });
     if (!res.ok) {
-      if (res.reason === "age_required") setForceAgeGate(true);
       if (res.reason === "not_authenticated") router.push("/auth/sign-in?redirect=/tienda/checkout");
       return;
     }
@@ -173,10 +170,7 @@ export default function ProductoDetallePage() {
       edad_minima: producto.edad_minima ?? producto.requiere_edad_minima ?? null,
       cantidad,
     });
-    if (!res.ok && res.reason === "age_required") {
-      setForceAgeGate(true);
-      return;
-    }
+    if (!res.ok) return;
     router.push("/tienda/checkout");
   };
 
@@ -288,15 +282,6 @@ export default function ProductoDetallePage() {
       className="mx-auto max-w-screen-xl px-4 py-8 md:px-8"
       style={{ backgroundColor: "#F4F0E3", minHeight: "100vh" }}
     >
-      <AgeGate
-        edadMinima={edadMinimaProducto}
-        forceOpen={forceAgeGate}
-        onVerified={() => setForceAgeGate(false)}
-        onDeny={() => {
-          setForceAgeGate(false);
-          if (!forceAgeGate) router.push("/");
-        }}
-      />
       <button
         onClick={() => router.back()}
         className="mb-8 flex items-center gap-2 hover:opacity-70 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-lg p-2 -ml-2"
@@ -313,11 +298,11 @@ export default function ProductoDetallePage() {
         {/* Columna izquierda — Galería de imágenes */}
         <div className="space-y-6">
           {/* Galería: miniaturas a la izquierda + imagen principal a la derecha */}
-          <div data-tour="product-gallery" className="flex gap-3">
+          <div data-tour="product-gallery" className="flex flex-col sm:flex-row gap-3">
 
-            {/* Tira de miniaturas — vertical a la izquierda cuando hay varias imágenes */}
+            {/* Tira de miniaturas — oculta en móvil, vertical a la izquierda en sm+ */}
             {todasImagenes.length > 1 && (
-              <div className="flex flex-col gap-2 flex-shrink-0" style={{ width: "76px" }}>
+              <div className="hidden sm:flex flex-col gap-2 flex-shrink-0" style={{ width: "76px" }}>
                 {todasImagenes.map((img, idx) => (
                   <button
                     key={idx}

@@ -21,6 +21,8 @@ export interface ShippingQuote {
   moneda: string;
   fechaEntregaEstimada: string;
   diasHabilesEstimados: number;
+  skydropxQuotationId?: string;
+  skydropxRateId?: string;
 }
 
 export interface GrupoEnvio {
@@ -31,6 +33,8 @@ export interface GrupoEnvio {
   peso_facturable_kg: number;
   dimensiones: { largo_cm: number; ancho_cm: number; alto_cm: number };
   contiene_alcohol?: boolean;
+  valor_declarado_mxn?: number;
+  proteccion_estimada_mxn?: number;
   quotes: ShippingQuote[];
   error?: string;
 }
@@ -44,6 +48,7 @@ export interface OpcionAgregada {
   diasMax: number;                                    // max(diasHabilesEstimados)
   tipo: 'nacional' | 'internacional';
   quotesByProductor: Record<number, ShippingQuote>;   // para derivar seleccionados
+  totalProteccionEstimadaMXN: number;                 // suma estimada de seguro por productor
 }
 
 function buildOpcionesAgregadas(grupos: GrupoEnvio[]): OpcionAgregada[] {
@@ -64,12 +69,14 @@ function buildOpcionesAgregadas(grupos: GrupoEnvio[]): OpcionAgregada[] {
           diasMax: 0,
           tipo: q.tipo,
           quotesByProductor: {},
+          totalProteccionEstimadaMXN: 0,
         });
       }
       const agg = map.get(key)!;
       agg.precioTotal += q.precioTotal;
       agg.diasMax = Math.max(agg.diasMax, q.diasHabilesEstimados);
       agg.quotesByProductor[grupo.id_productor] = q;
+      agg.totalProteccionEstimadaMXN += grupo.proteccion_estimada_mxn ?? 0;
     }
   }
 
@@ -94,6 +101,7 @@ function buildOpcionesAgregadas(grupos: GrupoEnvio[]): OpcionAgregada[] {
     diasMax: 0,
     tipo: grupos[0]?.quotes[0]?.tipo ?? 'internacional',
     quotesByProductor: {},
+    totalProteccionEstimadaMXN: 0,
   };
   for (const grupo of grupos) {
     const cheapest = grupo.quotes[0]; // already sorted cheapest first by backend
@@ -101,6 +109,7 @@ function buildOpcionesAgregadas(grupos: GrupoEnvio[]): OpcionAgregada[] {
       synthetic.precioTotal += cheapest.precioTotal;
       synthetic.diasMax = Math.max(synthetic.diasMax, cheapest.diasHabilesEstimados);
       synthetic.quotesByProductor[grupo.id_productor] = cheapest;
+      synthetic.totalProteccionEstimadaMXN += grupo.proteccion_estimada_mxn ?? 0;
     }
   }
   // If no producer had any quotes, don't show a $0 phantom option

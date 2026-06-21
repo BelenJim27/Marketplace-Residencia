@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from '../auth/auth.module';
 import { ComisionesModule } from '../comisiones/comisiones.module';
@@ -11,8 +11,9 @@ import { PedidosController } from './pedidos.controller';
 import { PedidosService } from './pedidos.service';
 
 @Module({
-  imports: [ConfigModule, PrismaModule, AuthModule, ComisionesModule, EmailModule, EnviosModule, PagosModule, NotificacionesModule],
+  imports: [ConfigModule, PrismaModule, AuthModule, ComisionesModule, EmailModule, forwardRef(() => EnviosModule), PagosModule, NotificacionesModule],
   controllers: [PedidosController],
   providers: [PedidosService],
+  exports: [PedidosService],
 })
 export class PedidosModule {}

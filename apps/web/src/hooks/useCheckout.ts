@@ -359,7 +359,8 @@ export function useCheckout() {
         }, 0).toFixed(2),
       );
       const subtotal = parseFloat(precioTotal.toFixed(2));
-      const totalConEnvio = parseFloat((precioTotal + costoEnvioMXN).toFixed(2));
+      const proteccionMXN = solicitarProteccion ? costoProteccionEstimadoMXN : 0;
+      const totalConEnvio = parseFloat((precioTotal + costoEnvioMXN + proteccionMXN).toFixed(2));
       if (pedidoIdCreado) {
         pedidoId = pedidoIdCreado;
       } else if (isCreatingPedidoRef.current) {
@@ -435,6 +436,8 @@ export function useCheckout() {
               carrier: quote.carrier,
               tipo: quote.tipo,
               moneda: quote.moneda,
+              skydropxQuotationId: quote.skydropxQuotationId,
+              skydropxRateId: quote.skydropxRateId,
             },
           });
         }
@@ -455,7 +458,7 @@ export function useCheckout() {
           pagoResponse = await api.pagos.paypal.createOrder(token, {
             id_pedido: pedidoId,
             subtotal,
-            shipping_amount: costoEnvioMXN,
+            shipping_amount: costoEnvioMXN + proteccionMXN,
             moneda: "MXN",
             shipping_address: buildShippingAddressForStripe(direccionSeleccionada),
           });
@@ -467,7 +470,7 @@ export function useCheckout() {
           pagoResponse = await api.pagos.stripe.createIntent(token, {
             id_pedido: pedidoId,
             subtotal,
-            shipping_amount: costoEnvioMXN,
+            shipping_amount: costoEnvioMXN + proteccionMXN,
             moneda: "MXN",
             shipping_address: buildShippingAddressForStripe(direccionSeleccionada),
             recipient_name: recipientName,
@@ -582,7 +585,11 @@ export function useCheckout() {
     return sum + enMXN;
   }, 0);
 
-  const totalConEnvio = precioTotal + totalEnvioMXN;
+  const costoProteccionEstimadoMXN = nivelKey
+    ? (opcionesAgregadas.find(o => o.key === nivelKey)?.totalProteccionEstimadaMXN ?? 0)
+    : 0;
+
+  const totalConEnvio = precioTotal + totalEnvioMXN + (solicitarProteccion ? costoProteccionEstimadoMXN : 0);
 
   return {
     paso,
@@ -635,5 +642,6 @@ export function useCheckout() {
     submitDob,
     solicitarProteccion,
     setSolicitarProteccion,
+    costoProteccionEstimadoMXN,
   };
 }

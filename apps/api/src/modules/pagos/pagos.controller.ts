@@ -36,7 +36,8 @@ export class PagosController {
   }
 
   @Throttle(PAGO_THROTTLE)
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Post('stripe/intent')
   async createStripeIntent(@Body() dto: CreateStripeIntentDto, @Req() req: Request) {
     await this.service.validatePedidoOwnership(dto.id_pedido, (req as any).user.id_usuario);
@@ -45,7 +46,8 @@ export class PagosController {
 
   // Confirmación síncrona tras un pago con tarjeta exitoso: no depende del webhook.
   @Throttle(PAGO_THROTTLE)
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Post('stripe/confirm')
   async confirmStripe(@Body() dto: ConfirmStripeDto, @Req() req: Request) {
     return this.service.confirmStripePayment(dto.id_pedido, (req as any).user.id_usuario);
@@ -90,7 +92,8 @@ export class PagosController {
   }
 
   @Throttle(PAGO_THROTTLE)
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Post('paypal/order')
   async createPaypalOrder(@Body() dto: CreatePaypalOrderDto, @Req() req: Request) {
     await this.service.validatePedidoOwnership(dto.id_pedido, (req as any).user.id_usuario);
@@ -98,7 +101,8 @@ export class PagosController {
   }
 
   @Throttle(PAGO_THROTTLE)
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Post('paypal/capture')
   capturePaypalOrder(@Body() dto: CapturePaypalOrderDto) {
     return this.service.capturePaypalOrder(dto);

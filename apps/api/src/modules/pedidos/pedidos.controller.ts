@@ -3,6 +3,8 @@ import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { CreateDetallePedidoDto, CreateFacturaDto, CreatePedidoDto, UpdateDetallePedidoDto, UpdateFacturaDto, UpdatePedidoDto, ValidarEnvioDto } from './dto/pedidos.dto';
 import { PedidosService } from './pedidos.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
+import { RolesGuard } from '../auth/guards/rbac.guard';
+import { Roles } from '../auth/guards/roles.decorator';
 
 @Controller('pedidos')
 export class PedidosController {
@@ -14,7 +16,8 @@ export class PedidosController {
     return this.service.getMisVentas(req.user.id_productor ?? null);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Get('mis-compras')
   getMisCompras(@Headers('authorization') authorization: string) {
     const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
@@ -92,13 +95,15 @@ export class PedidosController {
     return this.service.updateTrackingForProducer(id_pedido, id_productor, numero_rastreo);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Post('validar-envio')
   validarEnvio(@Body() dto: ValidarEnvioDto) {
     return this.service.validarEnvio(dto);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Post(':id/cotizar-envio')
   cotizarEnvio(@Param('id') id: string) {
     return this.service.cotizarEnvio(id);
@@ -128,7 +133,8 @@ export class PedidosController {
     }
     return pedido;
   }
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('cliente', 'administrador')
   @Post() create(@Body() dto: CreatePedidoDto, @Req() req: any) { return this.service.create(dto, req.user.id_usuario); }
   @UseGuards(AuthGuard)
   @Patch(':id') update(@Param('id') id: string, @Body() dto: UpdatePedidoDto, @Req() req: any) { return this.service.update(id, dto, req.user.id_usuario, isAdmin(req.user)); }

@@ -7,7 +7,7 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
-import { serializeBigInts } from "../shared/serialize";
+import { serializeBigInts } from "../../common/utilities/serialize";
 import {
   AdminUpdateProductorDto,
   CreateProductorDto,
@@ -473,19 +473,26 @@ export class ProductoresService {
   // ── Mi solicitud ───────────────────────────────────────────────────────────
 
   async getMiSolicitud(id_usuario: string) {
-    const solicitud = await this.prisma.productores.findFirst({
-      where: { id_usuario, eliminado_en: null },
-      include: {
-        usuarios: { select: { id_usuario: true, nombre: true, email: true } },
-        productor_categoria: {
-          include: {
-            categorias: {
-              select: { id_categoria: true, nombre: true, slug: true },
+    const [solicitud, direccionFiscal] = await Promise.all([
+      this.prisma.productores.findFirst({
+        where: { id_usuario, eliminado_en: null },
+        include: {
+          usuarios: { select: { id_usuario: true, nombre: true, email: true } },
+          productor_categoria: {
+            include: {
+              categorias: {
+                select: { id_categoria: true, nombre: true, slug: true },
+              },
             },
           },
+          direccion_bodega: true,
         },
-      },
-    });
+      }),
+      this.prisma.direcciones.findFirst({
+        where: { id_usuario, tipo: 'facturacion', eliminado_en: null },
+      }),
+    ]);
+
     if (!solicitud) return null;
 
     const decrypted = solicitud.datos_bancarios
@@ -496,6 +503,8 @@ export class ProductoresService {
       ...solicitud,
       datos_bancarios: decrypted,
       categorias: solicitud.productor_categoria.map((pc) => pc.categorias),
+      direccion_fiscal: direccionFiscal ?? undefined,
+      direccion_produccion: solicitud.direccion_bodega ?? undefined,
     });
   }
 

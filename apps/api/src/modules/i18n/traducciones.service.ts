@@ -53,28 +53,12 @@ export class TraduccionesService {
     return { idioma: 'es', nombre: prod.nombre, descripcion: prod.descripcion ?? null };
   }
 
-  async categoria(id_categoria: number, opts: ResolveOpts): Promise<TraduccionResult | null> {
-    const cadena = await this.cadenaFallback(opts);
-    const rows = await this.prisma.traducciones.findMany({
-      where: { entidad_tipo: 'categoria', entidad_id: id_categoria, idioma: { in: cadena } },
-    });
-    return this.elegirPorCadena(
-      rows.map((r) => ({ idioma: r.idioma, nombre: r.nombre ?? null, descripcion: r.descripcion ?? null })),
-      cadena,
-      (t) => t.idioma,
-    );
+  async categoria(_id_categoria: number, _opts: ResolveOpts): Promise<TraduccionResult | null> {
+    return null;
   }
 
-  async tienda(id_tienda: number, opts: ResolveOpts): Promise<TraduccionResult | null> {
-    const cadena = await this.cadenaFallback(opts);
-    const rows = await this.prisma.traducciones.findMany({
-      where: { entidad_tipo: 'tienda', entidad_id: id_tienda, idioma: { in: cadena } },
-    });
-    return this.elegirPorCadena(
-      rows.map((r) => ({ idioma: r.idioma, nombre: r.nombre ?? null, descripcion: r.descripcion ?? null })),
-      cadena,
-      (t) => t.idioma,
-    );
+  async tienda(_id_tienda: number, _opts: ResolveOpts): Promise<TraduccionResult | null> {
+    return null;
   }
 
   async productosBatch(ids: bigint[], opts: ResolveOpts): Promise<Map<string, TraduccionResult>> {

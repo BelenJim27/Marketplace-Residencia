@@ -1,13 +1,14 @@
-import { ConflictException, Injectable, InternalServerErrorException, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { ConflictException, Inject, Injectable, InternalServerErrorException, Logger, NotFoundException, UnprocessableEntityException, forwardRef } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { Moneda } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
-import { serializeBigInts, toBigIntId } from "../shared/serialize";
+import { serializeBigInts, toBigIntId } from "../../common/utilities/serialize";
 import { CreateEnvioDto, CotizarEnvioDto, DireccionDestinoDto, UpdateEnvioDto } from "./dto/envios.dto";
 import { ICarrierService } from "./interfaces/carrier.interface";
 import { SkydropxService } from "./skydropx.service";
 import { EmailService } from "../email/email.service";
+import { PedidosService } from "../pedidos/pedidos.service";
 
 @Injectable()
 export class EnviosService {
@@ -17,6 +18,7 @@ export class EnviosService {
     private readonly prisma: PrismaService,
     private readonly skydropxService: SkydropxService,
     private readonly emailService: EmailService,
+    @Inject(forwardRef(() => PedidosService)) private readonly pedidosService: PedidosService,
   ) {}
 
   private async toUsd(precio: any, moneda: string): Promise<number> {
@@ -263,7 +265,7 @@ export class EnviosService {
       where: { id_envio: toBigIntId(id_envio) },
       include: {
         pedidos: {
-          select: { direccion_envio_snapshot: true, total: true, moneda: true },
+          select: { direccion_envio_snapshot: true, total: true, moneda: true, id_usuario: true },
         },
         servicios_envio: true,
         transportistas: true,
@@ -275,6 +277,13 @@ export class EnviosService {
     if (envio.envio_guias?.length > 0) throw new ConflictException('GUIA_YA_EXISTE');
     if (!envio.pedidos?.direccion_envio_snapshot) throw new UnprocessableEntityException('SIN_DIRECCION');
 
+    const clienteUser = envio.pedidos.id_usuario
+      ? await this.prisma.usuarios.findUnique({
+          where: { id_usuario: envio.pedidos.id_usuario },
+          select: { email: true },
+        })
+      : null;
+
     const snap = envio.pedidos.direccion_envio_snapshot as any;
     const destPais = snap.pais_iso2 ?? snap.pais ?? 'MX';
     const destEstado = snap.estado || '';
@@ -282,11 +291,15 @@ export class EnviosService {
     // Resolve producer first — needed to scope restriction checks and address lookup to
     // this producer's items only, avoiding cross-producer interference in multi-producer orders.
     const producerFields = {
+      id_usuario: true,
       nombre_marca: true,
       rfc: true,
+      usuarios: { select: { nombre: true, email: true } },
       direccion_bodega: {
         select: {
           linea_1: true,
+          colonia: true,
+          referencia: true,
           ciudad: true,
           estado: true,
           codigo_postal: true,
@@ -393,10 +406,12 @@ export class EnviosService {
     });
     const cotPayload = cotizacion?.payload_response as any;
 
-    const preferred_provider = cotPayload?.providerName ?? cotPayload?.carrier ?? null;
-    const preferred_service = cotPayload?.productName ?? cotPayload?.productCode ?? null;
+    const preferred_provider     = cotPayload?.providerName ?? cotPayload?.carrier ?? null;
+    const preferred_service      = cotPayload?.productName ?? cotPayload?.productCode ?? null;
+    const skydropx_quotation_id: string | null = cotPayload?.skydropxQuotationId ?? null;
+    const skydropx_rate_id: string | null = cotPayload?.skydropxRateId ?? null;
     this.logger.debug(
-      `[crearGuia] cotizacion payload_response=${JSON.stringify(cotPayload)} → preferred_provider=${preferred_provider} preferred_service=${preferred_service}`,
+      `[crearGuia] cotizacion payload_response=${JSON.stringify(cotPayload)} → preferred_provider=${preferred_provider} preferred_service=${preferred_service} quotation_id=${skydropx_quotation_id} rate_id=${skydropx_rate_id}`,
     );
 
     const tasaRow = await this.prisma.tasas_cambio.findFirst({
@@ -443,13 +458,24 @@ export class EnviosService {
     }
     const valor_declarado_usd = Math.round((valorRealMxn / tipoCambio) * 100) / 100;
 
+    // Para internacionales: siempre se pasa en USD (aduana lo exige en products[].price).
+    // Para nacionales: solo si el productor solicita protección (opt-in), en MXN.
+    // Sin protección en nacional, omitir evita cargos extra de seguro y mantiene
+    // el precio igual al cotizado.
+    const valor_declarado_para_carrier = destPais !== 'MX'
+      ? valor_declarado_usd
+      : (envio.solicitar_proteccion ? valorRealMxn : undefined);
+
     const result = await carrier.createShipment({
       ...envio,
       productor: productorData,
+      cliente_email: clienteUser?.email ?? null,
       contenido_descripcion: productNames || 'Mezcal artesanal',
       preferred_provider,
       preferred_service,
-      valor_declarado_usd,
+      valor_declarado_usd: valor_declarado_para_carrier,
+      skydropx_quotation_id,
+      skydropx_rate_id,
     });
 
     // El carrier aceptó el envío pero la etiqueta puede seguir generándose de forma asíncrona
@@ -760,7 +786,10 @@ export class EnviosService {
 
     const updated = await this.prisma.envios.update({
       where: { id_envio: guia.id_envio },
-      data: { estado: estadoNormalizado ?? estado },
+      data: {
+        estado: estadoNormalizado ?? estado,
+        ...(estadoNormalizado === 'entregado' ? { fecha_entrega: new Date() } : {}),
+      },
     });
 
     // Sync pedidos.estado so buyer-facing order list stays current
@@ -776,6 +805,23 @@ export class EnviosService {
         where: { id_pedido: guia.envios.id_pedido },
         data: { estado: nuevoPedidoEstado },
       });
+    }
+
+    // Cuando el carrier confirma la entrega, sincronizar pedido_productor y disparar payout
+    if (estadoNormalizado === 'entregado' && guia.id_envio) {
+      const pps = await this.prisma.pedido_productor.findMany({
+        where: { id_envio: guia.id_envio },
+      });
+      for (const pp of pps) {
+        // isAdmin=true: el carrier es fuente autoritativa; idempotente si ya está en entregado
+        this.pedidosService
+          .updateOrderStatusForProductor(String(pp.id_pedido), pp.id_productor, 'entregado', true)
+          .catch(err =>
+            this.logger.warn(
+              `[tracking] Auto-entregado falló para pedido ${pp.id_pedido} productor ${pp.id_productor}: ${err?.message}`,
+            ),
+          );
+      }
     }
 
     // Notificar al comprador por email en estados clave
@@ -938,6 +984,13 @@ export class EnviosService {
           peso_facturable_kg: Number(pesoFacturable.toFixed(3)),
           dimensiones: { largo_cm: maxLargo, ancho_cm: maxAncho, alto_cm: alturaTotal },
           contiene_alcohol: isAlcohol,
+          valor_declarado_mxn: Number(valorTotalMxn.toFixed(2)),
+          proteccion_estimada_mxn: Number(
+            (
+              valorTotalMxn * (parseFloat(process.env.SKYDROPX_PROTECTION_PCT ?? '2') / 100) +
+              parseFloat(process.env.SKYDROPX_PROTECTION_FIXED_MXN ?? '0')
+            ).toFixed(2),
+          ),
           quotes,
         };
       }),
@@ -1169,6 +1222,15 @@ export class EnviosService {
 
     if (pedidoProds.length === 0) return [];
 
+    // Leer solicitar_proteccion del envío preliminar (creado en prepararPago antes del pago)
+    // para propagarlo a cada envío por productor que se crea aquí.
+    const envioBase = await this.prisma.envios.findFirst({
+      where: { id_pedido: BigInt(id_pedido) },
+      orderBy: { id_envio: 'asc' },
+      select: { solicitar_proteccion: true },
+    });
+    const solicitarProteccion = envioBase?.solicitar_proteccion ?? false;
+
     // Cada productor genera un envío + guía (API de paquetería) de forma
     // independiente. Se procesan en paralelo con allSettled-equivalente (cada
     // iteración captura su propio error y devuelve un resultado) en vez de serie,
@@ -1226,6 +1288,7 @@ export class EnviosService {
             alto_cm: alturaTotal.toFixed(2),
             estado: 'preparando',
             requires_adult_signature: esAlcohol,
+            solicitar_proteccion: solicitarProteccion,
           },
         });
 

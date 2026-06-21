@@ -1,11 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Loader2, AlertCircle, DollarSign, TrendingUp, Receipt, CreditCard, CheckCircle2, Eye, X, HelpCircle, Info, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { api, type Payout } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { formatMXN } from "@/lib/format-number";
+
+function maskEmail(email: string): string {
+  const at = email.indexOf("@");
+  if (at < 0) return email;
+  const local = email.slice(0, at);
+  const domain = email.slice(at);
+  return (local.length > 2 ? local[0] + "***" : "***") + domain;
+}
 
 type ConnectStatus = {
   connected: boolean;
@@ -57,6 +66,7 @@ export default function IngresosProductorPage() {
   const [connect, setConnect] = useState<ConnectStatus | null>(null);
   const [connectLoading, setConnectLoading] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [paypalEmail, setPaypalEmail] = useState<string | null>(null);
 
   const [detalleModal, setDetalleModal] = useState<Payout | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,11 +92,13 @@ export default function IngresosProductorPage() {
       api.payouts.misPayouts(token, user.id_productor),
       api.pagos.ingresos.getResumen(token, user.id_productor),
       api.pagos.connect.status(token).catch(() => null),
+      api.productores.getMiSolicitud(token).catch(() => null),
     ])
-      .then(([payoutsRes, resumenRes, connectRes]) => {
+      .then(([payoutsRes, resumenRes, connectRes, solicitudRes]) => {
         setPayouts(payoutsRes);
         setIngresosResumen(resumenRes);
         if (connectRes) setConnect(connectRes);
+        if (solicitudRes) setPaypalEmail((solicitudRes as any).paypal_email ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Error cargando datos"))
       .finally(() => setLoading(false));
@@ -190,6 +202,38 @@ export default function IngresosProductorPage() {
               </span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* PayPal status */}
+      {paypalEmail ? (
+        <div className="flex flex-col gap-2 rounded-2xl border border-[#A8C26B]/50 bg-[#A8C26B]/10 p-4 text-sm text-[#3D6B3F] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="shrink-0" />
+            <span>
+              PayPal configurado · <span className="font-mono">{maskEmail(paypalEmail)}</span>
+            </span>
+          </div>
+          <Link href="/dashboard/productor/configuracion-cobro"
+            className="inline-flex items-center gap-1 rounded-xl border border-[#3D6B3F]/30 px-3 py-1.5 text-xs font-medium text-[#3D6B3F] transition hover:bg-[#C5CFB0]/30 dark:border-[#A8C26B]/30 dark:text-[#A8C26B] dark:hover:bg-[#1F3A2E]/40">
+            Cambiar email
+          </Link>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between dark:border-amber-800/40 dark:bg-amber-900/10 dark:text-amber-300">
+          <div className="flex items-start gap-3">
+            <CreditCard size={20} className="mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold">Configura tu email de PayPal</p>
+              <p className="mt-0.5 text-amber-800 dark:text-amber-400">
+                Sin email de PayPal solo recibirás pagos vía Stripe. Agrégalo para activar el método alternativo.
+              </p>
+            </div>
+          </div>
+          <Link href="/dashboard/productor/configuracion-cobro"
+            className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600">
+            Configurar PayPal
+          </Link>
         </div>
       )}
 
@@ -425,7 +469,7 @@ export default function IngresosProductorPage() {
                   <Info size={14} className="mt-0.5 shrink-0" />
                   <p>El subtotal bruto incluye: tus productos + tu parte del IVA (prorrateado) + tu parte del envío (prorrateado).</p>
                 </div>
-                <div className="overflow-hidden rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40">
+                <div className="overflow-x-auto rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40">
                   <table className="w-full min-w-[400px] text-sm">
                     <thead className="bg-[#1F3A2E]">
                       <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white">

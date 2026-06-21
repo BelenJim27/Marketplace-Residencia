@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { AlertService } from "@/shared/alerts/alert.service";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, "");
@@ -73,8 +74,10 @@ export function ImagenProducto({
   fallbackPreview?: string | null;
   onChange: (next: ImagenProductoState) => void;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
   return (
-    <label className="block">
+    <div className="block">
       <span className="mb-2 block text-sm font-medium text-dark dark:text-white">{label}</span>
       <div className="flex items-center gap-4">
         {imagen.preview ? (
@@ -84,6 +87,7 @@ export function ImagenProducto({
         )}
         <div className="flex flex-col gap-1 w-full">
           <input
+            ref={inputRef}
             type="file"
             accept="image/*"
             disabled={disabled}
@@ -96,11 +100,24 @@ export function ImagenProducto({
               }
               onChange(updateImagenProductoState(imagen, file, fallbackPreview ?? null));
             }}
-            className="w-full rounded-lg border border-stroke bg-transparent px-4 py-3 text-sm outline-none focus:border-primary dark:border-dark-3 dark:bg-dark-2 disabled:opacity-60"
+            className="hidden"
           />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => inputRef.current?.click()}
+              className="rounded-lg border border-stroke bg-transparent px-4 py-2 text-sm outline-none hover:bg-gray-50 dark:border-dark-3 dark:bg-dark-2 dark:hover:bg-dark-3 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              Seleccionar imagen
+            </button>
+            <span className="truncate text-sm text-gray-500 dark:text-gray-400">
+              {imagen.file?.name ?? "Ningún archivo seleccionado"}
+            </span>
+          </div>
           <span className="text-xs text-gray-400">Máximo 500 KB</span>
         </div>
       </div>
-    </label>
+    </div>
   );
 }

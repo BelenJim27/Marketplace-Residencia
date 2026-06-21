@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { getMediaUrl } from "@/lib/media";
 import Link from "next/link";
-import { CheckCircle, ChevronRight, Truck, CreditCard, ShoppingBag, ArrowLeft, Lock, MapPin, Loader2, FileText } from "lucide-react";
+import { CheckCircle, ChevronRight, Truck, CreditCard, ShoppingBag, ArrowLeft, X, Lock, MapPin, Loader2, FileText } from "lucide-react";
 import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useCheckout, CheckoutStep, OpcionAgregada } from "@/hooks/useCheckout";
@@ -126,7 +126,7 @@ const ALCOHOL_RESTRICTED_STATES = new Set([
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, isCliente } = useAuth();
   const { items } = useCarrito();
   const { paises, loading: paisesLoading } = usePaises("envio");
 
@@ -170,6 +170,7 @@ export default function CheckoutPage() {
     cargando,
     solicitarProteccion,
     setSolicitarProteccion,
+    costoProteccionEstimadoMXN,
   } = useCheckout();
 
   const { t, locale, rates } = useLocale();
@@ -289,6 +290,14 @@ export default function CheckoutPage() {
 
   const enElements = paso === "pago" || paso === "resumen";
 
+  const btnDisabled =
+    !isCliente ||
+    cargando ||
+    (paso === "pago" && (
+      (metodoPago === 'stripe' && !clientSecret) ||
+      (metodoPago === 'paypal' && !paypalOrderId)
+    ));
+
   const mainContent = (
     <div style={{ position: "relative" }}>
 
@@ -322,6 +331,15 @@ export default function CheckoutPage() {
           {t('checkout_complete_steps')}
         </p>
       </div>
+
+      {isAuthenticated && !isCliente && (
+        <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: "8px", padding: "12px 16px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "18px" }}>⚠️</span>
+          <p style={{ color: "#DC2626", fontSize: "14px", margin: 0, fontWeight: 600 }}>
+            Solo los clientes pueden realizar compras.
+          </p>
+        </div>
+      )}
 
       <div data-tour="checkout-stepper" className="mb-8">
         {/* Stepper — Premium con colores biocultural */}
@@ -446,6 +464,7 @@ export default function CheckoutPage() {
                   displayCurrency={displayCurrency}
                   solicitarProteccion={solicitarProteccion}
                   setSolicitarProteccion={setSolicitarProteccion}
+                  costoProteccionEstimado={convertFromMXN(costoProteccionEstimadoMXN)}
                 />
               </div>
             )}
@@ -765,8 +784,52 @@ export default function CheckoutPage() {
             {/* Botones de navegación mejorados */}
             <div style={{ marginTop: "32px", display: "flex", gap: "12px", justifyContent: "space-between" }}>
               {paso !== "direccion" ? (
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <button
+                    onClick={retrocederPaso}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      borderRadius: "12px",
+                      paddingLeft: "20px",
+                      paddingRight: "20px",
+                      paddingTop: "12px",
+                      paddingBottom: "12px",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      border: `1px solid ${COLOR_PALETTE.border}`,
+                      color: COLOR_PALETTE.green,
+                      background: "transparent",
+                      cursor: "pointer",
+                      transition: "all 200ms ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = COLOR_PALETTE.green;
+                      e.currentTarget.style.background = `${COLOR_PALETTE.green}08`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = COLOR_PALETTE.border;
+                      e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    <ArrowLeft size={16} />
+                    {t('checkout_button_back')}
+                  </button>
+                  {(!clientSecret && !paypalOrderId) && (
+                    <button
+                      onClick={() => router.push('/tienda/carrito')}
+                      style={{ fontSize: "13px", color: COLOR_PALETTE.muted, background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: "4px 8px" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = "#ef4444"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = COLOR_PALETTE.muted; }}
+                    >
+                      {t('checkout_button_cancel')}
+                    </button>
+                  )}
+                </div>
+              ) : (!clientSecret && !paypalOrderId) ? (
                 <button
-                  onClick={retrocederPaso}
+                  onClick={() => router.push('/tienda/carrito')}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -779,35 +842,29 @@ export default function CheckoutPage() {
                     fontSize: "14px",
                     fontWeight: 500,
                     border: `1px solid ${COLOR_PALETTE.border}`,
-                    color: COLOR_PALETTE.green,
+                    color: COLOR_PALETTE.muted,
                     background: "transparent",
                     cursor: "pointer",
                     transition: "all 200ms ease",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = COLOR_PALETTE.green;
-                    e.currentTarget.style.background = `${COLOR_PALETTE.green}08`;
+                    e.currentTarget.style.borderColor = "#ef4444";
+                    e.currentTarget.style.color = "#ef4444";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = COLOR_PALETTE.border;
-                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = COLOR_PALETTE.muted;
                   }}
                 >
-                  <ArrowLeft size={16} />
-                  {t('checkout_button_back')}
+                  <X size={16} />
+                  {t('checkout_button_cancel')}
                 </button>
               ) : <div />}
 
               {paso !== "resumen" && (
                 <button
                   onClick={avanzarPaso}
-                  disabled={
-                    cargando ||
-                    (paso === "pago" && (
-                      (metodoPago === 'stripe' && !clientSecret) ||
-                      (metodoPago === 'paypal' && !paypalOrderId)
-                    ))
-                  }
+                  disabled={btnDisabled}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -821,32 +878,20 @@ export default function CheckoutPage() {
                     fontWeight: 700,
                     transition: "all 200ms ease",
                     border: "none",
-                    cursor:
-                      cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))
-                        ? "not-allowed"
-                        : "pointer",
-                    background:
-                      cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))
-                        ? "#D1D5DB"
-                        : COLOR_PALETTE.btnGreen,
-                    color:
-                      cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))
-                        ? "#6B7280"
-                        : "#ffffff",
-                    boxShadow:
-                      cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId)))
-                        ? "none"
-                        : "0 1px 2px rgba(0,0,0,0.05)",
+                    cursor: btnDisabled ? "not-allowed" : "pointer",
+                    background: btnDisabled ? "#D1D5DB" : COLOR_PALETTE.btnGreen,
+                    color: btnDisabled ? "#6B7280" : "#ffffff",
+                    boxShadow: btnDisabled ? "none" : "0 1px 2px rgba(0,0,0,0.05)",
                   }}
                   onMouseEnter={(e) => {
-                    if (!(cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))))) {
+                    if (!btnDisabled) {
                       e.currentTarget.style.background = COLOR_PALETTE.green;
                       e.currentTarget.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
                       e.currentTarget.style.opacity = "0.9";
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (!(cargando || (paso === "pago" && ((metodoPago === 'stripe' && !clientSecret) || (metodoPago === 'paypal' && !paypalOrderId))))) {
+                    if (!btnDisabled) {
                       e.currentTarget.style.background = COLOR_PALETTE.green;
                       e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
                       e.currentTarget.style.opacity = "1";
@@ -897,6 +942,14 @@ export default function CheckoutPage() {
                   {nivelKey ? `$${formatPrice(getShippingDisplayAmount() ?? 0, { showCurrency: false })} ${displayCurrency}` : '—'}
                 </span>
               </div>
+              {solicitarProteccion && costoProteccionEstimadoMXN > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", color: COLOR_PALETTE.green, marginBottom: "8px" }}>
+                  <span>{t('checkout_summary_insurance')}</span>
+                  <span style={{ fontWeight: 500 }}>
+                    ~${formatPrice(convertFromMXN(costoProteccionEstimadoMXN), { showCurrency: false })} {displayCurrency}
+                  </span>
+                </div>
+              )}
               {/* Impuestos: solo para MX (IVA aplica). Para international los impuestos
                   se liquidan en aduana; nunca mostrar breakdown fiscal de otro intent. */}
               {pais_destino === "MX" && taxBreakdown.length > 0 &&
@@ -1717,7 +1770,7 @@ function carrierColor(cot: any): string {
   return PROVIDER_COLORS[label] ?? PROVIDER_COLORS[cot.carrier] ?? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300';
 }
 
-function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cotizandoError, tieneAlcohol, convertQuotePrice, displayCurrency, solicitarProteccion, setSolicitarProteccion }: {
+function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cotizandoError, tieneAlcohol, convertQuotePrice, displayCurrency, solicitarProteccion, setSolicitarProteccion, costoProteccionEstimado }: {
   grupos: any[];
   opciones: OpcionAgregada[];
   nivelKey: string | null;
@@ -1729,6 +1782,7 @@ function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cot
   displayCurrency?: string;
   solicitarProteccion: boolean;
   setSolicitarProteccion: (v: boolean) => void;
+  costoProteccionEstimado?: number;
 }) {
   const { t } = useLocale();
   const COLOR_PALETTE = usePalette();
@@ -1831,12 +1885,20 @@ function EnvioStep({ grupos, opciones, nivelKey, setNivel, cotizandoLoading, cot
             checked={solicitarProteccion}
             onChange={(e) => setSolicitarProteccion(e.target.checked)}
           />
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              {t("Protección del envío")} · SkydropX
-            </p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {t("Protección del envío")} · SkydropX
+              </p>
+              {costoProteccionEstimado != null && costoProteccionEstimado > 0 && (
+                <p className="text-sm font-semibold text-green-700 dark:text-green-400 whitespace-nowrap">
+                  ~${formatPrice(costoProteccionEstimado, { showCurrency: false })} {displayCurrency}
+                </p>
+              )}
+            </div>
             <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-              {t("Cubre pérdida o daño hasta el valor declarado del pedido. El costo exacto se confirma al generar la guía.")}
+              {t("Cubre pérdida o daño hasta el valor declarado del pedido.")}{" "}
+              <span className="italic">{t("Precio estimado, se confirma al generar la guía.")}</span>
             </p>
           </div>
         </label>
@@ -1965,13 +2027,6 @@ function PagoYResumen({
       {/* Formulario de tarjeta — siempre montado para conservar datos al cambiar de paso */}
       <div className={paso === "pago" ? "" : "hidden"}>
         <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">{t("Forma de pago")}</h2>
-        {isTestMode() && (
-          <div className="mb-4 flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
-            <Lock size={12} />
-            {t("Modo de pruebas — usa la tarjeta 4242 4242 4242 4242, cualquier fecha futura y cualquier CVV.")}
-          </div>
-        )}
-
         <div className="mt-4 space-y-4">
           {/* Número de tarjeta */}
           <div>
