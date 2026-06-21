@@ -100,6 +100,23 @@ export class PedidosService {
     return serializeBigInts(item);
   }
 
+  async getIdProductorByUserId(id_usuario: string): Promise<number | null> {
+    const productor = await this.prisma.productores.findUnique({
+      where: { id_usuario },
+      select: { id_productor: true },
+    });
+    return productor?.id_productor ?? null;
+  }
+
+  // IDOR-safe: confirms the user owns a specific id_productor via direct join check
+  async verifyProductorOwnership(id_usuario: string, id_productor: number): Promise<boolean> {
+    const p = await this.prisma.productores.findFirst({
+      where: { id_productor, id_usuario },
+      select: { id_productor: true },
+    });
+    return p != null;
+  }
+
   async getMisVentas(id_productor: number | null) {
     if (!id_productor) {
       return {
@@ -1140,11 +1157,10 @@ export class PedidosService {
     return this.emailService.testEmail(to);
   }
 
-  async getMisCompras(accessToken: string) {
-    const user = await this.authService.getMe(accessToken);
+  async getMisCompras(id_usuario: string) {
     const pedidos = await this.prisma.pedidos.findMany({
       where: {
-        id_usuario: user.id_usuario,
+        id_usuario,
         eliminado_en: null,
         // Ocultar abandonos auto-cancelados por el cron expirarPedidosPendientes()
         // (cancelado y nunca cobrado). Los cancelados CON pago completado/reembolsado
@@ -1174,8 +1190,8 @@ export class PedidosService {
     return serializeBigInts(pedidos);
   }
 
-  async getMisPedidosProductor(accessToken: string) {
-    const id_productor = await this.resolveProductorId(accessToken);
+  async getMisPedidosProductor(id_usuario: string, jwtIdProductor?: number | null) {
+    const id_productor = jwtIdProductor ?? await this.getIdProductorByUserId(id_usuario);
     if (!id_productor) return [];
 
     const relationWhere: Prisma.detalle_pedidoWhereInput = {

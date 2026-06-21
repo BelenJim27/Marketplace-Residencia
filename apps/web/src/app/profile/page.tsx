@@ -116,8 +116,7 @@ export default function ClientePerfilPage() {
 
   // ── Carga de datos ──────────────────────────────────────────────
   const cargarPerfil = useCallback(async () => {
-    const token = getCookie("token");
-    if (!token) return;
+    const token = getCookie("token") ?? "";
     try {
       const profile = (await api.auth.getProfile(token)) as StoredUser;
       setUser(profile);
@@ -135,8 +134,7 @@ export default function ClientePerfilPage() {
   }, [authUser?.id_usuario, cargarPerfil]);
 
   const cargarDirecciones = async () => {
-    const token = getCookie("token");
-    if (!token) return;
+    const token = getCookie("token") ?? "";
     setLoadingDir(true);
     try {
       const sol = await api.productores.getMiSolicitud(token) as any;
@@ -156,8 +154,7 @@ export default function ClientePerfilPage() {
   };
 
   const cargarFiscal = async () => {
-    const token = getCookie("token");
-    if (!token) return;
+    const token = getCookie("token") ?? "";
     setLoadingFiscal(true);
     try {
       const [regionesData, sol] = await Promise.all([
@@ -252,8 +249,7 @@ export default function ClientePerfilPage() {
   };
 
   const handleSaveDir = async () => {
-    const token = getCookie("token");
-    if (!token) return;
+    const token = getCookie("token") ?? "";
     setSavingDir(true);
     try {
       await api.productores.actualizarMiPerfil(token, {
@@ -266,8 +262,7 @@ export default function ClientePerfilPage() {
   };
 
   const handleSaveFiscal = async () => {
-    const token = getCookie("token");
-    if (!token) return;
+    const token = getCookie("token") ?? "";
     setSavingFiscal(true);
     try {
       await api.productores.actualizarMiPerfil(token, {

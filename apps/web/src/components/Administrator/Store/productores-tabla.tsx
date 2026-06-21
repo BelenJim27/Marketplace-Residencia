@@ -133,8 +133,7 @@ export function ProductoresTabla() {
     if (!deleting) return;
     setDeleteLoading(true);
     try {
-      const token = getCookie("token");
-      if (!token) throw new Error("No autorizado");
+      const token = getCookie("token") ?? "";
       await api.productores.delete(token, deleting.id as any);
       setProductores((c) => c.filter((p) => p.id !== deleting.id));
       successToast.mostrar("Productor eliminado correctamente.");

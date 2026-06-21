@@ -107,9 +107,9 @@ export default function SolicitudesProductoresPage() {
     try {
       setLoading(true);
       const token = getCookie("token");
-      if (!token) { setError("No autorizado"); return; }
       const response = await fetch(`/admin/productores/solicitudes`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+        ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -127,10 +127,10 @@ export default function SolicitudesProductoresPage() {
     try {
       setProcessingId(id);
       const token = getCookie("token");
-      if (!token) return;
       const response = await fetch(`/admin/productores/${id}/revisar`, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ estado: "aprobado", ...(approveReason ? { motivo_aprobacion: approveReason } : {}) }),
       });
       if (!response.ok) throw new Error("Error al aprobar solicitud");
@@ -150,10 +150,10 @@ export default function SolicitudesProductoresPage() {
     try {
       setProcessingId(id);
       const token = getCookie("token");
-      if (!token) return;
       const response = await fetch(`/admin/productores/${id}/revisar`, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ estado: "rechazado", motivo_rechazo: rejectReason }),
       });
       if (!response.ok) throw new Error("Error al rechazar solicitud");

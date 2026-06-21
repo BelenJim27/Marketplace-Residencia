@@ -111,8 +111,10 @@ export class ProductoresController {
   @Patch(':id')
   async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductorDto, @Req() req: any) {
     const isAdmin = req.user.roles?.some((r: string) => r.toLowerCase() === 'administrador');
-    if (!isAdmin && req.user.id_productor !== id) {
-      throw new HttpException('Solo puedes editar tu propio perfil de productor', HttpStatus.FORBIDDEN);
+    if (!isAdmin) {
+      const actualId = req.user.id_productor ??
+        ((await this.service.findByUsuario(req.user.id_usuario)) as any)?.id_productor;
+      if (actualId !== id) throw new HttpException('Solo puedes editar tu propio perfil de productor', HttpStatus.FORBIDDEN);
     }
     return this.service.update(id, dto);
   }

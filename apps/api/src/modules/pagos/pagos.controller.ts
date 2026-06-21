@@ -26,11 +26,24 @@ export class PagosController {
   ) {}
   @UseGuards(AuthGuard)
   @Get('ingresos/:id_productor')
-  getIngresosResumen(@Param('id_productor', ParseIntPipe) id_productor: number, @Req() req: Request) {
+  async getIngresosResumen(@Param('id_productor', ParseIntPipe) id_productor: number, @Req() req: Request) {
     const user = (req as any).user;
-    const isAdmin = user?.roles?.includes('admin') || user?.permisos?.includes('admin');
-    if (!isAdmin && user?.id_productor !== id_productor) {
-      throw new UnauthorizedException('Solo puedes ver tus propios ingresos');
+    const isAdmin = user?.roles?.some((r: string) => ['admin', 'administrador'].includes(r.toLowerCase()))
+      || user?.permisos?.some((p: string) => ['admin', 'administrador'].includes(p.toLowerCase()));
+    if (!isAdmin) {
+      // 1. JWT id_productor (fresh after re-login)
+      const jwtId = user.id_productor != null ? Number(user.id_productor) : null;
+      // 2. DB lookup by id_usuario
+      const dbId = await this.service.getIdProductorByUserId(user.id_usuario);
+      let actualIdProductor = jwtId ?? dbId;
+      // 3. If still unresolved (UUID drift), verify ownership via direct join
+      if (actualIdProductor == null) {
+        const owned = await this.service.verifyProductorOwnership(user.id_usuario, id_productor);
+        if (owned) actualIdProductor = id_productor;
+      }
+      if (actualIdProductor == null || actualIdProductor !== id_productor) {
+        throw new UnauthorizedException('Solo puedes ver tus propios ingresos');
+      }
     }
     return this.service.getIngresosResumen(id_productor);
   }

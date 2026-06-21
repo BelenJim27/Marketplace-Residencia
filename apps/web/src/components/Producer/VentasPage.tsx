@@ -63,7 +63,7 @@ export default function VentasPage() {
   useEffect(() => {
     if (authLoading) return;
     const productorId = user?.id_productor;
-    if (!productorId || !token) {
+    if (!productorId) {
       setLoading(false);
       setError("No fue posible identificar el productor autenticado.");
       return;
@@ -75,7 +75,7 @@ export default function VentasPage() {
         setError(null);
         const [storesData, salesData] = await Promise.all([
           api.tiendas.getByProductor(productorId, token),
-          api.pedidos.getMineSales(token),
+          api.pedidos.getMineSales(token, user?.id_productor ?? undefined),
         ]);
         if (cancelled) return;
         setStores(Array.isArray(storesData) ? (storesData as StoreItem[]) : []);

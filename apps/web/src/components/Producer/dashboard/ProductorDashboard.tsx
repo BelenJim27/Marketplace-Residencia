@@ -56,7 +56,7 @@ export function ProductorDashboard() {
   const chartsRef = useRef<HTMLDivElement | null>(null);
 
   const { categorias, loadingCategorias, tieneLotes } =
-    useProductorCategorias(token);
+    useProductorCategorias();
 
     console.log("categorias del productor:", categorias);
 
@@ -67,7 +67,7 @@ export function ProductorDashboard() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user?.id_productor || !token) {
+    if (!user?.id_productor) {
       setLoading(false);
       setError("No fue posible identificar el productor autenticado.");
       return;

@@ -59,7 +59,7 @@ export default function UsuariosUI() {
   const [currentPage, setCurrentPage]     = useState(1);
   const itemsPerPage = 10;
 
-  const getToken = () => typeof window !== "undefined" ? getCookie("token") : null;
+  const getToken = () => typeof window !== "undefined" ? (getCookie("token") ?? "") : "";
 
   useEffect(() => { fetchUsuarios(); fetchRoles(); }, []);
 
@@ -67,7 +67,6 @@ export default function UsuariosUI() {
     try {
       setLoading(true);
       const token = getToken();
-      if (!token) throw new Error("No hay sesión activa");
       const data = await api.usuarios.getAll(token);
       setUsuarios(data as Usuario[]);
     } catch (err) { setError(err instanceof Error ? err.message : "Error al cargar usuarios"); }
@@ -77,7 +76,6 @@ export default function UsuariosUI() {
   const fetchRoles = async () => {
     try {
       const token = getToken();
-      if (!token) return;
       const data = await api.roles.getAll(token);
       setRoles(data as Rol[]);
     } catch { /* roles no críticos */ }
@@ -90,7 +88,6 @@ export default function UsuariosUI() {
     try {
       setSaving(true);
       const token = getToken();
-      if (!token) throw new Error("No hay sesión activa");
       await api.usuarios.create(token, { ...userFormData });
       closeModal(); fetchUsuarios();
       successToast.mostrarRegistrado();
@@ -104,7 +101,6 @@ export default function UsuariosUI() {
     try {
       setSaving(true);
       const token = getToken();
-      if (!token) throw new Error("No hay sesión activa");
       const payload: Partial<UserFormData> = { ...userFormData };
       if (!payload.password) delete payload.password;
       await api.usuarios.update(token, editingUsuario.id_usuario, payload);
@@ -119,7 +115,6 @@ export default function UsuariosUI() {
     deleteAlert.abrir(nombre, async () => {
       try {
         const token = getToken();
-        if (!token) throw new Error("No hay sesión activa");
         await api.usuarios.delete(token, usuario.id_usuario);
         fetchUsuarios();
         successToast.mostrar("Usuario eliminado correctamente.");

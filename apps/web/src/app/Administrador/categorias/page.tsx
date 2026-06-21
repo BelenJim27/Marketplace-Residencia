@@ -92,8 +92,7 @@ export default function CategoriasAdminPage() {
     const isEditing = !!editingCategoria;
     const payload   = { nombre: formData.nombre, slug: formData.slug, tipo: formData.tipo, activo: formData.activo, id_padre: formData.jerarquia === "subcategoria" && formData.id_padre ? parseInt(formData.id_padre) : null };
     try {
-      const token = getCookie("token");
-      if (!token) throw new Error("No autorizado");
+      const token = getCookie("token") ?? "";
       if (isEditing) await api.categorias.update(token, editingCategoria!.id_categoria, payload);
       else await api.categorias.create(token, payload);
       setShowModal(false);
@@ -108,8 +107,7 @@ export default function CategoriasAdminPage() {
   const handleDelete = (id: number, nombre: string) => {
     deleteAlert.abrir(nombre, async () => {
       try {
-        const token = getCookie("token");
-        if (!token) throw new Error("No autorizado");
+        const token = getCookie("token") ?? "";
         await api.categorias.delete(token, id);
         loadCategorias();
         successToast.mostrar("Categoría eliminada correctamente.");

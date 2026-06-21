@@ -85,11 +85,6 @@ export default function ConfiguracionPage() {
   };
 
   const handleSave = async () => {
-    if (!token) {
-      setMessage({ type: "error", text: "No autenticado" });
-      return;
-    }
-
     setSaving(true);
     setMessage(null);
 

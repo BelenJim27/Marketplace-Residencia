@@ -190,18 +190,11 @@ export default function SolicitarPage() {
         setCategorias(cats as Categoria[]);
         setAsociaciones(Array.isArray(asocs) ? asocs : []);
 
-        let token = getCookie("token") || (session as any)?.accessToken;
-        if (!token) { await new Promise(r => setTimeout(r, 300)); token = getCookie("token") || (session as any)?.accessToken; }
-
-        if (token) {
-          const userId = (user as any)?.id_usuario || (user as any)?.id;
-          if (userId) {
-            try {
-              const sol = await api.productores.getMiSolicitud(token) as any;
-              if (sol?.id_productor) setSolicitudActual(sol as Solicitud);
-            } catch { /* no solicitud */ }
-          }
-        }
+        const token = getCookie("token") || (session as any)?.accessToken || "";
+        try {
+          const sol = await api.productores.getMiSolicitud(token) as any;
+          if (sol?.id_productor) setSolicitudActual(sol as Solicitud);
+        } catch { /* no solicitud */ }
       } catch (err) {
         setError(t("Error al cargar la información inicial."));
       } finally {
@@ -216,8 +209,7 @@ export default function SolicitarPage() {
     if (file.size > 500 * 1024) { setError(t("El archivo debe pesar menos de 500 KB.")); return; }
     setUploading(true); setError("");
     try {
-      const token = (session as any)?.accessToken || getCookie("token");
-      if (!token) { setError(t("No se detectó sesión.")); return; }
+      const token = (session as any)?.accessToken || getCookie("token") || "";
       const fd = new FormData();
       fd.append("archivo", file);
       fd.append("entidad_tipo", "productor_certificado");
@@ -262,8 +254,7 @@ export default function SolicitarPage() {
     if (!certificadoUrl) { setError(t("Sube el certificado primero")); return; }
     setIsSubmitting(true); setError("");
     try {
-      const token = (session as any)?.accessToken || getCookie("token");
-      if (!token) { setError(t("No se detectó sesión.")); return; }
+      const token = (session as any)?.accessToken || getCookie("token") || "";
       await api.productores.solicitar(token, {
         rfc: form.rfc || undefined,
         razon_social: form.razon_social || undefined,

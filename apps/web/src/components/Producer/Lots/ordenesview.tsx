@@ -100,7 +100,7 @@ export default function OrdenesView() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user?.id_productor || !token) {
+    if (!user?.id_productor) {
       setLoading(false);
       setError("No fue posible identificar el productor.");
       return;

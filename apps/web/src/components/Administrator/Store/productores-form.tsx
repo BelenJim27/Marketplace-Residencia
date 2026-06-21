@@ -134,8 +134,7 @@ export function ProductoresForm({
     setSubmitting(true);
 
     try {
-      const token = getCookie("token");
-      if (!token) throw new Error("No autorizado");
+      const token = getCookie("token") ?? "";
 
       const payload = new FormData();
       payload.append("nombre", form.nombre.trim());

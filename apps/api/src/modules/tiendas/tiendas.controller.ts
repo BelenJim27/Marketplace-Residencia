@@ -44,7 +44,8 @@ export class TiendasController {
     if (!isAdmin(user)) {
       const tienda = await this.service.findOne(id) as any;
       if (!tienda) throw new NotFoundException('Tienda no encontrada');
-      if (tienda.id_productor !== user.id_productor) {
+      const actualId = user.id_productor ?? await this.service.getIdProductorByUserId(user.id_usuario);
+      if (tienda.id_productor !== actualId) {
         throw new ForbiddenException('Solo puedes editar tu propia tienda');
       }
     }

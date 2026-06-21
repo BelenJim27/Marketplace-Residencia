@@ -187,7 +187,6 @@ function ImageUpload({ label, name, value, onUploaded }: {
   const [error, setError] = useState<string | null>(null);
 
   const handleFile = async (file: File) => {
-    if (!token) { setError("No autenticado"); return; }
     if (file.size > 2 * 1024 * 1024) { setError("Máximo 2 MB"); return; }
     setUploading(true); setError(null);
     try {
@@ -274,7 +273,6 @@ export default function LandingConfigSection() {
   };
 
   const handleSave = async () => {
-    if (!token) { setMessage({ type: "error", text: "No autenticado" }); return; }
     setSaving(true); setMessage(null);
     try {
       const items = Object.entries(formData).map(([clave, valor]) => ({

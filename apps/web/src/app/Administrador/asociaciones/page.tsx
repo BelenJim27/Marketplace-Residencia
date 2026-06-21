@@ -38,8 +38,7 @@ export default function AsociacionesPage() {
     setSaving(true);
     setNotice(null);
     try {
-      const token = getCookie("token");
-      if (!token) throw new Error("No autorizado");
+      const token = getCookie("token") ?? "";
       await api.configuracion.setAsociaciones(token, lista);
       setAsociaciones(lista);
       return true;

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Headers, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { CreateDetallePedidoDto, CreateFacturaDto, CreatePedidoDto, UpdateDetallePedidoDto, UpdateFacturaDto, UpdatePedidoDto, ValidarEnvioDto } from './dto/pedidos.dto';
 import { PedidosService } from './pedidos.service';
@@ -9,47 +9,70 @@ import { Roles } from '../auth/guards/roles.decorator';
 @Controller('pedidos')
 export class PedidosController {
   constructor(private readonly service: PedidosService) {}
+
+  private async resolveProductorId(user: any): Promise<number | null> {
+    return user.id_productor ?? await this.service.getIdProductorByUserId(user.id_usuario);
+  }
   @UseGuards(AuthGuard)
   @Get() findAll(@Query() query: PaginacionQueryDto) { return this.service.findAll(query); }
   @UseGuards(AuthGuard)
-  @Get('mis-ventas') getMisVentas(@Req() req: any) {
-    return this.service.getMisVentas(req.user.id_productor ?? null);
+  @Get('mis-ventas') async getMisVentas(@Req() req: any, @Query('id_productor') idProductor?: string) {
+    const parsed = idProductor ? Number(idProductor) : null;
+    // 1. JWT id_productor
+    const jwtId = req.user.id_productor != null ? Number(req.user.id_productor) : null;
+    // 2. DB lookup
+    const dbId = await this.service.getIdProductorByUserId(req.user.id_usuario);
+    let id_productor: number | null = jwtId ?? dbId;
+    // 3. UUID drift fallback: verify ownership via direct join
+    if (id_productor == null && parsed != null && !Number.isNaN(parsed)) {
+      const owned = await this.service.verifyProductorOwnership(req.user.id_usuario, parsed);
+      if (owned) id_productor = parsed;
+    }
+    return this.service.getMisVentas(id_productor ?? null);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('cliente', 'administrador')
   @Get('mis-compras')
-  getMisCompras(@Headers('authorization') authorization: string) {
-    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
-    if (!token) throw new BadRequestException('Token requerido');
-    return this.service.getMisCompras(token);
+  getMisCompras(@Req() req: any) {
+    return this.service.getMisCompras(req.user.id_usuario);
   }
 
   @UseGuards(AuthGuard)
   @Get('mis-pedidos')
-  getMisPedidos(@Headers('authorization') authorization: string) {
-    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
-    if (!token) throw new BadRequestException('Token requerido');
-    return this.service.getMisPedidosProductor(token);
+  getMisPedidos(@Req() req: any) {
+    return this.service.getMisPedidosProductor(req.user.id_usuario, req.user.id_productor);
   }
 
   @UseGuards(AuthGuard)
-  @Get('estadisticas') getEstadisticas(@Req() req: any, @Query('id_productor') idProductor?: string, @Query('periodo') periodo?: string) {
+  @Get('estadisticas') async getEstadisticas(@Req() req: any, @Query('id_productor') idProductor?: string, @Query('periodo') periodo?: string) {
     const parsed = idProductor ? Number(idProductor) : undefined;
-    // Un productor solo ve sus propias estadísticas; un admin puede consultar las de
-    // cualquier productor pasando ?id_productor= (evita que un productor vea las de otro).
-    const id_productor =
-      isAdmin(req.user) && parsed != null && !Number.isNaN(parsed)
-        ? parsed
-        : (req.user.id_productor ?? null);
+    let id_productor: number | null;
+    if (isAdmin(req.user) && parsed != null && !Number.isNaN(parsed)) {
+      id_productor = parsed;
+    } else {
+      // 1. JWT id_productor (fresh after re-login)
+      const jwtId = req.user.id_productor != null ? Number(req.user.id_productor) : null;
+      // 2. DB lookup by id_usuario
+      const dbId = await this.service.getIdProductorByUserId(req.user.id_usuario);
+      id_productor = jwtId ?? dbId;
+
+      // 3. If frontend passed id_productor and both above fail (UUID drift between
+      //    JWT and DB), verify ownership directly via IDOR-safe join check
+      if (id_productor == null && parsed != null && !Number.isNaN(parsed)) {
+        const owned = await this.service.verifyProductorOwnership(req.user.id_usuario, parsed);
+        if (owned) id_productor = parsed;
+      }
+    }
     return this.service.getEstadisticas(periodo || 'month', id_productor);
   }
 
   @UseGuards(AuthGuard)
   @Get('productor/:id_productor')
-  getOrdersByProductor(@Param('id_productor', ParseIntPipe) id_productor: number, @Req() req: any) {
-    if (!isAdmin(req.user) && req.user?.id_productor !== id_productor) {
-      throw new ForbiddenException('Solo puedes ver tus propios pedidos');
+  async getOrdersByProductor(@Param('id_productor', ParseIntPipe) id_productor: number, @Req() req: any) {
+    if (!isAdmin(req.user)) {
+      const actual = await this.resolveProductorId(req.user);
+      if (actual !== id_productor) throw new ForbiddenException('Solo puedes ver tus propios pedidos');
     }
     return this.service.getOrdersByProductor(id_productor);
   }
@@ -65,32 +88,32 @@ export class PedidosController {
 
   @UseGuards(AuthGuard)
   @Patch('productor/:id_pedido/:id_productor/estado')
-  updateOrderStatus(
+  async updateOrderStatus(
     @Param('id_pedido') id_pedido: string,
     @Param('id_productor', ParseIntPipe) id_productor: number,
     @Body() { estado }: { estado: string },
     @Req() req: any,
   ) {
-    const userProductorId = req.user?.id_productor;
-    const isAdmin = req.user?.roles?.includes('admin') || req.user?.permisos?.includes('admin');
-    if (!isAdmin && userProductorId !== id_productor) {
-      throw new ForbiddenException('Solo puedes actualizar el estado de tus propios pedidos');
+    const admin = req.user?.roles?.includes('admin') || req.user?.permisos?.includes('admin');
+    if (!admin) {
+      const actual = await this.resolveProductorId(req.user);
+      if (actual !== id_productor) throw new ForbiddenException('Solo puedes actualizar el estado de tus propios pedidos');
     }
-    return this.service.updateOrderStatusForProductor(id_pedido, id_productor, estado, isAdmin);
+    return this.service.updateOrderStatusForProductor(id_pedido, id_productor, estado, admin);
   }
 
   @UseGuards(AuthGuard)
   @Patch('productor/:id_pedido/:id_productor/tracking')
-  updateTracking(
+  async updateTracking(
     @Param('id_pedido') id_pedido: string,
     @Param('id_productor', ParseIntPipe) id_productor: number,
     @Body() { numero_rastreo }: { numero_rastreo: string },
     @Req() req: any,
   ) {
-    const userProductorId = req.user?.id_productor;
-    const isAdmin = req.user?.roles?.includes('admin') || req.user?.permisos?.includes('admin');
-    if (!isAdmin && userProductorId !== id_productor) {
-      throw new ForbiddenException('Solo puedes actualizar el tracking de tus propios pedidos');
+    const admin = req.user?.roles?.includes('admin') || req.user?.permisos?.includes('admin');
+    if (!admin) {
+      const actual = await this.resolveProductorId(req.user);
+      if (actual !== id_productor) throw new ForbiddenException('Solo puedes actualizar el tracking de tus propios pedidos');
     }
     return this.service.updateTrackingForProducer(id_pedido, id_productor, numero_rastreo);
   }

@@ -167,7 +167,6 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
   };
 
   const handleDelete = (product: ProductItem) => {
-    if (!token) { setError("No autorizado para eliminar productos."); return; }
     deleteAlert.abrir(product.nombre, async () => {
       try {
         await api.productos.delete(token, String(product.id_producto));
@@ -180,7 +179,6 @@ export function ProductosProductor({ idProductor }: ProductosProductorProps) {
   };
 
   const handleCreate = async () => {
-    if (!token) { setError("No autorizado para crear productos."); return; }
     if (!form.nombre.trim()) { setError("El nombre del producto es obligatorio."); return; }
     setSaving(true);
     setError(null);

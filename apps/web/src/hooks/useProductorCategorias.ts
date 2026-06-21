@@ -8,16 +8,16 @@ type CategoriaProductor = {
 
 const CATEGORIAS_CON_LOTES = ["Bebidas", "Bebidas_mezcal"];
 
-export function useProductorCategorias(token: string, skip = false) {
+export function useProductorCategorias(skip = false) {
   const [categorias, setCategorias] = useState<CategoriaProductor[]>([]);
   const [loadingCategorias, setLoadingCategorias] = useState(!skip);
 
   useEffect(() => {
-    if (skip || !token) { setLoadingCategorias(false); return; }
+    if (skip) { setLoadingCategorias(false); return; }
     let cancelled = false;
 
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/productores/mi-solicitud`, {
-      headers: { Authorization: `Bearer ${token}` },
+    fetch('/productores/mi-solicitud', {
+      credentials: 'include',
     })
       .then((r) => {
         if (!r.ok) return null;
@@ -34,7 +34,7 @@ export function useProductorCategorias(token: string, skip = false) {
       .finally(() => { if (!cancelled) setLoadingCategorias(false); });
 
     return () => { cancelled = true; };
-  }, [token, skip]);
+  }, [skip]);
 
   const tieneLotes = useMemo(
     () => categorias.some(

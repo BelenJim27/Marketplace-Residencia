@@ -94,6 +94,7 @@ const sentryConfig = {
   widenClientFileUpload: true,
   disableLogger: true,
   automaticVercelMonitors: false,
+  autoInstrumentClientSide: false,
 };
 
 export default withSentryConfig(withNextIntl(nextConfig), sentryConfig);

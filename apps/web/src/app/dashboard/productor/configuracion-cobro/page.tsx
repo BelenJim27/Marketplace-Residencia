@@ -39,19 +39,13 @@ export default function ConfiguracionCobroPage() {
 
     const init = async () => {
       try {
-        let token = (session as any)?.accessToken || getCookie("token");
-        if (!token) {
-          await new Promise(resolve => setTimeout(resolve, 300));
-          token = getCookie("token");
-        }
-        if (token) {
-          const solicitud = await api.productores.getMiSolicitud(token) as any;
-          if (solicitud) {
-            setFormData({
-              paypal_email: solicitud.paypal_email ?? "",
-              datos_bancarios: solicitud.datos_bancarios ?? "",
-            });
-          }
+        const token = (session as any)?.accessToken || getCookie("token") || "";
+        const solicitud = await api.productores.getMiSolicitud(token) as any;
+        if (solicitud) {
+          setFormData({
+            paypal_email: solicitud.paypal_email ?? "",
+            datos_bancarios: solicitud.datos_bancarios ?? "",
+          });
         }
       } catch (err) {
         console.error("Error al cargar configuración de cobro:", err);
@@ -70,12 +64,7 @@ export default function ConfiguracionCobroPage() {
     setSuccessMsg("");
 
     try {
-      const token = (session as any)?.accessToken || getCookie("token");
-      if (!token) {
-        setError("No se detectó sesión. Por favor inicia sesión.");
-        return;
-      }
-
+      const token = (session as any)?.accessToken || getCookie("token") || "";
       await api.productores.actualizarMiPerfil(token, {
         paypal_email: formData.paypal_email || undefined,
         datos_bancarios: formData.datos_bancarios || undefined,

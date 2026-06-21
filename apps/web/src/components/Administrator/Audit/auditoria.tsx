@@ -35,7 +35,7 @@ export default function AuditoriaUI() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
-  const getToken = () => (typeof window !== "undefined" ? getCookie("token") : null);
+  const getToken = () => (typeof window !== "undefined" ? (getCookie("token") ?? "") : "");
 
   useEffect(() => {
     fetchAuditoria();
@@ -50,7 +50,6 @@ export default function AuditoriaUI() {
     try {
       setLoading(true);
       const token = getToken();
-      if (!token) throw new Error("No hay sesión activa");
       const data = await api.auditoria.getAll() as any;
       const list = Array.isArray(data) ? data : (data?.items ?? []);
       setAuditoria(list as Auditoria[]);

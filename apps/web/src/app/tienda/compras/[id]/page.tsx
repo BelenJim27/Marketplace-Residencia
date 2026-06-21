@@ -272,7 +272,7 @@ function DetallePedidoContent() {
   const handleSolicitarFactura = async () => {
     const token = authToken || getCookie("token");
     const pedidoId = String(params.id);
-    if (!pedidoId || !token) {
+    if (!pedidoId) {
       setFacturaError("No se pudo identificar la sesión. Recarga la página.");
       setFacturaEstado("error");
       return;

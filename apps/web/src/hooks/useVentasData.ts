@@ -26,7 +26,7 @@ export function useVentasData(periodo: DashboardPeriod) {
 
     const token = getCookie("token") ?? "";
 
-    if (!user?.id_productor || !token) {
+    if (!user?.id_productor) {
       setIsLoading(false);
       setError("No fue posible identificar el productor autenticado.");
       setData(null);
@@ -40,7 +40,7 @@ export function useVentasData(periodo: DashboardPeriod) {
       setError(null);
 
       try {
-        const response = (await api.pedidos.getAnalytics(token, PERIOD_MAP[periodo])) as VentasAnalytics;
+        const response = (await api.pedidos.getAnalytics(token, PERIOD_MAP[periodo], user?.id_productor ?? undefined)) as VentasAnalytics;
         if (!cancelled) setData(response);
       } catch (err) {
         if (!cancelled)

@@ -104,6 +104,23 @@ export class PagosService {
   async create(dto: CreatePagoDto) { return serializeBigInts(await this.prisma.pagos.create({ data: { id_pedido: toBigIntId(dto.id_pedido), proveedor: dto.proveedor ?? null, payment_intent_id: dto.payment_intent_id ?? null, estado: dto.estado?.trim() ?? 'pendiente', monto: dto.monto, moneda: dto.moneda } })); }
   async update(id_pago: string, dto: UpdatePagoDto) { return serializeBigInts(await this.prisma.pagos.update({ where: { id_pago: toBigIntId(id_pago) }, data: { id_pedido: dto.id_pedido ? toBigIntId(dto.id_pedido) : undefined, proveedor: dto.proveedor, payment_intent_id: dto.payment_intent_id, estado: dto.estado?.trim(), monto: dto.monto, moneda: dto.moneda } })); }
   async remove(id_pago: string) { await this.prisma.pagos.delete({ where: { id_pago: toBigIntId(id_pago) } }); return { message: 'Pago eliminado' }; }
+
+  async getIdProductorByUserId(id_usuario: string): Promise<number | null> {
+    const productor = await this.prisma.productores.findUnique({
+      where: { id_usuario },
+      select: { id_productor: true },
+    });
+    return productor?.id_productor ?? null;
+  }
+
+  async verifyProductorOwnership(id_usuario: string, id_productor: number): Promise<boolean> {
+    const p = await this.prisma.productores.findFirst({
+      where: { id_productor, id_usuario },
+      select: { id_productor: true },
+    });
+    return p != null;
+  }
+
   async getIngresosResumen(id_productor: number) {
     const pedidoProductores = await this.prisma.pedido_productor.findMany({
       where: { id_productor, estado: { not: 'cancelado' } },

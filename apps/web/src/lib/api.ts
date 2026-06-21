@@ -553,10 +553,10 @@ export const api = {
       return Array.isArray(res) ? res : ((res as any)?.items ?? []);
     },
     getOne: (id: string) => fetchJson(endpoint(`/pedidos/${id}`)),
-    getMineSales: (token: string) =>
-      fetchJson(endpoint("/pedidos/mis-ventas"), { headers: headers(token) }),
-    getAnalytics: (token: string, periodo: string) =>
-      fetchJson(endpoint(`/pedidos/estadisticas?periodo=${periodo}`), {
+    getMineSales: (token: string, id_productor?: number) =>
+      fetchJson(endpoint(`/pedidos/mis-ventas${id_productor ? `?id_productor=${id_productor}` : ''}`), { headers: headers(token) }),
+    getAnalytics: (token: string, periodo: string, id_productor?: number) =>
+      fetchJson(endpoint(`/pedidos/estadisticas?periodo=${periodo}${id_productor ? `&id_productor=${id_productor}` : ''}`), {
         headers: headers(token),
       }),
     getMisCompras: (token: string) =>

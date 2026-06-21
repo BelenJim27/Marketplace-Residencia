@@ -51,6 +51,11 @@ export class TiendasService {
     });
   }
 
+  async getIdProductorByUserId(id_usuario: string): Promise<number | null> {
+    const p = await this.prisma.productores.findUnique({ where: { id_usuario }, select: { id_productor: true } });
+    return p?.id_productor ?? null;
+  }
+
   async findOne(id_tienda: number) {
     const item = await this.prisma.tiendas.findFirst({
       where: { id_tienda, eliminado_en: null },
