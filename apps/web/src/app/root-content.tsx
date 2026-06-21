@@ -44,14 +44,14 @@ export function RootContent({ children }: PropsWithChildren) {
     pathname.startsWith("/producto/") ||
     pathname === "/producto";
 
-  // Se inicializa en true (SSR-safe) y el efecto comprueba la cookie real en cliente
-  const [ageVerified, setAgeVerified] = useState(true);
+  // SSR-safe: empieza como false y se verifica en el cliente
+  const [ageVerified, setAgeVerified] = useState(false);
 
   useEffect(() => {
-    if (needsAgeGate && !ageVerified) {
+    if (needsAgeGate) {
       setAgeVerified(isGlobalAgeVerified());
     }
-  }, [needsAgeGate, pathname, ageVerified]);
+  }, [needsAgeGate, pathname]);
 
   if (loading) {
     if (user && (isAdmin || isProductor)) {

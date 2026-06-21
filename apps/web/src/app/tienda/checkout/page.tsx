@@ -683,6 +683,8 @@ export default function CheckoutPage() {
                           locale={locale}
                           token={getCookie("token")}
                           numeroOrden={numeroOrdenCreado}
+                          solicitarProteccion={solicitarProteccion}
+                          proteccionMontoDisplay={convertFromMXN(costoProteccionEstimadoMXN)}
                         />
                       </Elements>
                     )}
@@ -760,6 +762,8 @@ export default function CheckoutPage() {
                           displayCurrency={displayCurrency}
                           shippingDisplayAmount={getShippingDisplayAmount()}
                           locale={locale}
+                          solicitarProteccion={solicitarProteccion}
+                          proteccionMontoDisplay={convertFromMXN(costoProteccionEstimadoMXN)}
                         />
                       </div>
                     )}
@@ -1924,6 +1928,8 @@ function PagoYResumen({
   locale,
   token,
   numeroOrden,
+  solicitarProteccion,
+  proteccionMontoDisplay,
 }: {
   paso: CheckoutStep;
   items: any[];
@@ -1941,6 +1947,8 @@ function PagoYResumen({
   locale: string;
   token: string | null;
   numeroOrden: number | null;
+  solicitarProteccion?: boolean;
+  proteccionMontoDisplay?: number;
 }) {
   const { t } = useLocale();
   const COLOR_PALETTE = usePalette();
@@ -2197,6 +2205,24 @@ function PagoYResumen({
           );
         })()}
 
+        {solicitarProteccion && proteccionMontoDisplay != null && proteccionMontoDisplay > 0 && (
+          <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <span className="font-medium text-gray-800 dark:text-gray-200 truncate block">
+                  {locale === 'en' ? 'Shipping protection' : 'Protección de envío'}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {locale === 'en' ? 'Coverage up to declared value' : 'Cubre pérdida o daño hasta el valor declarado'}
+                </span>
+              </div>
+              <span className="flex-shrink-0 font-semibold text-green-700 dark:text-green-400">
+                ~${formatPrice(proteccionMontoDisplay, { showCurrency: false })} {displayCurrency}
+              </span>
+            </div>
+          </div>
+        )}
+
         <button
           data-tour="checkout-confirm"
           onClick={handleConfirm}
@@ -2227,6 +2253,8 @@ function PagoYResumenPaypal({
   displayCurrency,
   shippingDisplayAmount,
   locale,
+  solicitarProteccion,
+  proteccionMontoDisplay,
 }: {
   items: any[];
   direccionSeleccionada: any;
@@ -2238,6 +2266,8 @@ function PagoYResumenPaypal({
   displayCurrency: string;
   shippingDisplayAmount: number | null;
   locale: string;
+  solicitarProteccion?: boolean;
+  proteccionMontoDisplay?: number;
 }) {
   const router = useRouter();
   const COLOR_PALETTE = usePalette();
@@ -2333,6 +2363,24 @@ function PagoYResumenPaypal({
           </div>
         );
       })()}
+
+      {solicitarProteccion && proteccionMontoDisplay != null && proteccionMontoDisplay > 0 && (
+        <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <span className="font-medium text-gray-800 dark:text-gray-200 truncate block">
+                {locale === 'en' ? 'Shipping protection' : 'Protección de envío'}
+              </span>
+              <span className="text-xs text-gray-500">
+                {locale === 'en' ? 'Coverage up to declared value' : 'Cubre pérdida o daño hasta el valor declarado'}
+              </span>
+            </div>
+            <span className="flex-shrink-0 font-semibold text-green-700 dark:text-green-400">
+              ~${formatPrice(proteccionMontoDisplay, { showCurrency: false })} {displayCurrency}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
         <p className="font-medium">✓ {locale === 'en' ? 'Payment confirmed with PayPal' : 'Pago confirmado con PayPal'}</p>

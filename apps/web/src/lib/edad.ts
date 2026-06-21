@@ -50,19 +50,16 @@ export function persistAgeVerified(edadMinima: number): void {
 
 export const GLOBAL_AGE_GATE_COOKIE = "age_gate_verified";
 
-const LS_KEY = "age_gate_verified_until";
-const DAYS_MS = COOKIE_DAYS * 24 * 60 * 60 * 1000;
+const LS_KEY = "age_gate_verified";
 
 export function isGlobalAgeVerified(): boolean {
   if (typeof window === "undefined") return false;
-  const val = localStorage.getItem(LS_KEY);
-  if (!val) return false;
-  return Date.now() < Number(val);
+  return localStorage.getItem(LS_KEY) === "1";
 }
 
 export function persistGlobalAgeVerified(): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(LS_KEY, String(Date.now() + DAYS_MS));
+  localStorage.setItem(LS_KEY, "1");
 }
 
 export function calcularEdadEnAnios(fechaNacimiento: Date | string, ref: Date = new Date()): number {
