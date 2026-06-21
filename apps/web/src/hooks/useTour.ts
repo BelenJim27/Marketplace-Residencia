@@ -132,18 +132,6 @@ export function useTour() {
     return () => clearTimeout(t);
   }, [role, runTour]);
 
-  // Auto-start page tour on first visit to each section (nav tour must be done first)
-  useEffect(() => {
-    const page = detectPage(pathname, role);
-    if (!page) return;
-    if (!localStorage.getItem(NAV_TOUR_KEY(role))) return;
-    if (localStorage.getItem(PAGE_TOUR_KEY(role, page))) return;
-    const t = setTimeout(() => {
-      runTour(page, () => localStorage.setItem(PAGE_TOUR_KEY(role, page), 'true'));
-    }, 800);
-    return () => clearTimeout(t);
-  }, [pathname, role, runTour]);
-
   const resetTour = useCallback(() => {
     const page = detectPage(pathname, role);
     if (page) {

@@ -174,7 +174,7 @@ export function ChatWidget() {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? (isEN ? "Close assistant" : "Cerrar asistente") : (isEN ? "Open assistant" : "Abrir asistente")}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2"
+        className="fixed bottom-28 md:bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2"
         style={{ backgroundColor: "#2E4A33", focusRingColor: "#2E4A33" } as React.CSSProperties}
       >
         {open ? (
@@ -190,7 +190,7 @@ export function ChatWidget() {
 
       {/* ── Panel ── */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 flex h-[520px] w-[340px] flex-col overflow-hidden rounded-2xl border border-[rgba(244,240,227,0.15)] shadow-2xl sm:w-[380px]"
+        <div className="fixed bottom-44 md:bottom-24 right-6 z-50 flex h-[520px] w-[340px] flex-col overflow-hidden rounded-2xl border border-[rgba(244,240,227,0.15)] shadow-2xl sm:w-[380px]"
           style={{ backgroundColor: "#1F3A2E" }}
         >
           {/* Header */}

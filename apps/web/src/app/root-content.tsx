@@ -44,14 +44,15 @@ export function RootContent({ children }: PropsWithChildren) {
     pathname.startsWith("/producto/") ||
     pathname === "/producto";
 
-  // SSR-safe: empieza como false y se verifica en el cliente
   const [ageVerified, setAgeVerified] = useState(false);
+  const [ageChecked, setAgeChecked] = useState(false);
 
   useEffect(() => {
     if (needsAgeGate) {
       setAgeVerified(isGlobalAgeVerified());
     }
-  }, [needsAgeGate, pathname]);
+    setAgeChecked(true);
+  }, [needsAgeGate]);
 
   if (loading) {
     if (user && (isAdmin || isProductor)) {
@@ -127,7 +128,7 @@ export function RootContent({ children }: PropsWithChildren) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        {!ageVerified && needsAgeGate && (
+        {ageChecked && !ageVerified && needsAgeGate && (
           <AgeGate
             mode="global"
             edadMinima={18}
@@ -150,7 +151,7 @@ export function RootContent({ children }: PropsWithChildren) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
-        {!ageVerified && needsAgeGate && (
+        {ageChecked && !ageVerified && needsAgeGate && (
           <AgeGate
             mode="global"
             edadMinima={18}

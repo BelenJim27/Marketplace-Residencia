@@ -745,13 +745,6 @@ export default function CheckoutPage() {
                     )}
                     {isPaypalConfigured() && !dobRequired && paypalOrderId && paso === "resumen" && (
                       <div className="space-y-4">
-                        <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-                          <CheckCircle size={20} className="shrink-0" />
-                          <div>
-                            <p className="font-medium">{t("¡Pago con PayPal confirmado!")}</p>
-                            <p className="text-xs">{t("Tu pago ha sido procesado exitosamente.")}</p>
-                          </div>
-                        </div>
                         <PagoYResumenPaypal
                           items={items}
                           direccionSeleccionada={direccionSeleccionada}
@@ -766,6 +759,23 @@ export default function CheckoutPage() {
                           solicitarProteccion={solicitarProteccion}
                           proteccionMontoDisplay={convertFromMXN(costoProteccionEstimadoMXN)}
                         />
+                        <div className="space-y-4">
+                          <div style={{ borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.copper}33`, background: `${COLOR_PALETTE.copper}08`, padding: "16px", fontSize: "14px", color: COLOR_PALETTE.copper }}>
+                            <p style={{ margin: "0 0 4px", fontWeight: 600 }}>{t("Completa tu pago en PayPal")}</p>
+                            <p style={{ fontSize: "12px", margin: 0, lineHeight: 1.4 }}>{t("Haz clic en el botón de abajo para confirmar tu pago de forma segura.")}</p>
+                          </div>
+                          <PaypalCheckoutButton
+                            orderId={paypalOrderId}
+                            onCapture={async (orderId: string) => {
+                              if (facturaData.solicitarFactura && pedidoIdCreado) {
+                                sessionStorage.setItem('checkout_factura', JSON.stringify({ ...facturaData, pedidoId: pedidoIdCreado }));
+                              }
+                              await capturePaypalOrder(orderId);
+                            }}
+                            onError={setErrorMensaje}
+                            disabled={cargando}
+                          />
+                        </div>
                       </div>
                     )}
                   </>
@@ -2273,12 +2283,7 @@ function PagoYResumenPaypal({
   solicitarProteccion?: boolean;
   proteccionMontoDisplay?: number;
 }) {
-  const router = useRouter();
   const COLOR_PALETTE = usePalette();
-
-  const handleSuccess = () => {
-    router.push(`/tienda/checkout/pago-exitoso?pedido=${pedidoId}`);
-  };
 
   return (
     <div>

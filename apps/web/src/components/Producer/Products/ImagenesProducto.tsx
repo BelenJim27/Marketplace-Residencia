@@ -38,13 +38,15 @@ export function ImagenesProducto({
   const [previews, setPreviews] = useState<{ file: File; url: string }[]>([]);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const onFilesChangeRef = useRef(onFilesChange);
+  onFilesChangeRef.current = onFilesChange;
 
   // Re-sincronizar cuando cambia el producto abierto en el modal.
   useEffect(() => {
     setImages(imagenesExistentes);
     setPreviews([]);
-    onFilesChange([]);
-  }, [id_producto, imagenesExistentes, onFilesChange]);
+    onFilesChangeRef.current([]);
+  }, [id_producto]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);

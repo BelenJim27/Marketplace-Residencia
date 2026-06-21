@@ -11,4 +11,4 @@ coverage
 .vercel
 .env*.local
 .CLAUDE.md
-apps/api/uploads/
+
