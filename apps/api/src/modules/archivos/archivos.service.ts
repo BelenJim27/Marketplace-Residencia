@@ -32,10 +32,12 @@ export class ArchivosService {
   async deleteLocal(url: string): Promise<void> {
     try {
       if (!url) return;
-      // url es relativa: /uploads/archivos/{nombre}
       const fileName = url.split('/').pop();
-      if (!fileName) return;
+      // Rechazar nombres con path traversal o caracteres peligrosos
+      if (!fileName || fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) return;
       const filePath = join(ARCHIVOS_DIR, fileName);
+      // Verificar que el path resultante sigue dentro del directorio permitido
+      if (!filePath.startsWith(ARCHIVOS_DIR)) return;
       if (existsSync(filePath)) {
         unlinkSync(filePath);
       }

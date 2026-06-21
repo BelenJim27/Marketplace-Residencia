@@ -255,7 +255,7 @@ describe('EnviosService', () => {
 
       const result = await service.cotizarCarrito([{ id_producto: 1, cantidad: 1 }], destino);
 
-      expect(result[0].contiene_alcohol).toBe(true);
+      expect((result[0] as any).contiene_alcohol).toBe(true);
     });
 
     it('uses direccion_bodega as shipper when available', async () => {
@@ -306,8 +306,8 @@ describe('EnviosService', () => {
       ], destino);
 
       expect(result).toHaveLength(2);
-      const failed = result.find(r => r.error);
-      const succeeded = result.find(r => !r.error);
+      const failed = result.find(r => 'error' in r) as any;
+      const succeeded = result.find(r => !('error' in r));
       expect(failed?.error).toBe('Timeout carrier');
       expect(failed?.quotes).toEqual([]);
       expect(succeeded).toBeDefined();
@@ -319,8 +319,8 @@ describe('EnviosService', () => {
 
       const result = await service.cotizarCarrito([{ id_producto: 1, cantidad: 1 }], destino);
 
-      expect(result[0].error).toContain('tasa de cambio');
-      expect(result[0].quotes).toEqual([]);
+      expect((result[0] as any).error).toContain('tasa de cambio');
+      expect((result[0] as any).quotes).toEqual([]);
     });
 
     it('returns peso_real_kg and peso_facturable_kg in result', async () => {
@@ -332,7 +332,7 @@ describe('EnviosService', () => {
 
       const result = await service.cotizarCarrito([{ id_producto: 1, cantidad: 2 }], destino);
 
-      expect(result[0].peso_real_kg).toBe(4);
+      expect((result[0] as any).peso_real_kg).toBe(4);
     });
   });
 

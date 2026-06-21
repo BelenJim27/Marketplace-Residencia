@@ -41,6 +41,13 @@ export class UsuariosController {
     return this.service.requestDeletion(req.user.id_usuario);
   }
 
+  // CCPA: "Do Not Sell My Personal Information" (opt-out por email, sin sesión requerida).
+  // Público intencionalmente: usuarios no autenticados también tienen este derecho bajo CCPA.
+  @Post('ccpa/opt-out')
+  ccpaOptOut(@Body() body: { email?: string }) {
+    return this.service.ccpaOptOut(body?.email ?? '');
+  }
+
   @UseGuards(AuthGuard)
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {

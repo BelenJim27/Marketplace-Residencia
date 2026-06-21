@@ -136,7 +136,7 @@ function OrderStepper({ pedidoEstado, envioEstado }: { pedidoEstado: string; env
 export default function RastreoPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [pedido, setPedido] = useState<PedidoResumen | null>(null);
   const [tracking, setTracking] = useState<TrackingData | null>(null);

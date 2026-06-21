@@ -1,6 +1,22 @@
-import { Body, Controller, Get, HttpCode, Logger, Post, Req, Res, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Logger, Post, Query, Req, Res, UnauthorizedException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { OAuthService } from './oauth.service';
 import { AuthService } from './auth.service';
+
+// Almacén temporal de códigos OAuth (en memoria, TTL 90s).
+// El código se consume una sola vez: el atacante que robe la URL /auth/callback?code=…
+// no obtiene tokens reales, solo un código de un único uso que expira rápidamente.
+const pendingOAuthCodes = new Map<string, { access_token: string; refresh_token: string; expires: number }>();
+
+function generateOAuthCode(tokens: { access_token: string; refresh_token: string }): string {
+  const code = randomBytes(32).toString('hex');
+  pendingOAuthCodes.set(code, { ...tokens, expires: Date.now() + 90_000 });
+  // Limpiar códigos expirados (housekeeping pasivo)
+  for (const [k, v] of pendingOAuthCodes) {
+    if (v.expires < Date.now()) pendingOAuthCodes.delete(k);
+  }
+  return code;
+}
 
 interface OAuthGoogleDto {
   access_token: string;
@@ -104,7 +120,10 @@ export class OAuthController {
   @Get('google/callback')
   async googleCallback(@Req() req: any, @Res() res: any) {
     const { user } = req;
-    
+    if (!user?.id) {
+      return res.redirect(`${process.env.FRONTEND_URL}/auth/login?error=oauth_failed`);
+    }
+
     const idUsuario = await this.oauthService.upsertOAuthAccount({
       provider: 'google',
       providerUid: user.id,
@@ -118,7 +137,22 @@ export class OAuthController {
 
     const authResult = await this.authService.loginWithOAuth(idUsuario);
 
-    const redirectUrl = `${process.env.FRONTEND_URL}/auth/callback?token=${authResult.tokens.access_token}&refresh=${authResult.tokens.refresh_token}`;
+    // Generamos un código temporal de un solo uso (90s) en lugar de pasar los tokens en la URL.
+    // La URL /auth/callback solo recibe el código; los tokens nunca aparecen en el historial del navegador.
+    const code = generateOAuthCode(authResult.tokens);
+    const redirectUrl = `${process.env.FRONTEND_URL}/auth/callback?code=${code}`;
     res.redirect(redirectUrl);
+  }
+
+  // Canjea un código OAuth temporal por los tokens reales. Un solo uso.
+  @Post('exchange-code')
+  @HttpCode(200)
+  exchangeOAuthCode(@Body() body: { code: string }) {
+    const entry = pendingOAuthCodes.get(body?.code ?? '');
+    if (!entry || entry.expires < Date.now()) {
+      throw new UnauthorizedException('Código OAuth inválido o expirado');
+    }
+    pendingOAuthCodes.delete(body.code);
+    return { access_token: entry.access_token, refresh_token: entry.refresh_token };
   }
 }

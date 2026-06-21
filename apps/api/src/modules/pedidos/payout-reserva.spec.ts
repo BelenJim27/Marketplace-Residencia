@@ -1,3 +1,5 @@
+// Marca este archivo como módulo ES para evitar colisión de declaraciones con otros specs.
+export {};
 // auth.service (importado transitivamente por pedidos.service) exige secretos JWT
 // al cargar el módulo; se setean antes del require para no romper el import.
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? 'test-secret';

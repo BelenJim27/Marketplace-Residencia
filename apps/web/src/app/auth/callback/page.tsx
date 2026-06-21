@@ -15,15 +15,49 @@ function AuthCallbackContent() {
   const { data: session } = useSession();
 
   useEffect(() => {
-    const token = searchParams.get("token");
-    const refresh = searchParams.get("refresh");
+    const code = searchParams.get("code");
+    // Legado: algunos flujos todavía envían token+refresh directamente (NextAuth interno)
+    const tokenDirect = searchParams.get("token");
+    const refreshDirect = searchParams.get("refresh");
 
-    if (token && refresh) {
-      setCookie("token", token, 7);
-      setCookie("refresh_token", refresh, 30);
+    if (code) {
+      // Flujo seguro: canjear código temporal por tokens (nunca hay tokens en la URL)
+      fetch(`/auth/oauth/exchange-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Código OAuth inválido");
+          return res.json();
+        })
+        .then(({ access_token, refresh_token }) => {
+          setCookie("token", access_token, 7);
+          setCookie("refresh_token", refresh_token, 30);
+          return fetch(`/auth/me`, {
+            headers: { Authorization: `Bearer ${access_token}` },
+          }).then((r) => r.json());
+        })
+        .then((userData) => {
+          if (userData?.id_usuario) {
+            setCookie("usuario", JSON.stringify(userData), 7);
+          }
+          const dest = getPostLoginUrl(
+            Array.isArray(userData?.roles) ? userData.roles : [],
+            Array.isArray(userData?.permisos) ? userData.permisos : [],
+          );
+          router.replace(dest);
+        })
+        .catch(() => {
+          router.replace("/auth/login?error=oauth_failed");
+        });
+    } else if (tokenDirect && refreshDirect) {
+      // Flujo legado (solo NextAuth interno) — no viene de Google callback directo
+      setCookie("token", tokenDirect, 7);
+      setCookie("refresh_token", refreshDirect, 30);
 
       fetch(`/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${tokenDirect}` },
       })
         .then((res) => res.json())
         .then((userData) => {

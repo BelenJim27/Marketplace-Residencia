@@ -3,6 +3,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { X, ImagePlus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
 import { AlertService } from "@/shared/alerts/alert.service";
 
@@ -38,7 +39,8 @@ const noSpinClass = "[appearance:textfield] [&::-webkit-outer-spin-button]:appea
 
 export default function ModalEditarVer({ isOpen, onClose, producto, modo, onRefresh, onSuccess }: ModalProps) {
     const formRef = useRef<HTMLFormElement>(null);
-    const { token } = useAuth();
+    useAuth(); // mantener contexto activo
+    const token = getCookie("token");
     const esEdicion = modo === 'editar';
     const [categorias, setCategorias] = useState<Categoria[]>([]);
     const [selectedCategorias, setSelectedCategorias] = useState<number[]>([]);

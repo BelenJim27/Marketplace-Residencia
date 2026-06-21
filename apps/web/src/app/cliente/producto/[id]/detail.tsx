@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { ProductDetailPremium } from '@/components/Products/ProductDetailPremium';
-import { Skeleton } from '@/components/shadcn/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Producto {
   id_producto: bigint;

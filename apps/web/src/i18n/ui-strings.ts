@@ -78,7 +78,6 @@ export const UI_TRANSLATIONS: Record<string, Record<string, string>> = {
     "Registrando...": "Creating account...",
     "Error al registrar usuario": "Error creating account",
     // Sign-up regular (comprador)
-    "¿No tienes cuenta?": "Don't have an account?",
     "¿Ya tienes una cuenta?": "Already have an account?",
     "Inicia sesión": "Sign in",
     "Crea tu cuenta": "Create your account",

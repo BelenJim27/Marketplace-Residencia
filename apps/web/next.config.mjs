@@ -7,8 +7,6 @@ const _apiUrl = new URL(process.env.NEXT_PUBLIC_API_URL || "http://localhost:300
 
 const nextConfig = {
   productionBrowserSourceMaps: false,
-  typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },

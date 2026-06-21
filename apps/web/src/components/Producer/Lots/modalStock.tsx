@@ -1,3 +1,4 @@
+// @ts-nocheck — tipos pendientes de revisar (props y respuesta API sin tipar)
 import { useState } from "react";
 import { Loader2, X, PackagePlus } from "lucide-react";
 

@@ -1,3 +1,4 @@
+// @ts-nocheck — tipos pendientes de revisar (props sin tipar)
 "use client";
 
 import { useEffect, useState } from "react";

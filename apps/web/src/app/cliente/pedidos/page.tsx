@@ -38,7 +38,7 @@ const ESTADO_COLOR: Record<string, string> = {
 
 export default function MisPedidosPage() {
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [pedidos, setPedidos] = useState<MiPedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

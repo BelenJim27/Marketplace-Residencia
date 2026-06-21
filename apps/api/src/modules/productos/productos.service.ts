@@ -1,7 +1,8 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { join } from "path";
 import { unlinkSync } from "fs";
+import * as jwt from "jsonwebtoken";
 import { PrismaService } from "../../prisma/prisma.service";
 import { serializeBigInts } from "../../common/utilities/serialize";
 import { CreateProductoDto, UpdateProductoDto } from "./dto/productos.dto";
@@ -127,25 +128,22 @@ function getProductoStock(inventario?: Array<{ stock?: number | null }>) {
   );
 }
 
-function getUserIdFromAccessToken(token: string) {
-  const payload = token.split(".")[1];
-  if (!payload) {
-    throw new NotFoundException("Token inválido");
+function getUserIdFromAccessToken(token: string): string {
+  const secret = process.env.JWT_ACCESS_SECRET;
+  if (!secret) throw new UnauthorizedException("JWT_ACCESS_SECRET no configurado");
+  try {
+    const payload = jwt.verify(token, secret, { algorithms: ["HS256"] }) as {
+      sub?: string;
+      token_type?: string;
+    };
+    if (payload.token_type !== "access" || !payload.sub) {
+      throw new UnauthorizedException("Token inválido");
+    }
+    return payload.sub;
+  } catch (err) {
+    if (err instanceof UnauthorizedException) throw err;
+    throw new UnauthorizedException("Token inválido o expirado");
   }
-
-  const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized.padEnd(
-    Math.ceil(normalized.length / 4) * 4,
-    "=",
-  );
-  const decoded = Buffer.from(padded, "base64").toString("utf8");
-  const parsed = JSON.parse(decoded) as { sub?: string };
-
-  if (!parsed.sub) {
-    throw new NotFoundException("Token inválido");
-  }
-
-  return parsed.sub;
 }
 
 @Injectable()

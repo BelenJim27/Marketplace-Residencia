@@ -243,7 +243,7 @@ function DetallePedidoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const numeroPedido = searchParams.get("n");
-  const { token: authToken } = useAuth();
+  const authToken = getCookie("token");
   const { t, locale, currency } = useLocale();
   const dateLocale = locale === "en" ? "en-US" : "es-MX";
   const [pedido, setPedido] = useState<Pedido | null>(null);

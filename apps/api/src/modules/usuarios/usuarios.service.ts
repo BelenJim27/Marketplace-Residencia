@@ -256,6 +256,30 @@ export class UsuariosService {
     };
   }
 
+  /**
+   * CCPA "Do Not Sell My Personal Information": registra la solicitud en auditoría.
+   * Guardians del Mezcal no vende datos a terceros, pero la CCPA requiere un canal formal
+   * de opt-out. La solicitud queda registrada y se responde en 45 días.
+   */
+  async ccpaOptOut(email: string) {
+    if (!email || !email.includes('@')) {
+      throw new BadRequestException('Email inválido');
+    }
+    const normalizedEmail = email.toLowerCase().trim();
+    await this.prisma.auditoria.create({
+      data: {
+        accion: 'ccpa_opt_out_request',
+        tabla_afectada: 'usuarios',
+        registro_id: normalizedEmail,
+        valor_nuevo: { email: normalizedEmail, timestamp: new Date().toISOString() } as any,
+      },
+    });
+    return {
+      message:
+        'Your request has been received. We do not sell personal information. We will confirm within 45 days.',
+    };
+  }
+
   private async ensureUserExists(id_usuario: string) {
     const user = await this.prisma.usuarios.findUnique({ where: { id_usuario } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
