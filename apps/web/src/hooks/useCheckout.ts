@@ -61,7 +61,6 @@ export function useCheckout() {
   // se debe forzar la recreación para reflejar el nuevo monto en el cobro.
   useEffect(() => {
     if (
-      paso === "pago" &&
       prevProteccionRef.current !== solicitarProteccion &&
       pedidoIdCreado
     ) {
@@ -461,6 +460,7 @@ export function useCheckout() {
           transportista_codigo: (primeraSeleccion as any)?.carrier,
           codigo_servicio: primeraSeleccion?.productCode,
           solicitar_proteccion: solicitarProteccion,
+          costo_proteccion: solicitarProteccion ? String(costoProteccionEstimadoMXN) : undefined,
         });
 
         // Save one cotización per producer group so the backend can validate shipping amount

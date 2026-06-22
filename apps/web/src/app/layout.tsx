@@ -19,7 +19,7 @@ import type { Metadata } from "next";
 import NextTopLoader from "nextjs-toploader";
 import type { PropsWithChildren } from "react";
 import { ClientWidgets } from "@/components/ClientWidgets";
-import { CookieConsent } from "@/components/CookieConsent";
+
 import { Providers } from "./providers";
 import { RootContent } from "./root-content";
 
@@ -98,7 +98,6 @@ export default function RootLayout({ children }: PropsWithChildren) {
           <NextTopLoader color="#5750F1" showSpinner={false} />
           <RootContent>{children}</RootContent>
           <ClientWidgets />
-          <CookieConsent />
         </Providers>
       </body>
     </html>

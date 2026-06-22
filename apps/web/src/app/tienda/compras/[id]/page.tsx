@@ -57,6 +57,7 @@ interface Pedido {
   estado?: string;
   total?: string;
   moneda?: string;
+  shipping_amount?: string;
   fecha_creacion?: string;
   creado_en?: string;
   direccion_envio_snapshot?: Record<string, string>;
@@ -1236,12 +1237,15 @@ function DetallePedidoContent() {
           const impuestos = Number((pedido as any).tax_amount ?? 0);
           const descuento = Number((pedido as any).discount_amount ?? 0);
           const envios = pedido.envios ?? [];
-          const costoEnvio = envios.reduce((sum, e) => sum + Number(e.costo_envio ?? 0), 0);
+          const shippingAmount = Number((pedido as any).shipping_amount ?? 0);
+          const costoEnvioDeEnvios = envios.reduce((sum, e) => sum + Number(e.costo_envio ?? 0), 0);
           const costoProteccion = envios.reduce((sum, e) => sum + Number(e.costo_proteccion ?? 0), 0);
           const tieneProteccion = costoProteccion > 0 || envios.some(e => e.solicitar_proteccion);
-          const proteccionEstimada = tieneProteccion && costoProteccion === 0
-            ? Math.max(0, (Number((pedido as any).shipping_amount ?? 0) - costoEnvio))
+          const costoEnvio = costoEnvioDeEnvios > 0 ? costoEnvioDeEnvios : shippingAmount;
+          const proteccionEstimada = tieneProteccion && costoProteccion === 0 && costoEnvioDeEnvios > 0
+            ? Math.max(0, shippingAmount - costoEnvioDeEnvios)
             : costoProteccion;
+          const mostrarProteccion = tieneProteccion && (costoProteccion > 0 || proteccionEstimada > 0);
           const total = Number(pedido.total ?? subtotal - descuento + impuestos + costoEnvio + proteccionEstimada);
           const moneda = pedido.moneda || "MXN";
           const rowStyle = { display: "flex", justifyContent: "space-between" } as const;
@@ -1275,7 +1279,7 @@ function DetallePedidoContent() {
                     {costoEnvio === 0 ? t("Gratis") : `$${formatPrice(costoEnvio, { showCurrency: false })}`}
                   </span>
                 </div>
-                {tieneProteccion && (
+                {mostrarProteccion && (
                   <div style={rowStyle}>
                     <span style={labelStyle}>{t("Protección del envío")}</span>
                     <span style={{ ...valueStyle, color: C.copper }}>
@@ -1521,12 +1525,15 @@ function DetallePedidoContent() {
               0,
             );
             const envios = pedido.envios ?? [];
-            const costoEnvio = envios.reduce((sum, e) => sum + Number(e.costo_envio ?? 0), 0);
+            const shippingAmount = Number((pedido as any).shipping_amount ?? 0);
+            const costoEnvioDeEnvios = envios.reduce((sum, e) => sum + Number(e.costo_envio ?? 0), 0);
             const costoProteccion = envios.reduce((sum, e) => sum + Number(e.costo_proteccion ?? 0), 0);
             const tieneProteccion = costoProteccion > 0 || envios.some(e => e.solicitar_proteccion);
-            const proteccionEstimada = tieneProteccion && costoProteccion === 0
-              ? Math.max(0, (Number((pedido as any).shipping_amount ?? 0) - costoEnvio))
+            const costoEnvio = costoEnvioDeEnvios > 0 ? costoEnvioDeEnvios : shippingAmount;
+            const proteccionEstimada = tieneProteccion && costoProteccion === 0 && costoEnvioDeEnvios > 0
+              ? Math.max(0, shippingAmount - costoEnvioDeEnvios)
               : costoProteccion;
+            const mostrarProteccion = tieneProteccion && (costoProteccion > 0 || proteccionEstimada > 0);
             const total = Number(pedido.total ?? subtotal + costoEnvio + proteccionEstimada);
             const moneda = pedido.moneda || "MXN";
             return (
@@ -1545,7 +1552,7 @@ function DetallePedidoContent() {
                       {costoEnvio === 0 ? "Gratis" : `$${formatPrice(costoEnvio, { showCurrency: false })}`}
                     </span>
                   </div>
-                  {tieneProteccion && (
+                  {mostrarProteccion && (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ fontSize: "14px", color: C.muted }}>Protección de envío</span>
                       <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: C.copper }}>

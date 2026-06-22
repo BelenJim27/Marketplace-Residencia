@@ -99,8 +99,8 @@ export class EnviosService {
     }
 
     // 4. Creamos el registro usando las variables resueltas arriba.
-    // costo_envio se almacena como null en este registro preliminar: el valor
-    // real lo establece crearGuia() con el costo devuelto por el carrier.
+    // costo_envio se almacena inicialmente con el valor enviado desde checkout;
+    // crearGuia() lo sobrescribe con el costo real devuelto por el carrier.
     return serializeBigInts(
       await this.prisma.envios.create({
         data: {
@@ -115,8 +115,10 @@ export class EnviosService {
           alto_cm: dto.alto_cm ?? null,
           ancho_cm: dto.ancho_cm ?? null,
           largo_cm: dto.largo_cm ?? null,
-          costo_envio: null,
+          costo_envio: dto.costo_envio ?? null,
           moneda_costo: (dto.moneda_costo?.trim() ?? "MXN") as Moneda,
+          solicitar_proteccion: dto.solicitar_proteccion ?? false,
+          costo_proteccion: dto.costo_proteccion ?? null,
           estado: dto.estado?.trim() ?? "preparando",
           requires_adult_signature,
           fecha_envio: dto.fecha_envio ? new Date(dto.fecha_envio) : null,
@@ -1222,14 +1224,35 @@ export class EnviosService {
 
     if (pedidoProds.length === 0) return [];
 
-    // Leer solicitar_proteccion del envío preliminar (creado en prepararPago antes del pago)
-    // para propagarlo a cada envío por productor que se crea aquí.
+    // Leer solicitar_proteccion y costo_envio del envío preliminar (creado en
+    // prepararPago antes del pago) para propagarlos a cada envío por productor
+    // que se crea aquí.
     const envioBase = await this.prisma.envios.findFirst({
       where: { id_pedido: BigInt(id_pedido) },
       orderBy: { id_envio: 'asc' },
-      select: { solicitar_proteccion: true },
+      select: { id_envio: true, solicitar_proteccion: true, costo_envio: true, moneda_costo: true },
     });
     const solicitarProteccion = envioBase?.solicitar_proteccion ?? false;
+    const costoEnvioTotal = envioBase?.costo_envio
+      ? parseFloat(envioBase.costo_envio.toString())
+      : 0;
+    const monedaCostoBase = (envioBase?.moneda_costo ?? 'MXN') as Moneda;
+
+    // Calcular subtotales por productor para prorratear el costo de envío
+    const todosItems = await this.prisma.detalle_pedido.findMany({
+      where: { id_pedido: BigInt(id_pedido) },
+      select: { id_productor: true, cantidad: true, precio_compra: true },
+    });
+    const subtotalTotal = todosItems.reduce(
+      (s, i) => s + Number(i.precio_compra) * i.cantidad, 0,
+    );
+    const subtotalPorProductor: Record<number, number> = {};
+    for (const item of todosItems) {
+      if (item.id_productor == null) continue;
+      subtotalPorProductor[item.id_productor] =
+        (subtotalPorProductor[item.id_productor] ?? 0) +
+        Number(item.precio_compra) * item.cantidad;
+    }
 
     // Cada productor genera un envío + guía (API de paquetería) de forma
     // independiente. Se procesan en paralelo con allSettled-equivalente (cada
@@ -1279,6 +1302,12 @@ export class EnviosService {
 
         const esAlcohol = await this.detectarFirmaAdulto(id_pedido, pp.id_productor);
 
+        // Prorratear el costo de envío total según la proporción de items del productor
+        const prodSubtotal = subtotalPorProductor[pp.id_productor] ?? 0;
+        const costoEnvioProrrateado = subtotalTotal > 0 && costoEnvioTotal > 0
+          ? ((costoEnvioTotal * prodSubtotal) / subtotalTotal).toFixed(2)
+          : null;
+
         const envio = await this.prisma.envios.create({
           data: {
             id_pedido: BigInt(id_pedido),
@@ -1289,6 +1318,8 @@ export class EnviosService {
             estado: 'preparando',
             requires_adult_signature: esAlcohol,
             solicitar_proteccion: solicitarProteccion,
+            costo_envio: costoEnvioProrrateado,
+            moneda_costo: monedaCostoBase,
           },
         });
 
@@ -1315,6 +1346,15 @@ export class EnviosService {
       }
       }),
     );
+
+    // Limpiar costo_envio del envío preliminar para evitar doble conteo
+    // ahora que cada envío por productor tiene su costo prorrateado.
+    if (envioBase?.id_envio) {
+      await this.prisma.envios.update({
+        where: { id_envio: envioBase.id_envio },
+        data: { costo_envio: null },
+      }).catch(() => {});
+    }
 
     return results;
   }

@@ -16,6 +16,7 @@ export class CreateEnvioDto {
   @IsOptional() @IsNumber() @IsPositive() @Type(() => Number) largo_cm?: number;
   @IsOptional() @IsString() costo_envio?: string;
   @IsOptional() @IsString() @MaxLength(3) moneda_costo?: string;
+  @IsOptional() @IsString() costo_proteccion?: string;
   @IsOptional() @IsString() @MaxLength(30) estado?: string;
   @IsOptional() @IsDateString() fecha_envio?: string;
   @IsOptional() @IsDateString() fecha_entrega_estimada?: string;
