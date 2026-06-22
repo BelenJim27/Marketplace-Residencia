@@ -37,6 +37,8 @@ interface Envio {
   numero_rastreo?: string;
   estado?: string;
   costo_envio?: string;
+  costo_proteccion?: string;
+  solicitar_proteccion?: boolean;
   fecha_entrega_estimada?: string;
   transportistas?: { nombre: string };
   envio_guias?: Array<{ payload_response?: Record<string, unknown> }>;
@@ -1233,12 +1235,14 @@ function DetallePedidoContent() {
           const subtotal = items.reduce((acc, item) => acc + Number(item.precio_compra) * item.cantidad, 0);
           const impuestos = Number((pedido as any).tax_amount ?? 0);
           const descuento = Number((pedido as any).discount_amount ?? 0);
-          // Preferir shipping_amount del pedido; si no existe, sumar el costo real de los envíos.
-          const enviosSum = (pedido.envios ?? []).reduce((sum, e) => sum + Number(e.costo_envio ?? 0), 0);
-          const costoEnvio = (pedido as any).shipping_amount != null
-            ? Number((pedido as any).shipping_amount)
-            : enviosSum;
-          const total = Number(pedido.total ?? subtotal - descuento + impuestos + costoEnvio);
+          const envios = pedido.envios ?? [];
+          const costoEnvio = envios.reduce((sum, e) => sum + Number(e.costo_envio ?? 0), 0);
+          const costoProteccion = envios.reduce((sum, e) => sum + Number(e.costo_proteccion ?? 0), 0);
+          const tieneProteccion = costoProteccion > 0 || envios.some(e => e.solicitar_proteccion);
+          const proteccionEstimada = tieneProteccion && costoProteccion === 0
+            ? Math.max(0, (Number((pedido as any).shipping_amount ?? 0) - costoEnvio))
+            : costoProteccion;
+          const total = Number(pedido.total ?? subtotal - descuento + impuestos + costoEnvio + proteccionEstimada);
           const moneda = pedido.moneda || "MXN";
           const rowStyle = { display: "flex", justifyContent: "space-between" } as const;
           const labelStyle = { fontSize: "14px", color: C.muted } as const;
@@ -1271,6 +1275,16 @@ function DetallePedidoContent() {
                     {costoEnvio === 0 ? t("Gratis") : `$${formatPrice(costoEnvio, { showCurrency: false })}`}
                   </span>
                 </div>
+                {tieneProteccion && (
+                  <div style={rowStyle}>
+                    <span style={labelStyle}>{t("Protección del envío")}</span>
+                    <span style={{ ...valueStyle, color: C.copper }}>
+                      {costoProteccion > 0
+                        ? `$${formatPrice(costoProteccion, { showCurrency: false })}`
+                        : `~$${formatPrice(proteccionEstimada, { showCurrency: false })} ${t("(estimado)")}`}
+                    </span>
+                  </div>
+                )}
                 <div style={{ height: "1px", background: C.border, margin: "4px 0" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                   <span style={{ fontSize: "15px", fontWeight: "700", color: C.text }}>{t("Total")}</span>
@@ -1506,8 +1520,14 @@ function DetallePedidoContent() {
               (acc, item) => acc + Number(item.precio_compra) * item.cantidad,
               0,
             );
-            const costoEnvio = (pedido.envios ?? []).reduce((sum, e) => sum + Number(e.costo_envio ?? 0), 0);
-            const total = Number(pedido.total ?? subtotal + costoEnvio);
+            const envios = pedido.envios ?? [];
+            const costoEnvio = envios.reduce((sum, e) => sum + Number(e.costo_envio ?? 0), 0);
+            const costoProteccion = envios.reduce((sum, e) => sum + Number(e.costo_proteccion ?? 0), 0);
+            const tieneProteccion = costoProteccion > 0 || envios.some(e => e.solicitar_proteccion);
+            const proteccionEstimada = tieneProteccion && costoProteccion === 0
+              ? Math.max(0, (Number((pedido as any).shipping_amount ?? 0) - costoEnvio))
+              : costoProteccion;
+            const total = Number(pedido.total ?? subtotal + costoEnvio + proteccionEstimada);
             const moneda = pedido.moneda || "MXN";
             return (
               <Card accentColor={C.copper}>
@@ -1525,6 +1545,16 @@ function DetallePedidoContent() {
                       {costoEnvio === 0 ? "Gratis" : `$${formatPrice(costoEnvio, { showCurrency: false })}`}
                     </span>
                   </div>
+                  {tieneProteccion && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "14px", color: C.muted }}>Protección de envío</span>
+                      <span style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "600", color: C.copper }}>
+                        {costoProteccion > 0
+                          ? `$${formatPrice(costoProteccion, { showCurrency: false })}`
+                          : `~$${formatPrice(proteccionEstimada, { showCurrency: false })} (estimado)`}
+                      </span>
+                    </div>
+                  )}
                   <div style={{ height: "1px", background: C.border }} />
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                     <span style={{ fontSize: "15px", fontWeight: "700", color: C.text }}>Total</span>

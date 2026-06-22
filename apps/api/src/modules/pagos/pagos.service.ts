@@ -787,6 +787,22 @@ export class PagosService {
         `El costo de envío enviado (${shippingRounded}) no coincide con las tarifas cotizadas (${precioTotal.toFixed(2)}). Recarga la página e intenta de nuevo.`,
       );
     }
+    // Cota superior: si el pedido solicitó protección de envío, permitimos hasta 5x
+    // (protección puede costar hasta ~3x el envío base); si no, solo +2% contra manipulación.
+    const envios = await this.prisma.envios.findMany({
+      where: { id_pedido },
+      select: { solicitar_proteccion: true },
+    });
+    const tieneProteccion = envios.some((e) => e.solicitar_proteccion);
+    const limiteSuperior = tieneProteccion ? precioTotal * 5 : precioTotal * 1.02;
+    if (shippingRounded > limiteSuperior) {
+      this.logger.error(
+        `[pagos] Shipping por encima del límite: cliente=${shippingRounded}, límite=${limiteSuperior.toFixed(2)}, proteccion=${tieneProteccion}, pedido=${id_pedido}`,
+      );
+      throw new BadRequestException(
+        `El costo de envío enviado (${shippingRounded}) excede el límite permitido (${limiteSuperior.toFixed(2)}). Recarga la página e intenta de nuevo.`,
+      );
+    }
   }
 
   /**

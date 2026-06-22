@@ -84,6 +84,9 @@ const mockPrisma: any = {
     findMany: jest.fn(),
     count: jest.fn(),
   },
+  envios: {
+    findMany: jest.fn(),
+  },
   webhook_events_log: { create: jest.fn() },
   payouts: {
     findMany: jest.fn(),
@@ -368,6 +371,10 @@ describe('PagosService', () => {
       await expect(callMethod(service, BigInt(1), -1)).rejects.toThrow('no puede ser negativo');
     });
 
+    beforeEach(() => {
+      mockPrisma.envios.findMany.mockResolvedValue([{ solicitar_proteccion: false }]);
+    });
+
     it('throws COTIZACIONES_EXPIRADAS when quotes exist but all expired', async () => {
       mockPrisma.envio_cotizaciones.findMany.mockResolvedValue([]);
       mockPrisma.envio_cotizaciones.count.mockResolvedValue(3); // expiradas
@@ -409,6 +416,39 @@ describe('PagosService', () => {
         { precio_total: '0' },
       ]);
       await expect(callMethod(service, BigInt(1), 0)).resolves.toBeUndefined();
+    });
+
+    it('throws when shipping exceeds 102% of cotized and no protection requested', async () => {
+      mockPrisma.envio_cotizaciones.findMany.mockResolvedValue([
+        { precio_total: '100.00' },
+      ]);
+      // 100 * 1.02 = 102 → 103 should fail
+      await expect(callMethod(service, BigInt(1), 103)).rejects.toThrow('excede el límite');
+    });
+
+    it('passes at exactly 102% without protection (boundary)', async () => {
+      mockPrisma.envio_cotizaciones.findMany.mockResolvedValue([
+        { precio_total: '100.00' },
+      ]);
+      await expect(callMethod(service, BigInt(1), 102)).resolves.toBeUndefined();
+    });
+
+    it('passes with protection when shipping is well above cotizado', async () => {
+      mockPrisma.envios.findMany.mockResolvedValue([{ solicitar_proteccion: true }]);
+      mockPrisma.envio_cotizaciones.findMany.mockResolvedValue([
+        { precio_total: '100.00' },
+      ]);
+      // 100 * 5 = 500 → 300 should pass
+      await expect(callMethod(service, BigInt(1), 300)).resolves.toBeUndefined();
+    });
+
+    it('throws with protection when shipping exceeds 5x cotizado', async () => {
+      mockPrisma.envios.findMany.mockResolvedValue([{ solicitar_proteccion: true }]);
+      mockPrisma.envio_cotizaciones.findMany.mockResolvedValue([
+        { precio_total: '100.00' },
+      ]);
+      // 100 * 5 = 500 → 501 should fail
+      await expect(callMethod(service, BigInt(1), 501)).rejects.toThrow('excede el límite');
     });
   });
 

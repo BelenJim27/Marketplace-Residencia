@@ -54,6 +54,28 @@ export function useCheckout() {
   // Mutex para prevenir doble creación de pedido por doble click o llamadas concurrentes.
   const isCreatingPedidoRef = useRef(false);
 
+  // Ref para detectar cambios en solicitarProteccion mientras ya hay un PaymentIntent
+  const prevProteccionRef = useRef(solicitarProteccion);
+
+  // Si el usuario cambia la protección después de que ya se creó el pedido/PaymentIntent,
+  // se debe forzar la recreación para reflejar el nuevo monto en el cobro.
+  useEffect(() => {
+    if (
+      paso === "pago" &&
+      prevProteccionRef.current !== solicitarProteccion &&
+      pedidoIdCreado
+    ) {
+      const token = getCookie("token") || "";
+      api.pedidos.update(token, pedidoIdCreado, { estado: "cancelado" }).catch(() => {});
+      setClientSecret(null);
+      setPaymentIntentId(null);
+      setPaypalOrderId(null);
+      setPedidoIdCreado(null);
+      setNumeroOrdenCreado(null);
+    }
+    prevProteccionRef.current = solicitarProteccion;
+  }, [solicitarProteccion, paso, pedidoIdCreado]);
+
   const pesoTotal = items.reduce(
     (sum, item) => sum + ((item as any).peso_kg ?? 0.75) * item.cantidad,
     0,
