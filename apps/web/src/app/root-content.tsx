@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/Layouts/sidebar";
 import { SidebarProvider } from "@/context/SidebarContext";
 import { TiendaHeader } from "@/components/Administrator/Store/tienda-header";
 import { useAuth } from "@/context/AuthContext";
+import { getCookie } from "@/lib/cookies";
 import Footer from "@/components/Cliente/Footer";
 import AgeGate from "@/components/AgeGate";
 import { isGlobalAgeVerified } from "@/lib/edad";
@@ -134,6 +135,8 @@ export function RootContent({ children }: PropsWithChildren) {
             edadMinima={18}
             onVerified={() => setAgeVerified(true)}
             onDeny={() => router.push("/")}
+            userId={user?.id_usuario}
+            token={getCookie("token") ?? undefined}
           />
         )}
         <main className={`flex-1 w-full overflow-hidden ${isCatalogo ? "" : "mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10"}`}>
@@ -157,6 +160,8 @@ export function RootContent({ children }: PropsWithChildren) {
             edadMinima={18}
             onVerified={() => setAgeVerified(true)}
             onDeny={() => router.push("/")}
+            userId={user?.id_usuario}
+            token={getCookie("token") ?? undefined}
           />
         )}
         <main className="flex-1 mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">

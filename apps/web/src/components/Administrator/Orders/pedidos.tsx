@@ -97,7 +97,7 @@ export default function Pedidos() {
   const token = getCookie("token") ?? "";
 
   const [pedidos, setPedidos]               = useState<Pedido[]>([]);
-  const [productoresMap, setProductoresMap] = useState<Map<number, Productor>>(new Map());
+  const [productoresList, setProductoresList] = useState<Productor[]>([]);
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState<string | null>(null);
   const [searchTerm, setSearchTerm]         = useState("");
@@ -125,11 +125,9 @@ export default function Pedidos() {
   const fetchProductores = async () => {
     try {
       const data = await api.productores.getAll();
-      const map = new Map<number, Productor>();
-      for (const p of data as Productor[]) {
-        map.set(Number(p.id_productor), p);
-      }
-      setProductoresMap(map);
+      setProductoresList((data as Productor[]).sort((a, b) =>
+        productorLabel(a).localeCompare(productorLabel(b)),
+      ));
     } catch {
       // silencioso
     }
@@ -139,15 +137,6 @@ export default function Pedidos() {
     fetchPedidos();
     fetchProductores();
   }, []);
-
-  // Todos los productores registrados (no solo los que aparecen en pedidos)
-  const productores = useMemo(
-    () =>
-      [...productoresMap.values()].sort((a, b) =>
-        productorLabel(a).localeCompare(productorLabel(b)),
-      ),
-    [productoresMap],
-  );
 
   const filtered = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -293,7 +282,7 @@ export default function Pedidos() {
             className="border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-4 py-2.5 rounded-xl text-sm text-[#1F3A2E] dark:text-[#E8E3D5] outline-none focus:ring-2 focus:ring-[#3D6B3F] transition-all min-w-[200px]"
           >
             <option value="">Todos los productores</option>
-            {productores.map((p) => (
+            {productoresList.map((p) => (
               <option key={p.id_productor} value={String(p.id_productor)}>
                 {productorLabel(p)}
               </option>
@@ -342,14 +331,12 @@ export default function Pedidos() {
               ) : (
                 paginated.map((pedido) => {
                   const productoresEnPedido = [
-                    ...new Set(
+                    ...new Map(
                       (pedido.detalle_pedido ?? [])
-                        .map((d) => d.id_productor)
-                        .filter((id): id is number => id != null),
-                    ),
-                  ]
-                    .map((id) => productoresMap.get(id))
-                    .filter((p): p is Productor => p !== undefined);
+                        .filter((d) => d.productores != null)
+                        .map((d) => [d.productores!.id_productor, d.productores!])
+                    ).values(),
+                  ];
 
                   return (
                     <tr key={pedido.id_pedido} className="odd:bg-white even:bg-[#F4F0E3]/40 hover:bg-[#C5CFB0]/20 dark:odd:bg-[#0f1a10] dark:even:bg-[#1a2a1f] dark:hover:bg-[#2d4a2e]/40 transition-all duration-200">
@@ -456,7 +443,6 @@ export default function Pedidos() {
       {detalleModal && (
         <DetallePedidoModal
           pedido={detalleModal}
-          productoresMap={productoresMap}
           onClose={() => setDetalleModal(null)}
         />
       )}
@@ -512,11 +498,9 @@ function EstadoBadge({ estado }: { estado: string }) {
 
 function DetallePedidoModal({
   pedido,
-  productoresMap,
   onClose,
 }: {
   pedido: Pedido;
-  productoresMap: Map<number, Productor>;
   onClose: () => void;
 }) {
   const [data, setData]       = useState<Pedido | null>(null);
@@ -582,7 +566,7 @@ function DetallePedidoModal({
             <p className="font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] mb-2">Productos</p>
             <ul className="space-y-2">
               {(data.detalle_pedido ?? []).map((d) => {
-                const pr = d.id_productor != null ? productoresMap.get(d.id_productor) : undefined;
+                const pr = d.productores ?? undefined;
                 const subtotal =
                   d.precio_compra != null && d.cantidad != null
                     ? Number(d.precio_compra) * d.cantidad

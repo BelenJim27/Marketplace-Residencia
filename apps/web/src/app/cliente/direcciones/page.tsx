@@ -245,18 +245,10 @@ export default function DireccionesPage() {
       <Breadcrumb pageName="Mis Direcciones de Envío" />
 
       <div className="mt-6 rounded-xl bg-white p-6 shadow-1 dark:bg-gray-dark sm:p-8">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-dark dark:text-white">
-              Mis Direcciones de Envío
-            </h1>
-            <p className="mt-1 text-gray-500">
-              Gestiona tus direcciones de entrega para pedidos más rápidos
-            </p>
-          </div>
+        <div className="mb-6 flex justify-end">
           <button
             onClick={() => abrirFormulario()}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-medium text-white hover:bg-opacity-90"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 font-medium text-white hover:bg-opacity-90 sm:w-auto"
           >
             <Plus className="h-5 w-5" />
             Agregar
@@ -597,7 +589,7 @@ export default function DireccionesPage() {
                 </button>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col gap-3 pt-4 sm:flex-row">
                 <button
                   type="submit"
                   disabled={enviando}
@@ -627,13 +619,13 @@ export default function DireccionesPage() {
           </div>
         )}
 
-        <div className="grid gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           {direcciones.map((dir) => (
             <div
               key={dir.id_direccion}
               className="rounded-lg border border-gray-200 p-4 dark:border-dark-3"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="truncate font-semibold text-dark dark:text-white">
@@ -676,11 +668,11 @@ export default function DireccionesPage() {
                   )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 sm:border-0 sm:pt-0 dark:border-dark-3">
                   {!dir.es_predeterminada && (
                     <button
                       onClick={() => marcarPredeterminada(dir.id_direccion || 0)}
-                      className="rounded px-3 py-2 text-xs font-medium text-primary hover:bg-gray-1 dark:hover:bg-dark-2"
+                      className="w-full rounded px-3 py-2 text-xs font-medium text-primary hover:bg-gray-1 sm:w-auto dark:hover:bg-dark-2"
                     >
                       Usar como predeterminada
                     </button>

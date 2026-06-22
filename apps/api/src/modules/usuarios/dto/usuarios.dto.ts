@@ -72,6 +72,11 @@ export class CreateUsuarioDto {
   @IsOptional()
   @IsDateString()
   fecha_nacimiento?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  id_rol?: number;
 }
 
 export class UpdateUsuarioDto extends PartialType(CreateUsuarioDto) {}

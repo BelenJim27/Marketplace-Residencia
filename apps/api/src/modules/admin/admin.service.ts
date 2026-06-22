@@ -42,7 +42,10 @@ export class AdminService {
         where: { estado: { in: ['enviado', 'entregado'] }, eliminado_en: null },
       }),
       this.prisma.productores.count({
-        where: { eliminado_en: null },
+        where: {
+          eliminado_en: null,
+          tiendas: { some: { status: 'activa', eliminado_en: null } },
+        },
       }),
     ]);
 

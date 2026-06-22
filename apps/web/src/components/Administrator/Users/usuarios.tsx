@@ -51,6 +51,27 @@ export default function UsuariosUI() {
   const [userFormData, setUserFormData]   = useState<UserFormData>(DEFAULT_FORM);
   const [selectedFotoFile, setSelectedFotoFile] = useState<File | null>(null);
   const [saving, setSaving]               = useState(false);
+  const [formErrors, setFormErrors]       = useState<Partial<Record<keyof UserFormData, string>>>({});
+
+  const handleFormChange = <K extends keyof UserFormData>(field: K, value: UserFormData[K]) => {
+    setUserFormData((prev) => ({ ...prev, [field]: value }));
+    setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  function validateUsuario() {
+    const errors: Partial<Record<keyof UserFormData, string>> = {};
+    if (!userFormData.nombre_usuario.trim()) errors.nombre_usuario = 'El nombre de usuario es obligatorio.';
+    else if (userFormData.nombre_usuario.trim().length < 2) errors.nombre_usuario = 'Mínimo 2 caracteres.';
+    if (!userFormData.nombre.trim()) errors.nombre = 'El nombre es obligatorio.';
+    else if (userFormData.nombre.trim().length < 2) errors.nombre = 'Mínimo 2 caracteres.';
+    if (!userFormData.email.trim()) errors.email = 'El email es obligatorio.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userFormData.email.trim())) errors.email = 'Email inválido.';
+    if (!editingUsuario && !userFormData.password) errors.password = 'La contraseña es obligatoria.';
+    else if (userFormData.password && userFormData.password.length < 8) errors.password = 'Mínimo 8 caracteres.';
+    if (userFormData.telefono && !/^[\d\s+\-()]{7,20}$/.test(userFormData.telefono)) errors.telefono = 'Formato de teléfono inválido.';
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
   const [searchTerm, setSearchTerm]       = useState("");
   const [filterRole, setFilterRole]       = useState("todos");
   const deleteAlert = useDeleteAlert("usuario");
@@ -84,14 +105,19 @@ export default function UsuariosUI() {
     fetchRoles();
   }, [fetchUsuarios]);
 
-  const closeModal = () => { setShowModal(false); setEditingUsuario(null); setSelectedFotoFile(null); setUserFormData(DEFAULT_FORM); };
+  const closeModal = () => { setShowModal(false); setEditingUsuario(null); setSelectedFotoFile(null); setUserFormData(DEFAULT_FORM); setFormErrors({}); };
 
   const handleCreateUsuario = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateUsuario()) return;
     try {
       setSaving(true);
       const token = getToken();
-      await api.usuarios.create(token, { ...userFormData });
+      const { id_rol, ...payload } = userFormData;
+      const response = await api.usuarios.create(token, {
+        ...payload,
+        id_rol: id_rol || undefined,
+      }) as { id_usuario: string };
       closeModal(); fetchUsuarios();
       successToast.mostrarRegistrado();
     } catch (err) { setError(err instanceof Error ? err.message : "Error al crear usuario"); }
@@ -101,12 +127,14 @@ export default function UsuariosUI() {
   const handleUpdateUsuario = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUsuario) return;
+    if (!validateUsuario()) return;
     try {
       setSaving(true);
       const token = getToken();
-      const payload: Partial<UserFormData> = { ...userFormData };
-      if (!payload.password) delete payload.password;
-      await api.usuarios.update(token, editingUsuario.id_usuario, payload);
+      const { id_rol, password, ...payload } = userFormData;
+      const updatePayload: Record<string, unknown> = { ...payload };
+      if (password) updatePayload.password = password;
+      await api.usuarios.update(token, editingUsuario.id_usuario, updatePayload);
       closeModal(); fetchUsuarios();
       successToast.mostrarActualizado();
     } catch (err) { setError(err instanceof Error ? err.message : "Error al actualizar usuario"); }
@@ -356,25 +384,27 @@ export default function UsuariosUI() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-4 overflow-y-auto">
+            <form onSubmit={editingUsuario ? handleUpdateUsuario : handleCreateUsuario} className="p-6 space-y-4 overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={labelCls}>Nombre de Usuario</label>
-                  <input type="text" value={userFormData.nombre_usuario} onChange={(e) => setUserFormData({ ...userFormData, nombre_usuario: e.target.value })} className={inputCls} required />
+                  <input type="text" value={userFormData.nombre_usuario} onChange={(e) => handleFormChange('nombre_usuario', e.target.value)} className={inputCls} />
+                  {formErrors.nombre_usuario && <p className="mt-1 text-xs text-red-500">{formErrors.nombre_usuario}</p>}
                 </div>
                 <div>
                   <label className={labelCls}>Nombre</label>
-                  <input type="text" value={userFormData.nombre} onChange={(e) => setUserFormData({ ...userFormData, nombre: e.target.value })} className={inputCls} required />
+                  <input type="text" value={userFormData.nombre} onChange={(e) => handleFormChange('nombre', e.target.value)} className={inputCls} />
+                  {formErrors.nombre && <p className="mt-1 text-xs text-red-500">{formErrors.nombre}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={labelCls}>Apellido Paterno</label>
-                  <input type="text" value={userFormData.apellido_paterno} onChange={(e) => setUserFormData({ ...userFormData, apellido_paterno: e.target.value })} className={inputCls} />
+                  <input type="text" value={userFormData.apellido_paterno} onChange={(e) => handleFormChange('apellido_paterno', e.target.value)} className={inputCls} />
                 </div>
                 <div>
                   <label className={labelCls}>Apellido Materno</label>
-                  <input type="text" value={userFormData.apellido_materno} onChange={(e) => setUserFormData({ ...userFormData, apellido_materno: e.target.value })} className={inputCls} />
+                  <input type="text" value={userFormData.apellido_materno} onChange={(e) => handleFormChange('apellido_materno', e.target.value)} className={inputCls} />
                 </div>
               </div>
               <div>
@@ -396,54 +426,56 @@ export default function UsuariosUI() {
               </div>
               <div>
                 <label className={labelCls}>Email</label>
-                <input type="email" value={userFormData.email} onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })} className={inputCls} required />
+                <input type="email" value={userFormData.email} onChange={(e) => handleFormChange('email', e.target.value)} className={inputCls} />
+                {formErrors.email && <p className="mt-1 text-xs text-red-500">{formErrors.email}</p>}
               </div>
               <div>
                 <label className={labelCls}>{editingUsuario ? "Password (opcional)" : "Password"}</label>
-                <input type="password" value={userFormData.password} onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })} className={inputCls} required={!editingUsuario} placeholder={editingUsuario ? "Dejar vacío para mantener actual" : ""} />
+                <input type="password" value={userFormData.password} onChange={(e) => handleFormChange('password', e.target.value)} className={inputCls} placeholder={editingUsuario ? "Dejar vacío para mantener actual" : ""} />
+                {formErrors.password && <p className="mt-1 text-xs text-red-500">{formErrors.password}</p>}
               </div>
               <div>
                 <label className={labelCls}>Teléfono</label>
-                <input type="text" value={userFormData.telefono} onChange={(e) => setUserFormData({ ...userFormData, telefono: e.target.value })} className={inputCls} />
+                <input type="text" value={userFormData.telefono} onChange={(e) => handleFormChange('telefono', e.target.value)} className={inputCls} />
+                {formErrors.telefono && <p className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={labelCls}>Idioma Preferido</label>
-                  <select value={userFormData.idioma_preferido} onChange={(e) => setUserFormData({ ...userFormData, idioma_preferido: e.target.value })} className={inputCls}>
+                  <select value={userFormData.idioma_preferido} onChange={(e) => handleFormChange('idioma_preferido', e.target.value)} className={inputCls}>
                     <option value="es">Español</option><option value="en">English</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="pt">Português</option>
                   </select>
                 </div>
                 <div>
                   <label className={labelCls}>Moneda Preferida</label>
-                  <select value={userFormData.moneda_preferida} onChange={(e) => setUserFormData({ ...userFormData, moneda_preferida: e.target.value })} className={inputCls}>
+                  <select value={userFormData.moneda_preferida} onChange={(e) => handleFormChange('moneda_preferida', e.target.value)} className={inputCls}>
                     <option value="MXN">MXN - Peso Mexicano</option><option value="USD">USD - Dólar</option>
                   </select>
                 </div>
               </div>
               <div>
                 <label className={labelCls}>Asignar Rol</label>
-                <select value={userFormData.id_rol} onChange={(e) => setUserFormData({ ...userFormData, id_rol: parseInt(e.target.value) || 0 })} className={inputCls}>
+                <select value={userFormData.id_rol} onChange={(e) => handleFormChange('id_rol', parseInt(e.target.value) || 0)} className={inputCls}>
                   <option value={0}>Seleccionar rol...</option>
                   {roles.map((rol) => <option key={rol.id_rol} value={rol.id_rol}>{rol.nombre}</option>)}
                 </select>
               </div>
-            </div>
 
-            {/* Modal Footer */}
-            <div className="flex gap-3 border-t border-[#C5CFB0] p-6 bg-[#F4F0E3]/50">
-              <button type="button" onClick={closeModal} className="flex-1 rounded-xl border border-[#C5CFB0] py-3 text-sm font-medium text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200">Cancelar</button>
-              <button
-                type="button"
-                onClick={(e) => editingUsuario ? handleUpdateUsuario(e as unknown as React.FormEvent) : handleCreateUsuario(e as unknown as React.FormEvent)}
-                disabled={saving}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#3D6B3F] py-3 text-sm font-medium text-white hover:bg-[#1F3A2E] transition-all duration-200 disabled:opacity-50"
+              {/* Modal Footer */}
+              <div className="flex gap-3 pt-4 border-t border-[#C5CFB0]">
+                <button type="button" onClick={closeModal} className="flex-1 rounded-xl border border-[#C5CFB0] py-3 text-sm font-medium text-[#1F3A2E] hover:bg-[#C5CFB0]/30 transition-all duration-200">Cancelar</button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#3D6B3F] py-3 text-sm font-medium text-white hover:bg-[#1F3A2E] transition-all duration-200 disabled:opacity-50"
               >
                 {saving && <Loader2 className="animate-spin" size={16} />}
                 {editingUsuario ? "Actualizar" : "Crear"}
               </button>
             </div>
-          </div>
+          </form>
         </div>
+      </div>
       )}
     </div>
   );

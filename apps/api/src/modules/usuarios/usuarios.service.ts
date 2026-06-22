@@ -54,12 +54,21 @@ export class UsuariosService {
     };
 
     const user = await this.prisma.usuarios.create({ data });
+
+    if (dto.id_rol) {
+      await this.prisma.usuario_rol.upsert({
+        where: { id_usuario_id_rol: { id_usuario: user.id_usuario, id_rol: dto.id_rol } },
+        create: { id_usuario: user.id_usuario, id_rol: dto.id_rol },
+        update: { estado: 'activo' },
+      });
+    }
+
     await this.prisma.auditoria.create({
       data: {
         accion: 'crear_usuario',
         tabla_afectada: 'usuarios',
         registro_id: user.id_usuario,
-        valor_nuevo: { email: user.email, nombre: user.nombre } as any,
+        valor_nuevo: { email: user.email, nombre: user.nombre, id_rol: dto.id_rol ?? null } as any,
       },
     });
     return serializeBigInts(user);

@@ -9,7 +9,6 @@ import {
   FileCheck,
   FileText,
   FolderOpen,
-  Home,
   Key,
   Layers,
   LayoutDashboard,
@@ -45,17 +44,6 @@ type NavItem = {
 type NavSection = {
   label: string;
   items: NavItem[];
-};
-
-const VISTA_CLIENTE_SECTION: NavSection = {
-  label: "VISTA CLIENTE",
-  items: [
-    {
-      title: "Ver Tienda",
-      url: "/cliente/producto",
-      icon: Home,
-    },
-  ],
 };
 
 export const ADMIN_NAV_DATA: NavSection[] = [
@@ -130,7 +118,6 @@ export const ADMIN_NAV_DATA: NavSection[] = [
       },
     ],
   },
-  VISTA_CLIENTE_SECTION,
 ];
 
 export const PRODUCTOR_NAV_DATA: NavSection[] = [

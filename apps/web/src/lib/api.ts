@@ -18,6 +18,11 @@ interface ArchivosUploadResponse {
  * Error con la respuesta del backend preservada (status + payload). Permite que los
  * llamadores hagan `if (err instanceof ApiError && err.code === 'AGE_DOB_REQUIRED')`.
  */
+// Cache para evitar llamadas duplicadas a getAnalytics (usado por el dashboard
+// que tiene dos charts que llaman al mismo endpoint con los mismos parámetros).
+const analyticsCache = new Map<string, { promise: Promise<any>; expires: number }>();
+const ANALYTICS_CACHE_TTL = 10_000; // 10 segundos
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -555,10 +560,18 @@ export const api = {
     getOne: (id: string) => fetchJson(endpoint(`/pedidos/${id}`)),
     getMineSales: (token: string, id_productor?: number) =>
       fetchJson(endpoint(`/pedidos/mis-ventas${id_productor ? `?id_productor=${id_productor}` : ''}`), { headers: headers(token) }),
-    getAnalytics: (token: string, periodo: string, id_productor?: number) =>
-      fetchJson(endpoint(`/pedidos/estadisticas?periodo=${periodo}${id_productor ? `&id_productor=${id_productor}` : ''}`), {
+    getAnalytics: (token: string, periodo: string, id_productor?: number) => {
+      const cacheKey = `${periodo}_${id_productor ?? ''}`;
+      const cached = analyticsCache.get(cacheKey);
+      if (cached && cached.expires > Date.now()) {
+        return cached.promise;
+      }
+      const promise = fetchJson(endpoint(`/pedidos/estadisticas?periodo=${periodo}${id_productor ? `&id_productor=${id_productor}` : ''}`), {
         headers: headers(token),
-      }),
+      });
+      analyticsCache.set(cacheKey, { promise, expires: Date.now() + ANALYTICS_CACHE_TTL });
+      return promise;
+    },
     getMisCompras: (token: string) =>
       fetchJson(endpoint("/pedidos/mis-compras"), { headers: headers(token) }),
     create: (token: string, data: any) =>

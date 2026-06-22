@@ -165,8 +165,6 @@ export default function CheckoutPage() {
     setMetodoPago,
     paypalOrderId,
     capturePaypalOrder,
-    dobRequired,
-    submitDob,
     cargando,
     solicitarProteccion,
     setSolicitarProteccion,
@@ -628,14 +626,7 @@ export default function CheckoutPage() {
                         Stripe no está configurado. Define <code>NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code>.
                       </p>
                     )}
-                    {stripeConfigured && dobRequired && (
-                      <DobCaptureForm
-                        edadRequerida={dobRequired.edadRequerida}
-                        message={dobRequired.message}
-                        onSubmit={submitDob}
-                      />
-                    )}
-                    {stripeConfigured && !dobRequired && !clientSecret && (
+                    {stripeConfigured && !clientSecret && (
                       <div className="space-y-4">
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.green}33`, background: `${COLOR_PALETTE.green}08`, padding: "24px", fontSize: "14px", color: COLOR_PALETTE.green }} role="status" aria-live="polite">
                           <Loader2 size={16} className="animate-spin" aria-label="Cargando" />
@@ -652,7 +643,7 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                     )}
-                    {stripeConfigured && !dobRequired && clientSecret && stripePromise && (
+                    {stripeConfigured && clientSecret && stripePromise && (
                       <Elements
                         stripe={stripePromise}
                         options={{
@@ -699,15 +690,7 @@ export default function CheckoutPage() {
                         PayPal no está configurado. Define <code>NEXT_PUBLIC_PAYPAL_CLIENT_ID</code>.
                       </p>
                     )}
-                    {isPaypalConfigured() && dobRequired && (
-                      <DobCaptureForm
-                        edadRequerida={dobRequired.edadRequerida}
-                        message={dobRequired.message}
-                        onSubmit={submitDob}
-                        errorMensaje={errorMensaje}
-                      />
-                    )}
-                    {isPaypalConfigured() && !dobRequired && !paypalOrderId && (
+                    {isPaypalConfigured() && !paypalOrderId && (
                       <div className="space-y-4">
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.copper}33`, background: `${COLOR_PALETTE.copper}08`, padding: "24px", fontSize: "14px", color: COLOR_PALETTE.copper }} role="status" aria-live="polite">
                           <Loader2 size={16} className="animate-spin" aria-label="Cargando" />
@@ -724,7 +707,7 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                     )}
-                    {isPaypalConfigured() && !dobRequired && paypalOrderId && paso === "pago" && (
+                    {isPaypalConfigured() && paypalOrderId && paso === "pago" && (
                       <div className="space-y-4">
                         <div style={{ borderRadius: "8px", border: `1px solid ${COLOR_PALETTE.copper}33`, background: `${COLOR_PALETTE.copper}08`, padding: "16px", fontSize: "14px", color: COLOR_PALETTE.copper }}>
                           <p style={{ marginBottom: "8px", fontWeight: 600, margin: 0 }}>{t("Completa tu pago en PayPal")}</p>
@@ -743,7 +726,7 @@ export default function CheckoutPage() {
                         />
                       </div>
                     )}
-                    {isPaypalConfigured() && !dobRequired && paypalOrderId && paso === "resumen" && (
+                    {isPaypalConfigured() && paypalOrderId && paso === "resumen" && (
                       <div className="space-y-4">
                         <PagoYResumenPaypal
                           items={items}
@@ -1495,66 +1478,6 @@ function DireccionStep({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function DobCaptureForm({
-  edadRequerida,
-  message,
-  onSubmit,
-  errorMensaje,
-}: {
-  edadRequerida: number;
-  message: string;
-  onSubmit: (fechaISO: string) => Promise<boolean>;
-  errorMensaje?: string | null;
-}) {
-  const { t } = useLocale();
-  const COLOR_PALETTE = usePalette();
-  const [dob, setDob] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
-
-  const handle = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dob) {
-      setLocalError(t("Ingresa tu fecha de nacimiento."));
-      return;
-    }
-    setSubmitting(true);
-    setLocalError(null);
-    const ok = await onSubmit(dob);
-    if (!ok) setSubmitting(false);
-  };
-
-  return (
-    <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-800 dark:bg-amber-900/20">
-      <p className="mb-2 font-medium text-amber-900 dark:text-amber-200">
-        {t("Confirmar tu edad ({n}+)").replace("{n}", String(edadRequerida))}
-      </p>
-      <p className="mb-3 text-amber-800 dark:text-amber-300">{message}</p>
-      <form onSubmit={handle} className="space-y-3">
-        <input
-          type="date"
-          value={dob}
-          onChange={(e) => setDob(e.target.value)}
-          max={new Date().toISOString().slice(0, 10)}
-          className="w-full rounded-lg border border-amber-300 px-3 py-3 text-sm focus:border-amber-500 focus:outline-none dark:border-amber-700 dark:bg-gray-800 dark:text-white"
-          required
-        />
-        {localError && <p aria-live="polite" role="alert" className="text-xs text-red-600 dark:text-red-400">{localError}</p>}
-        {errorMensaje && !localError && <p aria-live="polite" role="alert" className="text-xs text-red-600 dark:text-red-400">{errorMensaje}</p>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white
-            ${submitting ? "cursor-not-allowed bg-gray-400" : "bg-amber-600 hover:bg-amber-700"}`}
-        >
-          {submitting ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
-          {t("Confirmar y continuar")}
-        </button>
-      </form>
     </div>
   );
 }

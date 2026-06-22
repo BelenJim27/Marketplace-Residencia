@@ -17,11 +17,6 @@ import type { CheckoutStep, Direccion, TarjetaMock } from "@/types/checkout";
 export type { CheckoutStep, Direccion, TarjetaMock } from "@/types/checkout";
 export type { GrupoEnvio, ShippingQuote, OpcionAgregada } from "./useShipping";
 
-export interface DobRequiredState {
-  edadRequerida: number;
-  message: string;
-}
-
 export function useCheckout() {
   const router = useRouter();
   const { items, precioTotal, limpiarCarrito } = useCarrito();
@@ -54,7 +49,6 @@ export function useCheckout() {
   const [metodoPago, setMetodoPago] = useState<'stripe' | 'paypal'>('stripe');
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
 
-  const [dobRequired, setDobRequired] = useState<DobRequiredState | null>(null);
   const [solicitarProteccion, setSolicitarProteccion] = useState(false);
 
   // Mutex para prevenir doble creación de pedido por doble click o llamadas concurrentes.
@@ -518,10 +512,7 @@ export function useCheckout() {
         }
       } catch (err) {
         if (err instanceof ApiError && err.code === "AGE_DOB_REQUIRED") {
-          setDobRequired({
-            edadRequerida: Number(err.details?.edadRequerida ?? 21),
-            message: err.message,
-          });
+          setErrorMensaje(err.message);
           return null;
         }
         if (err instanceof ApiError && err.code === "AGE_INSUFFICIENT") {
@@ -594,25 +585,6 @@ export function useCheckout() {
     }
   }, [pedidoIdCreado, router, limpiarCarrito]);
 
-  const submitDob = useCallback(async (fechaNacimientoISO: string) => {
-    if (!user?.id_usuario) return false;
-    const token = getCookie("token") || "";
-    setErrorMensaje(null);
-    try {
-      await api.usuarios.update(token, user.id_usuario, { fecha_nacimiento: fechaNacimientoISO });
-      const result = await prepararPago();
-      if (result) setDobRequired(null);
-      return !!result;
-    } catch (err) {
-      if (err instanceof ApiError && err.code === "AGE_INSUFFICIENT") {
-        setErrorMensaje(err.message);
-      } else {
-        setErrorMensaje(err instanceof Error ? err.message : "No se pudo guardar la fecha de nacimiento.");
-      }
-      return false;
-    }
-  }, [user?.id_usuario, prepararPago]);
-
   return {
     paso,
     setPaso,
@@ -660,8 +632,6 @@ export function useCheckout() {
     setMetodoPago,
     paypalOrderId,
     capturePaypalOrder,
-    dobRequired,
-    submitDob,
     solicitarProteccion,
     setSolicitarProteccion,
     costoProteccionEstimadoMXN,

@@ -62,6 +62,27 @@ export default function RolesPermisosPage() {
   });
   const [selectedFotoFile, setSelectedFotoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<Partial<Record<string, string>>>({});
+
+  const handleFormChange = (field: string, value: string | number) => {
+    setUserFormData((prev) => ({ ...prev, [field]: value }));
+    setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  function validateUsuario() {
+    const errors: Partial<Record<string, string>> = {};
+    if (!userFormData.nombre_usuario.trim()) errors.nombre_usuario = 'El nombre de usuario es obligatorio.';
+    else if (userFormData.nombre_usuario.trim().length < 2) errors.nombre_usuario = 'Mínimo 2 caracteres.';
+    if (!userFormData.nombre.trim()) errors.nombre = 'El nombre es obligatorio.';
+    else if (userFormData.nombre.trim().length < 2) errors.nombre = 'Mínimo 2 caracteres.';
+    if (!userFormData.email.trim()) errors.email = 'El email es obligatorio.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userFormData.email.trim())) errors.email = 'Email inválido.';
+    if (!editingUsuario && !userFormData.password) errors.password = 'La contraseña es obligatoria.';
+    else if (userFormData.password && userFormData.password.length < 8) errors.password = 'Mínimo 8 caracteres.';
+    if (userFormData.telefono && !/^[\d\s+\-()]{7,20}$/.test(userFormData.telefono)) errors.telefono = 'Formato de teléfono inválido.';
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
 
   const PERMISOS_CLIENTE   = ["ver_productos","crear_pedido","ver_pedidos","ver_tienda","ver_inventario","panel_cliente"];
   const PERMISOS_PRODUCTOR = ["ver_productos","crear_producto","editar_producto","eliminar_producto","ver_inventario","crear_inventario","editar_inventario","ver_pedidos","editar_pedido","ver_tienda","crear_tienda","editar_tienda","panel_productor"];
@@ -165,11 +186,13 @@ export default function RolesPermisosPage() {
 
   const handleCreateUsuario = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateUsuario()) return;
     try {
-      setSaving(true); const token = getToken();      const response = await api.usuarios.create(token, { nombre: userFormData.nombre, email: userFormData.email, password: userFormData.password || undefined, apellido_paterno: userFormData.apellido_paterno || undefined, apellido_materno: userFormData.apellido_materno || undefined, telefono: userFormData.telefono || undefined, idioma_preferido: userFormData.idioma_preferido, moneda_preferida: userFormData.moneda_preferida }) as { id_usuario: string };
+      setSaving(true); const token = getToken();
+      const response = await api.usuarios.create(token, { ...userFormData, id_rol: userFormData.id_rol || undefined }) as { id_usuario: string };
       if (selectedFotoFile) { const fd = new FormData(); fd.append("foto", selectedFotoFile); await api.usuarios.uploadPhoto(token, response.id_usuario, fd); }
-      if (userFormData.id_rol) await api.usuariosRoles.assign(token, { id_usuario: response.id_usuario, id_rol: userFormData.id_rol });
-      setShowModalUsuario(false); setSelectedFotoFile(null); setUserFormData({ nombre_usuario: "", nombre: "", foto_url: "", apellido_paterno: "", apellido_materno: "", email: "", password: "", telefono: "", idioma_preferido: "es", moneda_preferida: "MXN", id_rol: 0 }); fetchData(); successToast.mostrar("Usuario creado correctamente.");
+      setShowModalUsuario(false); setSelectedFotoFile(null); setFormErrors({});
+      setUserFormData({ nombre_usuario: "", nombre: "", foto_url: "", apellido_paterno: "", apellido_materno: "", email: "", password: "", telefono: "", idioma_preferido: "es", moneda_preferida: "MXN", id_rol: 0 }); fetchData(); successToast.mostrar("Usuario creado correctamente.");
     } catch (err) { setError(err instanceof Error ? err.message : "Error al crear usuario"); }
     finally { setSaving(false); }
   };
@@ -177,10 +200,11 @@ export default function RolesPermisosPage() {
     const rolAsignado = usuario.usuario_rol?.find((ur) => ur.estado === "activo");
     setEditingUsuario(usuario); setSelectedFotoFile(null);
     setUserFormData({ nombre_usuario: usuario.nombre_usuario || "", nombre: usuario.nombre || "", foto_url: usuario.foto_url || "", apellido_paterno: usuario.apellido_paterno || "", apellido_materno: usuario.apellido_materno || "", email: usuario.email || "", password: "", telefono: usuario.telefono || "", idioma_preferido: usuario.idioma_preferido || "es", moneda_preferida: usuario.moneda_preferida || "MXN", id_rol: rolAsignado?.id_rol || 0 });
-    setShowModalUsuario(true);
+    setShowModalUsuario(true); setFormErrors({});
   };
   const handleUpdateUsuario = async (e: React.FormEvent) => {
     e.preventDefault(); if (!editingUsuario) return;
+    if (!validateUsuario()) return;
     try {
       setSaving(true); const token = getToken();      const payload: Record<string, unknown> = { nombre: userFormData.nombre, apellido_paterno: userFormData.apellido_paterno || undefined, apellido_materno: userFormData.apellido_materno || undefined, email: userFormData.email, telefono: userFormData.telefono || undefined, idioma_preferido: userFormData.idioma_preferido, moneda_preferida: userFormData.moneda_preferida };
       if (userFormData.password) payload.password = userFormData.password;
@@ -641,50 +665,55 @@ export default function RolesPermisosPage() {
                 <User size={20} className="text-[#A8C26B]" />
                 <h2 className="text-lg font-bold text-white">{editingUsuario ? "Editar Usuario" : "Nuevo Usuario"}</h2>
               </div>
-              <button onClick={() => { setShowModalUsuario(false); setEditingUsuario(null); }} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"><X size={18} /></button>
+              <button onClick={() => { setShowModalUsuario(false); setEditingUsuario(null); setFormErrors({}); }} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"><X size={18} /></button>
             </div>
             <form onSubmit={editingUsuario ? handleUpdateUsuario : handleCreateUsuario} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className={labelCls}>Nombre *</label>
-                  <input className={inputCls} placeholder="Nombre" value={userFormData.nombre} onChange={(e) => setUserFormData({ ...userFormData, nombre: e.target.value })} required />
+                  <input className={inputCls} placeholder="Nombre" value={userFormData.nombre} onChange={(e) => handleFormChange('nombre', e.target.value)} />
+                  {formErrors.nombre && <p className="mt-1 text-xs text-red-500">{formErrors.nombre}</p>}
                 </div>
                 <div>
                   <label className={labelCls}>Nombre de usuario</label>
-                  <input className={inputCls} placeholder="nombre_usuario" value={userFormData.nombre_usuario} onChange={(e) => setUserFormData({ ...userFormData, nombre_usuario: e.target.value })} />
+                  <input className={inputCls} placeholder="nombre_usuario" value={userFormData.nombre_usuario} onChange={(e) => handleFormChange('nombre_usuario', e.target.value)} />
+                  {formErrors.nombre_usuario && <p className="mt-1 text-xs text-red-500">{formErrors.nombre_usuario}</p>}
                 </div>
                 <div>
                   <label className={labelCls}>Apellido paterno</label>
-                  <input className={inputCls} placeholder="Apellido paterno" value={userFormData.apellido_paterno} onChange={(e) => setUserFormData({ ...userFormData, apellido_paterno: e.target.value })} />
+                  <input className={inputCls} placeholder="Apellido paterno" value={userFormData.apellido_paterno} onChange={(e) => handleFormChange('apellido_paterno', e.target.value)} />
                 </div>
                 <div>
                   <label className={labelCls}>Apellido materno</label>
-                  <input className={inputCls} placeholder="Apellido materno" value={userFormData.apellido_materno} onChange={(e) => setUserFormData({ ...userFormData, apellido_materno: e.target.value })} />
+                  <input className={inputCls} placeholder="Apellido materno" value={userFormData.apellido_materno} onChange={(e) => handleFormChange('apellido_materno', e.target.value)} />
                 </div>
               </div>
               <div>
                 <label className={labelCls}>Correo electrónico *</label>
-                <input type="email" className={inputCls} placeholder="email@ejemplo.com" value={userFormData.email} onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })} required />
+                <input type="email" className={inputCls} placeholder="email@ejemplo.com" value={userFormData.email} onChange={(e) => handleFormChange('email', e.target.value)} />
+                {formErrors.email && <p className="mt-1 text-xs text-red-500">{formErrors.email}</p>}
               </div>
               <div>
                 <label className={labelCls}>{editingUsuario ? "Nueva contraseña (vacío para no cambiar)" : "Contraseña *"}</label>
-                <input type="password" className={inputCls} placeholder="••••••••" value={userFormData.password} onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })} required={!editingUsuario} />
+                <input type="password" className={inputCls} placeholder="••••••••" value={userFormData.password} onChange={(e) => handleFormChange('password', e.target.value)} />
+                {formErrors.password && <p className="mt-1 text-xs text-red-500">{formErrors.password}</p>}
               </div>
               <div>
                 <label className={labelCls}>Teléfono</label>
-                <input className={inputCls} placeholder="+52 000 000 0000" value={userFormData.telefono} onChange={(e) => setUserFormData({ ...userFormData, telefono: e.target.value })} />
+                <input className={inputCls} placeholder="+52 000 000 0000" value={userFormData.telefono} onChange={(e) => handleFormChange('telefono', e.target.value)} />
+                {formErrors.telefono && <p className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
               </div>
               {!editingUsuario && (
                 <div>
                   <label className={labelCls}>Rol inicial</label>
-                  <select className={inputCls} value={userFormData.id_rol} onChange={(e) => setUserFormData({ ...userFormData, id_rol: Number(e.target.value) })}>
+                  <select className={inputCls} value={userFormData.id_rol} onChange={(e) => handleFormChange('id_rol', Number(e.target.value))}>
                     <option value={0}>Sin rol</option>
                     {roles.map((r) => <option key={r.id_rol} value={r.id_rol}>{r.nombre}</option>)}
                   </select>
                 </div>
               )}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setShowModalUsuario(false); setEditingUsuario(null); }} className={btnCancel}>Cancelar</button>
+                <button type="button" onClick={() => { setShowModalUsuario(false); setEditingUsuario(null); setFormErrors({}); }} className={btnCancel}>Cancelar</button>
                 <button type="submit" disabled={saving} className={btnSave}>
                   {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                   {editingUsuario ? "Guardar cambios" : "Crear usuario"}

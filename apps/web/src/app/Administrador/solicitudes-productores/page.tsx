@@ -43,7 +43,7 @@ interface SolicitudProductor {
   categorias?: { id_categoria: number; nombre: string }[];
 }
 
-function CertificadoPreview({ url }: { url?: string }) {
+function CertificadoPreview({ url, onPreview }: { url?: string; onPreview?: (url: string) => void }) {
   if (!url) {
     return (
       <div className="rounded-xl border border-dashed border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3]/60 dark:bg-[#0f1a10]/60 px-4 py-8 text-center text-sm text-[#3D6B3F]/50 dark:text-[#A8C26B]/40">
@@ -59,12 +59,25 @@ function CertificadoPreview({ url }: { url?: string }) {
     <div className="space-y-3">
       {isImage && (
         <div className="overflow-hidden rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#0f1a10]">
-          <Image src={url} alt="Documento de solicitud" width={0} height={0} sizes="100vw" className="max-h-72 w-full object-contain" />
+          <Image
+            src={url}
+            alt="Documento de solicitud"
+            width={0}
+            height={0}
+            sizes="100vw"
+            className="max-h-48 sm:max-h-72 w-full cursor-pointer object-contain"
+            onClick={() => onPreview?.(url)}
+          />
         </div>
       )}
       {isPDF && (
-        <div className="overflow-hidden rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#0f1a10]">
-          <iframe src={url} title="Documento de solicitud" className="h-72 w-full" />
+        <div className="relative overflow-hidden rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#0f1a10]">
+          <iframe src={url} title="Documento de solicitud" className="h-48 sm:h-72 w-full" />
+          <button
+            onClick={() => onPreview?.(url)}
+            className="absolute inset-0 z-10 flex items-center justify-center bg-black/0 transition-colors hover:bg-black/10"
+            aria-label="Ver documento completo"
+          />
         </div>
       )}
       {!isImage && !isPDF && (
@@ -96,6 +109,7 @@ export default function SolicitudesProductoresPage() {
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [approveReason, setApproveReason] = useState("");
   const [rejectReason, setRejectReason] = useState("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [currentPageProcesadas, setCurrentPageProcesadas] = useState(1);
   const itemsPerPage = 10;
   const successToast = useSuccessToast("solicitud_productor");
@@ -348,7 +362,7 @@ export default function SolicitudesProductoresPage() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-[#C5CFB0] bg-[#1F3A2E] px-6 py-4">
+            <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-[#C5CFB0] bg-[#1F3A2E] px-4 py-3 sm:px-6 sm:py-4">
               <div>
                 <h2 className="text-lg font-bold text-white [font-family:'Playfair_Display',serif]">
                   {selectedSolicitud.usuarios?.nombre}
@@ -366,13 +380,13 @@ export default function SolicitudesProductoresPage() {
               </div>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="space-y-5 p-4 sm:p-6">
               {/* Información del Usuario */}
               <div>
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A2E] dark:text-[#E8E3D5]">
                   <User className="h-4 w-4 text-[#3D6B3F]" /> Información del Usuario
                 </h3>
-                <div className="grid grid-cols-2 gap-4 rounded-xl bg-white dark:bg-[#1a2a1f] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 p-4">
+                <div className="grid grid-cols-1 gap-4 rounded-xl bg-white dark:bg-[#1a2a1f] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 p-4 sm:grid-cols-2">
                   <div>
                     <p className="text-xs text-[#3D6B3F]/60 dark:text-[#A8C26B]/60">Nombre</p>
                     <p className="text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{selectedSolicitud.usuarios?.nombre}</p>
@@ -432,7 +446,7 @@ export default function SolicitudesProductoresPage() {
                   <FileImage className="h-4 w-4 text-[#3D6B3F]" /> Documento de Solicitud
                 </h3>
                 <div className="rounded-xl bg-white dark:bg-[#1a2a1f] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 p-4">
-                  <CertificadoPreview url={selectedSolicitud.certificado_url} />
+                  <CertificadoPreview url={selectedSolicitud.certificado_url} onPreview={(url) => setPreviewUrl(url)} />
                 </div>
               </div>
 
@@ -464,7 +478,7 @@ export default function SolicitudesProductoresPage() {
 
             {/* Acciones (solo pendientes) */}
             {selectedSolicitud.estado === "pendiente" && (
-              <div className="border-t border-[#C5CFB0] dark:border-[#3D6B3F]/30 px-6 py-4 flex gap-4">
+              <div className="flex flex-col gap-3 border-t border-[#C5CFB0] dark:border-[#3D6B3F]/30 px-4 py-4 sm:flex-row sm:px-6">
                 <button
                   onClick={() => setRejectModalOpen(true)}
                   disabled={processingId !== null}
@@ -541,6 +555,38 @@ export default function SolicitudesProductoresPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Lightbox ── */}
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.85)" }}
+          onClick={() => setPreviewUrl(null)}
+        >
+          <button
+            onClick={() => setPreviewUrl(null)}
+            className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white transition hover:bg-white/30"
+          >
+            <XCircle className="h-6 w-6" />
+          </button>
+          {/\.(png|jpe?g|webp|gif)($|\?)/i.test(previewUrl) ? (
+            <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
+              <Image
+                src={previewUrl}
+                alt="Documento de solicitud"
+                width={0}
+                height={0}
+                sizes="90vw"
+                className="max-h-[85vh] w-auto rounded-xl object-contain"
+              />
+            </div>
+          ) : (
+            <div className="h-[80vh] w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+              <iframe src={previewUrl} title="Documento de solicitud" className="h-full w-full rounded-xl" />
+            </div>
+          )}
         </div>
       )}
     </>

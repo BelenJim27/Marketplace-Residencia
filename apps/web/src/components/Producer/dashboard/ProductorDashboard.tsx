@@ -148,7 +148,10 @@ export function ProductorDashboard() {
     }
   }, [pdfLoading, producer, salesData, productsData]);
 
-  if (loading || loadingCategorias) {
+  // Nota: loadingCategorias NO bloquea el dashboard — solo controla el
+  // subtítulo del header. Si las categorías tardan, el dashboard se muestra
+  // igual con texto genérico, y se actualiza cuando lleguen.
+  if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#C5CFB0] border-t-[#3D6B3F]" />
@@ -157,9 +160,11 @@ export function ProductorDashboard() {
   }
 
   const categoriasLabel =
-    categorias.length > 0
-      ? categorias.map((c) => c.nombre).join(", ")
-      : "General";
+    loadingCategorias
+      ? "Cargando..."
+      : categorias.length > 0
+        ? categorias.map((c) => c.nombre).join(", ")
+        : "General";
 
   return (
     <div className="space-y-6">

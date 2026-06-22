@@ -384,6 +384,11 @@ export function ProductoModal({
               <Field label="Ancho (cm)" value={form.ancho_cm} onChange={set("ancho_cm")} disabled={mode === "view"} inputMode="decimal" placeholder="0.0" />
               <Field label="Largo (cm)" value={form.largo_cm} onChange={set("largo_cm")} disabled={mode === "view"} inputMode="decimal" placeholder="0.0" />
             </div>
+            {form.status === "activo" && mode !== "view" && (
+              <p className="mt-2 text-xs text-amber-500">
+                Todos los campos de dimensión son obligatorios para publicar el producto.
+              </p>
+            )}
           </div>
 
           {/* Error */}

@@ -26,6 +26,20 @@ type Periodo = "week" | "month" | "year";
 export class PedidosService {
   private readonly logger = new Logger(PedidosService.name);
 
+  // Cache en memoria para getEstadisticas: evita recomputar analytics
+  // si el mismo productor consulta con el mismo periodo repetidamente
+  // (ej: dashboard con VentasChart + ProductosChart en paralelo).
+  private static readonly ESTADISTICAS_CACHE_TTL_MS = 15_000; // 15 segundos
+  private estadisticasCache = new Map<string, { data: unknown; expires: number }>();
+
+  private getEstadisticasCacheKey(periodo: string, id_productor?: number | null): string {
+    return `${periodo}_${id_productor ?? 'null'}`;
+  }
+
+  private invalidateEstadisticasCache() {
+    this.estadisticasCache.clear();
+  }
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
@@ -197,12 +211,17 @@ export class PedidosService {
     }
 
     const periodo = normalizePeriodo(periodoRaw);
+    const cacheKey = this.getEstadisticasCacheKey(periodo, id_productor);
+    const cached = this.estadisticasCache.get(cacheKey);
+    if (cached && cached.expires > Date.now()) {
+      return cached.data;
+    }
+
     const { start, bucketSize, formatBucketLabel } = getRangeConfig(periodo);
 
-    const pedidos = await this.findPedidosByProductor(
+    const pedidos = await this.findPedidosByProductorLight(
       id_productor,
       start,
-      "asc",
     );
 
     // Solo ventas efectivamente pagadas alimentan métricas, gráfica y top de productos.
@@ -264,7 +283,7 @@ export class PedidosService {
       }))
       .sort((a, b) => b.y - a.y);
 
-    return {
+    const result = {
       periodo,
       resumen: {
         pedidos: pedidosPagados.length,
@@ -277,6 +296,14 @@ export class PedidosService {
       productos,
       rawRows,
     };
+
+    // Guardar en caché antes de retornar
+    this.estadisticasCache.set(cacheKey, {
+      data: result,
+      expires: Date.now() + PedidosService.ESTADISTICAS_CACHE_TTL_MS,
+    });
+
+    return result;
   }
   async create(dto: CreatePedidoDto, id_usuario: string) {
     // El pedido siempre se crea a nombre del usuario autenticado (del token),
@@ -1898,6 +1925,60 @@ export class PedidosService {
         },
       },
       orderBy: { fecha_creacion: direction },
+    });
+  }
+
+  /**
+   * Versión ligera de findPedidosByProductor para analytics.
+   * Usa `select` en vez de `include` para evitar traer columnas
+   * innecesarias de relaciones (lotes, tiendas, etc.).
+   */
+  private findPedidosByProductorLight(
+    id_productor: number,
+    start?: Date,
+  ) {
+    const relationWhere: Prisma.detalle_pedidoWhereInput = {
+      productos: {
+        OR: [
+          { tiendas: { id_productor, eliminado_en: null } },
+          { lotes: { id_productor, eliminado_en: null } },
+        ],
+      },
+    };
+
+    return this.prisma.pedidos.findMany({
+      where: {
+        eliminado_en: null,
+        ...(start ? { fecha_creacion: { gte: start } } : {}),
+        detalle_pedido: {
+          some: relationWhere,
+        },
+      },
+      select: {
+        id_pedido: true,
+        estado: true,
+        fecha_creacion: true,
+        detalle_pedido: {
+          where: relationWhere,
+          select: {
+            id_detalle: true,
+            cantidad: true,
+            precio_compra: true,
+            productos: {
+              select: {
+                nombre: true,
+                tiendas: {
+                  select: { id_productor: true, nombre: true },
+                },
+                lotes: {
+                  select: { id_productor: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { fecha_creacion: "asc" },
     });
   }
 

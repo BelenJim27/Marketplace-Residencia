@@ -9,6 +9,7 @@ import {
   isGlobalAgeVerified,
   persistGlobalAgeVerified,
 } from "@/lib/edad";
+import { api } from "@/lib/api";
 import { useLocale } from "@/context/LocaleContext";
 
 const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -23,9 +24,13 @@ interface AgeGateProps {
   forceOpen?: boolean;
   onVerified?: () => void;
   onDeny?: () => void;
+  /** User ID to persist fecha_nacimiento to profile (global mode only). */
+  userId?: string;
+  /** Auth token for API calls. */
+  token?: string;
 }
 
-export function AgeGate({ edadMinima, mode = "product", forceOpen = false, onVerified, onDeny }: AgeGateProps) {
+export function AgeGate({ edadMinima, mode = "product", forceOpen = false, onVerified, onDeny, userId, token }: AgeGateProps) {
   const { t, locale } = useLocale();
   const months = locale === "en" ? MONTHS_EN : MONTHS_ES;
   const minAge = typeof edadMinima === "number" && edadMinima > 0 ? edadMinima : 18;
@@ -78,6 +83,11 @@ export function AgeGate({ edadMinima, mode = "product", forceOpen = false, onVer
     }
     if (mode === "global") {
       persistGlobalAgeVerified();
+      // Persist fecha_nacimiento to user profile if logged in
+      if (userId && token) {
+        const fechaISO = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}T00:00:00.000Z`;
+        api.usuarios.update(token, userId, { fecha_nacimiento: fechaISO }).catch(() => {});
+      }
     } else {
       persistAgeVerified(edadMinima as number);
     }

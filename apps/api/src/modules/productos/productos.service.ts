@@ -266,7 +266,7 @@ export class ProductosService {
       const productos = ids.length
         ? await this.prisma.productos.findMany({
           where: { ...where, id_tienda: { in: ids } },
-          include: productoInclude as any,
+          select: productorProductSelect as any,
         })
         : [];
 
@@ -530,12 +530,12 @@ export class ProductosService {
       precio_base: new Prisma.Decimal(dto.precio_base),
       moneda_base: dto.moneda_base?.trim() ?? "MXN",
       metadata: (dto.metadata || {}) as Prisma.InputJsonValue,
-      peso_kg: dto.peso_kg ? new Prisma.Decimal(dto.peso_kg) : null,
-      alto_cm: dto.alto_cm ? new Prisma.Decimal(dto.alto_cm) : null,
-      ancho_cm: dto.ancho_cm ? new Prisma.Decimal(dto.ancho_cm) : null,
-      largo_cm: dto.largo_cm ? new Prisma.Decimal(dto.largo_cm) : null,
-      botellas_350ml: dto.botellas_350ml ? Number(dto.botellas_350ml) : null,
-      botellas_750ml: dto.botellas_750ml ? Number(dto.botellas_750ml) : null,
+      peso_kg: dto.peso_kg != null ? new Prisma.Decimal(dto.peso_kg) : null,
+      alto_cm: dto.alto_cm != null ? new Prisma.Decimal(dto.alto_cm) : null,
+      ancho_cm: dto.ancho_cm != null ? new Prisma.Decimal(dto.ancho_cm) : null,
+      largo_cm: dto.largo_cm != null ? new Prisma.Decimal(dto.largo_cm) : null,
+      botellas_350ml: dto.botellas_350ml != null ? Number(dto.botellas_350ml) : null,
+      botellas_750ml: dto.botellas_750ml != null ? Number(dto.botellas_750ml) : null,
       status: dto.status || 'activo',
       creado_por: dto.creado_por ?? null,
       actualizado_por: dto.actualizado_por ?? null,
@@ -645,12 +645,12 @@ export class ProductosService {
       }
     }
     if (dto.imagen_principal_url !== undefined) data.imagen_principal_url = dto.imagen_principal_url;
-    if (dto.peso_kg !== undefined) data.peso_kg = dto.peso_kg ? new Prisma.Decimal(dto.peso_kg) : null;
-    if (dto.alto_cm !== undefined) data.alto_cm = dto.alto_cm ? new Prisma.Decimal(dto.alto_cm) : null;
-    if (dto.ancho_cm !== undefined) data.ancho_cm = dto.ancho_cm ? new Prisma.Decimal(dto.ancho_cm) : null;
-    if (dto.largo_cm !== undefined) data.largo_cm = dto.largo_cm ? new Prisma.Decimal(dto.largo_cm) : null;
-    if (dto.botellas_350ml !== undefined) data.botellas_350ml = dto.botellas_350ml ? Number(dto.botellas_350ml) : null;
-    if (dto.botellas_750ml !== undefined) data.botellas_750ml = dto.botellas_750ml ? Number(dto.botellas_750ml) : null;
+    if (dto.peso_kg !== undefined) data.peso_kg = dto.peso_kg != null ? new Prisma.Decimal(dto.peso_kg) : null;
+    if (dto.alto_cm !== undefined) data.alto_cm = dto.alto_cm != null ? new Prisma.Decimal(dto.alto_cm) : null;
+    if (dto.ancho_cm !== undefined) data.ancho_cm = dto.ancho_cm != null ? new Prisma.Decimal(dto.ancho_cm) : null;
+    if (dto.largo_cm !== undefined) data.largo_cm = dto.largo_cm != null ? new Prisma.Decimal(dto.largo_cm) : null;
+    if (dto.botellas_350ml !== undefined) data.botellas_350ml = dto.botellas_350ml != null ? Number(dto.botellas_350ml) : null;
+    if (dto.botellas_750ml !== undefined) data.botellas_750ml = dto.botellas_750ml != null ? Number(dto.botellas_750ml) : null;
     if (dto.id_lote !== undefined) {
       if (dto.id_lote) {
         data.lotes = { connect: { id_lote: Number(dto.id_lote) } };
@@ -1091,4 +1091,89 @@ const productoListSelect = {
   categorias_productos: productoListInclude.categorias_productos,
   lotes: productoListInclude.lotes,
   tiendas: productoListInclude.tiendas,
+};
+
+// Versión `select` para el listado del productor autenticado.
+// Similar a productoListSelect pero incluye campos escalares extra
+// que necesita la página de edición de productos (peso, dimensiones,
+// lote fields, etc.) y relaciones más completas para el modal.
+// Sigue omitiendo metadata y traducciones (JSONB pesadas).
+const productorProductSelect = {
+  id_producto: true,
+  id_tienda: true,
+  id_lote: true,
+  nombre: true,
+  descripcion: true,
+  precio_base: true,
+  moneda_base: true,
+  status: true,
+  requiere_edad_minima: true,
+  imagen_principal_url: true,
+  peso_kg: true,
+  alto_cm: true,
+  ancho_cm: true,
+  largo_cm: true,
+  botellas_350ml: true,
+  botellas_750ml: true,
+  creado_por: true,
+  actualizado_por: true,
+  creado_en: true,
+  actualizado_en: true,
+  inventario: productoListInclude.inventario,
+  producto_imagenes: productoListInclude.producto_imagenes,
+  categorias_productos: productoListInclude.categorias_productos,
+  lotes: {
+    select: {
+      id_productor: true,
+      datos_api: true,
+      codigo_lote: true,
+      sitio: true,
+      grado_alcohol: true,
+      nombre_comun: true,
+      nombre_cientifico: true,
+      unidades: true,
+      fecha_elaboracion: true,
+      estado_lote: true,
+      descripcion: true,
+      marca: true,
+      url_trazabilidad: true,
+      botellas_350ml: true,
+      botellas_750ml: true,
+      productores: {
+        select: {
+          biografia: true,
+          otras_caracteristicas: true,
+          usuarios: {
+            select: {
+              nombre: true,
+              apellido_paterno: true,
+              apellido_materno: true,
+            },
+          },
+        },
+      },
+    },
+  },
+  tiendas: {
+    select: {
+      nombre: true,
+      descripcion: true,
+      ciudad_origen: true,
+      estado_origen: true,
+      pais_operacion: true,
+      nombre_contacto: true,
+      telefono_contacto: true,
+      productores: {
+        select: {
+          usuarios: {
+            select: {
+              nombre: true,
+              apellido_paterno: true,
+              apellido_materno: true,
+            },
+          },
+        },
+      },
+    },
+  },
 };

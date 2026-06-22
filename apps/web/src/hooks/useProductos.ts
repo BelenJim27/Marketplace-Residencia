@@ -377,6 +377,12 @@ export function useProductos() {
     if (!form.id_lote) { setError("Debes seleccionar un lote de trazabilidad."); return; }
     if (!form.descripcion.trim()) { setError("La descripción es obligatoria."); return; }
     if (!form.id_categoria) { setError("Debes seleccionar una categoría."); return; }
+    if (form.status === "activo") {
+      if (!form.peso_kg || !form.alto_cm || !form.ancho_cm || !form.largo_cm) {
+        setError("Para publicar un producto debes especificar peso, alto, ancho y largo. Estos datos son necesarios para calcular el costo de envío.");
+        return;
+      }
+    }
     if (mode === "create") {
       const loteEnUso = products.some((p) => String(p.id_lote) === form.id_lote);
       if (loteEnUso) {
