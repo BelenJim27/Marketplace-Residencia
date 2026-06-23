@@ -1,6 +1,5 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
 import { extname } from 'path';
 import { CreateArchivoDto, UpdateArchivoDto } from './dto/archivos.dto';
 import { ArchivosService } from './archivos.service';
@@ -8,12 +7,15 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/guards/roles.decorator';
 import { Throttle } from '@nestjs/throttler';
+import { documentUploadOptions } from '../../common/config/multer.config';
+import {
+  buildLocalUploadUrl,
+  deleteUploadedFile,
+  validateUploadedFileContent,
+} from '../../common/utilities/local-upload';
 
-const FILE_SIZE_LIMIT = 5 * 1024 * 1024; // 5 MB
 // Subida de archivos es costosa (I/O + disco): límite por usuario más estricto que el global.
 const UPLOAD_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
-
-const archivoStorage = memoryStorage();
 
 @Controller('archivos')
 export class ArchivosController {
@@ -35,22 +37,24 @@ export class ArchivosController {
   @Post('upload')
   @Throttle(UPLOAD_THROTTLE)
   @UseGuards(AuthGuard)
-  @UseInterceptors(FileInterceptor('archivo', { storage: archivoStorage, limits: { fileSize: FILE_SIZE_LIMIT } }))
+  @UseInterceptors(FileInterceptor('archivo', documentUploadOptions))
   async createWithUpload(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() dto: CreateArchivoDto
   ) {
     if (!file) throw new BadRequestException('Archivo requerido');
-    ensureAllowedFile(file.originalname);
-    await ensureAllowedMime(file.buffer, file.originalname);
-
-    const localUrl = await this.service.uploadToLocal(file.buffer, file.originalname);
-
-    return this.service.create({
-      ...dto,
-      url: localUrl,
-      tipo: dto.tipo?.trim() || inferTipo(file.originalname),
-    });
+    try {
+      await validateUploadedFileContent(file);
+      const localUrl = buildLocalUploadUrl('archivos', file.filename);
+      return await this.service.create({
+        ...dto,
+        url: localUrl,
+        tipo: dto.tipo?.trim() || inferTipo(file.originalname),
+      });
+    } catch (error) {
+      await deleteUploadedFile(file);
+      throw error;
+    }
   }
 
   @Post()
@@ -62,21 +66,23 @@ export class ArchivosController {
   @Patch(':id/upload')
   @Throttle(UPLOAD_THROTTLE)
   @UseGuards(AuthGuard)
-  @UseInterceptors(FileInterceptor('archivo', { storage: archivoStorage, limits: { fileSize: FILE_SIZE_LIMIT } }))
+  @UseInterceptors(FileInterceptor('archivo', documentUploadOptions))
   async updateWithUpload(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() dto: UpdateArchivoDto
   ) {
-    if (file) {
-      ensureAllowedFile(file.originalname);
-      await ensureAllowedMime(file.buffer, file.originalname);
+    try {
+      if (file) await validateUploadedFileContent(file);
+      return await this.service.updateWithFile(
+        id,
+        dto,
+        file ? buildLocalUploadUrl('archivos', file.filename) : undefined,
+      );
+    } catch (error) {
+      await deleteUploadedFile(file);
+      throw error;
     }
-
-    return this.service.updateWithFile(id, dto, file ? {
-      buffer: file.buffer,
-      originalName: file.originalname,
-    } : undefined);
   }
 
   @Patch(':id')
@@ -99,42 +105,4 @@ function normalizeExtension(fileName: string) {
 
 function inferTipo(fileName: string) {
   return normalizeExtension(fileName).replace('.', '').toUpperCase();
-}
-
-function ensureAllowedFile(fileName: string) {
-  const extension = normalizeExtension(fileName);
-  if (!['.pdf', '.png', '.jpg', '.jpeg', '.webp'].includes(extension)) {
-    throw new BadRequestException('Solo se permiten archivos PDF o imagen');
-  }
-}
-
-type MagicSig = readonly number[];
-
-const MAGIC_SIGNATURES: Record<string, MagicSig[]> = {
-  '.pdf': [[0x25, 0x50, 0x44, 0x46]],
-  '.png': [[0x89, 0x50, 0x4E, 0x47]],
-  '.jpg': [[0xFF, 0xD8, 0xFF]],
-  '.jpeg': [[0xFF, 0xD8, 0xFF]],
-  '.webp': [[0x52, 0x49, 0x46, 0x46]],
-};
-
-function matchesMagic(buffer: Buffer, sig: MagicSig): boolean {
-  if (buffer.length < sig.length) return false;
-  for (let i = 0; i < sig.length; i++) {
-    if (buffer[i] !== sig[i]) return false;
-  }
-  return true;
-}
-
-async function ensureAllowedMime(buffer: Buffer, fileName: string): Promise<void> {
-  const ext = normalizeExtension(fileName);
-  const sigs = MAGIC_SIGNATURES[ext];
-  if (!sigs) return;
-
-  const ok = sigs.some(sig => matchesMagic(buffer, sig));
-  if (!ok) {
-    throw new BadRequestException(
-      `El contenido del archivo no coincide con su extensión`,
-    );
-  }
 }

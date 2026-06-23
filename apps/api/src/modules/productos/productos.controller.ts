@@ -1,29 +1,18 @@
 import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, Req, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import type { Request } from 'express';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { mkdirSync, unlinkSync } from 'fs';
-import { randomBytes } from 'crypto';
 import { CreateProductoDto, UpdateProductoDto } from './dto/productos.dto';
 import { ProductosService } from './productos.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/guards/roles.decorator';
-
-const UPLOADS_DIR = join(__dirname, '../../..', 'uploads', 'productos');
-mkdirSync(UPLOADS_DIR, { recursive: true });
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
-
-const productosStorage = diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
-  filename: (_req, file, cb) => {
-    const ext = extname(file.originalname).toLowerCase();
-    const name = `${Date.now()}-${randomBytes(8).toString('hex')}${ext}`;
-    cb(null, name);
-  },
-});
+import { productImageOptions } from '../../common/config/multer.config';
+import {
+  buildLocalUploadUrl,
+  deleteUploadedFile,
+  deleteUploadedFiles,
+  validateUploadedFileContent,
+} from '../../common/utilities/local-upload';
 
 @Controller('productos')
 export class ProductosController {
@@ -84,36 +73,48 @@ export class ProductosController {
   @Post()
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('productor', 'administrador')
-  @UseInterceptors(FileInterceptor('imagen', { storage: productosStorage, limits: { fileSize: MAX_FILE_SIZE } }))
+  @UseInterceptors(FileInterceptor('imagen', productImageOptions))
   async create(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() dto: CreateProductoDto,
     @Req() req: Request,
   ) {
-    if (file) {
-      const imageUrl = `/uploads/productos/${file.filename}`;
-      dto.imagen_url = imageUrl;
-      dto.imagen_principal_url = imageUrl;
+    try {
+      if (file) {
+        await validateUploadedFileContent(file);
+        const imageUrl = buildLocalUploadUrl('productos', file.filename);
+        dto.imagen_url = imageUrl;
+        dto.imagen_principal_url = imageUrl;
+      }
+      return await this.service.create(dto, (req as any).user);
+    } catch (error) {
+      await deleteUploadedFile(file);
+      throw error;
     }
-    return this.service.create(dto, (req as any).user);
   }
 
   @Patch(':id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('productor', 'administrador')
-  @UseInterceptors(FileInterceptor('imagen', { storage: productosStorage, limits: { fileSize: MAX_FILE_SIZE } }))
+  @UseInterceptors(FileInterceptor('imagen', productImageOptions))
   async update(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() dto: UpdateProductoDto,
     @Req() req: Request,
   ) {
-    if (file) {
-      const imageUrl = `/uploads/productos/${file.filename}`;
-      dto.imagen_url = imageUrl;
-      dto.imagen_principal_url = imageUrl;
+    try {
+      if (file) {
+        await validateUploadedFileContent(file);
+        const imageUrl = buildLocalUploadUrl('productos', file.filename);
+        dto.imagen_url = imageUrl;
+        dto.imagen_principal_url = imageUrl;
+      }
+      return await this.service.update(id, dto, (req as any).user);
+    } catch (error) {
+      await deleteUploadedFile(file);
+      throw error;
     }
-    return this.service.update(id, dto, (req as any).user);
   }
 
   @Delete(':id')
@@ -126,13 +127,20 @@ export class ProductosController {
   @Post(':id/imagenes')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('productor', 'administrador')
-  @UseInterceptors(FilesInterceptor('imagenes', 10, { storage: productosStorage, limits: { fileSize: MAX_FILE_SIZE } }))
-  addImagenes(
+  @UseInterceptors(FilesInterceptor('imagenes', 10, productImageOptions))
+  async addImagenes(
     @Param('id') id: string,
     @UploadedFiles() files: Express.Multer.File[],
     @Req() req: Request,
   ) {
-    return this.service.addImagenes(id, files ?? [], (req as any).user);
+    const uploadedFiles = files ?? [];
+    try {
+      await Promise.all(uploadedFiles.map(validateUploadedFileContent));
+      return await this.service.addImagenes(id, uploadedFiles, (req as any).user);
+    } catch (error) {
+      await deleteUploadedFiles(uploadedFiles);
+      throw error;
+    }
   }
 
   @Delete(':id/imagenes/:id_imagen')

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { landingApi } from "@/lib/landing-api";
 
 export interface LoteAtributo {
   clave: string;
@@ -39,11 +39,18 @@ export function useTrazabilidadCarousel(top = 4) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.estadisticas
-      .topProductosConLote(top)
-      .then((data: any) => setProductos(Array.isArray(data) ? data : []))
-      .catch(() => setProductos([]))
-      .finally(() => setLoading(false));
+    const controller = new AbortController();
+    landingApi
+      .topProductosConLote<ProductoTrazabilidad>(top, controller.signal)
+      .then((data) => setProductos(Array.isArray(data) ? data : []))
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setProductos([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, [top]);
 
   return { productos, loading };

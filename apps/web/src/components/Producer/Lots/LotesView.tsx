@@ -117,12 +117,18 @@ export default function LotesView() {
           sitio: l.sitio || "-",
           cantidad: l.unidades
             ? `${l.unidades} uds`
-            : l.volumen_total ? `${l.volumen_total} L` : "-",
+            : l.volumen_total ? `${l.volumen_total} L` : "-",  
           fecha: l.fecha_produccion ? l.fecha_produccion.split("T")[0] : "-",
           estado: l.estado_lote || "disponible",
           year: l.fecha_produccion
             ? String(new Date(l.fecha_produccion).getFullYear())
             : "-",
+          peso_kg: l.productos?.[0]?.peso_kg ?? null,
+          alto_cm: l.productos?.[0]?.alto_cm ?? null,
+          ancho_cm: l.productos?.[0]?.ancho_cm ?? null,
+          largo_cm: l.productos?.[0]?.largo_cm ?? null,
+          botellas_350ml: l.productos?.[0]?.botellas_350ml ?? l.botellas_350ml ?? null,
+          botellas_750ml: l.productos?.[0]?.botellas_750ml ?? l.botellas_750ml ?? null,
           productoVinculado: l.productos?.[0]
             ? {
                 id_producto: l.productos[0].id_producto,
@@ -217,6 +223,7 @@ export default function LotesView() {
       datos_api: {
         variedad: form.tipoProducto, especie_cientifica: form.especieCientifica,
         categoria: form.categoria, clase: claseCompleta, descripcion: form.descripcion,
+        
       },
     };
     try {
@@ -579,6 +586,9 @@ function ModalLote({ title, subtitle, onClose, onSubmit, form, setForm, footerAc
 // ─── Modal: Ver Detalle ───────────────────────────────────────────────────────
 
 function DetalleLoteModal({ lote, onClose }) {
+  const fmtNum = (v: unknown) =>
+    v != null && v !== "" && v !== "-" ? String(v) : null;
+
   const rows = [
     ["Producto / Variedad", lote.producto],
     ["Especie Científica", lote.especieCientifica],
@@ -592,6 +602,18 @@ function DetalleLoteModal({ lote, onClose }) {
     ["Estado", lote.estado],
   ];
 
+  const extras: Array<[string, string]> = [];
+  const addIf = (label: string, val: unknown) => {
+    const f = fmtNum(val);
+    if (f) extras.push([label, f]);
+  };
+  addIf("Botellas 350 ml", lote.botellas_350ml);
+  addIf("Botellas 750 ml", lote.botellas_750ml);
+  addIf("Peso (kg)", lote.peso_kg);
+  addIf("Alto (cm)", lote.alto_cm);
+  addIf("Ancho (cm)", lote.ancho_cm);
+  addIf("Largo (cm)", lote.largo_cm);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl bg-[#F4F0E3] dark:bg-[#0f1a10] border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_24px_48px_rgba(31,58,46,0.25)] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -599,7 +621,7 @@ function DetalleLoteModal({ lote, onClose }) {
           <h2 className="text-lg font-semibold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Detalles: {lote.lote}</h2>
         </div>
         <div className="px-6 py-5 grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
-          {rows.map(([label, value]) => (
+          {[...rows, ...extras].map(([label, value]) => (
             <div key={label}>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3D6B3F]/50 dark:text-[#A8C26B]/50">{label}</p>
               <p className="mt-0.5 font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{value || "—"}</p>

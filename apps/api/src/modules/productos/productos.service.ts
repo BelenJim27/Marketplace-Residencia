@@ -1,10 +1,9 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { join } from "path";
-import { unlinkSync } from "fs";
 import * as jwt from "jsonwebtoken";
 import { PrismaService } from "../../prisma/prisma.service";
 import { serializeBigInts } from "../../common/utilities/serialize";
+import { deleteLocalUpload } from "../../common/utilities/local-upload";
 import { CreateProductoDto, UpdateProductoDto } from "./dto/productos.dto";
 
 /** Usuario autenticado resuelto por AuthGuard desde el JWT. */
@@ -717,6 +716,13 @@ export class ProductosService {
       },
     });
 
+    if (
+      dto.imagen_principal_url
+      && dto.imagen_principal_url !== current.imagen_principal_url
+    ) {
+      await deleteLocalUpload(current.imagen_principal_url);
+    }
+
     this.invalidatePublicCatalogCache();
     return serializeBigInts(producto);
   }
@@ -868,7 +874,7 @@ export class ProductosService {
     });
     const maxOrden = last?.orden ?? 0;
 
-    const imagenes = await Promise.all(
+    const imagenes = await this.prisma.$transaction(
       files.map((file, index) =>
         this.prisma.producto_imagenes.create({
           data: {
@@ -903,12 +909,7 @@ export class ProductosService {
 
     await this.prisma.producto_imagenes.delete({ where: { id_imagen: BigInt(id_imagen) } });
 
-    const filename = imagen.url.split('/uploads/productos/').pop();
-    if (filename) {
-      try {
-        unlinkSync(join(__dirname, '../../..', 'uploads', 'productos', filename));
-      } catch { }
-    }
+    await deleteLocalUpload(imagen.url);
 
     this.invalidatePublicCatalogCache();
     return { ok: true };

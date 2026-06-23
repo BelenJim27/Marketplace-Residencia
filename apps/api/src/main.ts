@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 import { randomUUID } from 'crypto';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { join, resolve } from 'path';
+import { resolve } from 'path';
 import { SanitizeBodyInterceptor } from './common/interceptors/sanitize.interceptor';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { static as expressStatic } from 'express';
@@ -71,7 +71,8 @@ async function bootstrap() {
     rawBody: true,
   });
   app.use(cookieParser());
-  app.use('/uploads', expressStatic(join(__dirname, '..', 'uploads')));
+  const { UPLOADS_ROOT } = await import('./common/config/multer.config');
+  app.use('/uploads', expressStatic(UPLOADS_ROOT));
 
   // Request ID para trazabilidad: reutiliza X-Request-ID entrante (de un proxy/LB) o
   // genera uno. Disponible en req.id y devuelto en la respuesta para correlacionar logs

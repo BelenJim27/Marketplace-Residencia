@@ -101,4 +101,11 @@ const sentryConfig = {
   autoInstrumentClientSide: false,
 };
 
-export default withSentryConfig(withNextIntl(nextConfig), sentryConfig);
+const configuredNext = withNextIntl(nextConfig);
+const sentryEnabled =
+  process.env.NODE_ENV === 'production' &&
+  Boolean(process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN);
+
+export default sentryEnabled
+  ? withSentryConfig(configuredNext, sentryConfig)
+  : configuredNext;

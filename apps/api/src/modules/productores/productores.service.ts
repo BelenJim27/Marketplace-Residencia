@@ -8,6 +8,7 @@ import {
 import { PrismaService } from "../../prisma/prisma.service";
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { serializeBigInts } from "../../common/utilities/serialize";
+import { deleteLocalUpload } from "../../common/utilities/local-upload";
 import {
   AdminUpdateProductorDto,
   CreateProductorDto,
@@ -157,12 +158,12 @@ export class ProductoresService {
   ) {
     const productor = await this.prisma.productores.findUnique({
       where: { id_productor },
+      include: { usuarios: { select: { foto_url: true } } },
     });
     if (!productor || productor.eliminado_en)
       throw new NotFoundException("Productor no encontrado");
 
-    return serializeBigInts(
-      await this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
         const usuarioData: Record<string, unknown> = {};
         if (dto.nombre !== undefined) usuarioData.nombre = dto.nombre;
         if (dto.apellido_paterno !== undefined) usuarioData.apellido_paterno = dto.apellido_paterno;
@@ -184,8 +185,13 @@ export class ProductoresService {
           data: productorData,
           include: { usuarios: true, regiones: true, lotes: true, tiendas: true },
         });
-      }),
-    );
+      });
+
+    if (fotoFilename) {
+      await deleteLocalUpload(productor.usuarios.foto_url);
+    }
+
+    return serializeBigInts(updated);
   }
 
   // ── Regiones ───────────────────────────────────────────────────────────────

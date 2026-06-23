@@ -133,6 +133,7 @@ export default function ProductosPage() {
           categorias={ctx.categorias}
           lotes={ctx.lotesDisponibles}
           saving={ctx.saving}
+          loadingDetails={ctx.loadingDetails}
           onSubmit={ctx.handleSubmit}
           onClose={ctx.closeModal}
           onLoteChange={ctx.handleLoteChange}

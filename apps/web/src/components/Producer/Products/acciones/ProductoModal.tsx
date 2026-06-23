@@ -84,6 +84,7 @@ type ProductoModalProps = {
   categorias: CategoriaItem[];
   lotes: LoteItem[];
   saving: boolean;
+  loadingDetails?: boolean;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onClose: () => void;
   onLoteChange?: (value: string) => void;
@@ -98,7 +99,7 @@ type ProductoModalProps = {
 
 export function ProductoModal({
   mode, form, setForm, imagen, setImagen, selected,
-  stores, categorias, lotes, saving, onSubmit, onClose,
+  stores, categorias, lotes, saving, loadingDetails = false, onSubmit, onClose,
   onLoteChange, categoriaProductorId, error,
   token, imagenesNuevas = [], onImagenesNuevasChange,
 }: ProductoModalProps) {
@@ -115,9 +116,9 @@ export function ProductoModal({
   const loteSeleccionado = lotes.find((l) => String(l.id_lote) === form.id_lote) ?? null;
   const tieneLote = !!form.id_lote;
 
-  const loteUnidades    = (loteSeleccionado as any)?.unidades;
-  const loteBot350      = (loteSeleccionado as any)?.botellas_350ml;
-  const loteBot750      = (loteSeleccionado as any)?.botellas_750ml;
+  const loteUnidades    = loteSeleccionado?.unidades;
+  const loteBot350      = loteSeleccionado?.botellas_350ml;
+  const loteBot750      = loteSeleccionado?.botellas_750ml;
 
   const lockStock     = mode !== "view" && tieneLote && loteUnidades != null;
   const lockBot350    = mode !== "view" && tieneLote && loteBot350 != null;
@@ -153,7 +154,18 @@ export function ProductoModal({
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4" aria-busy={loadingDetails}>
+          {loadingDetails && (
+            <div
+              role="status"
+              className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
+            >
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-300 border-t-blue-700 dark:border-blue-700 dark:border-t-blue-300" />
+              Cargando datos registrados del producto...
+            </div>
+          )}
+
+          <div className={`space-y-4 transition-opacity ${loadingDetails ? "pointer-events-none select-none opacity-50" : ""}`}>
 
           {/* ── Vincular con lote de trazabilidad (siempre visible, primero) ── */}
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
@@ -405,11 +417,12 @@ export function ProductoModal({
               Cerrar
             </button>
             {mode !== "view" && (
-              <button type="submit" disabled={saving}
+              <button type="submit" disabled={saving || loadingDetails}
                 className="rounded-lg bg-primary px-5 py-3 font-medium text-white hover:bg-opacity-90 disabled:opacity-60">
                 {saving ? "Guardando..." : "Guardar"}
               </button>
             )}
+          </div>
           </div>
         </form>
       </div>

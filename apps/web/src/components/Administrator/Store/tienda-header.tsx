@@ -207,8 +207,9 @@ const isDark = mounted && resolvedTheme === "dark";
             width={scrolled ? 80 : 100}
             height={scrolled ? 30 : 38}
             alt="Mezcanea"
+            priority
             className="object-contain transition-all duration-300"
-            style={{ filter: "brightness(0) invert(1)" }}
+            style={{ filter: "brightness(0) invert(1)", height: "auto" }}
           />
         </Link>
 

@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e4]:
+      - link "Mezcanea" [ref=e5] [cursor=pointer]:
+        - /url: /cliente/producto
+        - img "Mezcanea" [ref=e6]
+      - navigation [ref=e7]:
+        - generic [ref=e8]:
+          - button "Inicio" [ref=e9] [cursor=pointer]:
+            - img [ref=e11]
+            - generic [ref=e14]: Inicio
+          - button "Catálogo" [ref=e15] [cursor=pointer]:
+            - img [ref=e17]
+            - generic [ref=e20]: Catálogo
+          - button "Vender mezcal" [ref=e21] [cursor=pointer]:
+            - img [ref=e23]
+            - generic [ref=e27]: Vender mezcal
+          - button "Carrito" [ref=e28] [cursor=pointer]:
+            - img [ref=e30]
+            - generic [ref=e34]: Carrito
+        - generic [ref=e36]:
+          - button "Cambiar idioma y moneda" [ref=e38] [cursor=pointer]:
+            - generic [ref=e39]: 🇲🇽
+            - generic [ref=e40]: ES
+            - img [ref=e41]
+          - button "Guía" [ref=e43] [cursor=pointer]:
+            - img [ref=e44]
+            - generic [ref=e47]: Guía
+          - button "Perfil" [ref=e49] [cursor=pointer]:
+            - img [ref=e50]
+            - generic [ref=e53]: Perfil
+    - main [ref=e54]:
+      - main
+  - region "Notifications alt+T"

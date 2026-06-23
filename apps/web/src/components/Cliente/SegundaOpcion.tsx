@@ -2,26 +2,30 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import { useLocale } from "@/context/LocaleContext";
 import { useLandingStats } from "@/hooks/useLandingStats";
 import { useMasVendidos } from "@/hooks/useMasVendidos";
 import { useTrazabilidadCarousel } from "@/hooks/useTrazabilidadCarousel";
 import type { ProductoTrazabilidad } from "@/hooks/useTrazabilidadCarousel";
+import { landingApi } from "@/lib/landing-api";
 import Image from "next/image";
+import dynamic from "next/dynamic";
+import DeferredHeroVideo from "./DeferredHeroVideo";
+
+const LandingFaq = dynamic(() => import("./LandingFaq"), {
+  loading: () => <div aria-hidden="true" style={{ minHeight: "560px", background: "#1F3A2E" }} />,
+});
 
 // ─── HOOK: detecta ancho de ventana ──────────────────────────────────────────
 function useWindowWidth(): number {
   const [width, setWidth] = useState(1024);
-  const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    setMounted(true);
     setWidth(window.innerWidth);
     const handle = () => setWidth(window.innerWidth);
     window.addEventListener("resize", handle);
     return () => window.removeEventListener("resize", handle);
   }, []);
-  return mounted ? width : 1024;
+  return width;
 }
 
 // ─── COLORES: CSS Variable defaults (permiten override desde admin)  ────────
@@ -115,7 +119,7 @@ function TrazaSlide({ producto, isMobile, t }: { producto: ProductoTrazabilidad;
           alt={producto.nombre}
           width={0}
           height={0}
-          sizes="100vw"
+          sizes="(max-width: 639px) 100vw, 300px"
           style={{ width: "100%", height: isMobile ? "220px" : "340px", objectFit: "cover", display: "block" }}
           onError={(e) => { (e.target as HTMLImageElement).src = "/fotos/28.1.png"; }}
         />
@@ -224,7 +228,7 @@ function TrazaFallback({ isMobile, t, cfg }: { isMobile: boolean; t: (s: string)
   return (
     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "300px 1fr", gap: isMobile ? "24px" : "48px", alignItems: "start" }}>
       <div style={{ borderRadius: "16px", overflow: "hidden", position: "relative" }}>
-        <Image src="/fotos/28.1.png" alt="Mezcal" width={0} height={0} sizes="100vw" style={{ width: "100%", height: isMobile ? "220px" : "340px", objectFit: "cover", display: "block" }} />
+        <Image src="/fotos/28.1.png" alt="Mezcal" width={0} height={0} sizes="(max-width: 639px) 100vw, 300px" style={{ width: "100%", height: isMobile ? "220px" : "340px", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(22,34,24,0.92) 35%, transparent 65%)" }} />
         <div style={{ position: "absolute", bottom: "16px", left: "16px", right: "16px" }}>
           <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "19px", fontWeight: 700, color: "#F4F0E3", margin: 0 }}>Mezcal Artesanal</p>
@@ -322,20 +326,13 @@ export default function LandingPageOaxaca() {
   const { t } = useLocale();
   const router = useRouter();
   const { stats: landingStats, loading: statsLoading } = useLandingStats();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const winWidth = useWindowWidth();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   // ─── Config dinámica desde BD ─────────────────────────────────────────────
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [cfg, setCfg] = useState<LandingCfg>(LANDING_CFG_DEFAULTS);
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/configuracion/sistema/mapa`)
-      .then((r) => r.ok ? r.json() : {})
+    const controller = new AbortController();
+    landingApi.configuracion(controller.signal)
       .then((data: Record<string, string>) => {
         setCfg((prev) => {
           const next = { ...prev };
@@ -346,10 +343,11 @@ export default function LandingPageOaxaca() {
         });
       })
       .catch(() => {});
+    return () => controller.abort();
   }, []);
 
   // ─── Más vendidos ─────────────────────────────────────────────────────────
-  const { productos: masVendidos, loading: loadingVendidos, error: errorVendidos } = useMasVendidos(5);
+  const { productos: masVendidos, loading: loadingVendidos } = useMasVendidos(5);
 
   // ─── Carrusel trazabilidad ────────────────────────────────────────────────
   const { productos: trazaProductos, loading: trazaLoading } = useTrazabilidadCarousel(4);
@@ -380,14 +378,13 @@ export default function LandingPageOaxaca() {
   const statsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!mounted) return;
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setStatsVisible(true); },
       { threshold: 0.1 }
     );
     if (statsRef.current) observer.observe(statsRef.current);
     return () => observer.disconnect();
-  }, [mounted]);
+  }, []);
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
   const bgPrimary = getCSSVar("--land-bg-primary", "#F4F0E3");
@@ -398,17 +395,22 @@ export default function LandingPageOaxaca() {
   const colorSage = getCSSVar("--land-color-sage", "#A8C26B");
   const colorCtaBg = getCSSVar("--land-color-cta-bg", "#1F3A2E");
 
-  if (!mounted) return null;
-
   return (
     <main
-      className="font-sans"
+      className="landing-page font-sans"
       style={{
         background: bgPrimary,
         color: colorHeading,
         overflowY: "auto",
       }}
     >
+      <style>{`
+        .landing-page > div:nth-of-type(n + 3),
+        .landing-page > section {
+          content-visibility: auto;
+          contain-intrinsic-size: auto 720px;
+        }
+      `}</style>
 
       {/* ══════════════════════════════════════════════════
           SECCIÓN 1 — HERO VIDEO
@@ -419,12 +421,7 @@ export default function LandingPageOaxaca() {
         minHeight: isMobile ? "580px" : "480px",
         overflow: "hidden",
       }}>
-        <video
-          src="/fotos/videohero.mp4"
-          autoPlay muted loop playsInline
-          preload="none"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-        />
+        <DeferredHeroVideo />
         {/* Franja decorativa lateral */}
         <div style={{
           position: "absolute", top: 0, left: 0, bottom: 0, width: "3px",
@@ -1034,7 +1031,7 @@ export default function LandingPageOaxaca() {
                     alt={nombre}
                     width={0}
                     height={0}
-                    sizes="100vw"
+                    sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 25vw"
                     onError={(e) => {
                       const img = e.target as HTMLImageElement;
                       if (!img.dataset.err) { img.dataset.err = "1"; img.src = cfg[cfgKey] as string; }
@@ -1088,75 +1085,7 @@ export default function LandingPageOaxaca() {
       {/* ═══════════════════════════════════════════════════════════
           FAQ + CONTACTO
       ═══════════════════════════════════════════════════════════ */}
-      <section style={{ background: "#1F3A2E", padding: "64px 24px" }}>
-        <div style={{ maxWidth: "720px", margin: "0 auto" }}>
-          {/* Título */}
-          <p style={{ fontFamily: "Georgia, serif", color: "#A8C26B", fontSize: "12px", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "10px", textAlign: "center" }}>
-            {t("Ayuda")}
-          </p>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: "clamp(24px,4vw,34px)", fontWeight: 700, color: "#F4F0E3", textAlign: "center", marginBottom: "40px" }}>
-            {t("soporte_faq_title")}
-          </h2>
-
-          {/* Acordeón FAQ */}
-          <div style={{ marginBottom: "32px" }}>
-            {([1, 2, 3, 4, 5, 6] as const).map((n) => (
-              <div key={n} style={{ borderBottom: "1px solid rgba(244,240,227,0.1)" }}>
-                <button
-                  onClick={() => setOpenFaq(openFaq === n ? null : n)}
-                  aria-expanded={openFaq === n}
-                  style={{
-                    display: "flex", width: "100%", alignItems: "center",
-                    justifyContent: "space-between", padding: "16px 0",
-                    background: "none", border: "none", cursor: "pointer",
-                    textAlign: "left", fontFamily: "Georgia, serif",
-                    fontSize: "15px", fontWeight: 600, color: "#F4F0E3",
-                  }}
-                >
-                  <span style={{ paddingRight: "16px", lineHeight: "1.4" }}>{t(`soporte_faq_q${n}`)}</span>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                    fill="none" stroke="#C97A3E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                    style={{ flexShrink: 0, transition: "transform 0.2s", transform: openFaq === n ? "rotate(180deg)" : "rotate(0deg)" }}
-                  >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </button>
-                {openFaq === n && (
-                  <p style={{ paddingBottom: "16px", fontFamily: "Georgia, serif", fontSize: "14px", lineHeight: "1.7", color: "rgba(244,240,227,0.72)", margin: 0 }}>
-                    {t(`soporte_faq_a${n}`)}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* CTA Contacto */}
-          <div style={{ textAlign: "center" }}>
-            <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", color: "rgba(244,240,227,0.6)", fontSize: "14px", marginBottom: "16px" }}>
-              {t("soporte_contact_subtitle")}
-            </p>
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent("open-chat-widget", { detail: { tab: "contacto" } }))}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: "8px",
-                padding: "12px 28px", borderRadius: "8px",
-                background: "#C97A3E", color: "#fff",
-                fontFamily: "Georgia, serif", fontSize: "14px", fontWeight: 600,
-                border: "none", cursor: "pointer", letterSpacing: "0.03em",
-                transition: "opacity 0.2s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-            >
-              {t("soporte_contact_title")}
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </section>
+      <LandingFaq />
 
           </main>
   );

@@ -1,17 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-// Ajusta esta URL a la de tu API (revisa tu .env de Next.js)
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-
-interface EstadisticasLanding {
-  totalProductores: number;
-  totalProductos: number;
-  totalRegiones: number;
-  ingresosTotales: number;
-  ingresosFormateado: string;
-}
+import { landingApi } from "@/lib/landing-api";
+import type { EstadisticasLanding } from "@/lib/landing-api";
 
 interface UseLandingStatsResult {
   stats: EstadisticasLanding | null;
@@ -27,13 +18,7 @@ export function useLandingStats(): UseLandingStatsResult {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch(`${API_URL}/estadisticas/landing`, {
-      signal: controller.signal,
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        return res.json() as Promise<EstadisticasLanding>;
-      })
+    landingApi.estadisticas(controller.signal)
       .then((data) => {
         setStats(data);
         setLoading(false);

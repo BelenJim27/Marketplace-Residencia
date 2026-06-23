@@ -90,6 +90,18 @@ export class ConfiguracionService {
     return map;
   }
 
+  async getPublicLandingConfig(): Promise<Record<string, string>> {
+    const configs = await this.prisma.configuracion_sistema.findMany({
+      where: { clave: { startsWith: 'landing_' } },
+      select: { clave: true, valor: true },
+      orderBy: { clave: 'asc' },
+    });
+
+    return Object.fromEntries(
+      configs.flatMap((config) => config.valor ? [[config.clave, config.valor]] : []),
+    );
+  }
+
   async getAsociaciones(): Promise<string[]> {
     const config = await this.prisma.configuracion_sistema.findUnique({ where: { clave: 'asociaciones' } });
     if (!config?.valor) return ['Maestras Mezcaleras', 'Maestras y Maestros Mezcaleros', 'Tierra Combates'];

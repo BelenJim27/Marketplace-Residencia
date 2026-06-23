@@ -1,16 +1,17 @@
 import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, ParseUUIDPipe, ParseIntPipe, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { randomUUID } from 'crypto';
 import { AssignUsuarioRolDto, CreateUsuarioDto, UpdateUsuarioDto } from './dto/usuarios.dto';
 import { UsuariosService } from './usuarios.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/guards/roles.decorator';
-
-const USUARIOS_DIR = join(__dirname, '../../..', 'uploads', 'usuarios');
+import { userPhotoOptions } from '../../common/config/multer.config';
+import {
+  buildLocalUploadUrl,
+  deleteUploadedFile,
+  validateUploadedFileContent,
+} from '../../common/utilities/local-upload';
 
 function isAdmin(user: any): boolean {
   return user?.roles?.some((r: string) => r.toLowerCase() === 'administrador') ?? false;
@@ -75,39 +76,26 @@ export class UsuariosController {
 
   @UseGuards(AuthGuard)
   @Patch(':id/foto')
-  @UseInterceptors(
-    FileInterceptor('foto', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => cb(null, USUARIOS_DIR),
-        filename: (_req, file, cb) => {
-          const ext = extname(file.originalname).toLowerCase() || '.jpg';
-          cb(null, `${randomUUID()}${ext}`);
-        },
-      }),
-      fileFilter: (_req, file, cb) => {
-        const allowed = ['.jpg', '.jpeg', '.png', '.webp'];
-        const ext = extname(file.originalname).toLowerCase();
-        if (!allowed.includes(ext)) {
-          return cb(new BadRequestException('Solo se permiten imágenes JPG, PNG o WebP'), false);
-        }
-        cb(null, true);
-      },
-      limits: { fileSize: 5 * 1024 * 1024 },
-    }),
-  )
+  @UseInterceptors(FileInterceptor('foto', userPhotoOptions))
   async uploadPhoto(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
     @Req() req: any,
   ) {
-    if (!isAdmin(req.user) && req.user.id_usuario !== id) {
-      throw new ForbiddenException('Solo puedes cambiar tu propia foto');
+    try {
+      if (!isAdmin(req.user) && req.user.id_usuario !== id) {
+        throw new ForbiddenException('Solo puedes cambiar tu propia foto');
+      }
+      if (!file) {
+        throw new BadRequestException('Archivo de foto requerido');
+      }
+      await validateUploadedFileContent(file);
+      const fotoUrl = buildLocalUploadUrl('usuarios', file.filename);
+      return await this.service.update(id, { foto_url: fotoUrl });
+    } catch (error) {
+      await deleteUploadedFile(file);
+      throw error;
     }
-    if (!file) {
-      throw new BadRequestException('Archivo de foto requerido');
-    }
-    const fotoUrl = `/uploads/usuarios/${file.filename}`;
-    return this.service.update(id, { foto_url: fotoUrl });
   }
 
   @UseGuards(AuthGuard, RolesGuard)

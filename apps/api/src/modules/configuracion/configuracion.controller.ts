@@ -55,6 +55,11 @@ export class ConfiguracionController {
     }
   }
 
+  @Get('publica/landing')
+  getPublicLandingConfig() {
+    return this.service.getPublicLandingConfig();
+  }
+
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('administrador')
   @Get('sistema/seed')

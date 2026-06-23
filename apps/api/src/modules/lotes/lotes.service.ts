@@ -44,6 +44,12 @@ export class LotesService {
               id_producto: true,
               precio_base: true,
               status: true,
+              peso_kg: true,
+              alto_cm: true,
+              ancho_cm: true,
+              largo_cm: true,
+              botellas_350ml: true,
+              botellas_750ml: true,
               inventario: {
                 select: { id_inventario: true, stock: true },
               },

@@ -4,6 +4,7 @@ import { createHash, randomBytes, scrypt, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { serializeBigInts } from '../../common/utilities/serialize';
+import { deleteLocalUpload } from '../../common/utilities/local-upload';
 import { AssignUsuarioRolDto, CreateUsuarioDto, UpdateUsuarioDto } from './dto/usuarios.dto';
 
 @Injectable()
@@ -109,6 +110,10 @@ export class UsuariosService {
         valor_nuevo: { nombre: dto.nombre, email: dto.email, telefono: dto.telefono } as any,
       },
     });
+
+    if (dto.foto_url !== undefined && dto.foto_url !== current.foto_url) {
+      await deleteLocalUpload(current.foto_url);
+    }
 
     return serializeBigInts(user);
   }

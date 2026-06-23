@@ -1,5 +1,8 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { EstadisticasLandingService } from './estadisticas-landing.service';
+import {
+  DEFAULT_TOP_PRODUCTOS,
+  EstadisticasLandingService,
+} from './estadisticas-landing.service';
 
 // Endpoints públicos — sin AuthGuard (landing page pública)
 @Controller('estadisticas')
@@ -13,11 +16,11 @@ export class EstadisticasLandingController {
 
   @Get('top-productos')
   getTopProductos(@Query('top') top?: string) {
-    return this.service.getTopProductos(top ? Number(top) : 4);
+    return this.service.getTopProductos(top ? Number(top) : DEFAULT_TOP_PRODUCTOS);
   }
 
   @Get('top-productos-lote')
   getTopProductosConLote(@Query('top') top?: string) {
-    return this.service.getTopProductosConLote(top ? Number(top) : 4);
+    return this.service.getTopProductosConLote(top ? Number(top) : DEFAULT_TOP_PRODUCTOS);
   }
 }

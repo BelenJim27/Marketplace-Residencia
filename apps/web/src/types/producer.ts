@@ -10,6 +10,18 @@ export type CategoriaItem = {
   nombre: string;
 };
 
+export type LoteApiData = {
+  capacidad_ml?: number | null;
+  recolecciones?: Array<{
+    especie?: { nombre_comun?: string | null; nombre_cientifico?: string | null } | null;
+  }>;
+  especies?: Array<{ nombre_comun?: string | null; nombre_cientifico?: string | null }>;
+  impacto?: {
+    total_kg_maguey?: number | null;
+    porcentaje_evidencia?: number | null;
+  };
+};
+
 export type LoteItem = {
   id_lote: number;
   codigo_lote: string;
@@ -23,6 +35,7 @@ export type LoteItem = {
   botellas_350ml?: number | null;
   botellas_750ml?: number | null;
   url_trazabilidad?: string | null;
+  datos_api?: LoteApiData | null;
 };
 
 export type ProductItem = {
@@ -37,12 +50,19 @@ export type ProductItem = {
   stock: number;
   stock_minimo?: number | null;
   status?: string | null;
-  peso_kg?: number | null;
-  alto_cm?: number | null;
-  ancho_cm?: number | null;
-  largo_cm?: number | null;
+  peso_kg?: string | number | null;
+  alto_cm?: string | number | null;
+  ancho_cm?: string | number | null;
+  largo_cm?: string | number | null;
+  botellas_350ml?: number | null;
+  botellas_750ml?: number | null;
   id_categoria?: number | null;
   id_lote?: number | null;
+  categorias_full?: Array<{
+    id_categoria: number;
+    nombre: string;
+    requiere_edad_minima?: number | null;
+  }>;
 };
 
 export type InventarioItem = {

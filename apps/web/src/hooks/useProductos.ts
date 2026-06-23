@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
@@ -50,6 +50,33 @@ export const EMPTY_FORM: FormState = {
   botellas_750ml: "",
 };
 
+function toFormValue(value: string | number | null | undefined): string {
+  return value == null ? "" : String(value);
+}
+
+export function productToFormState(product: ProductItem): FormState {
+  const categoriaId =
+    product.categorias_full?.[0]?.id_categoria ?? product.id_categoria;
+
+  return {
+    nombre: product.nombre,
+    descripcion: product.descripcion ?? "",
+    id_tienda: toFormValue(product.id_tienda),
+    precio_base: toFormValue(product.precio_base),
+    moneda_base: product.moneda_base ?? "MXN",
+    status: product.status ?? "activo",
+    id_categoria: toFormValue(categoriaId),
+    peso_kg: toFormValue(product.peso_kg),
+    alto_cm: toFormValue(product.alto_cm),
+    ancho_cm: toFormValue(product.ancho_cm),
+    largo_cm: toFormValue(product.largo_cm),
+    id_lote: toFormValue(product.id_lote),
+    stock_inicial: toFormValue(product.stock),
+    botellas_350ml: toFormValue(product.botellas_350ml),
+    botellas_750ml: toFormValue(product.botellas_750ml),
+  };
+}
+
 // ─── Hook principal ───────────────────────────────────────────────────────────
 
 export function useProductos() {
@@ -75,6 +102,7 @@ export function useProductos() {
   const [unidadFilter, setUnidadFilter] = useState("todos");
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const [mode, setMode] = useState<ModalMode>("create");
   const [selected, setSelected] = useState<ProductItem | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -85,6 +113,7 @@ export function useProductos() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const detailRequestId = useRef(0);
 
   // ─── Obtener id_productor del usuario autenticado ─────────────────────────
   // Ajusta el campo según lo que devuelva tu AuthContext:
@@ -233,78 +262,66 @@ export function useProductos() {
   // ─── Modal ────────────────────────────────────────────────────────────────
 
   const openCreate = () => {
+    detailRequestId.current += 1;
     setSelected(null);
     setError(null);
+    setLoadingDetails(false);
     setImagen(resetImagenProductoState(imagen));
     setForm({ ...EMPTY_FORM, id_tienda: String(stores[0]?.id_tienda ?? ""), status: "borrador" });
     setMode("create");
     setModalOpen(true);
   };
 
-  const openEdit = (product: ProductItem) => {
+  const openProductModal = async (product: ProductItem, nextMode: Exclude<ModalMode, "create">) => {
+    const requestId = ++detailRequestId.current;
     setSelected(product);
+    setForm(productToFormState(product));
     setImagen(
       resetImagenProductoState(
         imagen,
         product.imagen_url ?? product.imagen_principal_url ?? null,
       ),
     );
-    const categoriaId =
-      (product as any).categorias_full?.[0]?.id_categoria ??
-      (product as any).id_categoria ??
-      "";
-    setForm({
-      nombre: product.nombre,
-      descripcion: product.descripcion ?? "",
-      id_tienda: String(product.id_tienda),
-      precio_base: String(product.precio_base ?? ""),
-      moneda_base: product.moneda_base ?? "MXN",
-      status: product.status ?? "activo",
-      id_categoria: categoriaId ? String(categoriaId) : "",
-      peso_kg: String(product.peso_kg ?? ""),
-      alto_cm: String(product.alto_cm ?? ""),
-      ancho_cm: String(product.ancho_cm ?? ""),
-      largo_cm: String(product.largo_cm ?? ""),
-      id_lote: String(product.id_lote ?? ""),
-      stock_inicial: String(product.stock ?? ""),
-      botellas_350ml: String((product as any).botellas_350ml ?? ""),
-      botellas_750ml: String((product as any).botellas_750ml ?? ""),
-    });
-    setMode("edit");
+    setMode(nextMode);
+    setError(null);
+    setLoadingDetails(true);
     setModalOpen(true);
+
+    try {
+      const detail = await api.productos.getOneForManage(
+        token,
+        String(product.id_producto),
+      );
+      if (requestId !== detailRequestId.current) return;
+
+      setSelected(detail);
+      setForm(productToFormState(detail));
+      setImagen(
+        resetImagenProductoState(
+          imagen,
+          detail.imagen_url ?? detail.imagen_principal_url ?? null,
+        ),
+      );
+    } catch {
+      if (requestId !== detailRequestId.current) return;
+      setError("No fue posible cargar el detalle completo del producto.");
+    } finally {
+      if (requestId === detailRequestId.current) setLoadingDetails(false);
+    }
+  };
+
+  const openEdit = (product: ProductItem) => {
+    void openProductModal(product, "edit");
   };
 
   const openView = (product: ProductItem) => {
-    setSelected(product);
-    setImagen(
-      resetImagenProductoState(
-        imagen,
-        product.imagen_url ?? product.imagen_principal_url ?? null,
-      ),
-    );
-    setForm({
-      nombre: product.nombre,
-      descripcion: product.descripcion ?? "",
-      id_tienda: String(product.id_tienda),
-      precio_base: String(product.precio_base ?? ""),
-      moneda_base: product.moneda_base ?? "MXN",
-      status: product.status ?? "activo",
-      id_categoria: String(product.id_categoria ?? ""),
-      peso_kg: String(product.peso_kg ?? ""),
-      alto_cm: String(product.alto_cm ?? ""),
-      ancho_cm: String(product.ancho_cm ?? ""),
-      largo_cm: String(product.largo_cm ?? ""),
-      id_lote: String(product.id_lote ?? ""),
-      stock_inicial: String(product.stock ?? ""),
-      botellas_350ml: String((product as any).botellas_350ml ?? ""),
-      botellas_750ml: String((product as any).botellas_750ml ?? ""),
-    });
-    setMode("view");
-    setModalOpen(true);
+    void openProductModal(product, "view");
   };
 
   const closeModal = () => {
+    detailRequestId.current += 1;
     setModalOpen(false);
+    setLoadingDetails(false);
     setError(null);
     setImagen(resetImagenProductoState(imagen));
     setImagenesNuevas([]);
@@ -320,7 +337,7 @@ export function useProductos() {
     }
 
     // Leer datos enriquecidos del endpoint individual si están disponibles
-    const datosApi = (lote as any).datos_api as Record<string, any> | null | undefined;
+    const datosApi = lote.datos_api;
     const especie = datosApi?.recolecciones?.[0]?.especie ?? datosApi?.especies?.[0];
 
     // Nombre: solo el nombre del agave/especie, sin marca
@@ -340,8 +357,8 @@ export function useProductos() {
     if (lote.codigo_lote)  partes.push(`Folio: ${lote.codigo_lote}`);
     const descripcionAuto = partes.join(" · ");
 
-    // Calcular botellas usando capacidad_ml (del endpoint lista, guardado en datos_api o en el lote)
-    const capacidadMl: number | null = (lote as any).capacidad_ml ?? datosApi?.capacidad_ml ?? null;
+    // Calcular botellas usando capacidad_ml (guardado en datos_api desde la API de trazabilidad)
+    const capacidadMl: number | null = datosApi?.capacidad_ml ?? null;
     const bot750 = capacidadMl === 750
       ? (lote.unidades ?? lote.botellas_750ml)
       : lote.botellas_750ml;
@@ -561,6 +578,7 @@ export function useProductos() {
     toggleProductSelection,
     toggleSelectAllVisible,
     modalOpen,
+    loadingDetails,
     mode,
     selected,
     form, setForm,

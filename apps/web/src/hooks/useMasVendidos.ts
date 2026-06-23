@@ -1,15 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-
-interface ProductoMasVendido {
-  id: number;
-  nombre: string;
-  imagen: string;
-  descripcion: string;
-  cantidad: number;
-}
+import { landingApi } from "@/lib/landing-api";
+import type { ProductoMasVendido } from "@/lib/landing-api";
 
 export function useMasVendidos(top = 4) {
   const [productos, setProductos] = useState<ProductoMasVendido[]>([]);
@@ -17,19 +10,22 @@ export function useMasVendidos(top = 4) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
     const load = async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await api.estadisticas.topProductos(top) as ProductoMasVendido[];
+        const data = await landingApi.topProductos(top, controller.signal);
         setProductos(Array.isArray(data) ? data : []);
       } catch (err) {
+        if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : "Error al cargar productos");
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
-    load();
+    void load();
+    return () => controller.abort();
   }, [top]);
 
   return { productos, loading, error };

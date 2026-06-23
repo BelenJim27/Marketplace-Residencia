@@ -1,63 +1,89 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+
+const ESTADOS_PEDIDO_VALIDOS = ['completado', 'entregado', 'pagado'];
+export const DEFAULT_TOP_PRODUCTOS = 4;
+export const MAX_TOP_PRODUCTOS = 20;
+
+type ProductoDestacado = {
+  id: number;
+  nombre: string;
+  imagen: string;
+  descripcion: string;
+  cantidad: number;
+};
+
+type EstadisticasLandingRow = {
+  totalProductores: number | bigint;
+  totalProductos: number | bigint;
+  totalRegiones: number | bigint;
+  ingresosTotales: Prisma.Decimal | number | string;
+};
+
+type ProductoConLoteRow = {
+  nombre: string;
+  imagen: string | null;
+  descripcion: string | null;
+  cantidad: number | bigint;
+  codigo_lote: string | null;
+  nombre_comun: string | null;
+  nombre_cientifico: string | null;
+  grado_alcohol: Prisma.Decimal | null;
+  unidades: number | null;
+  botellas_750ml: number | null;
+  fecha_produccion: Date | null;
+  sitio: string | null;
+  url_trazabilidad: string | null;
+  url_foto_especie: string | null;
+  productor: string | null;
+  region: string | null;
+};
 
 @Injectable()
 export class EstadisticasLandingService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getTopProductos(top = 4) {
-    const estadosValidos = ['completado', 'entregado', 'pagado'];
+  async getTopProductos(top = DEFAULT_TOP_PRODUCTOS): Promise<ProductoDestacado[]> {
+    const limite = validarTop(top);
+    const ventas = await this.getVentasAgrupadas(limite);
+    const ids = ventas.map((venta) => venta.id_producto);
 
-    const detalles = await this.prisma.detalle_pedido.findMany({
-      where: {
-        pedidos: { estado: { in: estadosValidos }, eliminado_en: null },
-      },
-      include: {
-        productos: {
+    const productos = ids.length
+      ? await this.prisma.productos.findMany({
+          where: { id_producto: { in: ids } },
           select: {
             id_producto: true,
             nombre: true,
             descripcion: true,
             imagen_principal_url: true,
           },
-        },
-      },
+        })
+      : [];
+
+    const productosPorId = new Map(
+      productos.map((producto) => [producto.id_producto.toString(), producto]),
+    );
+    const resultado: ProductoDestacado[] = ventas.flatMap((venta) => {
+      const producto = productosPorId.get(venta.id_producto.toString());
+      if (!producto) return [];
+
+      return [{
+        id: Number(producto.id_producto),
+        nombre: producto.nombre,
+        imagen: producto.imagen_principal_url ?? '',
+        descripcion: producto.descripcion ?? '',
+        cantidad: Number(venta._sum.cantidad ?? 0),
+      }];
     });
 
-    const map = new Map<
-      number,
-      { id: number; nombre: string; imagen: string; descripcion: string; cantidad: number }
-    >();
-
-    for (const d of detalles) {
-      if (!d.productos) continue;
-      const id = Number(d.productos.id_producto);
-      const existing = map.get(id);
-      if (existing) {
-        existing.cantidad += Number(d.cantidad);
-      } else {
-        map.set(id, {
-          id,
-          nombre: d.productos.nombre,
-          imagen: d.productos.imagen_principal_url ?? '',
-          descripcion: d.productos.descripcion ?? '',
-          cantidad: Number(d.cantidad),
-        });
-      }
-    }
-
-    const result = Array.from(map.values())
-      .sort((a, b) => b.cantidad - a.cantidad)
-      .slice(0, top);
-
-    // Si hay menos de `top` con ventas, rellenar con productos activos de la BD
-    if (result.length < top) {
-      const idsYaIncluidos = result.map((p) => BigInt(p.id));
+    if (resultado.length < limite) {
+      const idsIncluidos = resultado.map((producto) => BigInt(producto.id));
       const restantes = await this.prisma.productos.findMany({
         where: {
           status: 'activo',
           eliminado_en: null,
-          id_producto: { notIn: idsYaIncluidos },
+          id_producto: { notIn: idsIncluidos },
         },
         select: {
           id_producto: true,
@@ -66,159 +92,141 @@ export class EstadisticasLandingService {
           imagen_principal_url: true,
         },
         orderBy: { creado_en: 'desc' },
-        take: top - result.length,
+        take: limite - resultado.length,
       });
 
-      for (const p of restantes) {
-        result.push({
-          id: Number(p.id_producto),
-          nombre: p.nombre,
-          imagen: p.imagen_principal_url ?? '',
-          descripcion: p.descripcion ?? '',
+      resultado.push(
+        ...restantes.map((producto) => ({
+          id: Number(producto.id_producto),
+          nombre: producto.nombre,
+          imagen: producto.imagen_principal_url ?? '',
+          descripcion: producto.descripcion ?? '',
           cantidad: 0,
-        });
-      }
+        })),
+      );
     }
 
-    return result;
+    return resultado;
   }
 
-  async getTopProductosConLote(top = 4) {
-    const estadosValidos = ['completado', 'entregado', 'pagado'];
+  async getTopProductosConLote(top = DEFAULT_TOP_PRODUCTOS) {
+    const limite = validarTop(top);
+    const productos = await this.prisma.$queryRaw<ProductoConLoteRow[]>(
+      Prisma.sql`
+        WITH ventas AS (
+          SELECT
+            detalle.id_producto,
+            SUM(detalle.cantidad)::integer AS cantidad
+          FROM detalle_pedido AS detalle
+          INNER JOIN pedidos AS pedido ON pedido.id_pedido = detalle.id_pedido
+          WHERE pedido.estado IN ('completado', 'entregado', 'pagado')
+            AND pedido.eliminado_en IS NULL
+          GROUP BY detalle.id_producto
+          ORDER BY cantidad DESC, detalle.id_producto ASC
+          LIMIT ${limite}
+        )
+        SELECT
+          producto.nombre,
+          producto.imagen_principal_url AS imagen,
+          producto.descripcion,
+          ventas.cantidad,
+          lote.codigo_lote,
+          lote.nombre_comun,
+          lote.nombre_cientifico,
+          lote.grado_alcohol,
+          lote.unidades,
+          lote.botellas_750ml,
+          lote.fecha_produccion,
+          lote.sitio,
+          lote.url_trazabilidad,
+          lote.url_foto_especie,
+          productor.nombre_marca AS productor,
+          region.nombre AS region
+        FROM ventas
+        INNER JOIN productos AS producto ON producto.id_producto = ventas.id_producto
+        LEFT JOIN lotes AS lote ON lote.id_lote = producto.id_lote
+        LEFT JOIN productores AS productor ON productor.id_productor = lote.id_productor
+        LEFT JOIN regiones AS region ON region.id_region = lote.id_region
+        ORDER BY ventas.cantidad DESC, ventas.id_producto ASC
+      `,
+    );
 
-    const detalles = await this.prisma.detalle_pedido.findMany({
-      where: {
-        pedidos: { estado: { in: estadosValidos }, eliminado_en: null },
-      },
-      include: {
-        productos: {
-          select: {
-            id_producto: true,
-            nombre: true,
-            descripcion: true,
-            imagen_principal_url: true,
-            lotes: {
-              include: {
-                productores: { select: { nombre_marca: true } },
-                regiones: { select: { nombre: true } },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const map = new Map<
-      number,
-      {
-        nombre: string;
-        imagen: string;
-        descripcion: string;
-        cantidad: number;
-        lote: any;
-      }
-    >();
-
-    for (const d of detalles) {
-      if (!d.productos) continue;
-      const id = Number(d.productos.id_producto);
-      const existing = map.get(id);
-      if (existing) {
-        existing.cantidad += Number(d.cantidad);
-      } else {
-        const lote = d.productos.lotes ?? null;
-        map.set(id, {
-          nombre: d.productos.nombre,
-          imagen: d.productos.imagen_principal_url ?? '',
-          descripcion: d.productos.descripcion ?? '',
-          cantidad: Number(d.cantidad),
-          lote: lote
-            ? {
-                codigo_lote: lote.codigo_lote,
-                nombre_comun: lote.nombre_comun ?? null,
-                nombre_cientifico: lote.nombre_cientifico ?? null,
-                grado_alcohol: lote.grado_alcohol ?? null,
-                unidades: lote.unidades ?? null,
-                botellas_750ml: lote.botellas_750ml ?? null,
-                fecha_produccion: lote.fecha_produccion ?? null,
-                sitio: lote.sitio ?? null,
-                url_trazabilidad: lote.url_trazabilidad ?? null,
-                url_foto_especie: lote.url_foto_especie ?? null,
-                productor: lote.productores?.nombre_marca ?? null,
-                region: lote.regiones?.nombre ?? null,
-              }
-            : null,
-        });
-      }
-    }
-
-    return Array.from(map.values())
-      .sort((a, b) => b.cantidad - a.cantidad)
-      .slice(0, top);
+    return productos.map((producto) => ({
+      nombre: producto.nombre,
+      imagen: producto.imagen ?? '',
+      descripcion: producto.descripcion ?? '',
+      cantidad: Number(producto.cantidad),
+      lote: producto.codigo_lote
+          ? {
+              codigo_lote: producto.codigo_lote,
+              nombre_comun: producto.nombre_comun,
+              nombre_cientifico: producto.nombre_cientifico,
+              grado_alcohol: producto.grado_alcohol,
+              unidades: producto.unidades,
+              botellas_750ml: producto.botellas_750ml,
+              fecha_produccion: producto.fecha_produccion,
+              sitio: producto.sitio,
+              url_trazabilidad: producto.url_trazabilidad,
+              url_foto_especie: producto.url_foto_especie,
+              productor: producto.productor,
+              region: producto.region,
+            }
+          : null,
+    }));
   }
 
   async getEstadisticasPublicas() {
-    // Los estados que se consideran "completados" según tu lógica
-    const estadosCompletados = ['completado', 'entregado', 'pagado'];
+    const [estadisticas] = await this.prisma.$queryRaw<EstadisticasLandingRow[]>(
+      Prisma.sql`
+        SELECT
+          (SELECT COUNT(*) FROM productores WHERE estado = 'aprobado' AND eliminado_en IS NULL) AS "totalProductores",
+          (SELECT COUNT(*) FROM productos WHERE status = 'activo' AND eliminado_en IS NULL) AS "totalProductos",
+          (SELECT COUNT(*) FROM regiones WHERE activo = true) AS "totalRegiones",
+          COALESCE((
+            SELECT SUM(total)
+            FROM pedidos
+            WHERE estado IN ('completado', 'entregado', 'pagado')
+              AND eliminado_en IS NULL
+          ), 0) AS "ingresosTotales"
+      `,
+    );
 
-    const [
-      totalProductores,
-      totalProductos,
-      totalRegiones,
-      ingresos,
-    ] = await Promise.all([
-      // Total de productores aprobados y activos
-      this.prisma.productores.count({
-        where: {
-          estado: 'aprobado',
-          eliminado_en: null,
-        },
-      }),
-
-      // Total de productos activos
-      this.prisma.productos.count({
-        where: {
-          status: 'activo',
-          eliminado_en: null,
-        },
-      }),
-
-      // Total de regiones activas (comunidades)
-      this.prisma.regiones.count({
-        where: {
-          activo: true,
-        },
-      }),
-
-      // Suma de ingresos de pedidos completados
-      this.prisma.pedidos.aggregate({
-        _sum: { total: true },
-        where: {
-          estado: { in: estadosCompletados },
-          eliminado_en: null,
-        },
-      }),
-    ]);
-
-    const ingresosTotales = Number(ingresos._sum.total ?? 0);
+    const ingresosTotales = Number(estadisticas?.ingresosTotales ?? 0);
 
     return {
-      totalProductores,
-      totalProductos,
-      totalRegiones,
+      totalProductores: Number(estadisticas?.totalProductores ?? 0),
+      totalProductos: Number(estadisticas?.totalProductos ?? 0),
+      totalRegiones: Number(estadisticas?.totalRegiones ?? 0),
       ingresosTotales,
-      // Formateado para mostrar en la landing (ej: "$1.2 M")
       ingresosFormateado: formatearIngresos(ingresosTotales),
     };
   }
+
+  private getVentasAgrupadas(top: number) {
+    return this.prisma.detalle_pedido.groupBy({
+      by: ['id_producto'],
+      where: {
+        pedidos: {
+          estado: { in: ESTADOS_PEDIDO_VALIDOS },
+          eliminado_en: null,
+        },
+      },
+      _sum: { cantidad: true },
+      orderBy: { _sum: { cantidad: 'desc' } },
+      take: top,
+    });
+  }
+}
+
+function validarTop(top: number): number {
+  if (!Number.isInteger(top) || top <= 0) {
+    throw new BadRequestException('El límite de productos debe ser un entero positivo');
+  }
+  return Math.min(top, MAX_TOP_PRODUCTOS);
 }
 
 function formatearIngresos(monto: number): string {
-  if (monto >= 1_000_000) {
-    return `$${(monto / 1_000_000).toFixed(1)} M`;
-  }
-  if (monto >= 1_000) {
-    return `$${(monto / 1_000).toFixed(1)} K`;
-  }
+  if (monto >= 1_000_000) return `$${(monto / 1_000_000).toFixed(1)} M`;
+  if (monto >= 1_000) return `$${(monto / 1_000).toFixed(1)} K`;
   return `$${monto.toFixed(0)}`;
 }

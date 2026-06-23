@@ -329,6 +329,11 @@ export const api = {
       fetchJson<ProductItem>(endpoint(`/productos/${id}`), {
         next: { revalidate: 300 },
       }),
+    getOneForManage: (token: string, id: string) =>
+      fetchJson<ProductItem>(endpoint(`/productos/${id}`), {
+        cache: "no-store",
+        headers: headers(token),
+      }),
     create: (token: string, data: any) =>
       fetchJson<ProductItem>(endpoint("/productos"), {
         method: "POST",
