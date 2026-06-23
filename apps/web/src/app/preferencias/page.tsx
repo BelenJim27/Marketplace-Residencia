@@ -186,7 +186,8 @@ export default function PreferenciasPage() {
                 style={{
                   backgroundColor: "rgba(201,122,62,0.08)",
                   borderColor: "rgba(201,122,62,0.25)",
-                  border: "1px solid",
+                  borderStyle: "solid",
+                  borderWidth: "1px",
                 }}
               >
                 <span style={{ color: "#C97A3E" }} className="flex-shrink-0 font-bold text-sm leading-none mt-0.5">

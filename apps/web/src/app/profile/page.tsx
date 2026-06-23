@@ -392,7 +392,7 @@ export default function ClientePerfilPage() {
                 ))}
                 <div>
                   <label style={{ fontSize: "12px", color: colors.textSub, display: "block", marginBottom: "6px" }}>{t("Teléfono")}</label>
-                  <input type="tel" value={form.telefono} onChange={(e) => { setForm({ ...form, telefono: e.target.value.replace(/[^\d]/g, "").slice(0, 10) }); setTelefonoError(null); }} style={{ ...inputStyle, borderColor: telefonoError ? "#f87171" : undefined }} placeholder="10 dígitos, ej. 9511234567" maxLength={10} />
+                  <input type="tel" value={form.telefono} onChange={(e) => { setForm({ ...form, telefono: e.target.value.replace(/[^\d]/g, "").slice(0, 10) }); setTelefonoError(null); }} style={{ ...inputStyle, border: `1px solid ${telefonoError ? "#f87171" : colors.border}` }} placeholder="10 dígitos, ej. 9511234567" maxLength={10} />
                   {telefonoError && <p style={{ fontSize: "11px", color: "#ef4444", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}><AlertCircle size={11} /> {telefonoError}</p>}
                 </div>
                 <div style={{ gridColumn: "span 2" }}>

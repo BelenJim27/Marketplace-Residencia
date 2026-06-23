@@ -1,4 +1,5 @@
-# Claude
 .CLAUDE.md
 .env
 .env.production
+.env.local
+*.env
