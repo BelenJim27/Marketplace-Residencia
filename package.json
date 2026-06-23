@@ -11,7 +11,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "build:web": "turbo run build --filter=web",
-    "build:api": "turbo run build --filter=api",
+    "build:api": "npx turbo run build --filter=api",
     "start": "turbo run start",
     "start:web": "turbo run start --filter=web",
     "start:api": "turbo run start:prod --filter=api",
