@@ -5,6 +5,7 @@ import {
   Loader2, AlertCircle, CheckCircle2, X, Search,
   ExternalLink, TriangleAlert, ShieldCheck, ChevronLeft, ChevronRight,
 } from "lucide-react";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { formatMXN } from "@/lib/format-number";
@@ -51,6 +52,14 @@ const BADGE: Record<string, string> = {
 const ITEMS_PER_PAGE = 10;
 
 export default function ReembolsosAdminPage() {
+  return (
+    <PermissionGate requiredPermissions={["gestionar_reembolsos"]}>
+      <ReembolsosAdminPageContent />
+    </PermissionGate>
+  );
+}
+
+function ReembolsosAdminPageContent() {
   const [pagos, setPagos] = useState<PagoReembolso[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice | null>(null);

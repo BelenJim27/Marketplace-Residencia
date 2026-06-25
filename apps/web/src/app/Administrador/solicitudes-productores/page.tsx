@@ -20,6 +20,7 @@ import {
 import { getCookie } from "@/lib/cookies";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
 import { SuccessToast } from "@/components/ui/SuccessToast";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import Image from "next/image";
 
 interface SolicitudProductor {
@@ -100,6 +101,14 @@ function CertificadoPreview({ url, onPreview }: { url?: string; onPreview?: (url
 }
 
 export default function SolicitudesProductoresPage() {
+  return (
+    <PermissionGate requiredPermissions={["gestionar_productores"]}>
+      <SolicitudesProductoresPageContent />
+    </PermissionGate>
+  );
+}
+
+function SolicitudesProductoresPageContent() {
   const [solicitudes, setSolicitudes] = useState<SolicitudProductor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

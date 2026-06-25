@@ -250,23 +250,31 @@ model envios {
 
 model facturas {
   id_factura      BigInt   @id @default(autoincrement())
-  id_pedido       BigInt?
+  id_pedido       BigInt
   uuid_fiscal     String?  @db.VarChar(150)
   pdf_url         String?
   xml_url         String?
   creado_en       DateTime @default(now()) @db.Timestamptz(6)
   rfc_emisor      String?  @db.VarChar(13)
   rfc_receptor    String?  @db.VarChar(13)
+  nombre_razon_social String? @db.VarChar(200)
+  email_factura   String?  @db.VarChar(254)
+  codigo_postal   String?  @db.VarChar(5)
   uso_cfdi        String?  @db.VarChar(10)
   regimen_fiscal  String?  @db.VarChar(10)
   subtotal        Decimal? @db.Decimal(14, 2)
   impuestos_total Decimal? @db.Decimal(14, 2)
   total           Decimal? @db.Decimal(14, 2)
   moneda          Moneda?
-  estado          String   @default("pendiente") @db.VarChar(20)
+  estado          String   @default("preliminar") @db.VarChar(20)
+  cancelado_en    DateTime? @db.Timestamptz(6)
+  motivo_cancelacion String? @db.VarChar(2)
+  uuid_sustituto  String?  @db.VarChar(150)
   actualizado_en  DateTime @default(now()) @db.Timestamptz(6)
-  pedidos         pedidos? @relation(fields: [id_pedido], references: [id_pedido], onDelete: Restrict, onUpdate: NoAction)
+  pedidos         pedidos  @relation(fields: [id_pedido], references: [id_pedido], onDelete: Restrict, onUpdate: NoAction)
 
+  // La unicidad de la factura activa se garantiza mediante el índice parcial
+  // uq_facturas_pedido_activa de la migración SQL (Prisma no modela índices parciales).
   @@index([id_pedido], map: "idx_facturas_pedido")
 }
 

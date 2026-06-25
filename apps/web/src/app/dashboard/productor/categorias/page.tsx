@@ -2,6 +2,7 @@
 
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 type Categoria = {
   id_categoria: number;
@@ -24,6 +25,14 @@ type Notice = {
 const API_URL = "";
 
 export default function CategoriasProductorPage() {
+  return (
+    <PermissionGate requiredPermissions={["ver_inventario", "crear_inventario", "editar_inventario"]}>
+      <CategoriasProductorPageContent />
+    </PermissionGate>
+  );
+}
+
+function CategoriasProductorPageContent() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice | null>(null);

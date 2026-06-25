@@ -2,8 +2,9 @@ import { Body, Controller, Delete, Get, InternalServerErrorException, Logger, Pa
 import { ConfiguracionService } from './configuracion.service';
 import { CreateConfiguracionSistemaDto, CreateTasaImpuestoDto, UpdateConfiguracionSistemaDto, UpdateTasaImpuestoDto } from './dto/configuracion.dto';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { RolesGuard } from '../auth/guards/rbac.guard';
-import { Roles } from '../auth/guards/roles.decorator';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 
 @Controller('configuracion')
 export class ConfiguracionController {
@@ -20,8 +21,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Post('asociaciones')
   async setAsociaciones(@Body() body: { lista: string[] }) {
     try {
@@ -31,8 +32,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Get('sistema')
   async listSistema() {
     try {
@@ -43,8 +44,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Get('sistema/mapa')
   async getMapa() {
     try {
@@ -60,8 +61,8 @@ export class ConfiguracionController {
     return this.service.getPublicLandingConfig();
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Get('sistema/seed')
   async seedDefaults() {
     try {
@@ -72,8 +73,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Get('sistema/seed-biocultural')
   async seedBiocultural() {
     try {
@@ -84,8 +85,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Get('sistema/seed-all')
   async seedAll() {
     try {
@@ -96,8 +97,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Get('sistema/:id')
   async getSistema(@Param('id', ParseIntPipe) id: number) {
     try {
@@ -108,8 +109,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Post('sistema')
   async createSistema(@Body() dto: CreateConfiguracionSistemaDto) {
     try {
@@ -120,8 +121,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Post('sistema/bulk')
   async upsertBulk(@Body() configs: { clave: string; valor: string; tipo?: string }[]) {
     try {
@@ -132,8 +133,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Patch('sistema/:id')
   async updateSistema(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateConfiguracionSistemaDto) {
     try {
@@ -144,8 +145,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Delete('sistema/:id')
   async removeSistema(@Param('id', ParseIntPipe) id: number) {
     try {
@@ -176,8 +177,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Post('tasas')
   async createTasa(@Body() dto: CreateTasaImpuestoDto) {
     try {
@@ -188,8 +189,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Patch('tasas/:id')
   async updateTasa(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTasaImpuestoDto) {
     try {
@@ -200,8 +201,8 @@ export class ConfiguracionController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   @Delete('tasas/:id')
   async removeTasa(@Param('id', ParseIntPipe) id: number) {
     try {

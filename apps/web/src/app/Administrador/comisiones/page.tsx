@@ -5,6 +5,7 @@ import { Plus, Trash2, Edit2, X, Loader2, AlertCircle, Search, ChevronLeft, Chev
 import { api, type Comision, type ComisionInput } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { formatMXN } from "@/lib/format-number";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
@@ -17,6 +18,14 @@ type Resultado = { id_comision: number; porcentaje: number; monto_fijo: number |
 const ALCANCES: ComisionInput["alcance"][] = ["global", "pais", "categoria", "productor"];
 
 export default function ComisionesAdminPage() {
+  return (
+    <PermissionGate requiredPermissions={["gestionar_comisiones"]}>
+      <ComisionesAdminPageContent />
+    </PermissionGate>
+  );
+}
+
+function ComisionesAdminPageContent() {
   const [comisiones, setComisiones] = useState<Comision[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice | null>(null);

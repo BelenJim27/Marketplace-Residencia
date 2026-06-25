@@ -109,6 +109,7 @@ export default function SolicitarPage() {
   const [focusedField, setFocusedField]   = useState<string | null>(null);
   const [dragActive, setDragActive]       = useState(false);
   const [otraAsocInput, setOtraAsocInput] = useState("");
+  const [independiente, setIndependiente] = useState(false);
   const fileInputRef                      = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
@@ -132,13 +133,13 @@ export default function SolicitarPage() {
   const cpProdOk = isOaxacaCP(form.produccion_cp);
 
   const stepValid = [
-    !!form.asociacion,
+    !!form.asociacion || independiente,
     !!form.nombre_marca.trim() && !!form.rfc.trim() && rfcValido && cpProdOk,
     form.categorias_ids.length > 0,
     !!certificadoUrl,
   ];
   const showErr = {
-    asociacion:    step === 1 && attempted && !form.asociacion,
+    asociacion:    step === 1 && attempted && !form.asociacion && !independiente,
     nombre_marca:  step === 2 && (touched.nombre_marca || attempted) && !form.nombre_marca.trim(),
     rfc:           step === 2 && (touched.rfc || attempted) && (!form.rfc.trim() || !rfcValido),
     produccion_cp: step === 2 && (touched.produccion_cp || attempted) && !cpProdOk,
@@ -349,7 +350,7 @@ export default function SolicitarPage() {
         <div style={{ background:C.errorBg, border:`1px solid rgba(185,28,28,0.18)`, borderRadius:"8px", padding:"14px 16px", marginBottom:"24px", textAlign:"left" }}>
           <p style={{ fontFamily:SANS, color:C.error, fontSize:"13px", lineHeight:1.6, margin:0 }}>{solicitudActual.motivo_rechazo || "No especificado"}</p>
         </div>
-        <button onClick={() => { setSolicitudActual(null); setStep(1); }} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>{t("Intentar de nuevo")}</button>
+        <button onClick={() => { setSolicitudActual(null); setStep(1); setIndependiente(false); setOtraAsocInput(""); }} style={{ background:C.green, border:"none", borderRadius:"8px", padding:"11px 24px", fontFamily:SANS, fontSize:"13px", fontWeight:600, cursor:"pointer", color:C.cream }}>{t("Intentar de nuevo")}</button>
       </StatusCard>
     );
   }
@@ -503,7 +504,7 @@ export default function SolicitarPage() {
           <div>
             <StepHeader
               eyebrow={t("01 · Requisito")} title={t("Tu Asociación")}
-              desc={t("Selecciona la asociación de mezcaleros a la que perteneces. Este dato es requerido para validar tu actividad como productor.")}
+              desc={t("Selecciona la asociación de mezcaleros a la que perteneces o indícanos que eres productor independiente.")}
               C={C} SERIF={SERIF} SANS={SANS} MONO={MONO}
             />
 
@@ -519,7 +520,7 @@ export default function SolicitarPage() {
                     const sel = form.asociacion === asoc;
                     return (
                       <button key={asoc} type="button"
-                        onClick={() => { setField("asociacion", sel ? "" : asoc); setOtraAsocInput(""); }}
+                        onClick={() => { setField("asociacion", sel ? "" : asoc); setOtraAsocInput(""); setIndependiente(false); }}
                         style={{
                           display:"flex", alignItems:"center", gap:"14px",
                           background: sel ? (isDark ? "rgba(201,122,62,0.10)" : "rgba(46,74,51,0.05)") : C.section,
@@ -566,13 +567,50 @@ export default function SolicitarPage() {
                       const val = e.target.value;
                       setOtraAsocInput(val);
                       setField("asociacion", val.trim());
+                      if (val.trim()) setIndependiente(false);
                     }}
                   />
                   <FieldHint text={`${otraAsocInput.length}/150 ${t("caracteres")}`} C={C} SANS={SANS} />
                 </div>
+
+                {/* ── Independiente ──────────────────────────────────────── */}
+                <div style={{ display:"flex", alignItems:"center", gap:"12px", margin:"8px 0 4px" }}>
+                  <div style={{ flex:1, height:"1px", background:C.border }} />
+                  <span style={{ fontFamily:SANS, color:C.body, fontSize:"10px", letterSpacing:"0.10em", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+                    {t("¿Eres productor independiente?")}
+                  </span>
+                  <div style={{ flex:1, height:"1px", background:C.border }} />
+                </div>
+
+                <button type="button"
+                  onClick={() => {
+                    setIndependiente(v => !v);
+                    if (!independiente) { setField("asociacion", ""); setOtraAsocInput(""); }
+                  }}
+                  style={{
+                    width:"100%", display:"flex", alignItems:"center", gap:"14px",
+                    background: independiente ? (isDark ? "rgba(201,122,62,0.10)" : "rgba(46,74,51,0.05)") : C.section,
+                    border:`1.5px solid ${independiente ? C.copper : C.inputBorder}`,
+                    borderRadius:"10px", padding:"14px 16px", cursor:"pointer", textAlign:"left", transition:"all 0.2s",
+                  }}>
+                  <span style={{ width:"18px", height:"18px", borderRadius:"50%", flexShrink:0,
+                    border:`2px solid ${independiente ? C.copper : C.inputBorder}`,
+                    background: independiente ? C.copper : "transparent",
+                    display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s" }}>
+                    {independiente && <Check style={{ width:"10px", height:"10px", color:"#fff" }} strokeWidth={3} />}
+                  </span>
+                  <div style={{ display:"flex", flexDirection:"column", gap:"2px" }}>
+                    <span style={{ fontFamily:SANS, color: independiente ? (isDark ? C.cream : C.green) : C.label, fontSize:"14px", fontWeight: independiente ? 600 : 400 }}>
+                      {t("Soy productor independiente")}
+                    </span>
+                    <span style={{ fontFamily:SANS, color:C.body, fontSize:"12px", lineHeight:1.4 }}>
+                      {t("No pertenezco a ninguna asociación. El administrador evaluará mi solicitud con la información de mi marca.")}
+                    </span>
+                  </div>
+                </button>
               </>
             )}
-            {showErr.asociacion && <ErrMsg msg={t("Selecciona la asociación a la que perteneces o escribe una nueva")} C={C} SANS={SANS} />}
+            {showErr.asociacion && <ErrMsg msg={t("Selecciona una asociación, escribe una nueva o indica que eres productor independiente")} C={C} SANS={SANS} />}
           </div>
         )}
 

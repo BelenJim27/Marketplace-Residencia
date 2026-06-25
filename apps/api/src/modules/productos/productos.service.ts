@@ -5,6 +5,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { serializeBigInts } from "../../common/utilities/serialize";
 import { deleteLocalUpload } from "../../common/utilities/local-upload";
 import { CreateProductoDto, UpdateProductoDto } from "./dto/productos.dto";
+import { PERMISOS } from "../../common/permisos-catalog";
 
 /** Usuario autenticado resuelto por AuthGuard desde el JWT. */
 export interface RequestUser {
@@ -15,7 +16,7 @@ export interface RequestUser {
 }
 
 function isAdmin(user?: RequestUser): boolean {
-  return user?.roles?.some((r) => ['admin', 'administrador'].includes(r.toLowerCase())) ?? false;
+  return user?.permisos?.includes(PERMISOS.GESTIONAR_PRODUCTOS) ?? false;
 }
 
 export interface FiltrosProducto {

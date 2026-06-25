@@ -119,7 +119,8 @@ async function fetchJson<T>(
       cookies.forEach((cookie) => {
         const name = cookie.split("=")[0].trim();
         if (["token", "refresh_token", "usuario", "session"].includes(name)) {
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+          const secure = location.protocol === "https:" ? "; Secure" : "";
+          document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax${secure}`;
         }
       });
       // Notificar a AuthContext para que limpie la sesión OAuth también antes de redirigir
@@ -193,6 +194,24 @@ async function fetchJson<T>(
     console.error("Error parsing response JSON. Text:", text, "Error:", e);
     throw new Error(`Error al parsear respuesta: ${String(e)}`);
   }
+}
+
+async function fetchBlob(url: string, token?: string): Promise<Blob> {
+  const request = async (accessToken?: string) => fetch(url, {
+    credentials: "include",
+    headers: headers(accessToken),
+  });
+
+  let response = await request(token);
+  if (response.status === 401) {
+    const refreshed = await refreshAccessToken();
+    response = await request(refreshed ?? token);
+  }
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({ message: `Error ${response.status}` }));
+    throw new ApiError(response.status, payload);
+  }
+  return response.blob();
 }
 
 function endpoint(path: string) {
@@ -591,12 +610,16 @@ export const api = {
         headers: headers(token),
         body: JSON.stringify(data),
       }),
+    getFactura: (token: string, pedidoId: string) =>
+      fetchJson(endpoint(`/pedidos/${pedidoId}/factura`), { headers: headers(token) }),
     addFactura: (token: string, pedidoId: string, data: any) =>
-      fetchJson(endpoint(`/pedidos/${pedidoId}/facturas`), {
+      fetchJson(endpoint(`/pedidos/${pedidoId}/factura`), {
         method: "POST",
         headers: headers(token),
         body: JSON.stringify(data),
       }),
+    downloadFactura: (token: string, pedidoId: string) =>
+      fetchBlob(endpoint(`/pedidos/${pedidoId}/factura/pdf`), token),
     update: (token: string, id: string, data: any) =>
       fetchJson(endpoint(`/pedidos/${id}`), {
         method: "PATCH",

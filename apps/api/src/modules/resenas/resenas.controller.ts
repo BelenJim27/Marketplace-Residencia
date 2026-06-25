@@ -20,11 +20,9 @@ import {
 } from './dto/resenas.dto';
 import { ResenasService } from './resenas.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
-
-function hasRole(user: any, ...roles: string[]): boolean {
-  const wanted = roles.map((r) => r.toLowerCase());
-  return (user?.roles ?? []).some((r: string) => wanted.includes(r.toLowerCase()));
-}
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 
 @Controller('resenas')
 export class ResenasController {
@@ -89,21 +87,20 @@ export class ResenasController {
   }
 
   @Patch(':id/moderar')
-  @UseGuards(AuthGuard)
-  moderar(@Param('id') id: string, @Body() dto: ModerarResenaDto, @Req() req: any) {
-    if (!hasRole(req.user, 'administrador')) {
-      throw new ForbiddenException('Solo administradores pueden moderar reseñas');
-    }
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_RESENAS)
+  moderar(@Param('id') id: string, @Body() dto: ModerarResenaDto) {
     return this.service.moderar(id, dto);
   }
 
   @Patch(':id/responder')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.RESPONDER_RESENAS, PERMISOS.GESTIONAR_RESENAS)
   responder(@Param('id') id: string, @Body() dto: ResponderResenaDto, @Req() req: any) {
-    if (!hasRole(req.user, 'administrador', 'productor')) {
-      throw new ForbiddenException('Solo el vendedor o un administrador puede responder reseñas');
-    }
-    return this.service.responder(id, dto);
+    return this.service.responder(id, dto, {
+      id_productor: req.user.id_productor,
+      canManageAll: req.user.permisos.includes(PERMISOS.GESTIONAR_RESENAS),
+    });
   }
 
   @Patch(':id')
@@ -111,7 +108,7 @@ export class ResenasController {
   update(@Param('id') id: string, @Body() dto: UpdateResenaDto, @Req() req: any) {
     return this.service.update(id, dto, {
       id_usuario: req.user.id_usuario,
-      isAdmin: hasRole(req.user, 'administrador'),
+      isAdmin: req.user.permisos.includes(PERMISOS.GESTIONAR_RESENAS),
     });
   }
 
@@ -120,7 +117,7 @@ export class ResenasController {
   remove(@Param('id') id: string, @Req() req: any) {
     return this.service.remove(id, {
       id_usuario: req.user.id_usuario,
-      isAdmin: hasRole(req.user, 'administrador'),
+      isAdmin: req.user.permisos.includes(PERMISOS.GESTIONAR_RESENAS),
     });
   }
 }

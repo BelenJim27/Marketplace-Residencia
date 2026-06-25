@@ -7,8 +7,9 @@ import { StripeService } from './stripe.service';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { RolesGuard } from '../auth/guards/rbac.guard';
-import { Roles } from '../auth/guards/roles.decorator';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 import { Throttle } from '@nestjs/throttler';
 
 // Límite para creación de pagos (sensible). Los webhooks NO se limitan: los invoca
@@ -24,12 +25,12 @@ export class PagosController {
     private readonly connectService: ConnectService,
     private readonly configService: ConfigService,
   ) {}
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.VER_REPORTES_PRODUCTOR, PERMISOS.GESTIONAR_PAYOUTS)
   @Get('ingresos/:id_productor')
   async getIngresosResumen(@Param('id_productor', ParseIntPipe) id_productor: number, @Req() req: Request) {
     const user = (req as any).user;
-    const isAdmin = user?.roles?.some((r: string) => ['admin', 'administrador'].includes(r.toLowerCase()))
-      || user?.permisos?.some((p: string) => ['admin', 'administrador'].includes(p.toLowerCase()));
+    const isAdmin = user?.permisos?.includes(PERMISOS.GESTIONAR_PAYOUTS);
     if (!isAdmin) {
       // 1. JWT id_productor (fresh after re-login)
       const jwtId = user.id_productor != null ? Number(user.id_productor) : null;
@@ -49,8 +50,8 @@ export class PagosController {
   }
 
   @Throttle(PAGO_THROTTLE)
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('cliente', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.PAGAR, PERMISOS.GESTIONAR_PEDIDOS)
   @Post('stripe/intent')
   async createStripeIntent(@Body() dto: CreateStripeIntentDto, @Req() req: Request) {
     await this.service.validatePedidoOwnership(dto.id_pedido, (req as any).user.id_usuario);
@@ -59,8 +60,8 @@ export class PagosController {
 
   // Confirmación síncrona tras un pago con tarjeta exitoso: no depende del webhook.
   @Throttle(PAGO_THROTTLE)
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('cliente', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.PAGAR, PERMISOS.GESTIONAR_PEDIDOS)
   @Post('stripe/confirm')
   async confirmStripe(@Body() dto: ConfirmStripeDto, @Req() req: Request) {
     return this.service.confirmStripePayment(dto.id_pedido, (req as any).user.id_usuario);
@@ -105,8 +106,8 @@ export class PagosController {
   }
 
   @Throttle(PAGO_THROTTLE)
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('cliente', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.PAGAR, PERMISOS.GESTIONAR_PEDIDOS)
   @Post('paypal/order')
   async createPaypalOrder(@Body() dto: CreatePaypalOrderDto, @Req() req: Request) {
     await this.service.validatePedidoOwnership(dto.id_pedido, (req as any).user.id_usuario);
@@ -114,8 +115,8 @@ export class PagosController {
   }
 
   @Throttle(PAGO_THROTTLE)
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('cliente', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.PAGAR, PERMISOS.GESTIONAR_PEDIDOS)
   @Post('paypal/capture')
   capturePaypalOrder(@Body() dto: CapturePaypalOrderDto) {
     return this.service.capturePaypalOrder(dto);
@@ -162,37 +163,37 @@ export class PagosController {
     return { received: true };
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_REEMBOLSOS)
   @Post(':id/reembolso')
   reembolsarPago(@Param('id') id: string) {
     return this.service.reembolsarPago(id);
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   @Get() findAll(@Query('estado') estado?: string, @Query('proveedor') proveedor?: string) {
     return this.service.findAll({ estado, proveedor });
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   @Post() create(@Body() dto: CreatePagoDto) { return this.service.create(dto); }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   @Patch(':id') update(@Param('id') id: string, @Body() dto: UpdatePagoDto) { return this.service.update(id, dto); }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   @Post(':id/resolver-manual')
   resolverManual(@Param('id') id: string, @Body() body: { notas?: string }) {
     return this.service.resolverManual(id, body.notas);

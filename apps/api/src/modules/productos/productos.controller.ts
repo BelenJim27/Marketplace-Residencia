@@ -4,8 +4,9 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { CreateProductoDto, UpdateProductoDto } from './dto/productos.dto';
 import { ProductosService } from './productos.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { RolesGuard } from '../auth/guards/rbac.guard';
-import { Roles } from '../auth/guards/roles.decorator';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 import { productImageOptions } from '../../common/config/multer.config';
 import {
   buildLocalUploadUrl,
@@ -43,15 +44,15 @@ export class ProductosController {
   }
 
   @Get('sin-lote/check')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PRODUCTOS)
   findSinLote() {
     return this.service.findSinLote();
   }
 
   @Post('sin-lote/assign-matching')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PRODUCTOS)
   assignLotesMatching() {
     return this.service.assignLotesMatching();
   }
@@ -59,7 +60,8 @@ export class ProductosController {
   // Alertas de stock del productor autenticado (calculadas en el backend).
   // Debe ir antes de @Get(':id') para que la ruta dinámica no la capture.
   @Get('alertas-stock')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.VER_INVENTARIO, PERMISOS.EDITAR_INVENTARIO, PERMISOS.GESTIONAR_INVENTARIO)
   getAlertasStock(@Headers('authorization') authorization?: string) {
     const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined;
     return this.service.getAlertasStock(token);
@@ -71,8 +73,8 @@ export class ProductosController {
   }
 
   @Post()
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('productor', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.CREAR_PRODUCTO, PERMISOS.GESTIONAR_PRODUCTOS)
   @UseInterceptors(FileInterceptor('imagen', productImageOptions))
   async create(
     @UploadedFile() file: Express.Multer.File | undefined,
@@ -94,8 +96,8 @@ export class ProductosController {
   }
 
   @Patch(':id')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('productor', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.EDITAR_PRODUCTO, PERMISOS.GESTIONAR_PRODUCTOS)
   @UseInterceptors(FileInterceptor('imagen', productImageOptions))
   async update(
     @Param('id') id: string,
@@ -118,15 +120,15 @@ export class ProductosController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('productor', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.ELIMINAR_PRODUCTO, PERMISOS.GESTIONAR_PRODUCTOS)
   remove(@Param('id') id: string, @Req() req: Request) {
     return this.service.remove(id, (req as any).user);
   }
 
   @Post(':id/imagenes')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('productor', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.EDITAR_PRODUCTO, PERMISOS.GESTIONAR_PRODUCTOS)
   @UseInterceptors(FilesInterceptor('imagenes', 10, productImageOptions))
   async addImagenes(
     @Param('id') id: string,
@@ -144,8 +146,8 @@ export class ProductosController {
   }
 
   @Delete(':id/imagenes/:id_imagen')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('productor', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.EDITAR_PRODUCTO, PERMISOS.GESTIONAR_PRODUCTOS)
   removeImagen(
     @Param('id') id: string,
     @Param('id_imagen') id_imagen: string,

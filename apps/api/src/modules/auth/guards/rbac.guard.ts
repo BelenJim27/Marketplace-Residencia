@@ -1,65 +1,56 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
-export const ROLES_KEY = 'roles';
 export const PERMISOS_KEY = 'permisos';
-
-@Injectable()
-export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
-
-  canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (!requiredRoles) {
-      return true;
-    }
-
-    const request = context.switchToHttp().getRequest();
-    const user = request.user;
-
-    if (!user || !user.roles) {
-      throw new ForbiddenException('No tienes acceso a este recurso');
-    }
-
-    const hasRole = requiredRoles.some((role) =>
-      user.roles.some((r: string) => r.toLowerCase() === role.toLowerCase()),
-    );
-
-    if (!hasRole) {
-      throw new ForbiddenException('No tienes el rol necesario para acceder a este recurso');
-    }
-
-    return true;
-  }
-}
+export const REQUIRED_ANY_PERMISOS_KEY = 'required_any_permisos';
+export const REQUIRED_ALL_PERMISOS_KEY = 'required_all_permisos';
 
 @Injectable()
 export class PermisosGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredPermisos = this.reflector.getAllAndOverride<string[]>(PERMISOS_KEY, [
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+
+    const requiredAny = this.reflector.getAllAndOverride<string[]>(REQUIRED_ANY_PERMISOS_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
-    if (!requiredPermisos) {
+
+    const requiredAll = this.reflector.getAllAndOverride<string[]>(REQUIRED_ALL_PERMISOS_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    const legacyPermisos = this.reflector.getAllAndOverride<string[]>(PERMISOS_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (!requiredAny && !requiredAll && !legacyPermisos) {
       return true;
     }
-
-    const request = context.switchToHttp().getRequest();
-    const user = request.user;
 
     if (!user || !user.permisos) {
       throw new ForbiddenException('No tienes acceso a este recurso');
     }
 
-    const hasAllPermisos = requiredPermisos.every((permiso) => user.permisos.includes(permiso));
+    if (requiredAny && requiredAny.length > 0) {
+      const hasAny = requiredAny.some((permiso) => user.permisos.includes(permiso));
+      if (!hasAny) {
+        throw new ForbiddenException('No tienes los permisos necesarios para acceder a este recurso');
+      }
+      return true;
+    }
 
-    if (!hasAllPermisos) {
-      throw new ForbiddenException('No tienes los permisos necesarios para acceder a este recurso');
+    if ((requiredAll || legacyPermisos) && (requiredAll || legacyPermisos).length > 0) {
+      const allRequired = requiredAll ?? legacyPermisos;
+      const hasAll = allRequired.every((permiso: string) => user.permisos.includes(permiso));
+      if (!hasAll) {
+        throw new ForbiddenException('No tienes todos los permisos necesarios para acceder a este recurso');
+      }
+      return true;
     }
 
     return true;

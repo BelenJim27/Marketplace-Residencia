@@ -22,6 +22,8 @@ import {
 import { NotificacionesService } from "../notificaciones/notificaciones.service";
 import { ArchivosService } from "../archivos/archivos.service";
 import { EmailService } from "../email/email.service";
+import { SessionInvalidationService } from "../auth/session-invalidation.service";
+import { PERMISOS } from "../../common/permisos-catalog";
 import { createCipheriv, randomBytes, createDecipheriv } from "crypto";
 
 const IV_LENGTH = 16;
@@ -75,6 +77,7 @@ export class ProductoresService {
     private readonly notificaciones: NotificacionesService,
     private readonly archivos: ArchivosService,
     private readonly emailService: EmailService,
+    private readonly sessions: SessionInvalidationService,
   ) {}
 
   // ── CRUD básico ────────────────────────────────────────────────────────────
@@ -614,8 +617,9 @@ export class ProductoresService {
         });
       }
 
-      // Ensure the productor role has panel_productor permission
-      const panelPerm = await this.prisma.permisos.findUnique({ where: { nombre: 'panel_productor' } });
+      const panelPerm = await this.prisma.permisos.findUnique({
+        where: { nombre: PERMISOS.VER_REPORTES_PRODUCTOR },
+      });
       if (rolProductor && panelPerm) {
         await this.prisma.rol_permiso.upsert({
           where: { id_rol_id_permiso: { id_rol: rolProductor.id_rol, id_permiso: panelPerm.id_permiso } },
@@ -634,6 +638,7 @@ export class ProductoresService {
         motivo_rechazo: dto.motivo_rechazo ?? null,
       },
     });
+    await this.sessions.invalidateUsers([usuario.id_usuario]);
 
     const titulo =
       dto.estado === "aprobado" ? "Solicitud aprobada" : "Solicitud rechazada";

@@ -1,5 +1,10 @@
-import ProductosAdmin from '@/components/Administrator/Products/productos'; // Ajusta la ruta según tu proyecto
+import ProductosAdmin from '@/components/Administrator/Products/productos';
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export default function Page() {
-  return <ProductosAdmin />; // Aquí solo llamamos a tu componente
+  return (
+    <PermissionGate requiredPermissions={["gestionar_productos"]}>
+      <ProductosAdmin />
+    </PermissionGate>
+  );
 }

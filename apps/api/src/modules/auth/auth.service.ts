@@ -6,6 +6,7 @@ import * as jwt from 'jsonwebtoken';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { AccessContextService } from './access-context.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 import {
@@ -68,6 +69,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly notificaciones: NotificacionesService,
+    private readonly accessContext: AccessContextService,
   ) {}
 
   async register(dto: RegisterAuthDto): Promise<AuthResponseDto> {
@@ -317,37 +319,16 @@ export class AuthService {
 
   async getMe(token: string) {
     const decoded = verifyJwt<AccessTokenPayload>(token, ACCESS_TOKEN_SECRET);
-    if (!decoded) {
-      throw new UnauthorizedException('Token inválido');
+    const context = await this.accessContext.getForUser(decoded.sub);
+    if (!context || context.version_token !== decoded.version_token) {
+      throw new UnauthorizedException('Sesión invalidada. Inicia sesión nuevamente.');
     }
-
-    const user = await this.prisma.usuarios.findUnique({
-      where: { id_usuario: decoded.sub },
-    });
-
-    if (!user || user.eliminado_en) {
-      throw new UnauthorizedException('Usuario no encontrado');
-    }
-
-    const accessData = await getAccessData(this.prisma, user.id_usuario);
-
-    // ✅ Uso del tipo local en lugar del import directo
-    const biografia = (user as UsuarioPayload & { biografia?: string | null }).biografia ?? null;
-
     return {
-      id_usuario: user.id_usuario,
-      nombre: user.nombre,
-      email: user.email,
-      apellido_paterno: user.apellido_paterno,
-      apellido_materno: user.apellido_materno,
-      telefono: user.telefono,
-      biografia,
-      foto_url: user.foto_url,
-      idioma_preferido: user.idioma_preferido,
-      moneda_preferida: user.moneda_preferida,
-      roles: accessData.roles,
-      permisos: accessData.permisos,
-      id_productor: accessData.id_productor,
+      id_usuario: context.id_usuario,
+      email: context.email,
+      roles: context.roles,
+      permisos: context.permisos,
+      id_productor: context.id_productor,
     };
   }
 
@@ -378,7 +359,7 @@ export class AuthService {
       throw new NotFoundException('Usuario no encontrado');
     }
 
-    const accessData = await getAccessData(this.prisma, freshUser.id_usuario);
+    const accessData = await this.accessContext.requireForUser(freshUser.id_usuario);
 
     const accessToken = createSignedJwt<AccessTokenPayload>(
       {
@@ -458,53 +439,6 @@ export class AuthService {
       this.logger.warn(`Error logging auth event: ${(error as Error)?.message}`);
     }
   }
-}
-
-async function getAccessData(
-  prisma: PrismaService,
-  id_usuario: string,
-): Promise<{ roles: string[]; permisos: string[]; id_productor: number | null }> {
-  const user = await prisma.usuarios.findUnique({
-    where: { id_usuario },
-    include: {
-      productores: { select: { id_productor: true } },
-      usuario_rol: {
-        where: { estado: 'activo' },
-        include: {
-          roles: {
-            include: {
-              rol_permiso: { include: { permisos: true } },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (!user) {
-    throw new NotFoundException('Usuario no encontrado');
-  }
-
-  // ✅ Tipos explícitos en los callbacks para evitar implicit any
-  const roles = user.usuario_rol
-    .map((relation: (typeof user.usuario_rol)[number]) => relation.roles?.nombre)
-    .filter((role): role is string => Boolean(role));
-
-  const permisos: string[] = Array.from(
-    new Set(
-      user.usuario_rol.flatMap((relation: (typeof user.usuario_rol)[number]) =>
-        relation.roles?.rol_permiso
-          .map((permiso: (typeof relation.roles.rol_permiso)[number]) => permiso.permisos?.nombre)
-          .filter((permiso): permiso is string => Boolean(permiso)) ?? [],
-      ),
-    ),
-  );
-
-  return {
-    roles,
-    permisos,
-    id_productor: user.productores?.id_productor ?? null,
-  };
 }
 
 function hashPassword(password: string): Promise<string> {

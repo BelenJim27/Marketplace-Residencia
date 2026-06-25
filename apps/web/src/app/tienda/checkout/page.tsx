@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, Dispatch, SetStateAction } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { getMediaUrl } from "@/lib/media";
 import Link from "next/link";
-import { CheckCircle, ChevronRight, Truck, CreditCard, ShoppingBag, ArrowLeft, X, Lock, MapPin, Loader2, FileText } from "lucide-react";
+import { CheckCircle, ChevronRight, Truck, CreditCard, ShoppingBag, ArrowLeft, X, Lock, MapPin, Loader2 } from "lucide-react";
 import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useCheckout, CheckoutStep, OpcionAgregada } from "@/hooks/useCheckout";
@@ -217,15 +217,6 @@ export default function CheckoutPage() {
 
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
-
-  const [facturaData, setFacturaData] = useState({
-    solicitarFactura: false,
-    rfc: "",
-    nombre_razon_social: "",
-    uso_cfdi: "G03",
-    regimen_fiscal: "",
-    email_factura: "",
-  });
 
   // Ref para evitar que cambios de referencia en prepararPago (causados por ratesMXN async)
   // redisparen el efecto de pago y creen pedidos duplicados.
@@ -669,7 +660,6 @@ export default function CheckoutPage() {
                           convertToDisplay={convertFromMXN}
                           convertQuotePrice={convertQuoteToDisplay}
                           displayCurrency={displayCurrency}
-                          facturaData={facturaData}
                           shippingDisplayAmount={getShippingDisplayAmount()}
                           locale={locale}
                           token={getCookie("token")}
@@ -715,12 +705,7 @@ export default function CheckoutPage() {
                         </div>
                         <PaypalCheckoutButton
                           orderId={paypalOrderId}
-                          onCapture={async (orderId: string) => {
-                            if (facturaData.solicitarFactura && pedidoIdCreado) {
-                              sessionStorage.setItem('checkout_factura', JSON.stringify({ ...facturaData, pedidoId: pedidoIdCreado }));
-                            }
-                            await capturePaypalOrder(orderId);
-                          }}
+                          onCapture={capturePaypalOrder}
                           onError={setErrorMensaje}
                           disabled={cargando}
                         />
@@ -749,12 +734,7 @@ export default function CheckoutPage() {
                           </div>
                           <PaypalCheckoutButton
                             orderId={paypalOrderId}
-                            onCapture={async (orderId: string) => {
-                              if (facturaData.solicitarFactura && pedidoIdCreado) {
-                                sessionStorage.setItem('checkout_factura', JSON.stringify({ ...facturaData, pedidoId: pedidoIdCreado }));
-                              }
-                              await capturePaypalOrder(orderId);
-                            }}
+                            onCapture={capturePaypalOrder}
                             onError={setErrorMensaje}
                             disabled={cargando}
                           />
@@ -1482,217 +1462,6 @@ function DireccionStep({
   );
 }
 
-const USOS_CFDI = [
-  { value: "G01", label: "G01 - Adquisición de mercancias" },
-  { value: "G03", label: "G03 - Gastos en general" },
-  { value: "I01", label: "I01 - Construcciones" },
-  { value: "I04", label: "I04 - Equipo de computo y accesorios" },
-  { value: "D01", label: "D01 - Honorarios médicos y dentales" },
-  { value: "P01", label: "P01 - Por definir" },
-];
-
-function FacturaSolicitudSection({
-  facturaData,
-  setFacturaData,
-}: {
-  facturaData: {
-    solicitarFactura: boolean;
-    rfc: string;
-    nombre_razon_social: string;
-    uso_cfdi: string;
-    regimen_fiscal: string;
-    email_factura: string;
-  };
-  setFacturaData: Dispatch<SetStateAction<typeof facturaData>>;
-}) {
-  const COLOR_PALETTE = usePalette();
-  const set = (key: string, val: string | boolean) =>
-    setFacturaData((prev) => ({ ...prev, [key]: val }));
-
-  return (
-    <div
-      style={{
-        marginTop: "28px",
-        borderRadius: "12px",
-        border: `1px solid ${facturaData.solicitarFactura ? COLOR_PALETTE.copper : COLOR_PALETTE.border}`,
-        background: facturaData.solicitarFactura ? `${COLOR_PALETTE.amber}08` : "transparent",
-        overflow: "hidden",
-        transition: "all 200ms ease",
-      }}
-    >
-      {/* Toggle header */}
-      <button
-        type="button"
-        onClick={() => set("solicitarFactura", !facturaData.solicitarFactura)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          padding: "16px 20px",
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          textAlign: "left",
-        }}
-      >
-        <div
-          style={{
-            width: "20px",
-            height: "20px",
-            borderRadius: "4px",
-            border: `2px solid ${facturaData.solicitarFactura ? COLOR_PALETTE.copper : "#D1D5DB"}`,
-            background: facturaData.solicitarFactura ? COLOR_PALETTE.copper : "transparent",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            transition: "all 200ms ease",
-          }}
-        >
-          {facturaData.solicitarFactura && (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          )}
-        </div>
-        <FileText size={18} color={facturaData.solicitarFactura ? COLOR_PALETTE.copper : "#9CA3AF"} />
-        <div>
-          <p style={{ fontWeight: 700, color: facturaData.solicitarFactura ? COLOR_PALETTE.copper : COLOR_PALETTE.green, margin: 0, fontSize: "14px" }}>
-            Requiero factura (CFDI)
-          </p>
-          <p style={{ fontSize: "12px", color: "#9CA3AF", margin: "2px 0 0" }}>
-            Opcional — ingresa tus datos fiscales para facturación
-          </p>
-        </div>
-      </button>
-
-      {/* Formulario colapsable */}
-      {facturaData.solicitarFactura && (
-        <div style={{ padding: "4px 20px 20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-          <div style={{ height: "1px", background: `${COLOR_PALETTE.copper}33`, marginBottom: "4px" }} />
-
-          <div>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: COLOR_PALETTE.green, marginBottom: "6px" }}>
-              RFC *
-            </label>
-            <input
-              type="text"
-              value={facturaData.rfc}
-              onChange={(e) => set("rfc", e.target.value.toUpperCase().slice(0, 13))}
-              placeholder="XAXX010101000"
-              maxLength={13}
-              style={{
-                width: "100%",
-                borderRadius: "10px",
-                border: `1px solid ${COLOR_PALETTE.border}`,
-                padding: "10px 14px",
-                fontSize: "14px",
-                outline: "none",
-                fontFamily: "ui-monospace, monospace",
-                letterSpacing: "0.06em",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: COLOR_PALETTE.green, marginBottom: "6px" }}>
-              Nombre / Razón Social *
-            </label>
-            <input
-              type="text"
-              value={facturaData.nombre_razon_social}
-              onChange={(e) => set("nombre_razon_social", e.target.value)}
-              placeholder="Nombre completo o razón social"
-              style={{
-                width: "100%",
-                borderRadius: "10px",
-                border: `1px solid ${COLOR_PALETTE.border}`,
-                padding: "10px 14px",
-                fontSize: "14px",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: COLOR_PALETTE.green, marginBottom: "6px" }}>
-              Uso del CFDI *
-            </label>
-            <select
-              value={facturaData.uso_cfdi}
-              onChange={(e) => set("uso_cfdi", e.target.value)}
-              style={{
-                width: "100%",
-                borderRadius: "10px",
-                border: `1px solid ${COLOR_PALETTE.border}`,
-                padding: "10px 14px",
-                fontSize: "14px",
-                outline: "none",
-                background: COLOR_PALETTE.white,
-                cursor: "pointer",
-                boxSizing: "border-box",
-              }}
-            >
-              {USOS_CFDI.map((u) => (
-                <option key={u.value} value={u.value}>{u.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: COLOR_PALETTE.green, marginBottom: "6px" }}>
-              Régimen Fiscal
-            </label>
-            <input
-              type="text"
-              value={facturaData.regimen_fiscal}
-              onChange={(e) => set("regimen_fiscal", e.target.value)}
-              placeholder="Ej: 605 - Sueldos y Salarios"
-              style={{
-                width: "100%",
-                borderRadius: "10px",
-                border: `1px solid ${COLOR_PALETTE.border}`,
-                padding: "10px 14px",
-                fontSize: "14px",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: COLOR_PALETTE.green, marginBottom: "6px" }}>
-              Correo para envío de factura
-            </label>
-            <input
-              type="email"
-              value={facturaData.email_factura}
-              onChange={(e) => set("email_factura", e.target.value)}
-              placeholder="facturacion@correo.com"
-              style={{
-                width: "100%",
-                borderRadius: "10px",
-                border: `1px solid ${COLOR_PALETTE.border}`,
-                padding: "10px 14px",
-                fontSize: "14px",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          <p style={{ fontSize: "11px", color: "#9CA3AF", margin: 0 }}>
-            * La factura será generada y enviada a tu correo en un plazo de 24–48 horas hábiles.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
 const PROVIDER_COLORS: Record<string, string> = {
   fedex:         'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
   dhl:           'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
@@ -1860,7 +1629,6 @@ function PagoYResumen({
   convertToDisplay,
   convertQuotePrice,
   displayCurrency,
-  facturaData,
   shippingDisplayAmount,
   locale,
   token,
@@ -1879,7 +1647,6 @@ function PagoYResumen({
   convertToDisplay: (amount: number) => number;
   convertQuotePrice: (price: number, currency: string) => number;
   displayCurrency: string;
-  facturaData?: { solicitarFactura: boolean; rfc: string; nombre_razon_social: string; uso_cfdi: string; regimen_fiscal: string; email_factura: string };
   shippingDisplayAmount: number | null;
   locale: string;
   token: string | null;
@@ -1929,11 +1696,6 @@ function PagoYResumen({
     const numParam = numeroOrden ? `&num=${numeroOrden}` : "";
     const returnUrl = `${origin}/tienda/checkout/pago-exitoso${pedidoId ? `?pedido=${pedidoId}${numParam}` : ""}`;
 
-    // Guardar en localStorage como respaldo para tarjetas con 3DS (Stripe redirige externamente)
-    if (facturaData?.solicitarFactura && pedidoId) {
-      sessionStorage.setItem('checkout_factura', JSON.stringify({ ...facturaData, pedidoId }));
-    }
-
     const { error } = await stripe.confirmCardPayment(clientSecret, {
       payment_method: { card: cardElement },
       return_url: returnUrl,
@@ -1947,21 +1709,6 @@ function PagoYResumen({
       // sin depender del webhook (best-effort; el webhook queda de respaldo).
       if (pedidoId && token) {
         try { await api.pagos.stripe.confirm(token, String(pedidoId)); } catch { /* webhook de respaldo */ }
-      }
-      // Enviar factura directamente antes de redirigir.
-      if (facturaData?.solicitarFactura && pedidoId && token) {
-        try {
-          const payload: Record<string, string> = { estado: "pendiente" };
-          if (facturaData.rfc)                 payload.rfc_receptor        = facturaData.rfc;
-          if (facturaData.uso_cfdi)            payload.uso_cfdi            = facturaData.uso_cfdi;
-          if (facturaData.regimen_fiscal)      payload.regimen_fiscal      = facturaData.regimen_fiscal;
-          if (facturaData.nombre_razon_social) payload.nombre_razon_social = facturaData.nombre_razon_social;
-          if (facturaData.email_factura)       payload.email_factura       = facturaData.email_factura;
-          await api.pedidos.addFactura(token, pedidoId, payload);
-          sessionStorage.removeItem('checkout_factura'); // limpiar respaldo
-        } catch {
-          // si falla, pago-exitoso lo reintenta desde localStorage
-        }
       }
       window.location.assign(returnUrl);
     }

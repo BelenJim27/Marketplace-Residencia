@@ -39,6 +39,7 @@ const PAIS_LABELS: Record<string, string> = {
 
 export function TiendasPage() {
   const { user, loading: authLoading } = useAuth();
+  const canEditStore = user?.permisos?.includes("editar_tienda") ?? false;
   const token = getCookie("token") ?? "";
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +110,7 @@ export function TiendasPage() {
             <h1 className="text-2xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Mi Tienda</h1>
             <p className="mt-0.5 text-sm text-[#3D6B3F]/60 dark:text-[#A8C26B]/60">Información y configuración de tu tienda</p>
           </div>
-          <div data-tour="btn-editar-tienda" className="flex gap-2 shrink-0">
+          {canEditStore && <div data-tour="btn-editar-tienda" className="flex gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setActiveModal("edit")}
@@ -126,7 +127,7 @@ export function TiendasPage() {
               <Trash2 size={15} />
               Eliminar
             </button>
-          </div>
+          </div>}
         </div>
       </div>
 

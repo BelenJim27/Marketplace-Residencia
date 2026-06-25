@@ -13,11 +13,12 @@ import { useProductorCategorias } from "../../../hooks/useProductorCategorias";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
+import { getPanelArea } from "@/lib/permisos-catalog";
 
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { isProductor, isAdmin, logout } = useAuth();
+  const { user, logout } = useAuth();
   const { data: session } = useSession();
   const { setIsOpen, isOpen, isMobile, toggleSidebar, isCollapsed, toggleCollapse } =
     useSidebarContext();
@@ -30,8 +31,12 @@ export function Sidebar() {
     return menus;
   });
 
-  const { tieneLotes } = useProductorCategorias(isAdmin);
-  const navData = getNavData(isProductor, isAdmin, tieneLotes);
+  const permisos = user?.permisos ?? [];
+  const panelArea = getPanelArea(pathname);
+  const isAdminArea = panelArea === "admin";
+  const isProductorArea = panelArea === "productor";
+  const { tieneLotes } = useProductorCategorias(isAdminArea);
+  const navData = getNavData(isProductorArea, isAdminArea, permisos);
 
   const isFilesRoute = pathname.startsWith("/dashboard/productor/archivos");
 

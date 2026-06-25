@@ -1,10 +1,14 @@
 import { Controller, ForbiddenException, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthGuard } from '../auth/guards/auth.guard';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 import { ConnectService } from './connect.service';
 
 @Controller('pagos/connect')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, PermisosGuard)
+@RequireAnyPermission(PERMISOS.GESTIONAR_COBROS)
 export class ConnectController {
   constructor(private readonly connectService: ConnectService) {}
 

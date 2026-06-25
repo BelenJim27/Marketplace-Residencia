@@ -12,6 +12,9 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 import { ShippingQuote } from './interfaces/carrier.interface';
 import { TasasCambioService } from '../tasas-cambio/tasas-cambio.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 
 @Controller('envios')
 export class EnviosController {
@@ -30,7 +33,7 @@ export class EnviosController {
   @UseGuards(AuthGuard)
   async getTracking(@Param('id') id: string, @Req() req: any) {
     const user = req.user;
-    const isAdmin = user.roles?.some((r: string) => r.toLowerCase() === 'administrador');
+    const isAdmin = user.permisos?.includes(PERMISOS.GESTIONAR_PEDIDOS);
 
     if (!isAdmin) {
       const envio = await this.prisma.envios.findUnique({
@@ -57,27 +60,33 @@ export class EnviosController {
 
   // ─── Rutas autenticadas (require login) ──────────────────────────────────
   @Get()
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   findAll(@Query() query: PaginacionQueryDto) { return this.service.findAll(query); }
 
   @Get(':id')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   findOne(@Param('id') id: string) { return this.service.findOne(id); }
 
   @Post()
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   create(@Body() dto: CreateEnvioDto) { return this.service.create(dto); }
 
   @Patch(':id')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   update(@Param('id') id: string, @Body() dto: UpdateEnvioDto) { return this.service.update(id, dto); }
 
   @Delete(':id')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   remove(@Param('id') id: string) { return this.service.remove(id); }
 
   @Post('cotizar')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.CREAR_PEDIDO, PERMISOS.GESTIONAR_PEDIDOS)
   async cotizar(@Body() dto: CotizarEnvioDto, @Query('carrier') carrier = 'all'): Promise<ShippingQuote[]> {
     const adultSig = dto.adult_signature ?? false;
 
@@ -127,7 +136,8 @@ export class EnviosController {
    * Used during checkout before a pedido is created.
    */
   @Post('cotizar-carrito')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.CREAR_PEDIDO, PERMISOS.GESTIONAR_PEDIDOS)
   async cotizarCarrito(
     @Body() body: { items: Array<{ id_producto: number; cantidad: number }>; destino: DireccionDestinoDto },
   ) {
@@ -158,7 +168,8 @@ export class EnviosController {
    * Body: { id_pedido: number, destino: DireccionDestinoDto }
    */
   @Post('cotizar-por-productor')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.EDITAR_PEDIDO, PERMISOS.GESTIONAR_PEDIDOS)
   async cotizarPorProductor(
     @Body() body: { id_pedido: number; destino: DireccionDestinoDto },
   ) {
@@ -167,7 +178,8 @@ export class EnviosController {
 
   /** Creates the envio DB record for the authenticated producer in this order (no SkydropX). */
   @Post('pedido/:id_pedido/iniciar')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.EDITAR_PEDIDO, PERMISOS.GESTIONAR_PEDIDOS)
   async iniciarEnvioProductor(@Param('id_pedido') id_pedido: string, @Req() req: any) {
     const id_productor: number | null = req.user?.id_productor ?? null;
     if (!id_productor) throw new ForbiddenException('Solo productores pueden iniciar envíos');
@@ -176,25 +188,30 @@ export class EnviosController {
 
   /** Admin/system endpoint to retry guide creation for orders where automatic purchase failed. */
   @Post('pedido/:id_pedido/crear-guias')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   async crearGuiasPorPedido(@Param('id_pedido') id_pedido: string) {
     return this.service.crearEnviosPorProductor(Number(id_pedido));
   }
 
   @Post('cotizaciones')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.CREAR_PEDIDO, PERMISOS.GESTIONAR_PEDIDOS)
   guardarCotizacion(@Body() data: any) { return this.service.guardarCotizacion(data.id_pedido, data); }
 
   @Post(':id/crear-guia')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.EDITAR_PEDIDO, PERMISOS.GESTIONAR_PEDIDOS)
   crearGuia(@Param('id') id: string) { return this.service.crearGuia(id); }
 
   @Post(':id/refrescar-guia')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.EDITAR_PEDIDO, PERMISOS.GESTIONAR_PEDIDOS)
   refrescarGuia(@Param('id') id: string) { return this.service.refrescarGuiaPendiente(id); }
 
   @Get(':id/guia/download')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.VER_PEDIDOS, PERMISOS.EDITAR_PEDIDO, PERMISOS.GESTIONAR_PEDIDOS)
   async downloadGuia(@Param('id') id: string, @Res() res: Response) {
     const guia = await this.service.getGuiaPdf(id);
     res.setHeader('Content-Type', 'application/pdf');

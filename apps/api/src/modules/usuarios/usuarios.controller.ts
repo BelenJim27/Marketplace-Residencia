@@ -4,8 +4,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { AssignUsuarioRolDto, CreateUsuarioDto, UpdateUsuarioDto } from './dto/usuarios.dto';
 import { UsuariosService } from './usuarios.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { RolesGuard } from '../auth/guards/rbac.guard';
-import { Roles } from '../auth/guards/roles.decorator';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 import { userPhotoOptions } from '../../common/config/multer.config';
 import {
   buildLocalUploadUrl,
@@ -14,15 +15,15 @@ import {
 } from '../../common/utilities/local-upload';
 
 function isAdmin(user: any): boolean {
-  return user?.roles?.some((r: string) => r.toLowerCase() === 'administrador') ?? false;
+  return user?.permisos?.includes(PERMISOS.GESTIONAR_USUARIOS) ?? false;
 }
 
 @Controller('usuarios')
 export class UsuariosController {
   constructor(private readonly service: UsuariosService) {}
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_USUARIOS)
   @Get()
   findAll(@Query() query: PaginacionQueryDto) {
     return this.service.findAll(query);
@@ -58,8 +59,8 @@ export class UsuariosController {
     return this.service.findOne(id);
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_USUARIOS)
   @Post()
   create(@Body() dto: CreateUsuarioDto) {
     return this.service.create(dto);
@@ -98,22 +99,22 @@ export class UsuariosController {
     }
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_USUARIOS)
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_USUARIOS)
   @Post(':id/roles')
   addRole(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AssignUsuarioRolDto) {
     return this.service.addRole(id, dto.id_rol);
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_USUARIOS)
   @Delete(':id/roles/:id_rol')
   removeRole(
     @Param('id', ParseUUIDPipe) id: string,

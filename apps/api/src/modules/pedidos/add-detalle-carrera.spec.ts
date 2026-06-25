@@ -18,6 +18,7 @@ describe('PedidosService.addDetalle (carrera P2002 → reintento idempotente)', 
       {} as any, // authService
       {} as any, // comisionesService
       {} as any, // emailService
+      {} as any, // facturaPdfService
       {} as any, // skydropxService
       {} as any, // stripeService
       {} as any, // paypalService

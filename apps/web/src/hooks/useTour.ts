@@ -20,10 +20,10 @@ function detectPage(pathname: string, role: TourRole): string | null {
     if (pathname.startsWith('/dashboard/productor/lotes')) return 'lotes';
   }
   if (role === 'admin') {
-    if (pathname === '/administrador/dashboard' || pathname === '/administrador') return 'dashboard';
-    if (pathname.startsWith('/administrador/usuarios')) return 'usuarios';
-    if (pathname.startsWith('/administrador/pedidos')) return 'pedidos';
-    if (pathname.startsWith('/administrador/productos')) return 'productos';
+    if (pathname === '/Administrador/dashboard' || pathname === '/Administrador') return 'dashboard';
+    if (pathname.startsWith('/Administrador/usuarios')) return 'usuarios';
+    if (pathname.startsWith('/Administrador/pedidos')) return 'pedidos';
+    if (pathname.startsWith('/Administrador/productos')) return 'productos';
   }
   if (role === 'cliente') {
     if (pathname.startsWith('/cliente/producto/')) return 'detalle';

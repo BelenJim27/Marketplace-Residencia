@@ -1,17 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useAuth as useAuthContext } from "@/context/AuthContext";
 
 export function useAuth() {
-  const router = useRouter();
   const auth = useAuthContext();
-
-  const hasRole = (role: string | string[]): boolean => {
-    if (!auth.user) return false;
-    const roles = Array.isArray(role) ? role : [role];
-    return roles.some((r) => auth.user?.roles.includes(r));
-  };
 
   const hasPermiso = (permiso: string | string[]): boolean => {
     if (!auth.user) return false;
@@ -22,7 +14,6 @@ export function useAuth() {
   return {
     user: auth.user,
     loading: auth.loading,
-    hasRole,
     hasPermiso,
     logout: auth.logout,
     isAuthenticated: auth.isAuthenticated,

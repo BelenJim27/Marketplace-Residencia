@@ -6,10 +6,14 @@ import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { serializeBigInts } from '../../common/utilities/serialize';
 import { deleteLocalUpload } from '../../common/utilities/local-upload';
 import { AssignUsuarioRolDto, CreateUsuarioDto, UpdateUsuarioDto } from './dto/usuarios.dto';
+import { SessionInvalidationService } from '../auth/session-invalidation.service';
 
 @Injectable()
 export class UsuariosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sessions: SessionInvalidationService,
+  ) {}
 
   async findAll(query: PaginacionQueryDto = {}) {
     const pagina = query.pagina ?? 1;
@@ -162,20 +166,23 @@ export class UsuariosService {
       }
     }
 
-    const relation = await this.prisma.usuario_rol.upsert({
-      where: { id_usuario_id_rol: { id_usuario, id_rol } },
-      create: { id_usuario, id_rol },
-      update: { estado: 'activo' },
-    });
-
-    await this.prisma.auditoria.create({
-      data: {
-        id_usuario,
-        accion: 'asignar_rol',
-        tabla_afectada: 'usuario_rol',
-        registro_id: id_usuario,
-        valor_nuevo: { id_rol, nombre_rol: rol?.nombre } as any,
-      },
+    const relation = await this.prisma.$transaction(async (tx) => {
+      const assigned = await tx.usuario_rol.upsert({
+        where: { id_usuario_id_rol: { id_usuario, id_rol } },
+        create: { id_usuario, id_rol },
+        update: { estado: 'activo' },
+      });
+      await tx.auditoria.create({
+        data: {
+          id_usuario,
+          accion: 'asignar_rol',
+          tabla_afectada: 'usuario_rol',
+          registro_id: id_usuario,
+          valor_nuevo: { id_rol, nombre_rol: rol?.nombre } as any,
+        },
+      });
+      await this.sessions.invalidateUsers([id_usuario], tx);
+      return assigned;
     });
 
     return serializeBigInts(relation);
@@ -184,25 +191,26 @@ export class UsuariosService {
   async removeRole(id_usuario: string, id_rol: number) {
     const rol = await this.prisma.roles.findUnique({ where: { id_rol } });
 
-    await this.prisma.usuario_rol.delete({
-      where: { id_usuario_id_rol: { id_usuario, id_rol } },
-    });
-
-    if (rol?.nombre === 'productor') {
-      await this.prisma.productores.updateMany({
-        where: { id_usuario, eliminado_en: null },
-        data: { estado: 'inactivo' },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.usuario_rol.delete({
+        where: { id_usuario_id_rol: { id_usuario, id_rol } },
       });
-    }
-
-    await this.prisma.auditoria.create({
-      data: {
-        id_usuario,
-        accion: 'quitar_rol',
-        tabla_afectada: 'usuario_rol',
-        registro_id: id_usuario,
-        valor_anterior: { id_rol, nombre_rol: rol?.nombre } as any,
-      },
+      if (rol?.nombre === 'productor') {
+        await tx.productores.updateMany({
+          where: { id_usuario, eliminado_en: null },
+          data: { estado: 'inactivo' },
+        });
+      }
+      await tx.auditoria.create({
+        data: {
+          id_usuario,
+          accion: 'quitar_rol',
+          tabla_afectada: 'usuario_rol',
+          registro_id: id_usuario,
+          valor_anterior: { id_rol, nombre_rol: rol?.nombre } as any,
+        },
+      });
+      await this.sessions.invalidateUsers([id_usuario], tx);
     });
 
     return { message: 'Rol removido del usuario' };

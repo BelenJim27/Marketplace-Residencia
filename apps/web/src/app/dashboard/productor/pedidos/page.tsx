@@ -8,6 +8,7 @@ import { useLocale } from "@/context/LocaleContext";
 import { api } from "@/lib/api";
 import { formatMXN } from "@/lib/format-number";
 import { getCookie } from "@/lib/cookies";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 // ─── Instrucciones de empaque por paquetería ─────────────────────────────────
 
@@ -802,6 +803,14 @@ function DetalleModal({
 }
 
 export default function PedidosProductor() {
+  return (
+    <PermissionGate requiredPermissions={["ver_pedidos", "editar_pedido"]}>
+      <PedidosProductorContent />
+    </PermissionGate>
+  );
+}
+
+function PedidosProductorContent() {
   const { user, isProductor } = useAuth();
   const [pedidos, setPedidos] = useState<PedidoProductor[]>([]);
   const [loading, setLoading] = useState(true);

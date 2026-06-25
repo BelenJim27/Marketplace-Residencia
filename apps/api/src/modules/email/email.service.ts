@@ -919,137 +919,6 @@ export class EmailService {
     });
   }
 
-  async sendFacturaSolicitudEmail(
-    email: string,
-    datos: {
-      pedidoId: string;
-      rfc: string;
-      nombreRazonSocial: string;
-      usoCfdi: string;
-      regimenFiscal: string;
-      total: number;
-      moneda: string;
-    },
-  ): Promise<void> {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const year = new Date().getFullYear();
-
-    const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Solicitud de Factura #${datos.pedidoId}</title>
-</head>
-<body style="margin:0; padding:0; background-color:#f0ece0; font-family:Arial, Helvetica, sans-serif;">
-
-<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0ece0">
-  <tr><td align="center" style="padding:20px 10px;">
-    <table width="620" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff; border:1px solid #c8bfa8; max-width:620px;">
-
-      <!-- Barra superior -->
-      <tr>
-        <td height="5" style="background:linear-gradient(90deg,#2E4A33,#C97A3E,#C89B4A,#C97A3E,#2E4A33); font-size:1px; line-height:1px;">&nbsp;</td>
-      </tr>
-
-      <!-- Encabezado -->
-      <tr>
-        <td style="padding:24px 28px 16px; border-bottom:1px solid #c8bfa8;">
-          <p style="margin:0 0 4px; font-size:11px; font-weight:bold; color:#C97A3E; text-transform:uppercase; letter-spacing:1px;">Marketplace de Mezcal</p>
-          <h1 style="margin:0; font-size:22px; font-weight:bold; color:#2E4A33;">Solicitud de Factura Recibida</h1>
-          <p style="margin:6px 0 0; font-size:13px; color:#666;">Pedido <strong style="color:#2E4A33;">#${datos.pedidoId}</strong></p>
-        </td>
-      </tr>
-
-      <!-- Cuerpo -->
-      <tr>
-        <td style="padding:24px 28px;">
-          <p style="margin:0 0 20px; font-size:14px; color:#333; line-height:1.6;">
-            Hemos recibido tu solicitud de factura CFDI. A continuación encontrarás los datos con los que se generará:
-          </p>
-
-          <!-- Tabla de datos fiscales -->
-          <table width="100%" cellpadding="0" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c8bfa8; font-size:13px;">
-            <tr bgcolor="#f7f3ec">
-              <td colspan="2" style="padding:8px 12px; font-weight:bold; color:#2E4A33; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; border:1px solid #c8bfa8;">
-                Datos Fiscales del Receptor
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#777; width:40%;">RFC</td>
-              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#1a1a1a; font-weight:600; font-family:monospace; letter-spacing:0.08em;">${datos.rfc}</td>
-            </tr>
-            <tr bgcolor="#fafaf8">
-              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#777;">Nombre / Razón Social</td>
-              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#1a1a1a; font-weight:600;">${datos.nombreRazonSocial}</td>
-            </tr>
-            <tr>
-              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#777;">Uso CFDI</td>
-              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#1a1a1a;">${datos.usoCfdi}</td>
-            </tr>
-            ${datos.regimenFiscal ? `<tr bgcolor="#fafaf8">
-              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#777;">Régimen Fiscal</td>
-              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#1a1a1a;">${datos.regimenFiscal}</td>
-            </tr>` : ''}
-            <tr>
-              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#777;">Total del Pedido</td>
-              <td style="padding:9px 12px; border:1px solid #e0d9c8; color:#C97A3E; font-weight:700; font-size:14px;">$${datos.total.toFixed(2)} ${datos.moneda}</td>
-            </tr>
-          </table>
-
-          <!-- Aviso de tiempo -->
-          <div style="margin:20px 0 0; padding:14px 16px; background:#f7f3ec; border-left:4px solid #C97A3E; border-radius:0 6px 6px 0;">
-            <p style="margin:0; font-size:13px; color:#2E4A33; line-height:1.6;">
-              <strong>⏱ Tiempo de procesamiento:</strong> Tu CFDI será generado y enviado a este correo en un plazo de <strong>24 a 48 horas hábiles</strong>.
-            </p>
-          </div>
-
-          <p style="margin:20px 0 0; font-size:13px; color:#888; line-height:1.6;">
-            Si los datos no son correctos o necesitas hacer algún cambio, contáctanos lo antes posible respondiendo a este correo.
-          </p>
-        </td>
-      </tr>
-
-      <!-- Botón -->
-      <tr>
-        <td style="padding:0 28px 24px; text-align:center;">
-          <a href="${frontendUrl}/tienda/compras"
-             style="display:inline-block; background:#2E4A33; color:#ffffff; text-decoration:none; padding:11px 28px; border-radius:6px; font-size:13px; font-weight:bold; letter-spacing:0.3px;">
-            Ver mis compras
-          </a>
-        </td>
-      </tr>
-
-      <!-- Pie -->
-      <tr>
-        <td bgcolor="#2E4A33" style="padding:10px 16px;">
-          <p style="margin:0; font-size:11px; color:#a8c4a2; text-align:center;">
-            MARKETPLACE DE MEZCAL · OAXACA, MÉXICO
-          </p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:8px 16px 12px; border-top:1px solid #c8bfa8;">
-          <p style="margin:0; font-size:10px; color:#aaa; text-align:center;">
-            © ${year} Marketplace de Mezcal · Solicitud de factura para el pedido #${datos.pedidoId}
-          </p>
-        </td>
-      </tr>
-
-    </table>
-  </td></tr>
-</table>
-
-</body>
-</html>`;
-
-    await this.sendEmail({
-      to: email,
-      subject: `Solicitud de factura recibida — Pedido #${datos.pedidoId}`,
-      html,
-    });
-  }
-
   async sendFacturaEmail(
     email: string,
     datos: {
@@ -1088,7 +957,7 @@ export class EmailService {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Factura ${datos.folio}</title>
+  <title>Documento preliminar ${datos.folio}</title>
 </head>
 <body style="margin:0;padding:0;background:#f0ece0;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0ece0">
@@ -1103,7 +972,7 @@ export class EmailService {
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td>
           <p style="margin:0 0 2px;font-size:11px;font-weight:bold;color:#C97A3E;text-transform:uppercase;letter-spacing:1px;">Marketplace de Mezcal</p>
-          <h1 style="margin:0;font-size:22px;font-weight:bold;color:#2E4A33;">Factura</h1>
+          <h1 style="margin:0;font-size:22px;font-weight:bold;color:#2E4A33;">Documento preliminar</h1>
         </td>
         <td align="right">
           <p style="margin:0;font-size:13px;color:#555;">Folio: <strong style="font-family:monospace;color:#2E4A33;">${datos.folio}</strong></p>
@@ -1121,8 +990,7 @@ export class EmailService {
           <td width="48%" valign="top" style="padding-right:8px;">
             <p style="margin:0 0 6px;font-size:10px;font-weight:bold;color:#C97A3E;text-transform:uppercase;letter-spacing:0.5px;">Emisor</p>
             <p style="margin:0;font-size:12px;font-weight:bold;color:#1a1a1a;">Marketplace de Mezcal</p>
-            <p style="margin:2px 0;font-size:11px;color:#666;">RFC: MAR010101AAA</p>
-            <p style="margin:2px 0;font-size:11px;color:#666;">Régimen: 601 - General de Ley</p>
+            <p style="margin:2px 0;font-size:11px;color:#666;">Datos fiscales pendientes de timbrado PAC</p>
             <p style="margin:2px 0;font-size:11px;color:#666;">Oaxaca, México</p>
           </td>
           <!-- Receptor -->
@@ -1176,6 +1044,13 @@ export class EmailService {
       </table>
     </td></tr>
 
+    <tr><td style="padding:16px 28px 0;">
+      <div style="padding:12px 14px;border:1px solid #e7b76b;background:#fff7e8;color:#6b4a1f;font-size:12px;line-height:1.5;">
+        <strong>Documento preliminar sin validez fiscal.</strong><br>
+        No contiene timbrado, UUID ni certificados del SAT. La emisión de CFDI requerirá una integración posterior con un PAC.
+      </div>
+    </td></tr>
+
 
     <!-- Botón -->
     <tr><td style="padding:20px 28px;text-align:center;">
@@ -1204,13 +1079,13 @@ export class EmailService {
       const iva = datos.iva ?? Math.round(datos.subtotal * 0.16 * 100) / 100;
       pdfBuffer = await this.facturaPdfService.generate({
         serie: 'F',
-        folio: datos.folio,
+        folio: datos.folio.replace(/^F-/, ''),
         fecha: datos.fecha,
         pedidoId: datos.pedidoId,
         emisor: {
           nombre: 'Marketplace de Mezcal',
-          rfc: 'MAR010101AAA',
-          regimen: '601 - General de Ley Personas Morales',
+          rfc: '',
+          regimen: 'Pendiente de timbrado',
           direccion: 'Oaxaca de Juárez, Oaxaca, México',
           cp: '68000',
           lugarExpedicion: '68000',
@@ -1220,7 +1095,7 @@ export class EmailService {
           rfc: datos.rfc,
           regimen: datos.regimenFiscal || '616 - Sin obligaciones fiscales',
           usoCfdi: datos.usoCfdi,
-          domicilioFiscal: datos.domicilioFiscal ?? '68000',
+          domicilioFiscal: datos.domicilioFiscal,
         },
         conceptos: datos.conceptos.map(c => ({
           descripcion: c.descripcion,
@@ -1245,7 +1120,7 @@ export class EmailService {
 
     await this.sendEmail({
       to: email,
-      subject: `Factura ${datos.folio} — Pedido #${datos.pedidoId} · Marketplace de Mezcal`,
+      subject: `Documento preliminar ${datos.folio} — Pedido #${datos.pedidoId} · Marketplace de Mezcal`,
       html,
       attachments: pdfBuffer
         ? [{ filename: `factura-${datos.folio}.pdf`, content: pdfBuffer, type: 'application/pdf' }]

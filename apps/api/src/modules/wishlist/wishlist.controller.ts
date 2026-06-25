@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { WishlistService } from './wishlist.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
+import { PERMISOS } from '../../common/permisos-catalog';
 
 @Controller('wishlist')
 export class WishlistController {
@@ -26,7 +27,7 @@ export class WishlistController {
     @Param('id_usuario', ParseUUIDPipe) id_usuario: string,
     @Req() req: any,
   ) {
-    const isAdmin = req.user.roles?.some((r: string) => r.toLowerCase() === 'admin');
+    const isAdmin = req.user.permisos?.includes(PERMISOS.GESTIONAR_USUARIOS);
     if (req.user.id_usuario !== id_usuario && !isAdmin) {
       throw new ForbiddenException('No tienes permiso para acceder a esta wishlist');
     }
@@ -44,7 +45,7 @@ export class WishlistController {
     @Body() dto: { id_usuario: string; id_producto: string },
     @Req() req: any,
   ) {
-    const isAdmin = req.user.roles?.some((r: string) => r.toLowerCase() === 'admin');
+    const isAdmin = req.user.permisos?.includes(PERMISOS.GESTIONAR_USUARIOS);
     if (req.user.id_usuario !== dto.id_usuario && !isAdmin) {
       throw new ForbiddenException('No tienes permiso para modificar esta wishlist');
     }
@@ -63,7 +64,7 @@ export class WishlistController {
     @Param('id_producto') id_producto: string,
     @Req() req: any,
   ) {
-    const isAdmin = req.user.roles?.some((r: string) => r.toLowerCase() === 'admin');
+    const isAdmin = req.user.permisos?.includes(PERMISOS.GESTIONAR_USUARIOS);
     if (req.user.id_usuario !== id_usuario && !isAdmin) {
       throw new ForbiddenException('No tienes permiso para modificar esta wishlist');
     }
@@ -77,9 +78,13 @@ export class WishlistController {
 
   @UseGuards(AuthGuard)
   @Delete('item/:id')
-  async removeById(@Param('id') id: string) {
+  async removeById(@Param('id') id: string, @Req() req: any) {
     try {
-      return await this.service.removeById(id);
+      return await this.service.removeById(
+        id,
+        req.user.id_usuario,
+        req.user.permisos?.includes(PERMISOS.GESTIONAR_USUARIOS),
+      );
     } catch (error: any) {
       this.logger.error(`Error en DELETE /wishlist/item/${id}: ${(error as Error)?.message}`);
       return { error: error.message };
@@ -93,7 +98,7 @@ export class WishlistController {
     @Param('id_producto') id_producto: string,
     @Req() req: any,
   ) {
-    const isAdmin = req.user.roles?.some((r: string) => r.toLowerCase() === 'admin');
+    const isAdmin = req.user.permisos?.includes(PERMISOS.GESTIONAR_USUARIOS);
     if (req.user.id_usuario !== id_usuario && !isAdmin) {
       throw new ForbiddenException('No tienes permiso para acceder a esta wishlist');
     }

@@ -51,6 +51,15 @@ interface PedidoProductor {
   productores?: { nombre_marca?: string | null; razon_social?: string | null };
 }
 
+interface Factura {
+  id_factura: number;
+  estado: "preliminar" | "timbrada" | "error";
+  creado_en: string;
+  total?: string;
+  moneda?: string;
+  uuid_fiscal?: string | null;
+}
+
 interface Pedido {
   id?: number;
   id_pedido?: number;
@@ -270,9 +279,11 @@ function DetallePedidoContent() {
   const [facturaEnviando, setFacturaEnviando] = useState(false);
   const [facturaEstado, setFacturaEstado] = useState<"idle" | "ok" | "error">("idle");
   const [facturaError, setFacturaError] = useState("");
-  const [toastFactura, setToastFactura] = useState(false);
+  const [factura, setFactura] = useState<Factura | null>(null);
+  const [facturaCargando, setFacturaCargando] = useState(true);
+  const [facturaDescargando, setFacturaDescargando] = useState(false);
 
-  const handleSolicitarFactura = async () => {
+  const handleGenerarFactura = async () => {
     const token = authToken || getCookie("token");
     const pedidoId = String(params.id);
     if (!pedidoId) {
@@ -292,30 +303,68 @@ function DetallePedidoContent() {
         ? facturaNombre
         : [facturaNombre, facturaApPaterno, facturaApMaterno].filter(Boolean).join(" ");
       const payload: Record<string, string> = {
-        estado: "pendiente",
         rfc_receptor: facturaRfc,
         nombre_razon_social: razonSocial,
         uso_cfdi: facturaUsoCfdi,
         regimen_fiscal: facturaRegimen,
         email_factura: facturaEmail,
-        tipo_persona: facturaPersona,
         codigo_postal: facturaCp,
       };
-      await api.pedidos.addFactura(token ?? "", pedidoId, payload);
+      const creada = await api.pedidos.addFactura(token ?? "", pedidoId, payload) as Factura;
+      setFactura(creada);
       setFacturaEstado("ok");
-      // Cerrar modal y mostrar toast de éxito
-      setTimeout(() => {
-        setMostrarFactura(false);
-        setToastFactura(true);
-        setTimeout(() => setToastFactura(false), 5000);
-      }, 800);
+      setMostrarFactura(false);
     } catch (e: any) {
+      if (e?.status === 409 && token) {
+        const existente = await api.pedidos.getFactura(token, pedidoId) as Factura;
+        setFactura(existente);
+        setMostrarFactura(false);
+        return;
+      }
       setFacturaEstado("error");
       setFacturaError(e?.message ?? "No se pudo registrar. Inténtalo de nuevo.");
     } finally {
       setFacturaEnviando(false);
     }
   };
+
+  const handleDescargarFactura = async () => {
+    const token = authToken || getCookie("token");
+    const pedidoId = String(params.id);
+    if (!token || !pedidoId) return;
+    setFacturaDescargando(true);
+    setFacturaError("");
+    try {
+      const blob = await api.pedidos.downloadFactura(token, pedidoId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `factura-pedido-${pedidoId}.pdf`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setFacturaError(e?.message ?? "No se pudo descargar la factura.");
+    } finally {
+      setFacturaDescargando(false);
+    }
+  };
+
+  useEffect(() => {
+    const pedidoId = params.id as string;
+    const token = authToken || getCookie("token");
+    if (!pedidoId || !token) {
+      setFacturaCargando(false);
+      return;
+    }
+    let activo = true;
+    api.pedidos.getFactura(token, pedidoId)
+      .then((data) => { if (activo) setFactura(data as Factura); })
+      .catch((e: any) => {
+        if (activo && e?.status !== 404) setFacturaError(e?.message ?? "No se pudo consultar la factura.");
+      })
+      .finally(() => { if (activo) setFacturaCargando(false); });
+    return () => { activo = false; };
+  }, [params.id, authToken]);
 
   // Carga inicial + actualización en tiempo real del estado del pedido.
   // Polling cada 15s mientras la pestaña esté visible; se detiene al llegar a un
@@ -622,7 +671,7 @@ function DetallePedidoContent() {
               {t("Cancelar")}
             </button>
             <button
-              onClick={handleSolicitarFactura}
+              onClick={handleGenerarFactura}
               disabled={facturaEnviando}
               style={{
                 flex: 1, borderRadius: "8px",
@@ -674,6 +723,7 @@ function DetallePedidoContent() {
   const estado = pedido.estado || "pendiente";
   const estadoIndex = ESTADO_INDEX[estado] ?? 0;
   const badge = ESTADO_BADGE[estado] ?? ESTADO_BADGE.pendiente;
+  const puedeFacturar = ["pagado", "label_purchased", "enviado", "entregado"].includes(estado);
   // El timeline también refleja lo que marca el productor: en multiproductor avanza al paso
   // del productor MENOS adelantado (conservador para "Enviado/Entregado", pero deja encender
   // "Preparando" en cuanto el/los productor(es) lo marcan).
@@ -1349,17 +1399,39 @@ function DetallePedidoContent() {
           <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.6px", textTransform: "uppercase", color: C.copper, margin: "0 0 16px 0" }}>
             {t("Facturación")}
           </p>
-          {facturaEstado === "ok" ? (
-            <div style={{
-              display: "flex", alignItems: "center", gap: "8px",
-              fontSize: "13px", color: C.green, fontWeight: "500",
-              borderRadius: "8px", background: "rgba(61,107,63,0.06)",
-              border: "1px solid rgba(61,107,63,0.2)", padding: "12px 14px",
-            }}>
-              <CheckCircle size={15} />
-              {t("Solicitud enviada. Revisa tu correo")}{facturaEmail && <strong> {facturaEmail}</strong>} {t("(también en spam).")}
+          {facturaCargando ? (
+            <div style={{ fontSize: "13px", color: C.muted }}>{t("Consultando factura…")}</div>
+          ) : factura ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: "8px",
+                fontSize: "13px", color: C.green, fontWeight: "600",
+                borderRadius: "8px", background: "rgba(61,107,63,0.06)",
+                border: "1px solid rgba(61,107,63,0.2)", padding: "12px 14px",
+              }}>
+                <CheckCircle size={15} />
+                <span>{t("Factura existente")} · F-{String(id).padStart(6, "0")}</span>
+              </div>
+              {factura.estado === "preliminar" && (
+                <p style={{ margin: 0, fontSize: "12px", lineHeight: 1.5, color: C.copper }}>
+                  {t("Documento preliminar sin timbrado ni validez fiscal.")}
+                </p>
+              )}
+              <button
+                onClick={handleDescargarFactura}
+                disabled={facturaDescargando}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                  gap: "8px", borderRadius: "8px", background: C.green, border: "none",
+                  color: C.white, padding: "11px 16px", fontSize: "13px", fontWeight: "600",
+                  cursor: facturaDescargando ? "not-allowed" : "pointer", opacity: facturaDescargando ? 0.7 : 1,
+                }}
+              >
+                {facturaDescargando ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
+                {t(facturaDescargando ? "Descargando…" : "Descargar factura")}
+              </button>
             </div>
-          ) : (
+          ) : puedeFacturar ? (
             <button
               onClick={() => setMostrarFactura(true)}
               style={{
@@ -1373,8 +1445,15 @@ function DetallePedidoContent() {
               onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
             >
               <FileText size={15} />
-              {t("Solicitar factura (CFDI)")}
+              {t("Generar factura")}
             </button>
+          ) : (
+            <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.5, color: C.muted }}>
+              {t("La factura estará disponible cuando el pago haya sido confirmado.")}
+            </p>
+          )}
+          {facturaError && !mostrarFactura && (
+            <p role="alert" style={{ margin: "10px 0 0", fontSize: "12px", color: "#DC2626" }}>{t(facturaError)}</p>
           )}
         </div>
       </div>
@@ -1579,65 +1658,12 @@ function DetallePedidoContent() {
             );
           })()}
 
-          {/* Factura CFDI */}
-          <Card accentColor={C.copper}>
-            <SectionTitle>Facturación</SectionTitle>
-            {facturaEstado === "ok" ? (
-              <div style={{
-                display: "flex", alignItems: "center", gap: "8px",
-                fontSize: "13px", color: C.green, fontWeight: "500",
-                borderRadius: "8px", background: "rgba(61,107,63,0.06)",
-                border: "1px solid rgba(61,107,63,0.2)", padding: "12px 14px",
-              }}>
-                <CheckCircle size={15} />
-                Solicitud enviada. Revisa tu correo{facturaEmail && <strong> {facturaEmail}</strong>} (también en spam).
-              </div>
-            ) : (
-              <button
-                onClick={() => setMostrarFactura(true)}
-                style={{
-                  width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                  gap: "8px", borderRadius: "8px", background: "transparent",
-                  border: `1px solid ${C.border}`, color: C.green,
-                  padding: "11px 16px", fontSize: "13px", fontWeight: "600", cursor: "pointer",
-                  transition: "background 160ms ease",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(61,107,63,0.05)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-              >
-                <FileText size={15} />
-                Solicitar factura (CFDI)
-              </button>
-            )}
-          </Card>
         </div>
       </div>
     </main>
     </div>
     {ModalFactura}
 
-    {/* Toast de factura enviada */}
-    {toastFactura && (
-      <div style={{
-        position: "fixed", bottom: "24px", left: "50%", transform: "translateX(-50%)",
-        zIndex: 200, background: C.green, color: C.white,
-        borderRadius: "12px", padding: "14px 22px",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-        display: "flex", alignItems: "center", gap: "10px",
-        fontSize: "14px", fontWeight: "600",
-        animation: "fadeUp .3s ease",
-        whiteSpace: "nowrap",
-      }}>
-        <CheckCircle size={18} />
-        {t("¡Factura enviada! Revisa tu correo")}{facturaEmail ? ` (${facturaEmail})` : ""}.
-        <button
-          onClick={() => setToastFactura(false)}
-          style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "6px", cursor: "pointer", padding: "2px 8px", color: C.white, marginLeft: "6px", fontSize: "13px" }}
-        >
-          ✕
-        </button>
-      </div>
-    )}
     </>
   );
 }

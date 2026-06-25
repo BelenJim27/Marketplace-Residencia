@@ -7,13 +7,15 @@
     "dev:webpack": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.83",
     "@ai-sdk/react": "^3.0.210",
     "@cloudflare/next-on-pages": "^1.13.16",
     "@google/generative-ai": "^0.24.1",
+    "@marketplace/authorization": "*",
     "@paypal/react-paypal-js": "^9.2.0",
     "@sentry/nextjs": "^10.58.0",
     "@stripe/react-stripe-js": "^6.3.0",
@@ -50,6 +52,7 @@
   },
   "devDependencies": {
     "@netlify/plugin-nextjs": "^5.15.9",
+    "@playwright/test": "^1.61.1",
     "@rushstack/eslint-patch": "^1.16.1",
     "@types/node": "^20.19.39",
     "@types/react": "^19.0.8",

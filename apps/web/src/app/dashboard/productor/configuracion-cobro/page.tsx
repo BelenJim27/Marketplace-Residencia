@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useSession } from "next-auth/react";
 import { getCookie } from "@/lib/cookies";
 import { api } from "@/lib/api";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import {
   AlertCircle,
   CheckCircle2,
@@ -16,6 +17,14 @@ import {
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
 export default function ConfiguracionCobroPage() {
+  return (
+    <PermissionGate requiredPermissions={["gestionar_cobros"]}>
+      <ConfiguracionCobroPageContent />
+    </PermissionGate>
+  );
+}
+
+function ConfiguracionCobroPageContent() {
   const router = useRouter();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { data: session } = useSession();

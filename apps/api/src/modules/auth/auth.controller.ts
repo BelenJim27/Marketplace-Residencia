@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpCode, Post, Req, Res, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import {
@@ -10,6 +10,7 @@ import {
   ResetPasswordDto,
 } from './dto/auth.dto';
 import { AuthService } from './auth.service';
+import { AuthGuard } from './guards/auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -53,13 +54,25 @@ export class AuthController {
   }
 
   @Get('me')
-  me(@Headers('authorization') authorization?: string) {
-    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
-    if (!token) {
-      throw new UnauthorizedException('Token requerido');
-    }
-
-    return this.authService.getMe(token);
+  @UseGuards(AuthGuard)
+  me(@Req() req: Request) {
+    const user = (req as any).user;
+    const profile = (req as any).authProfile;
+    return {
+      id_usuario: user.id_usuario,
+      email: user.email,
+      nombre: profile.nombre,
+      apellido_paterno: profile.apellido_paterno,
+      apellido_materno: profile.apellido_materno,
+      telefono: profile.telefono,
+      biografia: null,
+      foto_url: profile.foto_url,
+      idioma_preferido: profile.idioma_preferido,
+      moneda_preferida: profile.moneda_preferida,
+      roles: user.roles,
+      permisos: user.permisos,
+      id_productor: user.id_productor,
+    };
   }
 
   @Post('refresh')

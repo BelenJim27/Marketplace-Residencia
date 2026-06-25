@@ -107,7 +107,7 @@ export function HeroMezcal() {
   useEffect(() => {
     api.productos.getAll({})
       .then((data: unknown) =>
-        setProductos((data as ProductoHero[]).slice(0, 4))
+        setProductos(data as ProductoHero[])
       )
       .catch((err) => console.error('Error al cargar productos hero:', err))
       .finally(() => setLoadingProductos(false));
@@ -417,7 +417,7 @@ export function HeroMezcal() {
             className="text-xs font-bold uppercase tracking-widest text-center"
             style={{ color: activeColors.accentGreen }}
           >
-            {t("catalog_most_sold")}
+            {t("catalog_all_products")}
           </p>
 
           {/* Loading skeleton */}
@@ -550,7 +550,7 @@ export function HeroMezcal() {
               >
                 <ChevronLeft size={18} />
               </button>
-              {productos.map((_, i) => (
+              {productos.length <= 8 && productos.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setActiveIndex(i)}

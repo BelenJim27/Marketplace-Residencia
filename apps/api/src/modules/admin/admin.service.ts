@@ -4,6 +4,7 @@ import { serializeBigInts } from '../../common/utilities/serialize';
 import { RevisarSolicitudDto } from '../productores/dto/productores.dto';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { EmailService } from '../email/email.service';
+import { SessionInvalidationService } from '../auth/session-invalidation.service';
 
 @Injectable()
 export class AdminService {
@@ -13,6 +14,7 @@ export class AdminService {
     private prisma: PrismaService,
     private notificaciones: NotificacionesService,
     private emailService: EmailService,
+    private sessions: SessionInvalidationService,
   ) {}
 
   async getStats() {
@@ -302,6 +304,7 @@ export class AdminService {
         motivo_rechazo: dto.motivo_rechazo ?? null,
       },
     });
+    await this.sessions.invalidateUsers([usuario.id_usuario]);
 
     const titulo = dto.estado === 'aprobado' ? 'Solicitud aprobada' : 'Solicitud rechazada';
     const cuerpo = dto.estado === 'aprobado'

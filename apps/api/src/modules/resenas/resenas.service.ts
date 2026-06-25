@@ -239,7 +239,22 @@ export class ResenasService {
    * PATCH /resenas/:id/responder
    * El vendedor responde una reseña
    */
-  async responder(id: string, dto: ResponderResenaDto) {
+  async responder(
+    id: string,
+    dto: ResponderResenaDto,
+    actor: { id_productor: number | null; canManageAll: boolean },
+  ) {
+    const review = await this.prisma.resenas.findUnique({
+      where: { id_resena: toBigIntId(id) },
+      select: {
+        eliminado_en: true,
+        productos: { select: { tiendas: { select: { id_productor: true } } } },
+      },
+    });
+    if (!review || review.eliminado_en) throw new NotFoundException('Reseña no encontrada');
+    if (!actor.canManageAll && review.productos.tiendas?.id_productor !== actor.id_productor) {
+      throw new ForbiddenException('Solo puedes responder reseñas de tus propios productos');
+    }
     return serializeBigInts(
       await this.prisma.resenas.update({
         where: { id_resena: toBigIntId(id) },

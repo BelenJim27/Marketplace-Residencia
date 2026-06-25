@@ -9,11 +9,15 @@ import {
   useMemo,
   ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
 import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
 import { api } from "@/lib/api";
 import { getCookie, setCookie, removeCookie } from "@/lib/cookies";
 import { getUserIdFromToken } from "@/lib/jwt";
+import {
+  ADMIN_PERMISOS,
+  PRODUCTOR_PERMISOS,
+  hasAnyPermission,
+} from "@/lib/permisos-catalog";
 
 interface Usuario {
   id_usuario?: string;
@@ -47,18 +51,27 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const [user, setUser] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
-  const [productorResolved, setProductorResolved] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
 
   const refreshAuth = useCallback(() => {
     if (sessionStatus === "loading") return;
 
-    if (session?.user) {
-      console.log("📋 Usando sesión de NextAuth", session.user.email);
+    if ((session as any)?.authError === "SESSION_INVALIDATED") {
+      removeCookie("token");
+      removeCookie("refresh_token");
+      removeCookie("session");
+      removeCookie("usuario");
+      setUser(null);
+      setLoading(false);
+      void nextAuthSignOut({
+        callbackUrl: "/auth/sign-in?error=session_invalidated",
+      });
+      return;
+    }
 
+    if (session?.user) {
       const accessToken = (session as any)?.accessToken;
       if (accessToken) setCookie("token", accessToken, 7);
 
@@ -154,10 +167,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session, sessionStatus]);
 
   useEffect(() => {
-    setProductorResolved(false);
-  }, [session]);
-
-  useEffect(() => {
     refreshAuth();
   }, [refreshAuth, session]);
 
@@ -239,121 +248,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [loading, user, session]);
 
-  // Productor resolution in background — does NOT block layout rendering
-  useEffect(() => {
-    if (!user?.id_usuario) return;
-
-    const hasProductorRole = user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r)) ?? false;
-
-    // Skip only when id_productor AND productor role are both confirmed
-    if (user.id_productor != null && user.id_productor !== 0 && hasProductorRole) return;
-    // Skip if already fully resolved AND has the role
-    if (productorResolved && hasProductorRole) return;
-
-    const isAdminRole = user?.roles?.some((r) => ["ADMIN", "administrador", "admin"].includes(r));
-    if (isAdminRole) {
-      setProductorResolved(true);
-      return;
-    }
-
-    let cancelled = false;
-
-    const resolveProductor = async () => {
-      try {
-        const response = await fetch(`/productores/by-usuario/${user.id_usuario}`);
-        if (!response.ok) return;
-
-        const text = await response.text();
-        if (!text || cancelled) return;
-
-        const prod = JSON.parse(text) as
-          | { id_productor?: number; estado?: string }
-          | Array<{ id_productor?: number; estado?: string }>;
-
-        if (!prod || (typeof prod === "object" && !Array.isArray(prod) && !prod.id_productor)) return;
-
-        const idProductor = Array.isArray(prod) ? prod[0]?.id_productor : prod.id_productor;
-        const estadoProductor = Array.isArray(prod) ? prod[0]?.estado : prod.estado;
-
-        if (idProductor == null) return;
-
-        if (estadoProductor === "inactivo") {
-          if (cancelled) return;
-          const nextUser: Usuario = {
-            ...user,
-            id_productor: undefined,
-            roles: user.roles.filter((r) => !["PRODUCTOR", "productor"].includes(r)),
-          };
-          setCookie("usuario", JSON.stringify(nextUser), 7);
-          setUser(nextUser);
-          setProductorResolved(true);
-          return;
-        }
-
-        const rolesActualizados = user.roles?.some((r) =>
-          ["PRODUCTOR", "productor"].includes(r),
-        );
-
-        if (estadoProductor === "aprobado" && !rolesActualizados) {
-          const refreshToken = getCookie("refresh_token");
-          const hasSession = getCookie("session") === "active";
-          if (refreshToken || hasSession) {
-            try {
-              const refreshRes = await fetch(`/auth/refresh`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                ...(refreshToken ? { body: JSON.stringify({ refresh_token: refreshToken }) } : {}),
-              });
-              if (refreshRes.ok) {
-                const refreshData = await refreshRes.json();
-                // Backend sets HttpOnly cookies; setCookie is silently ignored for HttpOnly sessions
-                if (refreshData.tokens?.access_token) setCookie("token", refreshData.tokens.access_token, 7);
-                if (refreshData.tokens?.refresh_token) setCookie("refresh_token", refreshData.tokens.refresh_token, 30);
-                const nextUser: Usuario = {
-                  ...user,
-                  ...refreshData.user,
-                  id_productor: Number(idProductor),
-                  roles: refreshData.user.roles ?? user.roles,
-                  permisos: refreshData.user.permisos ?? user.permisos,
-                };
-                if (cancelled) return;
-                setCookie("usuario", JSON.stringify(nextUser), 7);
-                setUser(nextUser);
-                setProductorResolved(true);
-                router.push("/dashboard/productor");
-                return;
-              }
-            } catch {
-              // If refresh fails, continue and update only id_productor
-            }
-          }
-        }
-
-        if (cancelled) return;
-
-        const nextUser = { ...user, id_productor: Number(idProductor) };
-        setCookie("usuario", JSON.stringify(nextUser), 7);
-        setUser(nextUser);
-        setProductorResolved(true);
-      } catch (err) {
-        console.error("Error resolving productor:", err);
-      }
-    };
-
-    // Start in background — no setLoading(true) here to avoid blocking layout
-    resolveProductor();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id_usuario, user?.id_productor, productorResolved, router, user]);
-
   // Cuando api.ts no puede refrescar el token, limpia la sesión OAuth también
   useEffect(() => {
     const handleSessionExpired = async () => {
       setUser(null);
-      setProductorResolved(false);
       try {
         // Cerrar sesión de NextAuth (Google OAuth) para que sign-in no redirija automáticamente
         await nextAuthSignOut({ redirect: false });
@@ -380,7 +278,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     setCookie("usuario", JSON.stringify(normalizedUser), 30);
     setUser(normalizedUser);
-    setProductorResolved(normalizedUser.id_productor != null && normalizedUser.id_productor !== 0);
   }, []);
 
   const logout = useCallback(async () => {
@@ -400,26 +297,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     removeCookie("session");
     removeCookie("usuario");
     setUser(null);
-    setProductorResolved(false);
     localStorage.removeItem("carrito_items_guest");
+
+    // Navegar inmediatamente para evitar que AuthGuard inyecte ?redirect=
+    window.location.href = "/auth/sign-in";
+
     try {
       await signOut({ redirect: false });
     } catch {
       // NextAuth may fail if no OAuth session exists; safe to ignore
     }
-
-    window.location.href = "/producto";
   }, []);
 
   const isAdmin = useMemo(
-    () => user?.roles?.some((r) => ["ADMIN", "administrador", "admin"].includes(r)) ?? false,
+    () => hasAnyPermission(user?.permisos, ADMIN_PERMISOS),
     [user],
   );
 
-  // ── isProductor solo depende del rol, NO del id_productor en cookie ──
-  // Esto evita que un ex-productor siga viendo el panel si aún tiene id_productor guardado
+  // El productor debe estar aprobado y contar con al menos un permiso funcional.
   const isProductor = useMemo(
-    () => user?.roles?.some((r) => ["PRODUCTOR", "productor"].includes(r)) ?? false,
+    () => user?.id_productor != null && hasAnyPermission(user?.permisos, PRODUCTOR_PERMISOS),
     [user],
   );
 

@@ -6,6 +6,7 @@ import { Loader2, AlertCircle, CheckCircle2, X, Search, Play, Eye, Undo2, Chevro
 import { api, type Payout, type PayoutDetalle } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
 import { formatMXN, formatPrice } from "@/lib/format-number";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { AlertService } from "@/shared/alerts/alert.service";
 
@@ -40,6 +41,14 @@ type ResumenPendiente = {
 };
 
 export default function PayoutsAdminPage() {
+  return (
+    <PermissionGate requiredPermissions={["gestionar_payouts"]}>
+      <PayoutsAdminPageContent />
+    </PermissionGate>
+  );
+}
+
+function PayoutsAdminPageContent() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice | null>(null);

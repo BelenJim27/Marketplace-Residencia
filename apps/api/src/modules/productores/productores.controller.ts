@@ -4,8 +4,9 @@ import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { ActualizarPerfilProductorDto, AdminUpdateProductorDto, CreateProductorDto, CreateRegionDto, RevisarSolicitudDto, SolicitarProductorDto, UpdateProductorDto, UpdateRegionDto } from './dto/productores.dto';
 import { ProductoresService } from './productores.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { RolesGuard } from '../auth/guards/rbac.guard';
-import { Roles } from '../auth/guards/roles.decorator';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 import { producerPhotoOptions } from '../../common/config/multer.config';
 import {
   deleteUploadedFile,
@@ -31,16 +32,16 @@ export class ProductoresController {
   }
 
   @Post('regiones')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PRODUCTORES)
   createRegion(@Body() dto: CreateRegionDto) { return this.service.createRegion(dto); }
   @Patch('regiones/:id')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PRODUCTORES)
   updateRegion(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRegionDto) { return this.service.updateRegion(id, dto); }
   @Delete('regiones/:id')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PRODUCTORES)
   removeRegion(@Param('id', ParseIntPipe) id: number) { return this.service.removeRegion(id); }
   
   @Post('solicitar')
@@ -77,7 +78,8 @@ export class ProductoresController {
     }
   }
   @Patch('mi-perfil')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.EDITAR_PERFIL_PRODUCTOR)
   async actualizarMiPerfil(@Body() dto: ActualizarPerfilProductorDto, @Req() req: any) {
     try {
       return await this.service.actualizarMiPerfil(dto, req.user.id_usuario);
@@ -88,19 +90,18 @@ export class ProductoresController {
     }
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PRODUCTORES)
   @Post()
-  async create(@Body() dto: CreateProductorDto, @Req() req: any) {
-    if (!req.user.roles?.some((r: string) => r.toLowerCase() === 'administrador')) {
-      throw new HttpException('Solo administradores pueden crear productores directamente', HttpStatus.FORBIDDEN);
-    }
+  async create(@Body() dto: CreateProductorDto) {
     return this.service.create(dto);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.EDITAR_PERFIL_PRODUCTOR, PERMISOS.GESTIONAR_PRODUCTORES)
   @Patch(':id')
   async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductorDto, @Req() req: any) {
-    const isAdmin = req.user.roles?.some((r: string) => r.toLowerCase() === 'administrador');
+    const isAdmin = req.user.permisos?.includes(PERMISOS.GESTIONAR_PRODUCTORES);
     if (!isAdmin) {
       const actualId = req.user.id_productor ??
         ((await this.service.findByUsuario(req.user.id_usuario)) as any)?.id_productor;
@@ -109,7 +110,8 @@ export class ProductoresController {
     return this.service.update(id, dto);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PRODUCTORES)
   @Patch(':id/admin')
   @UseInterceptors(FileInterceptor('foto', producerPhotoOptions))
   async adminUpdate(
@@ -119,9 +121,6 @@ export class ProductoresController {
     @Req() req: any,
   ) {
     try {
-      if (!req.user.roles?.some((r: string) => r.toLowerCase() === 'administrador')) {
-        throw new HttpException('Solo administradores pueden editar productores', HttpStatus.FORBIDDEN);
-      }
       if (file) await validateUploadedFileContent(file);
       return await this.service.adminUpdate(id, dto, file?.filename);
     } catch (error) {
@@ -130,12 +129,10 @@ export class ProductoresController {
     }
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PRODUCTORES)
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    if (!req.user.roles?.some((r: string) => r.toLowerCase() === 'administrador')) {
-      throw new HttpException('Solo administradores pueden eliminar productores', HttpStatus.FORBIDDEN);
-    }
+  async remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);
   }
 }

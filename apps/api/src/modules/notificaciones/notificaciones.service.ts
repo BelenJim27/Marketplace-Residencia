@@ -21,6 +21,14 @@ export class NotificacionesService {
   }
   async findByUser(id_usuario: string) { return serializeBigInts(await this.prisma.notificaciones.findMany({ where: { id_usuario }, include: { usuarios: true } })); }
   async create(dto: CreateNotificacionDto) { return serializeBigInts(await this.prisma.notificaciones.create({ data: { id_usuario: dto.id_usuario, tipo: dto.tipo.trim(), titulo: dto.titulo.trim(), cuerpo: dto.cuerpo ?? null, url_accion: dto.url_accion ?? null, leido: dto.leido ?? false } })); }
+  async findOwnerId(id: string): Promise<string> {
+    const notificacion = await this.prisma.notificaciones.findUnique({
+      where: { id_notificacion: toBigIntId(id) },
+      select: { id_usuario: true },
+    });
+    if (!notificacion) throw new NotFoundException('Notificación no encontrada');
+    return notificacion.id_usuario;
+  }
   async update(id: string, dto: UpdateNotificacionDto) {
     return serializeBigInts(await this.prisma.notificaciones.update({
       where: { id_notificacion: toBigIntId(id) },

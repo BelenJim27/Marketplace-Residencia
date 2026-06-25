@@ -75,7 +75,7 @@ function Avatar({ photo, initials, size = 48 }: { photo: string | null; initials
 /* ─── UserInfo ────────────────────────────────────────────────────────────── */
 export function UserInfo({ whiteText = false }: { whiteText?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { user: contextUser, logout } = useAuth();
+  const { user: contextUser, logout, isAdmin, isProductor } = useAuth();
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -107,8 +107,6 @@ export function UserInfo({ whiteText = false }: { whiteText?: boolean }) {
     [];
 
   const badge = getRoleBadge(roles);
-  const isAdmin     = roles.some((r) => ["administrador", "admin", "ADMIN"].includes(r));
-  const isProductor = roles.some((r) => ["productor", "PRODUCTOR"].includes(r));
 
   const profileHref = "/profile";
 

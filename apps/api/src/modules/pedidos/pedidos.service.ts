@@ -1,10 +1,11 @@
-import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, InternalServerErrorException, Logger, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { Cron } from '@nestjs/schedule';
 import { Moneda, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
 import { ComisionesService } from "../comisiones/comisiones.service";
 import { EmailService } from "../email/email.service";
+import { FacturaPdfData, FacturaPdfService } from "../email/factura-pdf.service";
 import { SkydropxService } from "../envios/skydropx.service";
 import { PaypalService } from "../pagos/paypal.service";
 import { StripeService } from "../pagos/stripe.service";
@@ -15,7 +16,6 @@ import {
   CreateFacturaDto,
   CreatePedidoDto,
   UpdateDetallePedidoDto,
-  UpdateFacturaDto,
   UpdatePedidoDto,
   ValidarEnvioDto,
 } from "./dto/pedidos.dto";
@@ -45,6 +45,7 @@ export class PedidosService {
     private readonly authService: AuthService,
     private readonly comisionesService: ComisionesService,
     private readonly emailService: EmailService,
+    private readonly facturaPdfService: FacturaPdfService,
     private readonly skydropxService: SkydropxService,
     private readonly stripeService: StripeService,
     private readonly paypalService: PaypalService,
@@ -66,7 +67,6 @@ export class PedidosService {
           },
         },
       },
-      facturas: true,
       usuarios: true,
     };
     const [items, total] = await Promise.all([
@@ -100,7 +100,6 @@ export class PedidosService {
             },
           },
         },
-        facturas: true,
         usuarios: true,
         pedido_productor: {
           include: {
@@ -1034,150 +1033,203 @@ export class PedidosService {
 
     return { message: "Detalle eliminado" };
   }
-  async addFactura(id: string, dto: CreateFacturaDto, id_usuario: string, adminFlag: boolean) {
-    if (!adminFlag) {
-      const pedido = await this.prisma.pedidos.findUnique({
-        where: { id_pedido: toBigIntId(id) },
-        select: { id_usuario: true },
-      });
-      if (!pedido) throw new NotFoundException('Pedido no encontrado');
-      if (pedido.id_usuario !== id_usuario) throw new ForbiddenException('No tienes acceso a este pedido');
-    }
-    const factura = await this.prisma.facturas.create({
-      data: {
-        id_pedido: toBigIntId(id),
-        uuid_fiscal: dto.uuid_fiscal ?? null,
-        pdf_url: dto.pdf_url ?? null,
-        xml_url: dto.xml_url ?? null,
-        rfc_emisor: dto.rfc_emisor ?? null,
-        rfc_receptor: dto.rfc_receptor ?? null,
-        uso_cfdi: dto.uso_cfdi ?? null,
-        regimen_fiscal: dto.regimen_fiscal ?? null,
-        subtotal: dto.subtotal ?? null,
-        impuestos_total: dto.impuestos_total ?? null,
-        total: dto.total ?? null,
-        moneda: dto.moneda ?? null,
-        estado: dto.estado?.trim() ?? "pendiente",
-      },
-    });
+  private static readonly ESTADOS_FACTURABLES = ['pagado', 'label_purchased', 'enviado', 'entregado'];
 
-    // Enviar factura por correo
+  private buildFacturaPdfData(pedido: any, factura: any): FacturaPdfData {
+    const conceptos = (pedido.detalle_pedido ?? []).map((detalle: any) => ({
+      descripcion: detalle.productos?.nombre ?? 'Producto',
+      clave: '50202306',
+      unidad: 'H87 · Pieza',
+      cantidad: Number(detalle.cantidad),
+      precioUnitario: Number(detalle.precio_compra),
+      descuento: 0,
+      importe: Number(detalle.cantidad) * Number(detalle.precio_compra),
+      objImpuesto: '02',
+    }));
+
+    return {
+      serie: 'F',
+      folio: String(pedido.id_pedido).padStart(6, '0'),
+      fecha: factura.creado_en,
+      pedidoId: String(pedido.id_pedido),
+      emisor: {
+        nombre: 'Marketplace de Mezcal',
+        rfc: factura.rfc_emisor ?? '',
+        regimen: factura.rfc_emisor ? '601 - General de Ley Personas Morales' : 'Pendiente de timbrado',
+        direccion: 'Oaxaca de Juárez, Oaxaca, México',
+        cp: '68000',
+        lugarExpedicion: '68000',
+      },
+      receptor: {
+        nombre: factura.nombre_razon_social ?? 'Cliente',
+        rfc: factura.rfc_receptor ?? 'XAXX010101000',
+        regimen: factura.regimen_fiscal ?? '616 - Sin obligaciones fiscales',
+        usoCfdi: factura.uso_cfdi ?? 'G03',
+        domicilioFiscal: factura.codigo_postal ?? undefined,
+      },
+      conceptos,
+      subtotal: Number(factura.subtotal),
+      iva: Number(factura.impuestos_total),
+      total: Number(factura.total),
+      moneda: factura.moneda ?? pedido.moneda,
+      formaPago: '03',
+      metodoPago: 'Pago en una sola exhibición',
+    };
+  }
+
+  async addFactura(id: string, dto: CreateFacturaDto, id_usuario: string, adminFlag: boolean) {
+    const id_pedido = toBigIntId(id);
+
     try {
-      const pedido = await this.prisma.pedidos.findUnique({
-        where: { id_pedido: toBigIntId(id) },
-        select: {
-          total: true,
-          moneda: true,
-          fecha_creacion: true,
-          usuarios: { select: { email: true, nombre: true, apellido_paterno: true } },
-          detalle_pedido: {
-            select: {
-              cantidad: true,
-              precio_compra: true,
-              moneda_compra: true,
-              productos: { select: { nombre: true } },
+      const result = await this.prisma.$transaction(async (tx) => {
+        const pedido = await tx.pedidos.findUnique({
+          where: { id_pedido },
+          select: {
+            id_pedido: true,
+            id_usuario: true,
+            estado: true,
+            eliminado_en: true,
+            total: true,
+            tax_amount: true,
+            moneda: true,
+            usuarios: { select: { email: true, nombre: true, apellido_paterno: true } },
+            pagos: { where: { estado: 'completado' }, select: { id_pago: true }, take: 1 },
+            detalle_pedido: {
+              select: {
+                cantidad: true,
+                precio_compra: true,
+                productos: { select: { nombre: true } },
+              },
             },
           },
-        },
+        });
+
+        if (!pedido || pedido.eliminado_en) throw new NotFoundException('Pedido no encontrado');
+        if (!adminFlag && pedido.id_usuario !== id_usuario) {
+          throw new ForbiddenException('No tienes acceso a este pedido');
+        }
+        if (
+          !PedidosService.ESTADOS_FACTURABLES.includes(normalizeEstado(pedido.estado))
+          || pedido.pagos.length === 0
+        ) {
+          throw new BadRequestException('Solo se pueden facturar pedidos con un pago completado y vigente');
+        }
+
+        const existente = await tx.facturas.findFirst({
+          where: { id_pedido, estado: { not: 'cancelada' } },
+          select: { id_factura: true },
+        });
+        if (existente) {
+          throw new ConflictException('El pedido ya tiene una factura activa. Consulta la factura existente.');
+        }
+
+        const nombreCliente = dto.nombre_razon_social?.trim()
+          || [pedido.usuarios.nombre, pedido.usuarios.apellido_paterno].filter(Boolean).join(' ')
+          || 'Cliente';
+        const impuestos = pedido.tax_amount;
+        const subtotal = pedido.total.minus(impuestos);
+        const factura = await tx.facturas.create({
+          data: {
+            id_pedido,
+            rfc_receptor: dto.rfc_receptor?.trim().toUpperCase() ?? null,
+            nombre_razon_social: nombreCliente,
+            email_factura: dto.email_factura?.trim() || pedido.usuarios.email,
+            codigo_postal: dto.codigo_postal ?? null,
+            uso_cfdi: dto.uso_cfdi?.trim() ?? null,
+            regimen_fiscal: dto.regimen_fiscal?.trim() ?? null,
+            subtotal,
+            impuestos_total: impuestos,
+            total: pedido.total,
+            moneda: pedido.moneda,
+            estado: 'preliminar',
+          },
+        });
+
+        return { factura, pedido };
       });
 
-      const emailFactura = dto.email_factura?.trim() || null;
-      const emailDestino = emailFactura ?? pedido?.usuarios?.email;
-
-      const nombreCliente = dto.nombre_razon_social
-        || [pedido?.usuarios?.nombre, pedido?.usuarios?.apellido_paterno].filter(Boolean).join(' ')
-        || 'Cliente';
-
-      const subtotal = (pedido?.detalle_pedido ?? []).reduce(
-        (s: number, d: any) => s + Number(d.cantidad) * Number(d.precio_compra), 0
-      );
-      const total = pedido?.total ? Number(pedido.total) : subtotal;
-      const iva = Math.round((total - subtotal) * 100) / 100 > 0
-        ? Math.round((total - subtotal) * 100) / 100
-        : Math.round(subtotal * 0.16 * 100) / 100;
-
-      const conceptos = (pedido?.detalle_pedido ?? []).map((d: any) => ({
-        descripcion: d.productos?.nombre ?? 'Producto',
-        clave: '50202306',
-        unidad: 'H87 · Pieza',
-        cantidad: Number(d.cantidad),
-        precioUnitario: Number(d.precio_compra),
-        descuento: 0,
-        importe: Number(d.cantidad) * Number(d.precio_compra),
-        objImpuesto: '02',
-      }));
-
-      if (emailDestino) {
-        await this.emailService.sendFacturaEmail(emailDestino, {
-          pedidoId: id,
-          folio: `F-${id.padStart(6, '0')}`,
-          fecha: pedido?.fecha_creacion ?? new Date(),
-          rfc: dto.rfc_receptor ?? 'XAXX010101000',
-          nombreRazonSocial: nombreCliente,
-          usoCfdi: dto.uso_cfdi ?? 'G03',
-          regimenFiscal: dto.regimen_fiscal ?? '616 - Sin obligaciones fiscales',
-          domicilioFiscal: '68000',
-          conceptos,
-          subtotal,
-          iva,
-          total,
-          moneda: pedido?.moneda ?? 'MXN',
-          formaPago: '03',
-          metodoPago: 'Pago en una sola exhibición',
-        });
+      try {
+        const emailDestino = result.factura.email_factura;
+        if (emailDestino) {
+          const pdfData = this.buildFacturaPdfData(result.pedido, result.factura);
+          await this.emailService.sendFacturaEmail(emailDestino, {
+            pedidoId: pdfData.pedidoId,
+            folio: `${pdfData.serie}-${pdfData.folio}`,
+            fecha: pdfData.fecha,
+            rfc: pdfData.receptor.rfc,
+            nombreRazonSocial: pdfData.receptor.nombre,
+            usoCfdi: pdfData.receptor.usoCfdi,
+            regimenFiscal: pdfData.receptor.regimen,
+            domicilioFiscal: pdfData.receptor.domicilioFiscal,
+            conceptos: pdfData.conceptos,
+            subtotal: pdfData.subtotal,
+            iva: pdfData.iva,
+            total: pdfData.total,
+            moneda: pdfData.moneda,
+            formaPago: pdfData.formaPago,
+            metodoPago: pdfData.metodoPago,
+          });
+        }
+      } catch (err: any) {
+        this.logger.error(`[pedidos] Error enviando documento preliminar: ${err?.message ?? err}`);
       }
-    } catch (err: any) {
-      this.logger.error(`[pedidos] Error enviando factura: ${err?.message ?? err}`);
-    }
 
+      return serializeBigInts(result.factura);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('El pedido ya tiene una factura activa. Consulta la factura existente.');
+      }
+      throw error;
+    }
+  }
+
+  async getFactura(id: string, id_usuario: string, adminFlag: boolean) {
+    const pedido = await this.prisma.pedidos.findUnique({
+      where: { id_pedido: toBigIntId(id) },
+      select: {
+        id_usuario: true,
+        facturas: {
+          where: { estado: { not: 'cancelada' } },
+          orderBy: { creado_en: 'desc' },
+          take: 1,
+        },
+      },
+    });
+    if (!pedido) throw new NotFoundException('Pedido no encontrado');
+    if (!adminFlag && pedido.id_usuario !== id_usuario) {
+      throw new ForbiddenException('No tienes acceso a este pedido');
+    }
+    const factura = pedido.facturas[0];
+    if (!factura) throw new NotFoundException('El pedido todavía no tiene una factura activa');
     return serializeBigInts(factura);
   }
-  async updateFactura(id_factura: string, dto: UpdateFacturaDto, id_usuario: string, adminFlag: boolean) {
-    if (!adminFlag) {
-      const existing = await this.prisma.facturas.findUnique({
-        where: { id_factura: toBigIntId(id_factura) },
-        select: { pedidos: { select: { id_usuario: true } } },
-      });
-      if (!existing) throw new NotFoundException('Factura no encontrada');
-      if (!existing.pedidos || existing.pedidos.id_usuario !== id_usuario) {
-        throw new ForbiddenException('No tienes acceso a esta factura');
-      }
-    }
-    return serializeBigInts(
-      await this.prisma.facturas.update({
-        where: { id_factura: toBigIntId(id_factura) },
-        data: {
-          uuid_fiscal: dto.uuid_fiscal,
-          pdf_url: dto.pdf_url,
-          xml_url: dto.xml_url,
-          rfc_emisor: dto.rfc_emisor,
-          rfc_receptor: dto.rfc_receptor,
-          uso_cfdi: dto.uso_cfdi,
-          regimen_fiscal: dto.regimen_fiscal,
-          subtotal: dto.subtotal,
-          impuestos_total: dto.impuestos_total,
-          total: dto.total,
-          moneda: dto.moneda,
-          estado: dto.estado,
+
+  async getFacturaPdf(id: string, id_usuario: string, adminFlag: boolean): Promise<Buffer> {
+    const pedido = await this.prisma.pedidos.findUnique({
+      where: { id_pedido: toBigIntId(id) },
+      include: {
+        usuarios: { select: { email: true, nombre: true, apellido_paterno: true } },
+        detalle_pedido: {
+          select: {
+            cantidad: true,
+            precio_compra: true,
+            productos: { select: { nombre: true } },
+          },
         },
-      }),
-    );
-  }
-  async removeFactura(id_factura: string, id_usuario: string, adminFlag: boolean) {
-    if (!adminFlag) {
-      const existing = await this.prisma.facturas.findUnique({
-        where: { id_factura: toBigIntId(id_factura) },
-        select: { pedidos: { select: { id_usuario: true } } },
-      });
-      if (!existing) throw new NotFoundException('Factura no encontrada');
-      if (!existing.pedidos || existing.pedidos.id_usuario !== id_usuario) {
-        throw new ForbiddenException('No tienes acceso a esta factura');
-      }
-    }
-    await this.prisma.facturas.delete({
-      where: { id_factura: toBigIntId(id_factura) },
+        facturas: {
+          where: { estado: { not: 'cancelada' } },
+          orderBy: { creado_en: 'desc' },
+          take: 1,
+        },
+      },
     });
-    return { message: "Factura eliminada" };
+    if (!pedido) throw new NotFoundException('Pedido no encontrado');
+    if (!adminFlag && pedido.id_usuario !== id_usuario) {
+      throw new ForbiddenException('No tienes acceso a este pedido');
+    }
+    const factura = pedido.facturas[0];
+    if (!factura) throw new NotFoundException('El pedido todavía no tiene una factura activa');
+    return this.facturaPdfService.generate(this.buildFacturaPdfData(pedido, factura));
   }
 
   async testEmail(to: string) {
@@ -1209,7 +1261,11 @@ export class PedidosService {
             },
           },
         },
-        facturas: true,
+        facturas: {
+          where: { estado: { not: 'cancelada' } },
+          orderBy: { creado_en: 'desc' },
+          take: 1,
+        },
         envios: true,
       },
       orderBy: { fecha_creacion: "desc" },

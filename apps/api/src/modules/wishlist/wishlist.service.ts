@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts, toBigIntId } from '../../common/utilities/serialize';
 
@@ -88,7 +88,15 @@ export class WishlistService {
     return { message: 'Producto eliminado de la lista de deseos' };
   }
 
-  async removeById(id: string) {
+  async removeById(id: string, id_usuario: string, canManageAll = false) {
+    const item = await this.prisma.listaDeseosItem.findUnique({
+      where: { id_item: toBigIntId(id) },
+      select: { id_usuario: true },
+    });
+    if (!item) throw new NotFoundException('Producto no encontrado en la lista de deseos');
+    if (!canManageAll && item.id_usuario !== id_usuario) {
+      throw new ForbiddenException('No puedes modificar la wishlist de otro usuario');
+    }
     await this.prisma.listaDeseosItem.delete({
       where: { id_item: toBigIntId(id) },
     });

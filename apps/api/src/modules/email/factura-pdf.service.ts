@@ -17,6 +17,12 @@ export interface FacturaPdfData {
   moneda: string;
   formaPago: string;
   metodoPago: string;
+  documentoFiscal?: {
+    uuid: string;
+    certificadoEmisor: string;
+    certificadoSat: string;
+    cadenaOriginal: string;
+  };
 }
 
 const G = '#2E4A33';
@@ -104,8 +110,10 @@ export class FacturaPdfService {
         .text(data.emisor.nombre, exL, headerY, { width: leftW - 42 });
       doc.fillColor(GRAY).fontSize(7.5).font('Helvetica')
         .text(`${data.emisor.direccion}`, exL, headerY + 16, { width: leftW - 42 })
-        .text(`C.P. ${data.emisor.cp} · Calle Macedonio Alcalá 100`, exL, undefined, { width: leftW - 42 })
-        .text(`RFC: ${data.emisor.rfc}`, exL, undefined, { width: leftW - 42 });
+        .text(`C.P. ${data.emisor.cp}`, exL, undefined, { width: leftW - 42 });
+      if (data.documentoFiscal) {
+        doc.text(`RFC: ${data.emisor.rfc}`, exL, undefined, { width: leftW - 42 });
+      }
       doc.fillColor(C).fontSize(7.5)
         .text(`Régimen Fiscal: ${data.emisor.regimen}`, exL, undefined, { width: leftW - 42 });
       doc.fillColor(GRAY)
@@ -133,24 +141,28 @@ export class FacturaPdfService {
       row('Fecha de Emisión', fechaStr(data.fecha), 20);
       row('Fecha Certificación', fechaStr(data.fecha), 30);
 
-      const mockUUID = `4317E07-3B94-4E59-8C0C-0963B5854B90`;
-      const mockCert = `00001000000512083194`;
-      const mockSAT  = `00001000000704859748`;
-
       doc.moveDown(0);
       const uuidY = infoY + 44;
-      doc.fillColor(C).fontSize(6.5).font('Helvetica-Bold')
-        .text('FOLIO FISCAL (UUID)', lCol, uuidY);
-      doc.fillColor(GRAY).fontSize(6.5).font('Helvetica')
-        .text(mockUUID, lCol, uuidY + 8, { width: rightW - 8 });
-      doc.fillColor(C).fontSize(6.5).font('Helvetica-Bold')
-        .text('NO. CERTIFICADO DIGITAL', lCol, uuidY + 20);
-      doc.fillColor(GRAY).fontSize(6.5).font('Helvetica')
-        .text(mockCert, lCol, uuidY + 28, { width: rightW - 8 });
-      doc.fillColor(C).fontSize(6.5).font('Helvetica-Bold')
-        .text('NO. SERIE CERTIFICADO SAT', lCol, uuidY + 40);
-      doc.fillColor(GRAY).fontSize(6.5).font('Helvetica')
-        .text(mockSAT, lCol, uuidY + 48, { width: rightW - 8 });
+      if (data.documentoFiscal) {
+        doc.fillColor(C).fontSize(6.5).font('Helvetica-Bold')
+          .text('FOLIO FISCAL (UUID)', lCol, uuidY);
+        doc.fillColor(GRAY).fontSize(6.5).font('Helvetica')
+          .text(data.documentoFiscal.uuid, lCol, uuidY + 8, { width: rightW - 8 });
+        doc.fillColor(C).fontSize(6.5).font('Helvetica-Bold')
+          .text('NO. CERTIFICADO DIGITAL', lCol, uuidY + 20);
+        doc.fillColor(GRAY).fontSize(6.5).font('Helvetica')
+          .text(data.documentoFiscal.certificadoEmisor, lCol, uuidY + 28, { width: rightW - 8 });
+        doc.fillColor(C).fontSize(6.5).font('Helvetica-Bold')
+          .text('NO. SERIE CERTIFICADO SAT', lCol, uuidY + 40);
+        doc.fillColor(GRAY).fontSize(6.5).font('Helvetica')
+          .text(data.documentoFiscal.certificadoSat, lCol, uuidY + 48, { width: rightW - 8 });
+      } else {
+        doc.rect(lCol, uuidY, rightW - 8, 48).fill('#fff4e5');
+        doc.fillColor(C).fontSize(8).font('Helvetica-Bold')
+          .text('DOCUMENTO PRELIMINAR', lCol + 6, uuidY + 8, { width: rightW - 20, align: 'center' });
+        doc.fillColor(GRAY).fontSize(7).font('Helvetica')
+          .text('Sin timbrado, UUID ni validez fiscal. No sustituye al CFDI emitido por un PAC.', lCol + 6, uuidY + 22, { width: rightW - 20, align: 'center' });
+      }
 
       // Border around FACTURA box
       doc.rect(rightX, headerY, rightW, uuidY + 58 - headerY).stroke('#c8bfa8');
@@ -308,23 +320,37 @@ export class FacturaPdfService {
       ry = doc.y + 10;
 
       // ════════════════════════════════════════════════════════
-      // CADENA ORIGINAL
+      // CADENA ORIGINAL O AVISO DE DOCUMENTO PRELIMINAR
       // ════════════════════════════════════════════════════════
-      doc.rect(ML, ry, W, 12).fill('#e8e4da');
-      doc.fillColor(G).fontSize(7.5).font('Helvetica-Bold')
-        .text('CADENA ORIGINAL DEL COMPLEMENTO DE CERTIFICACIÓN DIGITAL DEL SAT', ML + 4, ry + 3);
-      ry += 14;
-
-      const cadena = `||1.1|4317E07-3B94-4E59-8C0C-0963B5854B90|${fechaStr(data.fecha)}|MAR010101AAA|||${data.folio}||`;
-      doc.rect(ML, ry, W, 28).fill('#f5f5f5');
-      doc.fillColor(GRAY).fontSize(5.5).font('Helvetica')
-        .text(cadena, ML + 4, ry + 4, { width: W - 8 });
-      ry += 32;
+      if (data.documentoFiscal) {
+        doc.rect(ML, ry, W, 12).fill('#e8e4da');
+        doc.fillColor(G).fontSize(7.5).font('Helvetica-Bold')
+          .text('CADENA ORIGINAL DEL COMPLEMENTO DE CERTIFICACIÓN DIGITAL DEL SAT', ML + 4, ry + 3);
+        ry += 14;
+        doc.rect(ML, ry, W, 28).fill('#f5f5f5');
+        doc.fillColor(GRAY).fontSize(5.5).font('Helvetica')
+          .text(data.documentoFiscal.cadenaOriginal, ML + 4, ry + 4, { width: W - 8 });
+        ry += 32;
+      } else {
+        doc.rect(ML, ry, W, 30).fill('#fff4e5');
+        doc.fillColor(C).fontSize(8).font('Helvetica-Bold')
+          .text('SIN VALIDEZ FISCAL', ML + 6, ry + 5, { width: W - 12, align: 'center' });
+        doc.fillColor(GRAY).fontSize(7).font('Helvetica')
+          .text('Esta vista preliminar está preparada para una integración futura de timbrado CFDI.', ML + 6, ry + 16, { width: W - 12, align: 'center' });
+        ry += 34;
+      }
 
       // Footer bar
       doc.rect(ML, ry, W, 3).fill(G);
       doc.fillColor(LGRAY).fontSize(6).font('Helvetica')
-        .text('ESTE DOCUMENTO ES UNA REPRESENTACIÓN IMPRESA DE UN CFDI', ML, ry + 6, { width: W, align: 'center' });
+        .text(
+          data.documentoFiscal
+            ? 'ESTE DOCUMENTO ES UNA REPRESENTACIÓN IMPRESA DE UN CFDI'
+            : 'DOCUMENTO PRELIMINAR SIN TIMBRADO Y SIN VALIDEZ FISCAL',
+          ML,
+          ry + 6,
+          { width: W, align: 'center' },
+        );
 
       doc.end();
     });

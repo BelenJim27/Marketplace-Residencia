@@ -24,12 +24,14 @@ export function ProductoHeader({
   onSync,
   syncing = false,
   syncMessage,
+  canCreate = true,
 }: {
   onNew: () => void;
   disableNew: boolean;
   onSync?: () => void;
   syncing?: boolean;
   syncMessage?: { text: string; type: "success" | "error" } | null;
+  canCreate?: boolean;
 }) {
   return (
     <div className="mb-6 rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-6 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
@@ -39,7 +41,7 @@ export function ProductoHeader({
           <p className="text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Solo se muestran productos de tus tiendas</p>
         </div>
         <div className="flex items-center gap-3">
-          {onSync && (
+          {canCreate && onSync && (
             <button
               onClick={onSync}
               disabled={syncing}
@@ -50,14 +52,14 @@ export function ProductoHeader({
               {syncing ? "Sincronizando…" : "Sincronizar desde lotes"}
             </button>
           )}
-          <button
+          {canCreate && <button
             onClick={onNew}
             disabled={disableNew}
             title={disableNew ? "Debes crear una tienda antes de registrar productos" : undefined}
             className="inline-flex items-center gap-2 rounded-xl bg-[#3D6B3F] px-5 py-3 font-medium text-white transition hover:bg-[#1F3A2E] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Plus size={18} /> Nuevo producto
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -167,12 +169,15 @@ export function ProductoSeleccion({
   selectedIds,
   onToggleMode,
   onDeleteSelected,
+  canDelete = true,
 }: {
   selectionEnabled: boolean;
   selectedIds: number[];
   onToggleMode: (v: boolean) => void;
   onDeleteSelected: () => void;
+  canDelete?: boolean;
 }) {
+  if (!canDelete) return null;
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1F3A2E]/30 p-4 shadow-[0_2px_8px_rgba(61,107,63,0.08)] md:flex-row md:items-center md:justify-between">
       <label className="inline-flex items-center gap-3 text-sm font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">
@@ -288,6 +293,8 @@ type TablaProps = {
   onView: (p: ProductItem) => void;
   onEdit: (p: ProductItem) => void;
   onDelete: (p: ProductItem) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
 };
 
 export function ProductoTabla({
@@ -300,6 +307,8 @@ export function ProductoTabla({
   onView,
   onEdit,
   onDelete,
+  canEdit = true,
+  canDelete = true,
 }: TablaProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 shadow-[0_2px_8px_rgba(61,107,63,0.08)]">
@@ -403,13 +412,13 @@ export function ProductoTabla({
 
                   <td className="px-5 py-4">
                     <div className="flex justify-end gap-2">
-                      <button
+                      {canEdit && <button
                         onClick={() => onView(product)}
                         className="rounded-lg p-2 text-[#3D6B3F]/50 dark:text-[#A8C26B]/50 hover:bg-[#A8C26B]/20 dark:hover:bg-[#A8C26B]/15 hover:text-[#3D6B3F] dark:hover:text-[#A8C26B] transition-colors"
                       >
                         <Eye size={16} />
-                      </button>
-                      <button
+                      </button>}
+                      {canDelete && <button
                         onClick={() => onEdit(product)}
                         className={`rounded-lg p-2 transition-colors ${
                           sinPrecio
@@ -419,7 +428,7 @@ export function ProductoTabla({
                         title={sinPrecio ? "Editar — precio pendiente" : "Editar"}
                       >
                         <Pencil size={16} />
-                      </button>
+                      </button>}
                       <button
                         onClick={() => onDelete(product)}
                         className="rounded-lg p-2 text-[#3D6B3F]/50 dark:text-[#A8C26B]/50 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"

@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { RolesGuard } from '../auth/guards/rbac.guard';
-import { Roles } from '../auth/guards/roles.decorator';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 import { ConvertirQueryDto, CreateTasaCambioDto } from './dto/tasas-cambio.dto';
 import { TasasCambioService } from './tasas-cambio.service';
 
@@ -54,8 +55,8 @@ export class TasasCambioController {
   }
 
   @Post()
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   create(@Body() dto: CreateTasaCambioDto) {
     return this.service.create(dto);
   }

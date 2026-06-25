@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { serializeBigInts } from '../../common/utilities/serialize';
 import { CreateArchivoDto, UpdateArchivoDto } from './dto/archivos.dto';
@@ -8,15 +8,27 @@ import { deleteLocalUpload } from '../../common/utilities/local-upload';
 export class ArchivosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(entidad_tipo?: string, entidad_id?: number) {
+  async findAll(entidad_tipo?: string, entidad_id?: number, ownerId?: string) {
     return serializeBigInts(mapArchivoResponse(await this.prisma.archivos.findMany({
       where: {
         ...(entidad_tipo ? { entidad_tipo } : {}),
         ...(entidad_id != null ? { entidad_id } : {}),
+        ...(ownerId ? { validado_por: ownerId } : {}),
       },
       include: { usuarios: true },
       orderBy: { creado_en: 'desc' },
     })));
+  }
+
+  async assertOwner(id_archivo: string, ownerId: string) {
+    const item = await this.prisma.archivos.findUnique({
+      where: { id_archivo: BigInt(id_archivo) },
+      select: { validado_por: true },
+    });
+    if (!item) throw new NotFoundException('Archivo no encontrado');
+    if (item.validado_por !== ownerId) {
+      throw new ForbiddenException('No tienes permiso para gestionar este archivo');
+    }
   }
 
   async findOne(id_archivo: string) {

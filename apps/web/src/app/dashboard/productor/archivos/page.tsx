@@ -1,6 +1,11 @@
 import ArchivosView from "@/components/Producer/Files/ArchivosView";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export default function Page() {
-  return <ArchivosView />;
+  return (
+    <PermissionGate requiredPermissions={["gestionar_archivos"]}>
+      <ArchivosView />
+    </PermissionGate>
+  );
 }
 

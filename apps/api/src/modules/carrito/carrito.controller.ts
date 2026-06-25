@@ -14,17 +14,18 @@ import {
 import { CreateCarritoItemDto, UpdateCarritoItemDto } from './dto/carrito.dto';
 import { CarritoService } from './carrito.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { RolesGuard } from '../auth/guards/rbac.guard';
-import { Roles } from '../auth/guards/roles.decorator';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 
 @Controller('carrito')
 export class CarritoController {
   constructor(private readonly service: CarritoService) {}
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
   @Get()
-  findAll(@Req() req: any) {
-    if (!isAdmin(req.user)) throw new ForbiddenException('Solo administradores pueden listar todos los carritos');
+  findAll() {
     return this.service.findAll();
   }
 
@@ -35,8 +36,8 @@ export class CarritoController {
     return this.service.validarStock(req.user.id_usuario);
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('cliente', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.AGREGAR_CARRITO, PERMISOS.GESTIONAR_PEDIDOS)
   @Get(':id_usuario')
   findByUser(@Param('id_usuario', ParseUUIDPipe) id_usuario: string, @Req() req: any) {
     if (!isAdmin(req.user) && req.user.id_usuario !== id_usuario) {
@@ -45,8 +46,8 @@ export class CarritoController {
     return this.service.findByUser(id_usuario);
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('cliente', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.AGREGAR_CARRITO, PERMISOS.GESTIONAR_PEDIDOS)
   @Post()
   create(@Body() dto: CreateCarritoItemDto, @Req() req: any) {
     // Anclar al usuario del token: un no-admin siempre escribe en su propio
@@ -58,8 +59,8 @@ export class CarritoController {
     return this.service.create(dto);
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('cliente', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.AGREGAR_CARRITO, PERMISOS.GESTIONAR_PEDIDOS)
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateCarritoItemDto) {
     return this.service.update(id, dto);
@@ -67,15 +68,15 @@ export class CarritoController {
 
   // Vacía el carrito del usuario autenticado (derivado del token). El cliente no
   // envía ningún id, evitando desajustes con la cookie `usuario`.
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('cliente', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.AGREGAR_CARRITO, PERMISOS.GESTIONAR_PEDIDOS)
   @Delete('mi-carrito')
   clearMine(@Req() req: any) {
     return this.service.clearByUser(req.user.id_usuario);
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('cliente', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.AGREGAR_CARRITO, PERMISOS.GESTIONAR_PEDIDOS)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.service.remove(id);
@@ -83,8 +84,8 @@ export class CarritoController {
 
   // Solo admin: vaciar el carrito de un usuario arbitrario. Los no-admin usan
   // `DELETE /carrito/mi-carrito` (clearMine).
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('cliente', 'administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.AGREGAR_CARRITO, PERMISOS.GESTIONAR_PEDIDOS)
   @Delete('usuario/:id_usuario')
   clearByUser(@Param('id_usuario', ParseUUIDPipe) id_usuario: string, @Req() req: any) {
     if (!isAdmin(req.user) && req.user.id_usuario !== id_usuario) {
@@ -95,5 +96,5 @@ export class CarritoController {
 }
 
 function isAdmin(user: any): boolean {
-  return user?.roles?.some((r: string) => ['admin', 'administrador'].includes(r.toLowerCase())) ?? false;
+  return user?.permisos?.includes(PERMISOS.GESTIONAR_PEDIDOS) ?? false;
 }

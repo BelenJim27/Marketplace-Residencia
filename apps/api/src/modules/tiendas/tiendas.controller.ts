@@ -3,11 +3,12 @@ import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { CreateTiendaDto, UpdateTiendaDto } from './dto/tiendas.dto';
 import { TiendasService } from './tiendas.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { RolesGuard } from '../auth/guards/rbac.guard';
-import { Roles } from '../auth/guards/roles.decorator';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 
 function isAdmin(user: any): boolean {
-  return user?.roles?.some((r: string) => r.toLowerCase() === 'administrador') ?? false;
+  return user?.permisos?.includes(PERMISOS.GESTIONAR_PRODUCTORES) ?? false;
 }
 
 @Controller('tiendas')
@@ -31,13 +32,18 @@ export class TiendasController {
     return this.service.findOne(id);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.CREAR_TIENDA, PERMISOS.GESTIONAR_PRODUCTORES)
   @Post()
-  create(@Body() dto: CreateTiendaDto) {
+  async create(@Body() dto: CreateTiendaDto, @Req() req: any) {
+    if (!isAdmin(req.user) && req.user.id_productor !== dto.id_productor) {
+      throw new ForbiddenException('Solo puedes crear tu propia tienda');
+    }
     return this.service.create(dto);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.EDITAR_TIENDA, PERMISOS.GESTIONAR_PRODUCTORES)
   @Put(':id')
   async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTiendaDto, @Req() req: any) {
     const user = req.user;
@@ -52,10 +58,16 @@ export class TiendasController {
     return this.service.update(id, dto);
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.EDITAR_TIENDA, PERMISOS.GESTIONAR_PRODUCTORES)
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
+  async remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    if (!isAdmin(req.user)) {
+      const tienda = await this.service.findOne(id) as any;
+      if (tienda.id_productor !== req.user.id_productor) {
+        throw new ForbiddenException('Solo puedes eliminar tu propia tienda');
+      }
+    }
     return this.service.remove(id);
   }
 }

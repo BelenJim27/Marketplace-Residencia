@@ -2,6 +2,7 @@ import { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
   interface Session {
+    authError?: "SESSION_INVALIDATED";
     user: {
       id: string;
       id_usuario?: string;

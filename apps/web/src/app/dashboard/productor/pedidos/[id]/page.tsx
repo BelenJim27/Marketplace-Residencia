@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
@@ -32,6 +33,14 @@ interface OrderDetail {
 }
 
 export default function DetalleOrdenProductor() {
+  return (
+    <PermissionGate requiredPermissions={["ver_pedidos", "editar_pedido"]}>
+      <DetalleOrdenProductorContent />
+    </PermissionGate>
+  );
+}
+
+function DetalleOrdenProductorContent() {
   const { id } = useParams();
   const { user, isProductor } = useAuth();
   const [orden, setOrden] = useState<OrderDetail | null>(null);
@@ -212,6 +221,8 @@ export default function DetalleOrdenProductor() {
     );
   }
 
+  const canEdit = user?.permisos?.includes("editar_pedido") ?? false;
+
   return (
     <div>
       <Breadcrumb pageName={`Orden #${orden.id_pedido}`} />
@@ -221,13 +232,13 @@ export default function DetalleOrdenProductor() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Cliente */}
-          <div className="bg-white p-6 rounded-lg border border-gray-300">
+          {canEdit && <div className="bg-white p-6 rounded-lg border border-gray-300">
             <h2 className="text-lg font-bold mb-4">Cliente</h2>
             <div>
               <div className="font-medium">{orden.pedido.usuarios.nombre}</div>
               <div className="text-sm text-gray-600">{orden.pedido.usuarios.email}</div>
             </div>
-          </div>
+          </div>}
 
           {/* Estado */}
           <div className="bg-white p-6 rounded-lg border border-gray-300">
@@ -340,9 +351,10 @@ export default function DetalleOrdenProductor() {
                 onChange={(e) => setNumeroRastreo(e.target.value)}
                 placeholder="Ingresa el número de guía"
                 className="w-full px-3 py-2 border border-gray-300 rounded"
+                disabled={!canEdit}
               />
             </div>
-            <div className="flex flex-wrap gap-2">
+            {canEdit && <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleActualizarTracking}
                 disabled={saving || !numeroRastreo}
@@ -368,7 +380,7 @@ export default function DetalleOrdenProductor() {
                   {refrescandoGuia ? "Consultando..." : "Refrescar guía"}
                 </button>
               )}
-            </div>
+            </div>}
 
             {/* Tracking registrado + descarga de etiqueta */}
             {(tieneGuia || orden.envio?.numero_rastreo) && orden.envio?.id_envio && (

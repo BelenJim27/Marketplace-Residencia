@@ -2,17 +2,18 @@ import { Body, Controller, Delete, ForbiddenException, Get, Param, ParseUUIDPipe
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { CreateDireccionDto, UpdateDireccionDto } from './dto/direcciones.dto';
 import { DireccionesService } from './direcciones.service';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 
 @Controller('direcciones')
 export class DireccionesController {
   constructor(private readonly service: DireccionesService) {}
 
   @Get()
-  @UseGuards(AuthGuard)
-  findAll(@Req() req: any) {
-    if (!req.user.roles.includes('administrador')) {
-      throw new ForbiddenException('Solo administradores pueden ver todas las direcciones');
-    }
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_USUARIOS)
+  findAll() {
     return this.service.findAll();
   }
 
@@ -22,7 +23,7 @@ export class DireccionesController {
     @Param('id_usuario', ParseUUIDPipe) id_usuario: string,
     @Req() req: any,
   ) {
-    const isAdmin = req.user.roles.includes('administrador');
+    const isAdmin = req.user.permisos.includes(PERMISOS.GESTIONAR_USUARIOS);
     if (!isAdmin && req.user.id_usuario !== id_usuario) {
       throw new ForbiddenException('No puedes ver direcciones de otros usuarios');
     }

@@ -6,6 +6,7 @@ import { Loader2, AlertCircle, DollarSign, TrendingUp, Receipt, CreditCard, Chec
 import { useAuth } from "@/context/AuthContext";
 import { api, type Payout } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import { formatMXN } from "@/lib/format-number";
 
 function maskEmail(email: string): string {
@@ -55,6 +56,14 @@ function getRangoFechas(rango: RangoPeriodo, custom?: { desde: string; hasta: st
 }
 
 export default function IngresosProductorPage() {
+  return (
+    <PermissionGate requiredPermissions={["ver_reportes_productor"]}>
+      <IngresosProductorPageContent />
+    </PermissionGate>
+  );
+}
+
+function IngresosProductorPageContent() {
   const { user, isProductor } = useAuth();
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);

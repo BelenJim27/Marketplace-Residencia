@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useProductos } from "@/hooks/useProductos";
 import { getCookie } from "@/lib/cookies";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import { ProductoModal } from "@/components/Producer/Products/acciones/ProductoModal";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
+import { useAuth } from "@/context/AuthContext";
 import {
   ProductoHeader,
   ProductoStatCard,
@@ -17,7 +19,20 @@ import {
 const PAGE_SIZE = 10;
 
 export default function ProductosPage() {
+  return (
+    <PermissionGate requiredPermissions={["ver_productos", "crear_producto", "editar_producto", "eliminar_producto"]}>
+      <ProductosPageContent />
+    </PermissionGate>
+  );
+}
+
+function ProductosPageContent() {
   const ctx = useProductos();
+  const { user } = useAuth();
+  const permisos = user?.permisos ?? [];
+  const canCreate = permisos.includes("crear_producto");
+  const canEdit = permisos.includes("editar_producto");
+  const canDelete = permisos.includes("eliminar_producto");
   const [currentPage, setCurrentPage] = useState(1);
 
   // Reset to page 1 whenever filters change
@@ -59,6 +74,7 @@ export default function ProductosPage() {
           onSync={ctx.syncFromLotes}
           syncing={ctx.syncing}
           syncMessage={ctx.syncMessage}
+          canCreate={canCreate}
         />
       </div>
 
@@ -97,6 +113,7 @@ export default function ProductosPage() {
         selectedIds={ctx.selectedIds}
         onToggleMode={ctx.toggleSelectionMode}
         onDeleteSelected={ctx.handleDeleteSelected}
+        canDelete={canDelete}
       />
 
       <div data-tour="producto-tabla">
@@ -110,6 +127,8 @@ export default function ProductosPage() {
           onView={ctx.openView}
           onEdit={ctx.openEdit}
           onDelete={ctx.handleDelete}
+          canEdit={canEdit}
+          canDelete={canDelete}
         />
       </div>
 

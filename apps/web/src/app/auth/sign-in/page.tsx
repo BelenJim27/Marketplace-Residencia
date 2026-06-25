@@ -39,10 +39,9 @@ function SignInContent() {
     if (!isAuthenticated) return;
 
     const redirectUrl = searchParams.get("redirect");
-    const roles = user?.roles ?? [];
     const permisos = user?.permisos ?? [];
 
-    router.replace(getPostLoginUrl(roles, permisos, { isVenderFlow, redirectUrl }));
+    router.replace(getPostLoginUrl(permisos, user?.id_productor, { isVenderFlow, redirectUrl }));
   }, [isAuthenticated, loading, isVenderFlow, user, router, searchParams]);
 
   /* ── Vender flow: wizard layout igual que sign-up ── */

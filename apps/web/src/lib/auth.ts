@@ -10,8 +10,6 @@ export const authOptions: AuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-      // Account linking is handled by the backend (oauth.service.ts upsertOAuthAccount)
-      // which safely links to an existing email without requiring confirmation
       allowDangerousEmailAccountLinking: true,
       profile(profile) {
         return {
@@ -77,7 +75,7 @@ export const authOptions: AuthOptions = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 días, igual que el refresh token
+    maxAge: 30 * 24 * 60 * 60,
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
@@ -180,7 +178,7 @@ export const authOptions: AuthOptions = {
       const now = Math.floor(Date.now() / 1000);
       const issuedAt = (token.accessTokenIssuedAt as number) || 0;
       const backendTokenAge = now - issuedAt;
-      const backendTokenNeedsRefresh = backendTokenAge > 13 * 60; // refresh after 13 min
+      const backendTokenNeedsRefresh = backendTokenAge > 13 * 60;
 
       if (!backendTokenNeedsRefresh) {
         return token;
@@ -196,6 +194,7 @@ export const authOptions: AuthOptions = {
         });
 
         if (!response.ok) {
+          token.authError = "SESSION_INVALIDATED";
           return token;
         }
 
@@ -203,8 +202,16 @@ export const authOptions: AuthOptions = {
         token.accessToken = data.tokens.access_token;
         token.refreshToken = data.tokens.refresh_token;
         token.accessTokenIssuedAt = now;
+        // Update roles, permisos and id_productor from fresh backend data
+        if (data.user) {
+          token.roles = data.user.roles;
+          token.permisos = data.user.permisos;
+          token.id_productor = data.user.id_productor;
+        }
+        delete token.authError;
       } catch (err) {
         console.error("Error refreshing token:", err);
+        token.authError = "SESSION_INVALIDATED";
       }
 
       return token;
@@ -229,6 +236,7 @@ export const authOptions: AuthOptions = {
         session.user.roles = token.roles;
         session.user.permisos = token.permisos;
         session.user.id_productor = token.id_productor;
+        session.authError = token.authError;
       }
 
       return session;

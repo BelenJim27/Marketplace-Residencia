@@ -1,4 +1,5 @@
 import { StoreEditForm } from "@/components/Producer/Store/StoreEditForm";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export const metadata = {
   title: "Editar Tienda | Productor",
@@ -6,8 +7,8 @@ export const metadata = {
 
 export default function Page() {
   return (
-    <div className="min-h-screen bg-gray-1 px-4 py-8 dark:bg-dark sm:px-8">
+    <PermissionGate requiredPermissions={["editar_tienda", "editar_perfil_productor"]}>
       <StoreEditForm />
-    </div>
+    </PermissionGate>
   );
 }

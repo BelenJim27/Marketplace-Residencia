@@ -1,49 +1,50 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { RolesGuard } from '../auth/guards/rbac.guard';
-import { Roles } from '../auth/guards/roles.decorator';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 import { GenerarPayoutsDto, ListPayoutsQueryDto, UpdatePayoutEstadoDto } from './dto/payouts.dto';
 import { PayoutsService } from './payouts.service';
 
 @Controller('payouts')
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(AuthGuard, PermisosGuard)
 export class PayoutsController {
   constructor(private readonly service: PayoutsService) {}
 
   @Get()
-  @Roles('administrador')
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PAYOUTS)
   findAll(@Query() query: ListPayoutsQueryDto) {
     return this.service.findAll(query);
   }
 
   @Get('mis-payouts/:id_productor')
-  @Roles('productor', 'administrador')
+  @RequireAnyPermission(PERMISOS.VER_REPORTES, PERMISOS.GESTIONAR_PAYOUTS, PERMISOS.VER_REPORTES_PRODUCTOR)
   findByProductor(@Param('id_productor', ParseIntPipe) id_productor: number) {
     return this.service.findByProductor(id_productor);
   }
 
   @Get('resumen-pendientes')
-  @Roles('administrador')
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PAYOUTS)
   resumenPendientes() {
     return this.service.resumenPendientes();
   }
 
   @Get(':id')
-  @Roles('administrador')
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PAYOUTS)
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
   }
 
   @Post('generar')
-  @Roles('administrador')
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PAYOUTS)
   generar(@Body() dto: GenerarPayoutsDto, @Req() req: Request) {
     // C-5: registrar qué admin autorizó la generación de payouts (trazabilidad).
     return this.service.generar(dto, (req as any).user?.id_usuario);
   }
 
   @Patch(':id/estado')
-  @Roles('administrador')
+  @RequireAnyPermission(PERMISOS.GESTIONAR_PAYOUTS)
   actualizarEstado(@Param('id') id: string, @Body() dto: UpdatePayoutEstadoDto) {
     return this.service.actualizarEstado(id, dto);
   }

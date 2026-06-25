@@ -76,7 +76,7 @@ export default function SigninWithPassword({ isVenderFlow = false, onSuccess }: 
 
       if (isVenderFlow && onSuccess) { onSuccess(); return; }
 
-      router.push(getPostLoginUrl(roles, permisos, { isVenderFlow, redirectUrl }));
+      router.push(getPostLoginUrl(permisos, response.user.id_productor, { isVenderFlow, redirectUrl }));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("Error al iniciar sesión"));
     } finally {

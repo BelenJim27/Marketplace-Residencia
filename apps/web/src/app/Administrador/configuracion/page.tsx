@@ -7,6 +7,7 @@ import { getCookie } from "@/lib/cookies";
 import React, { useState, useEffect } from "react";
 import { Save, RotateCcw, Palette, Home } from "lucide-react";
 import LandingConfigSection from "@/components/Administrator/Configuration/Landingconfigsection";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 function ColorField({
   name,
@@ -75,6 +76,14 @@ const DEFAULT_CONFIG = {
 type Tab = "colores" | "landing";
 
 export default function ConfiguracionPage() {
+  return (
+    <PermissionGate requiredPermissions={["gestionar_configuracion"]}>
+      <ConfiguracionPageContent />
+    </PermissionGate>
+  );
+}
+
+function ConfiguracionPageContent() {
   const { isAuthenticated } = useAuth();
   const { config, refreshAndUpdate } = useConfig();
   const token = getCookie("token");

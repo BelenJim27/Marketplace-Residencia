@@ -19,6 +19,7 @@ describe('PedidosService.expirarPedidosPendientes', () => {
       {} as any, // authService
       {} as any, // comisionesService
       {} as any, // emailService
+      {} as any, // facturaPdfService
       {} as any, // skydropxService
       {} as any, // stripeService
       {} as any, // paypalService
@@ -120,6 +121,7 @@ describe('PedidosService.getMisCompras', () => {
       authService as any,
       {} as any, // comisionesService
       {} as any, // emailService
+      {} as any, // facturaPdfService
       {} as any, // skydropxService
       {} as any, // stripeService
       {} as any, // paypalService

@@ -1,5 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { verifyJwt } from '../auth.service';
+import { AccessContextService } from '../access-context.service';
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET;
 if (!ACCESS_TOKEN_SECRET) {
@@ -8,11 +9,12 @@ if (!ACCESS_TOKEN_SECRET) {
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
+  constructor(private readonly accessContext: AccessContextService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization;
 
-    // Accept token from Authorization header OR from HttpOnly cookie (credentials: include)
     let token: string | undefined;
     if (authHeader?.startsWith('Bearer ')) {
       token = authHeader.slice(7);
@@ -39,14 +41,29 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('Token inválido');
       }
 
+      const user = await this.accessContext.getForUser(payload.sub);
+
+      if (!user) {
+        throw new UnauthorizedException('Usuario no encontrado o eliminado');
+      }
+
+      if (user.version_token !== payload.version_token) {
+        throw new UnauthorizedException('Sesión invalidada. Inicia sesión nuevamente.');
+      }
+
+      if (user.roles.length === 0) {
+        throw new UnauthorizedException('No tienes roles activos');
+      }
+
       request.user = {
-        id_usuario: payload.sub,
-        email: payload.email,
-        version_token: payload.version_token,
-        roles: payload.roles,
-        permisos: payload.permisos,
-        id_productor: payload.id_productor,
+        id_usuario: user.id_usuario,
+        email: user.email,
+        version_token: user.version_token,
+        roles: user.roles,
+        permisos: user.permisos,
+        id_productor: user.id_productor,
       };
+      request.authProfile = user.profile;
 
       return true;
     } catch (error) {
@@ -56,4 +73,5 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Token inválido o expirado');
     }
   }
+
 }

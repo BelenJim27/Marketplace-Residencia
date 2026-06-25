@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { CheckCircle, ShoppingBag, Package, FileText, Loader2, Truck } from "lucide-react";
+import { CheckCircle, ShoppingBag, Package, Loader2, Truck } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
 import { useLocale } from "@/context/LocaleContext";
 import { api } from "@/lib/api";
@@ -35,20 +35,11 @@ function PagoExitosoContent() {
   const [captureState, setCaptureState] = useState<"idle" | "capturing" | "done" | "error">("idle");
   const [numeroRastreo, setNumeroRastreo] = useState<string | null>(null);
   const [estadoEnvio, setEstadoEnvio] = useState<string | null>(null);
-  const [mostrarFactura, setMostrarFactura] = useState(false);
-  const [facturaEstado, setFacturaEstado] = useState<"idle" | "ok" | "error">("idle");
-  const [facturaError, setFacturaError] = useState("");
-  const [email, setEmail] = useState("");
-  const [rfc, setRfc] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [usoCfdi, setUsoCfdi] = useState("G03");
-  const [enviando, setEnviando] = useState(false);
 
   const cols = ["0%", "18%", "36%", "54%", "72%", "90%"];
 
   useEffect(() => {
     limpiarCarrito();
-    sessionStorage.removeItem("checkout_factura");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -101,39 +92,6 @@ function PagoExitosoContent() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedidoId]);
-
-  const handleSolicitarFactura = async () => {
-    const authToken = getCookie("token");
-
-    if (!pedidoId || !authToken) {
-      setFacturaError(`No se pudo identificar el pedido (pedido: ${pedidoId ?? "?"}, sesión: ${authToken ? "ok" : "no"}). Recarga la página.`);
-      setFacturaEstado("error");
-      return;
-    }
-    if (!email) {
-      setFacturaError("El correo es requerido.");
-      return;
-    }
-
-    setEnviando(true);
-    setFacturaError("");
-
-    try {
-      const payload: Record<string, string> = { estado: "pendiente" };
-      if (rfc)     payload.rfc_receptor        = rfc;
-      if (nombre)  payload.nombre_razon_social = nombre;
-      if (usoCfdi) payload.uso_cfdi            = usoCfdi;
-      if (email)   payload.email_factura       = email;
-
-      await api.pedidos.addFactura(authToken, pedidoId, payload);
-      setFacturaEstado("ok");
-    } catch (e: any) {
-      setFacturaEstado("error");
-      setFacturaError(e?.message ?? "No se pudo registrar. Inténtalo de nuevo.");
-    } finally {
-      setEnviando(false);
-    }
-  };
 
   return (
     <div style={{ position: "relative", minHeight: "100vh" }}>
@@ -261,120 +219,6 @@ function PagoExitosoContent() {
             {estadoEnvio && (
               <div style={{ fontSize: "12px", color: C.muted, marginTop: "4px" }}>
                 {t("Estado:")} {estadoEnvio}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Sección de factura */}
-        {facturaEstado === "ok" ? (
-          <div style={{
-            borderRadius: "10px", border: "1px solid rgba(61,107,63,0.2)",
-            background: "rgba(61,107,63,0.06)", padding: "14px 16px",
-            fontSize: "13px", color: C.green, fontWeight: "500", marginBottom: "20px",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-          }}>
-            <CheckCircle size={15} />
-            {t("Solicitud de factura enviada. Revisa tu correo")} {email && <strong>{email}</strong>} {t("(también en spam).")}
-          </div>
-        ) : (
-          <div style={{ marginBottom: "20px", textAlign: "left" }}>
-            {!mostrarFactura ? (
-              <button
-                onClick={() => setMostrarFactura(true)}
-                style={{
-                  width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                  gap: "8px", borderRadius: "10px", background: "transparent",
-                  border: `1px solid ${C.border}`, color: C.green,
-                  padding: "11px 16px", fontSize: "13px", fontWeight: "600", cursor: "pointer",
-                }}
-              >
-                <FileText size={15} />
-                {t("Solicitar factura (CFDI)")}
-              </button>
-            ) : (
-              <div style={{ border: `1px solid ${C.copper}33`, borderRadius: "12px", padding: "16px", background: `${C.copper}05` }}>
-                <p style={{ fontSize: "13px", fontWeight: "700", color: C.copper, margin: "0 0 12px 0" }}>
-                  {t("Datos para factura")}
-                </p>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  <div>
-                    <label style={{ fontSize: "11px", fontWeight: "600", color: C.muted, display: "block", marginBottom: "4px" }}>
-                      {t("CORREO PARA RECIBIR LA FACTURA *")}
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="tu@correo.com"
-                      style={{ width: "100%", borderRadius: "8px", border: `1px solid ${C.border}`, padding: "9px 12px", fontSize: "13px", boxSizing: "border-box" }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: "11px", fontWeight: "600", color: C.muted, display: "block", marginBottom: "4px" }}>
-                      {t("RFC")}
-                    </label>
-                    <input
-                      type="text"
-                      value={rfc}
-                      onChange={e => setRfc(e.target.value.toUpperCase().slice(0, 13))}
-                      placeholder="XAXX010101000"
-                      style={{ width: "100%", borderRadius: "8px", border: `1px solid ${C.border}`, padding: "9px 12px", fontSize: "13px", fontFamily: "monospace", boxSizing: "border-box" }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: "11px", fontWeight: "600", color: C.muted, display: "block", marginBottom: "4px" }}>
-                      {t("NOMBRE / RAZÓN SOCIAL")}
-                    </label>
-                    <input
-                      type="text"
-                      value={nombre}
-                      onChange={e => setNombre(e.target.value)}
-                      placeholder={t("Nombre completo o razón social")}
-                      style={{ width: "100%", borderRadius: "8px", border: `1px solid ${C.border}`, padding: "9px 12px", fontSize: "13px", boxSizing: "border-box" }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: "11px", fontWeight: "600", color: C.muted, display: "block", marginBottom: "4px" }}>
-                      {t("USO CFDI")}
-                    </label>
-                    <select
-                      value={usoCfdi}
-                      onChange={e => setUsoCfdi(e.target.value)}
-                      style={{ width: "100%", borderRadius: "8px", border: `1px solid ${C.border}`, padding: "9px 12px", fontSize: "13px", background: "#fff", boxSizing: "border-box" }}
-                    >
-                      <option value="G01">G01 - Adquisición de mercancias</option>
-                      <option value="G03">G03 - Gastos en general</option>
-                      <option value="D01">D01 - Honorarios médicos</option>
-                      <option value="I01">I01 - Construcciones</option>
-                      <option value="P01">P01 - Por definir</option>
-                    </select>
-                  </div>
-
-                  {facturaEstado === "error" && (
-                    <p style={{ fontSize: "12px", color: "#DC2626", margin: 0 }}>
-                      {facturaError ? t(facturaError) : t("Error al enviar. Inténtalo de nuevo.")}
-                    </p>
-                  )}
-
-                  <button
-                    onClick={handleSolicitarFactura}
-                    disabled={enviando || !email}
-                    style={{
-                      borderRadius: "8px", background: C.copper, color: "#fff",
-                      padding: "11px", fontSize: "13px", fontWeight: "700",
-                      border: "none", cursor: enviando || !email ? "not-allowed" : "pointer",
-                      opacity: enviando || !email ? 0.7 : 1,
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-                    }}
-                  >
-                    {enviando ? <><Loader2 size={14} className="animate-spin" /> {t("Enviando…")}</> : t("Enviar solicitud de factura")}
-                  </button>
-                </div>
               </div>
             )}
           </div>

@@ -8,6 +8,6 @@ import { PrismaModule } from '../../prisma/prisma.module';
   imports: [PrismaModule],
   controllers: [EmailController],
   providers: [EmailService, FacturaPdfService],
-  exports: [EmailService],
+  exports: [EmailService, FacturaPdfService],
 })
 export class EmailModule {}

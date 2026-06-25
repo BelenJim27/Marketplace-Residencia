@@ -17,24 +17,25 @@ import {
 } from "./dto/inventario.dto";
 import { InventarioService } from "./inventario.service";
 import { AuthGuard } from "../auth/guards/auth.guard";
-import { RolesGuard } from "../auth/guards/rbac.guard";
-import { Roles } from "../auth/guards/roles.decorator";
+import { PermisosGuard } from "../auth/guards/rbac.guard";
+import { RequireAnyPermission } from "../auth/guards/permisos.decorator";
+import { PERMISOS } from "../../common/permisos-catalog";
 
 // La escritura de inventario solo puede hacerla productor o administrador.
-const WRITE_GUARDS = [AuthGuard, RolesGuard] as const;
+const WRITE_GUARDS = [AuthGuard, PermisosGuard] as const;
 
 @Controller("inventario")
 export class InventarioController {
   constructor(private readonly service: InventarioService) {}
 
   @UseGuards(...WRITE_GUARDS)
-  @Roles("productor", "administrador")
+  @RequireAnyPermission(PERMISOS.VER_INVENTARIO, PERMISOS.GESTIONAR_INVENTARIO)
   @Get("movimientos") listMovimientos() {
     return this.service.listMovimientos();
   }
   @Post("movimientos")
   @UseGuards(...WRITE_GUARDS)
-  @Roles("productor", "administrador")
+  @RequireAnyPermission(PERMISOS.CREAR_INVENTARIO, PERMISOS.GESTIONAR_INVENTARIO)
   createMovimiento(
     @Body() dto: CreateMovimientoInventarioDto,
   ) {
@@ -42,36 +43,36 @@ export class InventarioController {
   }
 
   @UseGuards(...WRITE_GUARDS)
-  @Roles("productor", "administrador")
+  @RequireAnyPermission(PERMISOS.VER_INVENTARIO, PERMISOS.GESTIONAR_INVENTARIO)
   @Get("dashboard") getDashboard(@Query() query: PaginacionQueryDto) {
     return this.service.listInventario(query);
   }
   @UseGuards(...WRITE_GUARDS)
-  @Roles("productor", "administrador")
+  @RequireAnyPermission(PERMISOS.VER_INVENTARIO, PERMISOS.GESTIONAR_INVENTARIO)
   @Get() listInventario(@Query() query: PaginacionQueryDto) {
     return this.service.listInventario(query);
   }
   @UseGuards(...WRITE_GUARDS)
-  @Roles("productor", "administrador")
+  @RequireAnyPermission(PERMISOS.VER_INVENTARIO, PERMISOS.GESTIONAR_INVENTARIO)
   @Get("producto/:id_producto") getByProducto(
     @Param("id_producto") id_producto: string,
   ) {
     return this.service.getByProducto(id_producto);
   }
   @UseGuards(...WRITE_GUARDS)
-  @Roles("productor", "administrador")
+  @RequireAnyPermission(PERMISOS.VER_INVENTARIO, PERMISOS.GESTIONAR_INVENTARIO)
   @Get(":id") getInventario(@Param("id") id: string) {
     return this.service.getInventario(id);
   }
   @Post()
   @UseGuards(...WRITE_GUARDS)
-  @Roles("productor", "administrador")
+  @RequireAnyPermission(PERMISOS.CREAR_INVENTARIO, PERMISOS.GESTIONAR_INVENTARIO)
   createInventario(@Body() dto: CreateInventarioDto) {
     return this.service.createInventario(dto);
   }
   @Patch(":id")
   @UseGuards(...WRITE_GUARDS)
-  @Roles("productor", "administrador")
+  @RequireAnyPermission(PERMISOS.EDITAR_INVENTARIO, PERMISOS.GESTIONAR_INVENTARIO)
   updateInventario(
     @Param("id") id: string,
     @Body() dto: UpdateInventarioDto,
@@ -80,7 +81,7 @@ export class InventarioController {
   }
   @Delete(":id")
   @UseGuards(...WRITE_GUARDS)
-  @Roles("productor", "administrador")
+  @RequireAnyPermission(PERMISOS.EDITAR_INVENTARIO, PERMISOS.GESTIONAR_INVENTARIO)
   removeInventario(@Param("id") id: string) {
     return this.service.removeInventario(id);
   }

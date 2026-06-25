@@ -46,8 +46,8 @@ function AuthCallbackContent() {
             setCookie("usuario", JSON.stringify(userData), 7);
           }
           const dest = getPostLoginUrl(
-            Array.isArray(userData?.roles) ? userData.roles : [],
             Array.isArray(userData?.permisos) ? userData.permisos : [],
+            userData?.id_productor,
           );
           router.replace(dest);
         })
@@ -68,8 +68,8 @@ function AuthCallbackContent() {
             setCookie("usuario", JSON.stringify(userData), 7);
           }
           const dest = getPostLoginUrl(
-            Array.isArray(userData?.roles) ? userData.roles : [],
             Array.isArray(userData?.permisos) ? userData.permisos : [],
+            userData?.id_productor,
           );
           router.replace(dest);
         })
@@ -79,8 +79,8 @@ function AuthCallbackContent() {
     } else if (session?.accessToken) {
       const su = session.user as any;
       const dest = getPostLoginUrl(
-        Array.isArray(su?.roles) ? su.roles : [],
         Array.isArray(su?.permisos) ? su.permisos : [],
+        su?.id_productor,
       );
       router.replace(dest);
     } else {

@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsDateString, IsEnum, IsInt, IsObject, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsEmail, IsEnum, IsInt, IsObject, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateNested } from 'class-validator';
 
 export enum Moneda {
   MXN = 'MXN',
@@ -32,22 +32,20 @@ export class CreateDetallePedidoDto {
 export class UpdateDetallePedidoDto extends PartialType(CreateDetallePedidoDto) {}
 
 export class CreateFacturaDto {
-  @IsOptional() @IsString() uuid_fiscal?: string;
-  @IsOptional() @IsString() pdf_url?: string;
-  @IsOptional() @IsString() xml_url?: string;
-  @IsOptional() @IsString() rfc_emisor?: string;
-  @IsOptional() @IsString() rfc_receptor?: string;
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$/i, { message: 'El RFC del receptor no tiene un formato válido' })
+  rfc_receptor?: string;
+
   @IsOptional() @IsString() @MaxLength(10) uso_cfdi?: string;
   @IsOptional() @IsString() @MaxLength(10) regimen_fiscal?: string;
-  @IsOptional() @IsString() subtotal?: string;
-  @IsOptional() @IsString() impuestos_total?: string;
-  @IsOptional() @IsString() total?: string;
-  @IsOptional() @IsEnum(Moneda) moneda?: Moneda;
-  @IsOptional() @IsString() @MaxLength(20) estado?: string;
-  @IsOptional() @IsString() nombre_razon_social?: string;
-  @IsOptional() @IsString() email_factura?: string;
+  @IsOptional() @IsString() @MaxLength(200) nombre_razon_social?: string;
+  @IsOptional() @IsEmail({}, { message: 'El correo de facturación no es válido' }) email_factura?: string;
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{5}$/, { message: 'El código postal fiscal debe contener 5 dígitos' })
+  codigo_postal?: string;
 }
-export class UpdateFacturaDto extends PartialType(CreateFacturaDto) {}
 
 export class ItemValidarDto {
   @IsInt() @Type(() => Number) id_producto!: number;

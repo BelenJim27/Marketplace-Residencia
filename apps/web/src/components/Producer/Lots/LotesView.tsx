@@ -62,6 +62,8 @@ function StatCard({ title, value, icon }) {
 
 export default function LotesView() {
   const { user } = useAuth();
+  const canCreateInventory = user?.permisos?.includes("crear_inventario") ?? false;
+  const canEditInventory = user?.permisos?.includes("editar_inventario") ?? false;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalVer, setModalVer] = useState(false);
@@ -326,7 +328,7 @@ export default function LotesView() {
           <h1 className="text-2xl font-bold text-[#1F3A2E] dark:text-[#E8E3D5] [font-family:'Playfair_Display',serif]">Mis Lotes</h1>
           <p className="text-sm text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Gestión de producción y existencias</p>
         </div>
-        <div className="flex gap-3">
+        {canCreateInventory && <div className="flex gap-3">
           <button
             onClick={sincronizarLotes} disabled={sincronizando}
             className="flex items-center gap-2 rounded-xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#0f1a10] px-4 py-2 text-sm font-medium text-[#3D6B3F] dark:text-[#A8C26B] transition hover:bg-[#C5CFB0]/30 dark:hover:bg-[#1F3A2E]/60 disabled:opacity-50"
@@ -334,7 +336,7 @@ export default function LotesView() {
             <RefreshCw className={`h-4 w-4 ${sincronizando ? "animate-spin" : ""}`} />
             Sincronizar
           </button>
-        </div>
+        </div>}
       </div>
 
       <Toast msg={toast.msg} type={toast.type} onClose={() => setToast({ msg: "", type: "success" })} />
@@ -407,6 +409,7 @@ export default function LotesView() {
                         lote={item}
                         onVer={abrirVer}
                         onEliminar={abrirEliminar}
+                        canDelete={canEditInventory}
                       />
                     </td>
                   </tr>

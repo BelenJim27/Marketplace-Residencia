@@ -14,6 +14,15 @@ export class LotesService {
 
   constructor(private readonly prisma: PrismaService) { }
 
+  async getOwnerId(id_lote: number): Promise<number> {
+    const lote = await this.prisma.lotes.findFirst({
+      where: { id_lote, eliminado_en: null },
+      select: { id_productor: true },
+    });
+    if (!lote) throw new NotFoundException('Lote no encontrado');
+    return lote.id_productor;
+  }
+
   async findAll(query: PaginacionQueryDto = {}) {
     const pagina = query.pagina ?? 1;
     const limite = query.limite ?? 20;

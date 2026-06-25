@@ -18,6 +18,7 @@ describe('PedidosService.triggerPayoutForProductor (reserva atómica C-1)', () =
       {} as any, // authService
       {} as any, // comisionesService
       {} as any, // emailService
+      {} as any, // facturaPdfService
       {} as any, // skydropxService
       stripeService as any,
       {} as any, // paypalService

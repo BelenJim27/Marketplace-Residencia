@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { RolesGuard } from '../auth/guards/rbac.guard';
-import { Roles } from '../auth/guards/roles.decorator';
+import { PermisosGuard } from '../auth/guards/rbac.guard';
+import { RequireAnyPermission } from '../auth/guards/permisos.decorator';
+import { PERMISOS } from '../../common/permisos-catalog';
 import { CreateIdiomaDto, UpdateIdiomaDto } from './dto/idiomas.dto';
 import { IdiomasService } from './idiomas.service';
 
@@ -20,15 +21,15 @@ export class IdiomasController {
   }
 
   @Post()
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   create(@Body() dto: CreateIdiomaDto) {
     return this.service.create(dto);
   }
 
   @Patch(':codigo')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('administrador')
+  @UseGuards(AuthGuard, PermisosGuard)
+  @RequireAnyPermission(PERMISOS.GESTIONAR_CONFIGURACION)
   update(@Param('codigo') codigo: string, @Body() dto: UpdateIdiomaDto) {
     return this.service.update(codigo, dto);
   }

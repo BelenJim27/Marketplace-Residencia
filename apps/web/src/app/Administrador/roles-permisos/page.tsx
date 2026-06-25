@@ -7,6 +7,7 @@ import {
   UserPlus, Filter, ChevronLeft, ChevronRight 
 } from "lucide-react";
 import { getCookie } from "@/lib/cookies";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
@@ -26,6 +27,14 @@ interface Usuario {
 }
 
 export default function RolesPermisosPage() {
+  return (
+    <PermissionGate requiredPermissions={["gestionar_roles_permisos"]}>
+      <RolesPermisosPageContent />
+    </PermissionGate>
+  );
+}
+
+function RolesPermisosPageContent() {
   const [roles, setRoles]       = useState<Rol[]>([]);
   const [permisos, setPermisos] = useState<Permiso[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -84,8 +93,8 @@ export default function RolesPermisosPage() {
     return Object.keys(errors).length === 0;
   }
 
-  const PERMISOS_CLIENTE   = ["ver_productos","crear_pedido","ver_pedidos","ver_tienda","ver_inventario","panel_cliente"];
-  const PERMISOS_PRODUCTOR = ["ver_productos","crear_producto","editar_producto","eliminar_producto","ver_inventario","crear_inventario","editar_inventario","ver_pedidos","editar_pedido","ver_tienda","crear_tienda","editar_tienda","panel_productor"];
+  const PERMISOS_CLIENTE   = ["ver_productos","agregar_carrito","crear_pedido","ver_pedidos","pagar"];
+  const PERMISOS_PRODUCTOR = ["ver_productos","crear_producto","editar_producto","eliminar_producto","ver_inventario","crear_inventario","editar_inventario","ver_pedidos","editar_pedido","ver_tienda","crear_tienda","editar_tienda","ver_reportes","gestionar_archivos","gestionar_cobros"];
 
   const deleteAlertRol     = useDeleteAlert("rol");
   const deleteAlertPermiso = useDeleteAlert("permiso");
@@ -376,20 +385,14 @@ export default function RolesPermisosPage() {
       {/* ── PERMISOS TAB ── */}
       {tab === "permisos" && (
         <div className="space-y-4">
-          <div className="flex justify-end">
-            <button onClick={() => { setEditingPermiso(null); setFormDataPermiso({ nombre: "" }); setShowModalPermiso(true); }} className="flex items-center gap-2 rounded-xl bg-[#3D6B3F] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#1F3A2E]">
-              <Plus size={18} /> Nuevo Permiso
-            </button>
+          <div className="rounded-xl border border-[#C5CFB0] bg-[#F4F0E3] px-4 py-3 text-sm text-[#3D6B3F] dark:border-[#3D6B3F]/40 dark:bg-[#1a2a1f] dark:text-[#A8C26B]">
+            Este catálogo lo administra el sistema. Puedes asignar estos permisos a los roles desde la pestaña Roles.
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {permisos.map((permiso) => (
               <div key={permiso.id_permiso} className="group rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-[#F4F0E3] dark:bg-[#1a2a1f] p-5 transition-shadow hover:shadow-[0_8px_24px_rgba(61,107,63,0.15)]">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#3D6B3F]/10 dark:bg-[#A8C26B]/10 text-[#3D6B3F] dark:text-[#A8C26B]"><Key size={20} /></div>
-                  <div className="flex gap-1">
-                    <button onClick={() => { setEditingPermiso(permiso); setFormDataPermiso({ nombre: permiso.nombre }); setShowModalPermiso(true); }} className="rounded-lg p-2 text-[#C5CFB0] opacity-0 transition-colors hover:bg-[#A8C26B]/20 hover:text-[#3D6B3F] group-hover:opacity-100"><Pencil size={16} /></button>
-                    <button onClick={() => handleDeletePermiso(permiso.id_permiso, permiso.nombre)} className="rounded-lg p-2 text-[#C5CFB0] opacity-0 transition-colors hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"><Trash2 size={16} /></button>
-                  </div>
                 </div>
                 <h3 className="mt-3 text-sm font-bold text-[#1F3A2E] dark:text-[#E8E3D5]">{permiso.nombre}</h3>
                 <p className="mt-1 text-xs text-[#3D6B3F]/50 dark:text-[#A8C26B]/40">ID: #{permiso.id_permiso}</p>

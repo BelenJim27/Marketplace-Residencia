@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { api } from "../../../lib/api";
 import { getCookie } from "../../../lib/cookies";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
@@ -13,6 +14,14 @@ import { SuccessToast } from "@/components/ui/SuccessToast";
 type Notice = { type: "error"; message: string };
 
 export default function AsociacionesPage() {
+  return (
+    <PermissionGate requiredPermissions={["gestionar_productores"]}>
+      <AsociacionesPageContent />
+    </PermissionGate>
+  );
+}
+
+function AsociacionesPageContent() {
   const { user } = useAuth();
   const [asociaciones, setAsociaciones] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);

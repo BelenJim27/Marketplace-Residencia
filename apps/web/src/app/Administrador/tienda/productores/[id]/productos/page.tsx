@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { use } from "react";
 import { ProductosProductor } from "@/components/Administrator/Store/productos-productor";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export default function ProductosProductorPage({
   params,
@@ -15,6 +16,7 @@ export default function ProductosProductorPage({
   const router = useRouter();
 
   return (
+    <PermissionGate requiredPermissions={["gestionar_productores"]}>
     <div className="p-6 space-y-4">
       <div className="flex items-center gap-4">
         <button
@@ -36,5 +38,6 @@ export default function ProductosProductorPage({
       </div>
       <ProductosProductor idProductor={idProductor} />
     </div>
+    </PermissionGate>
   );
 }

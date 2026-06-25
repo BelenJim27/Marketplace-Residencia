@@ -9,6 +9,7 @@ import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 import { SuccessToast } from "@/components/ui/SuccessToast";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 type Categoria = {
   id_categoria: number;
@@ -27,6 +28,14 @@ type Notice = { type: "error"; message: string };
 const API_URL = "";
 
 export default function CategoriasAdminPage() {
+  return (
+    <PermissionGate requiredPermissions={["gestionar_categorias"]}>
+      <CategoriasAdminPageContent />
+    </PermissionGate>
+  );
+}
+
+function CategoriasAdminPageContent() {
   const [query, setQuery]                       = useState("");
   const [loading, setLoading]                   = useState(true);
   const [notice, setNotice]                     = useState<Notice | null>(null);

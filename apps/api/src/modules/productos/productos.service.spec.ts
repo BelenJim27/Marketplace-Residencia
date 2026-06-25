@@ -29,7 +29,12 @@ const mockPrisma: any = {
 
 const productorDueno: RequestUser = { id_usuario: 'u1', id_productor: 1, roles: ['productor'] };
 const productorAjeno: RequestUser = { id_usuario: 'u2', id_productor: 2, roles: ['productor'] };
-const admin: RequestUser = { id_usuario: 'u3', id_productor: null, roles: ['administrador'] };
+  const admin: RequestUser = {
+    id_usuario: 'u3',
+    id_productor: null,
+    roles: ['administrador'],
+    permisos: ['gestionar_productos'],
+  };
 
 const productoEjemplo = {
   id_producto: 100n,

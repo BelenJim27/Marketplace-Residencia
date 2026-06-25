@@ -12,25 +12,34 @@ import { getCookie } from "@/lib/cookies";
 import Footer from "@/components/Cliente/Footer";
 import AgeGate from "@/components/AgeGate";
 import { isGlobalAgeVerified } from "@/lib/edad";
+import {
+  hasAnyPermission,
+  ADMIN_PERMISOS,
+  PRODUCTOR_PERMISOS,
+} from "@/lib/permisos-catalog";
 
 export function RootContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, isAdmin, isProductor, isAuthenticated } = useAuth();
 
-  const isLoggedIn = isAuthenticated && !!user && (user.roles.length > 0 || (user.permisos?.length ?? 0) > 0);
-  const isAdminOrProductor = isAdmin || isProductor;
+  const userPermisos = user?.permisos ?? [];
+  const hasAdminAccess = hasAnyPermission(userPermisos, [...ADMIN_PERMISOS]);
+  const hasProductorAccess =
+    user?.id_productor != null && hasAnyPermission(userPermisos, [...PRODUCTOR_PERMISOS]);
+  const isLoggedIn = isAuthenticated && !!user && (user.roles.length > 0 || userPermisos.length > 0);
+  const isAdminOrProductor = hasAdminAccess || hasProductorAccess;
 
   useEffect(() => {
     if (loading) return;
-    if (isAdmin) {
+    if (hasAdminAccess) {
       document.title = "Administrador";
-    } else if (isProductor) {
+    } else if (hasProductorAccess) {
       document.title = "Productor";
     } else {
       document.title = "Mezcales";
     }
-  }, [isAdmin, isProductor, loading]);
+  }, [hasAdminAccess, hasProductorAccess, loading]);
 
   const p = pathname.toLowerCase();
   const isAuthRoute = p.startsWith("/auth/");
@@ -38,7 +47,6 @@ export function RootContent({ children }: PropsWithChildren) {
   const isClientHome = p === "/cliente/inicio";
   const isSolicitarRoute = p === "/dashboard/productor/solicitar";
 
-  // Rutas que requieren verificación de edad global
   const needsAgeGate =
     p.startsWith("/tienda/") ||
     p.startsWith("/cliente/producto") ||
@@ -56,7 +64,7 @@ export function RootContent({ children }: PropsWithChildren) {
   }, [needsAgeGate]);
 
   if (loading) {
-    if (user && (isAdmin || isProductor)) {
+    if (user && (hasAdminAccess || hasProductorAccess)) {
       return (
         <SidebarProvider>
           <div className="flex min-h-screen bg-[#F4F0E3] dark:bg-[#020d1a]">
@@ -81,7 +89,6 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
-  // Ruta solicitar (sin autenticar) — el step 0 maneja su propio layout completo
   if (isSolicitarRoute && !isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-2 dark:bg-[#020d1a]">
@@ -90,8 +97,6 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
-  // Rutas de auth — sin header ni footer
-  // Excepción: /auth/sign-up maneja su propio layout (puede incluir TiendaHeader)
   if (isAuthRoute) {
     if (pathname === "/auth/sign-up") {
       return (
@@ -109,8 +114,6 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
-  // Página de inicio del cliente — el footer ya viene dentro del LandingPage,
-  // así que NO lo agregamos aquí para no duplicarlo
   if (isClientHome) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
@@ -123,7 +126,6 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
-  // Rutas de cliente (/tienda/ y /cliente/) — CON footer
   if (isClientOnlyRoute) {
     const isCatalogo = p === "/cliente/producto";
     return (
@@ -149,7 +151,6 @@ export function RootContent({ children }: PropsWithChildren) {
 
   const isTiendaRoute = pathname === "/" || pathname === "/producto" || pathname.startsWith("/producto/");
 
-  // Rutas de tienda — CON footer
   if (isTiendaRoute) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
@@ -172,7 +173,6 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
-  // Admin / productor — sin footer
   if (isLoggedIn) {
     if (isAdminOrProductor) {
       return (
@@ -190,7 +190,6 @@ export function RootContent({ children }: PropsWithChildren) {
       );
     }
 
-    // Cliente logueado — CON footer
     return (
       <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
         <TiendaHeader />
@@ -202,7 +201,6 @@ export function RootContent({ children }: PropsWithChildren) {
     );
   }
 
-  // Fallback — CON footer
   return (
     <div className="flex min-h-screen flex-col bg-gray-2 dark:bg-[#020d1a]">
       <TiendaHeader />
