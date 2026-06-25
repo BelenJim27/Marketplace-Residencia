@@ -30,7 +30,15 @@ const mockPrisma: any = {
   inventario: {
     create: jest.fn(),
     update: jest.fn(),
+    aggregate: jest.fn(),
+    findMany: jest.fn(),
   },
+  movimientos_inventario: {
+    create: jest.fn(),
+  },
+  $transaction: jest.fn().mockImplementation(async (promises: any[]) =>
+    Promise.all(promises),
+  ),
 };
 
 const mockLoteCreado = {
@@ -216,6 +224,73 @@ describe('LotesService — capacidad_ml mapping', () => {
       const loteData = mockPrisma.lotes.create.mock.calls[0][0].data;
       expect(loteData.codigo_lote).toBe('LOTE-001');
       expect(loteData.unidades).toBe(100);
+    });
+  });
+
+  describe('softDeleteEmptyLote', () => {
+    beforeEach(() => {
+      mockPrisma.lotes.update.mockResolvedValue({ id_lote: 1 });
+    });
+
+    it('soft-delete lote cuando stock total = 0', async () => {
+      mockPrisma.inventario.aggregate.mockResolvedValue({ _sum: { stock: 0 } });
+
+      await service.softDeleteEmptyLote(1);
+
+      expect(mockPrisma.lotes.update).toHaveBeenCalledWith({
+        where: { id_lote: 1 },
+        data: { eliminado_en: expect.any(Date), estado_lote: 'agotado' },
+      });
+    });
+
+    it('revive lote cuando stock total > 0', async () => {
+      mockPrisma.inventario.aggregate.mockResolvedValue({ _sum: { stock: 5 } });
+
+      await service.softDeleteEmptyLote(1);
+
+      expect(mockPrisma.lotes.update).toHaveBeenCalledWith({
+        where: { id_lote: 1 },
+        data: { eliminado_en: null, estado_lote: 'disponible' },
+      });
+    });
+  });
+
+  describe('ajustarStock — soft-delete automático', () => {
+    const mockProducto = {
+      id_producto: 100n,
+      inventario: [{ id_inventario: 1n, stock: 10 }],
+    };
+
+    beforeEach(() => {
+      mockPrisma.productos.findFirst.mockResolvedValue(mockProducto);
+      mockPrisma.inventario.update.mockResolvedValue({ id_inventario: 1n, stock: 0 });
+      mockPrisma.movimientos_inventario.create.mockResolvedValue({});
+    });
+
+    it('soft-delete lote cuando salida deja stock en 0', async () => {
+      mockPrisma.inventario.aggregate.mockResolvedValue({ _sum: { stock: 0 } });
+
+      await service.ajustarStock(1, 10, 'salida', 'Venta');
+
+      expect(mockPrisma.lotes.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id_lote: 1 },
+          data: expect.objectContaining({ eliminado_en: expect.any(Date), estado_lote: 'agotado' }),
+        }),
+      );
+    });
+
+    it('NO soft-delete lote cuando salida deja stock > 0', async () => {
+      mockPrisma.inventario.aggregate.mockResolvedValue({ _sum: { stock: 3 } });
+
+      await service.ajustarStock(1, 7, 'salida', 'Venta parcial');
+
+      expect(mockPrisma.lotes.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id_lote: 1 },
+          data: expect.objectContaining({ eliminado_en: null, estado_lote: 'disponible' }),
+        }),
+      );
     });
   });
 });

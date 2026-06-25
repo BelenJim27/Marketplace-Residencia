@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { getCookie } from "@/lib/cookies";
-import { Loader2, Plus, Pencil, Trash2, Mail, ShieldCheck, X, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Mail, ShieldCheck, X, User, ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
 import { useDeleteAlert } from "@/hooks/useDeleteAlert";
 import { DeleteAlertModal } from "@/components/ui/DeleteAlertModal";
 import { useSuccessToast } from "@/hooks/useSuccessToast";
 import { SuccessToast } from "@/components/ui/SuccessToast";
 import { AlertService } from "@/shared/alerts";
+import { getPasswordChecks, isStrongPassword } from "@/shared/validation/auth";
 import Image from "next/image";
 
 interface Rol { id_rol: number; nombre: string }
@@ -52,11 +53,17 @@ export default function UsuariosUI() {
   const [selectedFotoFile, setSelectedFotoFile] = useState<File | null>(null);
   const [saving, setSaving]               = useState(false);
   const [formErrors, setFormErrors]       = useState<Partial<Record<keyof UserFormData, string>>>({});
+  const [showPassword, setShowPassword]   = useState(false);
 
   const handleFormChange = <K extends keyof UserFormData>(field: K, value: UserFormData[K]) => {
     setUserFormData((prev) => ({ ...prev, [field]: value }));
     setFormErrors((prev) => ({ ...prev, [field]: undefined }));
   };
+
+  const passwordChecks = useMemo(
+    () => getPasswordChecks(userFormData.password, userFormData.email),
+    [userFormData.password, userFormData.email],
+  );
 
   function validateUsuario() {
     const errors: Partial<Record<keyof UserFormData, string>> = {};
@@ -67,8 +74,8 @@ export default function UsuariosUI() {
     if (!userFormData.email.trim()) errors.email = 'El email es obligatorio.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userFormData.email.trim())) errors.email = 'Email inválido.';
     if (!editingUsuario && !userFormData.password) errors.password = 'La contraseña es obligatoria.';
-    else if (userFormData.password && userFormData.password.length < 8) errors.password = 'Mínimo 8 caracteres.';
-    if (userFormData.telefono && !/^[\d\s+\-()]{7,20}$/.test(userFormData.telefono)) errors.telefono = 'Formato de teléfono inválido.';
+    else if (userFormData.password && !isStrongPassword(userFormData.password, userFormData.email)) errors.password = 'La contraseña no cumple con los requisitos.';
+    if (userFormData.telefono && !/^\d{10}$/.test(userFormData.telefono)) errors.telefono = 'El teléfono debe tener exactamente 10 dígitos.';
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -431,12 +438,37 @@ export default function UsuariosUI() {
               </div>
               <div>
                 <label className={labelCls}>{editingUsuario ? "Password (opcional)" : "Password"}</label>
-                <input type="password" value={userFormData.password} onChange={(e) => handleFormChange('password', e.target.value)} className={inputCls} placeholder={editingUsuario ? "Dejar vacío para mantener actual" : ""} />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={userFormData.password}
+                    onChange={(e) => handleFormChange('password', e.target.value)}
+                    className={`${inputCls} ${userFormData.password ? "pr-10" : ""}`}
+                    placeholder={editingUsuario ? "Dejar vacío para mantener actual" : ""}
+                  />
+                  {userFormData.password && (
+                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3D6B3F]/50 hover:text-[#3D6B3F] transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  )}
+                </div>
                 {formErrors.password && <p className="mt-1 text-xs text-red-500">{formErrors.password}</p>}
+                {userFormData.password.length > 0 && (
+                  <div className="grid grid-cols-2 gap-1.5 mt-2">
+                    {passwordChecks.map((check, i) => (
+                      <div key={i} className={`flex items-center text-[11px] font-medium ${check.fulfilled ? "text-green-600" : "text-gray-400"}`}>
+                        <div className={`mr-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full ${check.fulfilled ? "bg-green-600" : "bg-gray-300"}`} />
+                        {check.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className={labelCls}>Teléfono</label>
-                <input type="text" value={userFormData.telefono} onChange={(e) => handleFormChange('telefono', e.target.value)} className={inputCls} />
+                <input type="tel" value={userFormData.telefono} onChange={(e) => handleFormChange('telefono', e.target.value.replace(/[^\d]/g, "").slice(0, 10))} className={inputCls} maxLength={10} placeholder="10 dígitos" />
                 {formErrors.telefono && <p className="mt-1 text-xs text-red-500">{formErrors.telefono}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">

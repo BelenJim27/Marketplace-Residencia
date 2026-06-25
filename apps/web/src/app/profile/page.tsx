@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useLocale } from "@/context/LocaleContext";
@@ -14,6 +14,7 @@ import {
   Pencil, AlertCircle, Loader2, MapPin,
   Building2,
 } from "lucide-react";
+import { getPasswordChecks } from "@/shared/validation/auth";
 import Image from "next/image";
 
 interface StoredUser {
@@ -94,6 +95,11 @@ export default function ClientePerfilPage() {
   const [showPwActual, setShowPwActual] = useState(false);
   const [showPwNueva, setShowPwNueva] = useState(false);
   const [showPwConfirmar, setShowPwConfirmar] = useState(false);
+
+  const passwordChecks = useMemo(
+    () => getPasswordChecks(pwForm.nueva, user?.email ?? ""),
+    [pwForm.nueva, user?.email],
+  );
 
   // ── Tab: Mis Direcciones ────────────────────────────────────────
   const [loadingDir, setLoadingDir] = useState(false);
@@ -420,11 +426,23 @@ export default function ClientePerfilPage() {
                   { key: "nueva" as const, placeholder: t("Nueva contraseña"), show: showPwNueva, toggle: () => setShowPwNueva(!showPwNueva) },
                   { key: "confirmar" as const, placeholder: t("Confirmar"), show: showPwConfirmar, toggle: () => setShowPwConfirmar(!showPwConfirmar) },
                 ]).map((pw) => (
-                  <div key={pw.key} style={{ position: "relative" }}>
-                    <input type={pw.show ? "text" : "password"} placeholder={pw.placeholder} value={pwForm[pw.key]} onChange={(e) => setPwForm({ ...pwForm, [pw.key]: e.target.value })} style={{ ...inputStyle, paddingRight: "44px" }} />
-                    <button type="button" onClick={pw.toggle} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: colors.textSub, display: "flex", alignItems: "center" }}>
-                      {pw.show ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
+                  <div key={pw.key}>
+                    <div style={{ position: "relative" }}>
+                      <input type={pw.show ? "text" : "password"} placeholder={pw.placeholder} value={pwForm[pw.key]} onChange={(e) => setPwForm({ ...pwForm, [pw.key]: e.target.value })} style={{ ...inputStyle, paddingRight: "44px" }} />
+                      <button type="button" onClick={pw.toggle} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: colors.textSub, display: "flex", alignItems: "center" }}>
+                        {pw.show ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    {pw.key === "nueva" && pwForm.nueva.length > 0 && (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 8px", marginTop: "8px" }}>
+                        {passwordChecks.map((check, i) => (
+                          <div key={i} style={{ display: "flex", alignItems: "center", fontSize: "11px", fontWeight: 500, color: check.fulfilled ? "#16a34a" : "#9ca3af" }}>
+                            <div style={{ width: "6px", height: "6px", borderRadius: "50%", marginRight: "6px", flexShrink: 0, background: check.fulfilled ? "#16a34a" : "#d1d5db" }} />
+                            {check.label}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

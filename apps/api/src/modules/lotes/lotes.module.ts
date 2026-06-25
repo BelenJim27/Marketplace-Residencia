@@ -3,5 +3,5 @@ import { PrismaModule } from '../../prisma/prisma.module';
 import { LotesController } from './lotes.controller';
 import { LotesService } from './lotes.service';
 
-@Module({ imports: [PrismaModule], controllers: [LotesController], providers: [LotesService] })
+@Module({ imports: [PrismaModule], controllers: [LotesController], providers: [LotesService], exports: [LotesService] })
 export class LotesModule {}

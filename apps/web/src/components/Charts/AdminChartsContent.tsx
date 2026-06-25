@@ -49,6 +49,13 @@ const fmtMXN = (v: number) => {
 
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
+const mxnStr = (v: number) =>
+  new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    maximumFractionDigits: 0,
+  }).format(v);
+
 function getFechaUsuario(u: any): Date | null {
   const raw = u.createdAt ?? u.created_at ?? u.fechaRegistro ?? u.fecha_registro;
   if (!raw) return null;
@@ -78,7 +85,7 @@ function useIsDark() {
 
 // ─── PDF Export ───────────────────────────────────────────────────────────────
 
-async function exportToPDF(data: ChartsData) {
+async function exportToPDF(data: ChartsData, stats?: AdminChartsStats) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
 
@@ -324,6 +331,42 @@ async function exportToPDF(data: ChartsData) {
     [1],
   );
 
+  // ── SECCIÓN 4: Resumen Financiero ──────────────────────────────────────────
+  if (stats) {
+    drawSectionTitle("Resumen Financiero de la Plataforma", "Comisiones, envíos y total recibido");
+
+    const finRows = [
+      ["Comisiones del marketplace", mxnStr(stats.resumenFinanciero.totalComisiones), `${((stats.resumenFinanciero.totalComisiones / (stats.resumenFinanciero.totalPlataforma || 1)) * 100).toFixed(1)}%`],
+      ["Cargos de envío", mxnStr(stats.resumenFinanciero.totalEnvios), `${((stats.resumenFinanciero.totalEnvios / (stats.resumenFinanciero.totalPlataforma || 1)) * 100).toFixed(1)}%`],
+      ["Fees de procesador (Stripe/PayPal)", mxnStr(stats.resumenFinanciero.totalPaymentFees), "—"],
+      ["Total recibido por la plataforma", mxnStr(stats.resumenFinanciero.totalPlataforma), "100%"],
+    ];
+    drawTable(
+      ["Concepto", "Monto (MXN)", "Participación"],
+      finRows,
+      [115, 45, 18],
+      [1, 2],
+    );
+
+    // ── SECCIÓN 5: Ganancias Netas por Productor ─────────────────────────────
+    if (stats.detalleProductores.length > 0) {
+      drawSectionTitle("Ganancias Netas por Productor", "Ventas brutas, comisión y neto recibido");
+      const prodRows = stats.detalleProductores.map((p, i) => [
+        String(i + 1),
+        p.nombre,
+        mxnStr(p.totalVentas),
+        mxnStr(p.totalComisiones),
+        mxnStr(p.totalNeto),
+      ]);
+      drawTable(
+        ["#", "Productor", "Ventas Brutas", "Comisión", "Neto Recibido"],
+        prodRows,
+        [10, 52, 38, 38, 40],
+        [2, 3, 4],
+      );
+    }
+  }
+
   // ── FOOTER en cada página ─────────────────────────────────────────────────
   const totalPages = doc.getNumberOfPages();
   for (let pg = 1; pg <= totalPages; pg++) {
@@ -344,7 +387,7 @@ async function exportToPDF(data: ChartsData) {
 
 // ─── CSV Export ───────────────────────────────────────────────────────────────
 
-function exportToCSV(data: ChartsData) {
+function exportToCSV(data: ChartsData, stats?: AdminChartsStats) {
   const now     = new Date();
   const dateStr = now.toLocaleDateString("es-MX");
   const lines: string[] = [];
@@ -391,6 +434,26 @@ function exportToCSV(data: ChartsData) {
   row("NUEVOS USUARIOS POR PERÍODO");
   row("Fecha / Período", "Registros");
   data.registrosUsuarios.forEach((r) => row(r.fecha, r.total));
+
+  // Resumen Financiero
+  if (stats) {
+    lines.push("");
+    row("RESUMEN FINANCIERO DE LA PLATAFORMA");
+    row("Concepto", "Monto (MXN)");
+    row("Comisiones del marketplace", stats.resumenFinanciero.totalComisiones.toFixed(2));
+    row("Cargos de envío", stats.resumenFinanciero.totalEnvios.toFixed(2));
+    row("Fees de procesador (Stripe/PayPal)", stats.resumenFinanciero.totalPaymentFees.toFixed(2));
+    row("Total recibido por la plataforma", stats.resumenFinanciero.totalPlataforma.toFixed(2));
+    lines.push("");
+
+    if (stats.detalleProductores.length > 0) {
+      row("GANANCIAS NETAS POR PRODUCTOR");
+      row("Posición", "Productor", "Ventas Brutas (MXN)", "Comisión (MXN)", "Neto Recibido (MXN)");
+      stats.detalleProductores.forEach((p, i) => {
+        row(i + 1, p.nombre, p.totalVentas.toFixed(2), p.totalComisiones.toFixed(2), p.totalNeto.toFixed(2));
+      });
+    }
+  }
 
   const csv  = lines.join("\r\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
@@ -516,9 +579,27 @@ function BarEndLabel({ x, y, width, height, value }: any) {
   );
 }
 
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+type AdminChartsStats = {
+  resumenFinanciero: {
+    totalComisiones: number;
+    totalEnvios: number;
+    totalPaymentFees: number;
+    totalPlataforma: number;
+  };
+  detalleProductores: Array<{
+    id_productor: number;
+    nombre: string;
+    totalVentas: number;
+    totalComisiones: number;
+    totalNeto: number;
+  }>;
+} | null;
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export function AdminChartsContent() {
+export function AdminChartsContent({ stats }: { stats?: AdminChartsStats }) {
   const token  = getCookie("token");
   const isDark = useIsDark();
 
@@ -600,12 +681,12 @@ export function AdminChartsContent() {
   const handleExportPDF = async () => {
     if (!data) return;
     setPdfLoading(true);
-    try { await exportToPDF(data); }
+    try { await exportToPDF(data, stats); }
     catch (e) { console.error("PDF error", e); }
     finally { setPdfLoading(false); }
   };
 
-  const handleExportCSV = () => { if (data) exportToCSV(data); };
+  const handleExportCSV = () => { if (data) exportToCSV(data, stats); };
 
   return (
     <div className="space-y-6">

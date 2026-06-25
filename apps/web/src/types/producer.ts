@@ -109,6 +109,8 @@ export type VentasAnalytics = {
     pedidos: number;
     productosVendidos: number;
     ingresos: number;
+    comisiones: number;
+    neto: number;
   };
   ventas: VentasRow[];
   productos: { x: string; y: number; monto: number }[];

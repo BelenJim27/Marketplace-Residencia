@@ -104,7 +104,9 @@ export async function exportPdfReport(opts: ExportPdfOptions): Promise<void> {
   // ── Captura gráficas ──────────────────────────────────────────────────────────
   const captureEl = async (el: HTMLElement | null): Promise<string | null> => {
     if (!el) return null;
-    const c = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false });
+    // Pequeña pausa para que recharts termine animaciones internas
+    await new Promise((r) => setTimeout(r, 600));
+    const c = await html2canvas(el, { scale: 3, backgroundColor: "#F4F0E3", useCORS: true, logging: false } as any);
     return c.toDataURL("image/png");
   };
   const ventasImg    = await captureEl(opts.ventasChartEl);
@@ -246,6 +248,17 @@ export async function exportPdfReport(opts: ExportPdfOptions): Promise<void> {
   ], y);
   y += 3;
 
+  // ── Comisiones y neto ──
+  const comisiones = salesData?.resumen.comisiones ?? 0;
+  const neto = salesData?.resumen.neto ?? 0;
+  y = metricRow([
+    { lbl: "Ingresos brutos",  val: fmtMXN(totalVentas) },
+    { lbl: "Comisiones",       val: fmtMXN(comisiones),  sub: "Descontado por la plataforma" },
+    { lbl: "Neto recibido",    val: fmtMXN(neto) },
+    { lbl: "",                 val: "" },
+  ], y);
+  y += 3;
+
   // Dos tarjetas medianas
   const hw = CW / 2;
   const pnShort = (topProduct?.x ?? "—").length > 30 ? (topProduct?.x ?? "").slice(0, 28) + "…" : (topProduct?.x ?? "—");
@@ -281,7 +294,7 @@ export async function exportPdfReport(opts: ExportPdfOptions): Promise<void> {
 
   if (ventasImg) {
     const ip = pdf.getImageProperties(ventasImg);
-    const ih = Math.min(CW / (ip.width / ip.height), 110);
+    const ih = Math.min(CW / (ip.width / ip.height), 140);
     pdf.addImage(ventasImg, "PNG", M, y, CW, ih);
     y += ih + 6;
   } else {
@@ -303,7 +316,7 @@ export async function exportPdfReport(opts: ExportPdfOptions): Promise<void> {
 
   if (productosImg) {
     const ip = pdf.getImageProperties(productosImg);
-    const ih = Math.min(CW / (ip.width / ip.height), 120);
+    const ih = Math.min(CW / (ip.width / ip.height), 140);
     pdf.addImage(productosImg, "PNG", M, y, CW, ih);
     y += ih + 6;
   } else {

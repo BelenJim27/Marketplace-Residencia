@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { PaginacionQueryDto } from '../../common/dto/paginacion.dto';
 import { NotificacionesService } from "../notificaciones/notificaciones.service";
+import { LotesService } from "../lotes/lotes.service";
 import { serializeBigInts, toBigIntId } from "../../common/utilities/serialize";
 import {
   CreateInventarioDto,
@@ -15,6 +16,7 @@ export class InventarioService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificaciones: NotificacionesService,
+    private readonly lotesService: LotesService,
   ) {}
 
   async listInventario(query: PaginacionQueryDto = {}) {
@@ -147,6 +149,14 @@ export class InventarioService {
         valor_nuevo: { stock: dto.stock, stock_minimo: dto.stock_minimo } as any,
       },
     });
+
+    const producto = await this.prisma.productos.findUnique({
+      where: { id_producto: current.id_producto },
+      select: { id_lote: true },
+    });
+    if (producto?.id_lote) {
+      await this.lotesService.softDeleteEmptyLote(producto.id_lote);
+    }
 
     return serializeBigInts(updated);
   }

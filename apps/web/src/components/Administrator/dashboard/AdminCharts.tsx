@@ -19,6 +19,22 @@ const AdminChartsContent = dynamic(
   }
 );
 
-export function AdminCharts() {
-  return <AdminChartsContent />;
+type AdminChartsStats = {
+  resumenFinanciero: {
+    totalComisiones: number;
+    totalEnvios: number;
+    totalPaymentFees: number;
+    totalPlataforma: number;
+  };
+  detalleProductores: Array<{
+    id_productor: number;
+    nombre: string;
+    totalVentas: number;
+    totalComisiones: number;
+    totalNeto: number;
+  }>;
+} | null;
+
+export function AdminCharts({ stats }: { stats?: AdminChartsStats }) {
+  return <AdminChartsContent stats={stats ?? null} />;
 }

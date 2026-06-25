@@ -14,6 +14,19 @@ type Stats = {
   pedidosPendientes: number;
   pedidosEnviados: number;
   productoresActivos: number;
+  resumenFinanciero: {
+    totalComisiones: number;
+    totalEnvios: number;
+    totalPaymentFees: number;
+    totalPlataforma: number;
+  };
+  detalleProductores: Array<{
+    id_productor: number;
+    nombre: string;
+    totalVentas: number;
+    totalComisiones: number;
+    totalNeto: number;
+  }>;
 };
 
 const mxn = (v: number) =>
@@ -135,6 +148,46 @@ export function AdminDashboard() {
             </div>
           </section>
 
+          {/* ── Resumen Financiero ── */}
+          <section>
+            <Eyebrow>Resumen Financiero</Eyebrow>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <MetricCard
+                label="Comisiones cobradas"
+                value={mxn(stats?.resumenFinanciero.totalComisiones ?? 0)}
+                sub="Comisiones del marketplace"
+                icon={ICONS.comisiones}
+              />
+              <MetricCard
+                label="Envíos cobrados"
+                value={mxn(stats?.resumenFinanciero.totalEnvios ?? 0)}
+                sub="Cargos de envío a clientes"
+                icon={ICONS.enviosIcon}
+              />
+              <MetricCard
+                label="Fees de pago"
+                value={mxn(stats?.resumenFinanciero.totalPaymentFees ?? 0)}
+                sub="Stripe / PayPal"
+                icon={ICONS.fees}
+              />
+              <MetricCard
+                label="Total plataforma"
+                value={mxn(stats?.resumenFinanciero.totalPlataforma ?? 0)}
+                sub="Comisiones + envíos"
+                accent="attention"
+                icon={ICONS.totalPlataforma}
+              />
+            </div>
+          </section>
+
+          {/* ── Ganancias Netas por Productor ── */}
+          {stats?.detalleProductores && stats.detalleProductores.length > 0 && (
+            <section>
+              <Eyebrow>Ganancias Netas por Productor</Eyebrow>
+              <TablaProductoresNeto items={stats.detalleProductores} />
+            </section>
+          )}
+
           {/* ── Gráficas ── */}
           <section data-tour="admin-charts">
             <div className="flex items-center gap-4 mb-6">
@@ -143,7 +196,7 @@ export function AdminDashboard() {
               </h2>
               <span className="h-px flex-1 bg-[#C5CFB0] dark:bg-[#3D6B3F]/40" />
             </div>
-            <AdminCharts />
+            <AdminCharts stats={stats} />
           </section>
         </>
       )}
@@ -307,6 +360,39 @@ function DashboardSkeleton() {
   );
 }
 
+// ─── TablaProductoresNeto ─────────────────────────────────────────────────────
+
+function TablaProductoresNeto({ items }: { items: Stats['detalleProductores'] }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-[#C5CFB0] dark:border-[#3D6B3F]/40 bg-white dark:bg-[#1F3A2E]/40 shadow-[0_2px_12px_rgba(61,107,63,0.08)]">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[#C5CFB0]/50 dark:border-[#3D6B3F]/30 bg-[#F4F0E3] dark:bg-[#1F3A2E]/60">
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">#</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Productor</th>
+              <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Ventas Brutas</th>
+              <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[#3D6B3F]/70 dark:text-[#A8C26B]/70">Comisión</th>
+              <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[#C97A3E]">Neto Recibido</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((p, i) => (
+              <tr key={p.id_productor} className="border-b border-[#C5CFB0]/30 dark:border-[#3D6B3F]/20 hover:bg-[#F4F0E3]/50 dark:hover:bg-[#1F3A2E]/30 transition-colors">
+                <td className="px-5 py-3.5 text-[#3D6B3F]/60 dark:text-[#A8C26B]/60">{i + 1}</td>
+                <td className="px-5 py-3.5 font-medium text-[#1F3A2E] dark:text-[#E8E3D5]">{p.nombre}</td>
+                <td className="px-5 py-3.5 text-right tabular-nums text-[#3D6B3F] dark:text-[#A8C26B]">{mxn(p.totalVentas)}</td>
+                <td className="px-5 py-3.5 text-right tabular-nums text-[#C97A3E]/80">{mxn(p.totalComisiones)}</td>
+                <td className="px-5 py-3.5 text-right tabular-nums font-bold text-[#1F3A2E] dark:text-[#E8E3D5]">{mxn(p.totalNeto)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Icons ──────────────────────────────────────────────────────────────────
 
 const ICONS = {
@@ -333,6 +419,26 @@ const ICONS = {
   enviados: (
     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+    </svg>
+  ),
+  comisiones: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  enviosIcon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+    </svg>
+  ),
+  fees: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+    </svg>
+  ),
+  totalPlataforma: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
     </svg>
   ),
 };

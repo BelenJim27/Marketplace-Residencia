@@ -125,6 +125,8 @@ export class LotesService {
       }),
     ]);
 
+    await this.softDeleteEmptyLote(id_lote);
+
     return serializeBigInts(inventarioActualizado);
   }
 
@@ -187,6 +189,26 @@ export class LotesService {
         data: { eliminado_en: new Date() },
       }),
     );
+  }
+
+  async softDeleteEmptyLote(id_lote: number, tx?: Prisma.TransactionClient) {
+    const client = tx ?? this.prisma;
+    const result = await client.inventario.aggregate({
+      _sum: { stock: true },
+      where: {
+        productos: {
+          id_lote,
+          eliminado_en: null,
+        },
+      },
+    });
+    const stockTotal = result._sum.stock ?? 0;
+    await client.lotes.update({
+      where: { id_lote },
+      data: stockTotal === 0
+        ? { eliminado_en: new Date(), estado_lote: 'agotado' }
+        : { eliminado_en: null, estado_lote: 'disponible' },
+    });
   }
 
   // ─── HELPER PRIVADO: crear/actualizar producto desde datos de API ─────────────

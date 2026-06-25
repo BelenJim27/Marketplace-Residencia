@@ -234,20 +234,27 @@ export function ProductorDashboard() {
 
         <div className="p-6">
           <div ref={chartsRef} className="space-y-8">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <MiniStat
                 title="Periodo ventas"
                 value={salesData?.resumen.pedidos ?? 0}
                 subtitle={periodLabel(salesPeriod)}
               />
               <MiniStat
-                title="Ingresos"
+                title="Ingresos Brutos"
                 value={formatCurrency(salesData?.resumen.ingresos ?? 0)}
                 highlight
               />
               <MiniStat
-                title="Productos vendidos"
-                value={salesData?.resumen.productosVendidos ?? 0}
+                title="Comisiones"
+                value={formatCurrency(salesData?.resumen.comisiones ?? 0)}
+                subtitle="Descontado por la plataforma"
+              />
+              <MiniStat
+                title="Neto Recibido"
+                value={formatCurrency(salesData?.resumen.neto ?? 0)}
+                subtitle="Ingresos después de comisiones"
+                highlight
               />
             </div>
 
@@ -292,11 +299,16 @@ function MiniStat({
   return (
     <div className="flex flex-col rounded-xl border border-[#C5CFB0]/50 dark:border-[#2d4a35]/50 bg-white dark:bg-[#1a2a1e] p-5 transition-colors hover:bg-[#C5CFB0]/10 dark:hover:bg-[#2d4a35]/20">
       <span className="text-[10px] font-bold uppercase tracking-widest text-[#1F3A2E]/40 dark:text-[#e2ede3]/40">
-        {title} {subtitle && `(${subtitle})`}
+        {title}
       </span>
       <span className={`mt-2 text-2xl font-black ${highlight ? "text-[#3D6B3F] dark:text-[#6ab86c]" : "text-[#1F3A2E] dark:text-[#e2ede3]"}`}>
         {value}
       </span>
+      {subtitle && (
+        <span className="mt-1 text-xs text-[#3D6B3F]/60 dark:text-[#9dc49e]/60">
+          {subtitle}
+        </span>
+      )}
     </div>
   );
 }

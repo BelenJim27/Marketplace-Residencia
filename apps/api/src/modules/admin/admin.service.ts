@@ -26,6 +26,9 @@ export class AdminService {
       pedidosPendientes,
       pedidosEnviados,
       productoresActivos,
+      totalComisiones,
+      totalEnvios,
+      totalPaymentFees,
     ] = await Promise.all([
       this.prisma.usuarios.count({ where: { eliminado_en: null } }),
       this.prisma.productores.count({ where: { eliminado_en: null } }),
@@ -49,7 +52,46 @@ export class AdminService {
           tiendas: { some: { status: 'activa', eliminado_en: null } },
         },
       }),
+      // Comisiones totales cobradas por la plataforma
+      this.prisma.pedido_productor.aggregate({
+        where: { pedidos: { estado: 'pagado', eliminado_en: null } },
+        _sum: { comision_marketplace: true },
+      }),
+      // Total de envíos cobrados en pedidos pagados
+      this.prisma.pedidos.aggregate({
+        where: { estado: 'pagado', eliminado_en: null },
+        _sum: { shipping_amount: true },
+      }),
+      // Fees de procesador de pagos (Stripe/PayPal)
+      this.prisma.payment_fees.aggregate({
+        where: { pagos: { pedidos: { estado: 'pagado', eliminado_en: null } } },
+        _sum: { monto_fee: true },
+      }),
     ]);
+
+    const totalComisionesVal = Number(totalComisiones._sum.comision_marketplace ?? 0);
+    const totalEnviosVal = Number(totalEnvios._sum.shipping_amount ?? 0);
+    const totalPaymentFeesVal = Number(totalPaymentFees._sum.monto_fee ?? 0);
+
+    // Top productores con desglose financiero
+    const productoresNeto = await this.prisma.$queryRaw<
+      Array<{ id_productor: unknown; nombre: string | null; total_ventas: unknown; total_comisiones: unknown; total_neto: unknown }>
+    >`
+      SELECT
+        pp.id_productor,
+        COALESCE(u.nombre, 'Productor') AS nombre,
+        SUM(COALESCE(pp.subtotal_bruto, 0)) AS total_ventas,
+        SUM(COALESCE(pp.comision_marketplace, 0)) AS total_comisiones,
+        SUM(COALESCE(pp.monto_neto_productor, 0)) AS total_neto
+      FROM pedido_productor pp
+      INNER JOIN pedidos pe ON pe.id_pedido = pp.id_pedido
+      INNER JOIN productores pr ON pr.id_productor = pp.id_productor
+      LEFT JOIN usuarios u ON u.id_usuario = pr.id_usuario
+      WHERE pe.estado = 'pagado' AND pe.eliminado_en IS NULL
+      GROUP BY pp.id_productor, u.nombre
+      ORDER BY total_ventas DESC
+      LIMIT 20
+    `;
 
     return {
       totalUsuarios: Number(totalUsuarios),
@@ -59,6 +101,19 @@ export class AdminService {
       pedidosPendientes: Number(pedidosPendientes),
       pedidosEnviados: Number(pedidosEnviados),
       productoresActivos: Number(productoresActivos),
+      resumenFinanciero: {
+        totalComisiones: totalComisionesVal,
+        totalEnvios: totalEnviosVal,
+        totalPaymentFees: totalPaymentFeesVal,
+        totalPlataforma: totalComisionesVal + totalEnviosVal,
+      },
+      detalleProductores: productoresNeto.map((r) => ({
+        id_productor: Number(r.id_productor),
+        nombre: r.nombre || 'Productor',
+        totalVentas: Number(r.total_ventas ?? 0),
+        totalComisiones: Number(r.total_comisiones ?? 0),
+        totalNeto: Number(r.total_neto ?? 0),
+      })),
     };
   }
 

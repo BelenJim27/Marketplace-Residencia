@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ComisionesService } from '../comisiones/comisiones.service';
 import { EmailService } from '../email/email.service';
 import { EnviosService } from '../envios/envios.service';
+import { LotesService } from '../lotes/lotes.service';
 import { calcularEdadEnAnios } from '../productos/edad.helper';
 import { serializeBigInts, toBigIntId } from '../../common/utilities/serialize';
 import { TasasCambioService } from '../tasas-cambio/tasas-cambio.service';
@@ -23,6 +24,7 @@ export class PagosService {
     private readonly emailService: EmailService,
     private readonly comisionesService: ComisionesService,
     private readonly tasasCambioService: TasasCambioService,
+    private readonly lotesService: LotesService,
     @Optional() private readonly enviosService: EnviosService | null,
   ) {}
   async findAll(filtros?: { estado?: string; proveedor?: string }) {
@@ -1388,6 +1390,13 @@ export class PagosService {
           where: { id_inventario: inv.id_inventario },
           data: { stock: { increment: d.cantidad } },
         });
+        const prodLotePago = await this.prisma.productos.findUnique({
+          where: { id_producto: d.id_producto },
+          select: { id_lote: true },
+        });
+        if (prodLotePago?.id_lote) {
+          await this.lotesService.softDeleteEmptyLote(prodLotePago.id_lote);
+        }
         await this.prisma.movimientos_inventario.create({
           data: {
             id_inventario: inv.id_inventario,

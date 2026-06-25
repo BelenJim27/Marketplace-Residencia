@@ -7,6 +7,7 @@ import { ComisionesService } from "../comisiones/comisiones.service";
 import { EmailService } from "../email/email.service";
 import { FacturaPdfData, FacturaPdfService } from "../email/factura-pdf.service";
 import { SkydropxService } from "../envios/skydropx.service";
+import { LotesService } from "../lotes/lotes.service";
 import { PaypalService } from "../pagos/paypal.service";
 import { StripeService } from "../pagos/stripe.service";
 import { serializeBigInts, toBigIntId } from "../../common/utilities/serialize";
@@ -49,6 +50,7 @@ export class PedidosService {
     private readonly skydropxService: SkydropxService,
     private readonly stripeService: StripeService,
     private readonly paypalService: PaypalService,
+    private readonly lotesService: LotesService,
   ) {}
   async findAll(query: PaginacionQueryDto = {}) {
     const pagina = query.pagina ?? 1;
@@ -202,6 +204,8 @@ export class PedidosService {
           pedidos: 0,
           productosVendidos: 0,
           ingresos: 0,
+          comisiones: 0,
+          neto: 0,
         },
         ventas: buckets.map((bucket) => ({ x: bucket.label, y: 0 })),
         productos: [],
@@ -250,6 +254,22 @@ export class PedidosService {
         }),
     );
 
+    // Comisiones y neto del productor desde pedido_productor
+    const netoResult = await this.prisma.pedido_productor.aggregate({
+      where: {
+        id_productor,
+        pedidos: {
+          estado: { in: ESTADOS_VENTA_PAGADA },
+          eliminado_en: null,
+          fecha_creacion: { gte: start },
+        },
+      },
+      _sum: {
+        comision_marketplace: true,
+        monto_neto_productor: true,
+      },
+    });
+
     const ventasMap = new Map<string, number>();
     const productosMap = new Map<string, { cantidad: number; monto: number }>();
     const buckets = buildBuckets(start, periodo, bucketSize);
@@ -290,6 +310,8 @@ export class PedidosService {
         ingresos: Number(
           rawRows.reduce((sum, row) => sum + row.monto, 0).toFixed(2),
         ),
+        comisiones: Number(netoResult._sum.comision_marketplace ?? 0),
+        neto: Number(netoResult._sum.monto_neto_productor ?? 0),
       },
       ventas,
       productos,
@@ -486,6 +508,13 @@ export class PedidosService {
               where: { id_inventario: inv.id_inventario },
               data: { stock: { increment: restaurar } },
             });
+            const prodLote = await tx.productos.findUnique({
+              where: { id_producto: detalle.id_producto },
+              select: { id_lote: true },
+            });
+            if (prodLote?.id_lote) {
+              await this.lotesService.softDeleteEmptyLote(prodLote.id_lote, tx);
+            }
             await tx.movimientos_inventario.create({
               data: {
                 id_inventario: inv.id_inventario,
@@ -635,11 +664,25 @@ export class PedidosService {
                 `Stock insuficiente para el producto ${dto.id_producto}. Disponible: ${inventario.stock}, incremento solicitado: ${delta}.`,
               );
             }
+            const prodLoteUp = await tx.productos.findUnique({
+              where: { id_producto },
+              select: { id_lote: true },
+            });
+            if (prodLoteUp?.id_lote) {
+              await this.lotesService.softDeleteEmptyLote(prodLoteUp.id_lote, tx);
+            }
           } else if (delta < 0) {
             await tx.inventario.update({
               where: { id_inventario: inventario.id_inventario },
               data: { stock: { increment: Math.abs(delta) } },
             });
+            const prodLoteDown = await tx.productos.findUnique({
+              where: { id_producto },
+              select: { id_lote: true },
+            });
+            if (prodLoteDown?.id_lote) {
+              await this.lotesService.softDeleteEmptyLote(prodLoteDown.id_lote, tx);
+            }
           }
 
           if (delta !== 0) {
@@ -682,6 +725,14 @@ export class PedidosService {
             throw new BadRequestException(
               `Stock insuficiente para el producto ${dto.id_producto}. Disponible: ${inventario.stock}, solicitado: ${nuevaCantidad}.`,
             );
+          }
+
+          const prodLote = await tx.productos.findUnique({
+            where: { id_producto },
+            select: { id_lote: true },
+          });
+          if (prodLote?.id_lote) {
+            await this.lotesService.softDeleteEmptyLote(prodLote.id_lote, tx);
           }
 
           await tx.movimientos_inventario.create({
@@ -945,11 +996,25 @@ export class PedidosService {
                 throw new BadRequestException(
                   `Stock insuficiente. Disponible: ${inv.stock}, incremento solicitado: ${delta}.`,
                 );
+              const prodLoteEd = await tx.productos.findUnique({
+                where: { id_producto: detalleExistente.id_producto },
+                select: { id_lote: true },
+              });
+              if (prodLoteEd?.id_lote) {
+                await this.lotesService.softDeleteEmptyLote(prodLoteEd.id_lote, tx);
+              }
             } else {
               await tx.inventario.update({
                 where: { id_inventario: inv.id_inventario },
                 data: { stock: { increment: Math.abs(delta) } },
               });
+              const prodLoteEd = await tx.productos.findUnique({
+                where: { id_producto: detalleExistente.id_producto },
+                select: { id_lote: true },
+              });
+              if (prodLoteEd?.id_lote) {
+                await this.lotesService.softDeleteEmptyLote(prodLoteEd.id_lote, tx);
+              }
             }
 
             await tx.movimientos_inventario.create({
@@ -1008,6 +1073,13 @@ export class PedidosService {
           where: { id_inventario: inv.id_inventario },
           data: { stock: { increment: detalle.cantidad } },
         });
+        const prodLoteDel = await tx.productos.findUnique({
+          where: { id_producto: detalle.id_producto },
+          select: { id_lote: true },
+        });
+        if (prodLoteDel?.id_lote) {
+          await this.lotesService.softDeleteEmptyLote(prodLoteDel.id_lote, tx);
+        }
         await tx.movimientos_inventario.create({
           data: {
             id_inventario: inv.id_inventario,
@@ -2169,6 +2241,13 @@ export class PedidosService {
                 where: { id_inventario: inv.id_inventario },
                 data: { stock: { increment: restaurar } },
               });
+              const prodLoteExp = await tx.productos.findUnique({
+                where: { id_producto: detalle.id_producto },
+                select: { id_lote: true },
+              });
+              if (prodLoteExp?.id_lote) {
+                await this.lotesService.softDeleteEmptyLote(prodLoteExp.id_lote, tx);
+              }
               await tx.movimientos_inventario.create({
                 data: {
                   id_inventario: inv.id_inventario,
