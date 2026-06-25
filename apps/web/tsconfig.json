@@ -24,7 +24,10 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ]
+      ],
+      "@marketplace/authorization": [
+    "../../packages/authorization/src/index.ts"
+  ]
     },
     "target": "ES2017"
   },
