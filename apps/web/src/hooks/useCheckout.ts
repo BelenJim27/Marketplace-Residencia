@@ -105,11 +105,10 @@ export function useCheckout() {
 
   const extraerDireccionDestino = useCallback((dir: Direccion | null): DireccionDestino | null => {
     if (!dir) return null;
-    const ub = dir.ubicacion as Record<string, any> | undefined;
-    const pais = dir.pais_iso2 ?? ub?.pais;
-    const ciudad = dir.ciudad ?? ub?.ciudad;
-    const estado = dir.estado ?? ub?.estado;
-    const codigo_postal = dir.codigo_postal ?? ub?.codigo_postal;
+    const pais = dir.pais_iso2;
+    const ciudad = dir.ciudad;
+    const estado = dir.estado;
+    const codigo_postal = dir.codigo_postal;
     if (!pais || !ciudad || !estado || !codigo_postal) return null;
     return { pais, ciudad, estado, codigo_postal };
   }, []);
@@ -136,7 +135,6 @@ export function useCheckout() {
               codigo_postal: a.postcode ?? "",
               pais_iso2: (a.country_code ?? "MX").toUpperCase(),
               es_internacional: (a.country_code ?? "mx").toUpperCase() !== "MX",
-              ubicacion: { lat, lng, source: "gps" },
             });
           } catch {
             reject(new Error("No se pudo obtener la dirección desde las coordenadas."));
@@ -283,9 +281,9 @@ export function useCheckout() {
         return;
       }
 
-      const pais_iso2 = direccionSeleccionada?.pais_iso2 ?? (direccionSeleccionada?.ubicacion as any)?.pais ?? "MX";
+      const pais_iso2 = direccionSeleccionada?.pais_iso2 ?? "MX";
       if (pais_iso2 === "US" && items.length > 0) {
-        const estado_codigo = direccionSeleccionada?.estado ?? (direccionSeleccionada?.ubicacion as any)?.estado;
+        const estado_codigo = direccionSeleccionada?.estado;
         try {
           const resultado = await api.pedidos.validarEnvio({
             pais_iso2,
@@ -329,8 +327,7 @@ export function useCheckout() {
   }, [paso]);
 
   const buildShippingAddressForStripe = useCallback((dir: Direccion) => {
-    const ub = dir.ubicacion as Record<string, any> | undefined;
-    const country = (dir.pais_iso2 ?? ub?.pais ?? "MX").toUpperCase();
+    const country = (dir.pais_iso2 ?? "MX").toUpperCase();
     const line1 = dir.es_internacional
       ? (dir.linea_1 ?? "")
       : [dir.calle, dir.numero].filter(Boolean).join(" ");
@@ -340,9 +337,9 @@ export function useCheckout() {
     return {
       line1: line1 || "",
       line2: line2 || undefined,
-      city: dir.ciudad ?? ub?.ciudad ?? "",
-      state: dir.estado ?? ub?.estado ?? "",
-      postal_code: dir.codigo_postal ?? ub?.codigo_postal ?? "",
+      city: dir.ciudad ?? "",
+      state: dir.estado ?? "",
+      postal_code: dir.codigo_postal ?? "",
       country,
     };
   }, []);
@@ -427,7 +424,7 @@ export function useCheckout() {
             ? String(getRate(currency) ?? (1 / FALLBACK_MXN_PER_USD))
             : undefined,
           moneda_referencia: currency !== 'MXN' ? currency : undefined,
-          pais_destino_iso2: direccionSeleccionada.pais_iso2 ?? (direccionSeleccionada.ubicacion as any)?.pais ?? "MX",
+          pais_destino_iso2: direccionSeleccionada.pais_iso2 ?? "MX",
           direccion_envio_snapshot: direccionSeleccionada,
         }) as { id?: number; id_pedido?: number };
 
@@ -458,7 +455,6 @@ export function useCheckout() {
           peso_kg: String(pesoTotal),
           estado: "preparando",
           transportista_codigo: (primeraSeleccion as any)?.carrier,
-          codigo_servicio: primeraSeleccion?.productCode,
           solicitar_proteccion: solicitarProteccion,
           costo_proteccion: solicitarProteccion ? String(costoProteccionEstimadoMXN) : undefined,
         });

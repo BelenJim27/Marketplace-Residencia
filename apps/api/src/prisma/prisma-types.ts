@@ -13,7 +13,6 @@ type GetArgs<T> = T extends { findMany: (args?: infer A) => any } ? NonNullable<
 export type productosWhereInput      = GetArgs<PrismaClient['productos']>['where'];
 export type productosInclude         = GetArgs<PrismaClient['productos']>['include'];
 export type comisionesWhereInput     = GetArgs<PrismaClient['comisiones']>['where'];
-export type idiomasWhereInput        = GetArgs<PrismaClient['idiomas']>['where'];
 export type paisesWhereInput         = GetArgs<PrismaClient['paises']>['where'];
 export type payoutsWhereInput        = GetArgs<PrismaClient['payouts']>['where'];
 export type tasas_cambioWhereInput   = GetArgs<PrismaClient['tasas_cambio']>['where'];

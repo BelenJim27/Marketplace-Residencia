@@ -71,7 +71,7 @@ export class EnviosController {
 
   @Post()
   @UseGuards(AuthGuard, PermisosGuard)
-  @RequireAnyPermission(PERMISOS.GESTIONAR_PEDIDOS)
+  @RequireAnyPermission(PERMISOS.CREAR_PEDIDO, PERMISOS.GESTIONAR_PEDIDOS)
   create(@Body() dto: CreateEnvioDto) { return this.service.create(dto); }
 
   @Patch(':id')

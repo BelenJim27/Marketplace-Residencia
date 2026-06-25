@@ -16,7 +16,6 @@ interface TrackingEvento {
 interface TrackingData {
   numero_rastreo: string | null;
   estado_actual: string;
-  fecha_entrega_estimada: string | null;
   fecha_entrega_real: string | null;
   eventos: TrackingEvento[];
 }
@@ -262,14 +261,7 @@ export default function RastreoPage() {
                 <p className="font-medium text-gray-900 dark:text-white">{carrierId}</p>
               </div>
             )}
-            {tracking?.fecha_entrega_estimada && (
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Entrega estimada</span>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {new Date(tracking.fecha_entrega_estimada).toLocaleDateString('es-MX', { month: 'short', day: 'numeric' })}
-                </p>
-              </div>
-            )}
+
             {tracking?.estado_actual && (
               <div>
                 <span className="text-gray-500 dark:text-gray-400">Estado</span>

@@ -175,7 +175,7 @@ export default function CheckoutPage() {
   const COLOR_PALETTE = usePalette();
 
   // USD si locale='en' o país destino ≠ MX; de lo contrario MXN
-  const pais_destino = direccionSeleccionada?.pais_iso2 ?? (direccionSeleccionada?.ubicacion as any)?.pais ?? "MX";
+  const pais_destino = direccionSeleccionada?.pais_iso2 ?? "MX";
   const displayCurrency: 'MXN' | 'USD' = (locale === 'en' || pais_destino !== 'MX') ? 'USD' : 'MXN';
   // Moneda de COBRO real (la que usa el backend para Stripe/PayPal): por PAÍS destino.
   // El backend cobra USD a destinos != MX (C-4); la moneda de la orden de PayPal debe
@@ -1071,7 +1071,7 @@ function DireccionStep({
                 onChange={() => setDireccionSeleccionada(dir)}
               />
               <div className="text-sm text-gray-700 dark:text-gray-300">
-                <p className="font-medium capitalize">{dir.nombre_etiqueta || dir.tipo || t("Dirección")}</p>
+                <p className="font-medium capitalize">{dir.tipo || t("Dirección")}</p>
                 {dir.nombre_destinatario && <p className="text-xs text-gray-500">{t("Para")}: {dir.nombre_destinatario}</p>}
                 <p>
                   {dir.es_internacional ? (
@@ -1087,8 +1087,7 @@ function DireccionStep({
                   )}
                 </p>
                 <p className="text-gray-500">
-                  {[dir.ciudad, dir.estado, dir.codigo_postal, dir.pais_iso2].filter(Boolean).join(", ") ||
-                    [dir.ubicacion?.ciudad, dir.ubicacion?.estado, dir.ubicacion?.codigo_postal, dir.ubicacion?.pais].filter(Boolean).join(", ")}
+                  {[dir.ciudad, dir.estado, dir.codigo_postal, dir.pais_iso2].filter(Boolean).join(", ")}
                 </p>
                 {dir.es_internacional && <span className="text-xs text-blue-600 dark:text-blue-400">{t("Internacional")}</span>}
               </div>

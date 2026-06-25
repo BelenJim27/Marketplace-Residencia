@@ -39,7 +39,6 @@ interface Envio {
   costo_envio?: string;
   costo_proteccion?: string;
   solicitar_proteccion?: boolean;
-  fecha_entrega_estimada?: string;
   transportistas?: { nombre: string };
   envio_guias?: Array<{ payload_response?: Record<string, unknown> }>;
 }
@@ -1186,19 +1185,7 @@ function DetallePedidoContent() {
                     </div>
                   )}
 
-                  {/* Fecha estimada de entrega */}
-                  {trk?.fecha_entrega_estimada && (
-                    <div style={{
-                      display: "flex", alignItems: "center", gap: "8px", marginTop: "12px",
-                      padding: "10px 14px", borderRadius: "8px",
-                      background: "rgba(61,107,63,0.06)", border: "1px solid rgba(61,107,63,0.15)",
-                    }}>
-                      <CheckCircle size={14} style={{ color: C.green, flexShrink: 0 }} />
-                      <span style={{ fontSize: "13px", color: C.greenDark }}>
-                        {t("Entrega estimada:")} <strong>{new Date(trk.fecha_entrega_estimada).toLocaleDateString(dateLocale, { weekday: "long", day: "numeric", month: "long" })}</strong>
-                      </span>
-                    </div>
-                  )}
+
                 </div>
               );
             })}

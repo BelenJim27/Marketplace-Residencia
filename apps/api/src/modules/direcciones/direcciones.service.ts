@@ -35,7 +35,6 @@ export class DireccionesService {
         id_usuario: dto.id_usuario,
         nombre_destinatario: dto.nombre_destinatario ?? null,
         telefono: dto.telefono ?? null,
-        nombre_etiqueta: dto.nombre_etiqueta ?? null,
         es_predeterminada: dto.es_predeterminada ?? false,
         es_internacional: dto.es_internacional ?? false,
         calle: dto.calle ?? null,
@@ -49,7 +48,6 @@ export class DireccionesService {
         pais_iso2: dto.pais_iso2 ?? null,
         referencia: dto.referencia ?? null,
         tipo: dto.tipo ?? null,
-        ubicacion: (dto.ubicacion ?? {}) as any,
       },
     });
     return serializeBigInts(resultado);
@@ -85,7 +83,6 @@ export class DireccionesService {
         data: {
           nombre_destinatario: dto.nombre_destinatario,
           telefono: dto.telefono,
-          nombre_etiqueta: dto.nombre_etiqueta,
           es_predeterminada: dto.es_predeterminada,
           es_internacional: dto.es_internacional,
           calle: dto.calle,
@@ -99,7 +96,6 @@ export class DireccionesService {
           pais_iso2: dto.pais_iso2,
           referencia: dto.referencia,
           tipo: dto.tipo,
-          ubicacion: dto.ubicacion as any | undefined,
         },
       }),
     );

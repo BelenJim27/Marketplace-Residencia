@@ -589,7 +589,6 @@ export class ProductosService {
               url: img.url,
               orden: img.orden ?? index,
               es_principal: img.es_principal ?? false,
-              alt_text: img.alt_text || null,
             },
           }),
         ),

@@ -73,7 +73,6 @@ function makeEnvio(overrides: any = {}) {
       moneda: 'MXN',
     },
     transportistas: null,
-    servicios_envio: null,
     envio_guias: [],
     ...overrides,
   };

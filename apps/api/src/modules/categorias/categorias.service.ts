@@ -40,7 +40,6 @@ export class CategoriasService {
           slug: dto.slug.trim(),
           descripcion: dto.descripcion ?? null,
           tipo: dto.tipo?.trim() ?? 'general',
-          imagen_url: dto.imagen_url ?? null,
           activo: dto.activo ?? true,
         },
       });
@@ -77,7 +76,6 @@ export class CategoriasService {
         slug: dto.slug?.trim(),
         descripcion: dto.descripcion,
         tipo: dto.tipo?.trim(),
-        imagen_url: dto.imagen_url,
         activo: dto.activo,
       },
     });

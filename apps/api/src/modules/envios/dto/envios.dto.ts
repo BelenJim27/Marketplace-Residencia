@@ -5,7 +5,6 @@ import { IsBoolean, IsDateString, IsInt, IsNumber, IsOptional, IsPositive, IsStr
 export class CreateEnvioDto {
   @IsInt() @Type(() => Number) id_pedido!: number;
   @IsOptional() @IsInt() @Type(() => Number) id_transportista?: number;
-  @IsOptional() @IsInt() @Type(() => Number) id_servicio?: number;
   @IsOptional() @IsString() numero_rastreo?: string;
   @IsOptional() @IsString() valor_declarado_aduana?: string;
   @IsOptional() @IsString() @MaxLength(3) moneda_aduana?: string;
@@ -19,10 +18,7 @@ export class CreateEnvioDto {
   @IsOptional() @IsString() costo_proteccion?: string;
   @IsOptional() @IsString() @MaxLength(30) estado?: string;
   @IsOptional() @IsDateString() fecha_envio?: string;
-  @IsOptional() @IsDateString() fecha_entrega_estimada?: string;
-  @IsOptional() @IsDateString() fecha_entrega?: string;
   @IsOptional() @IsString() transportista_codigo?: string;
-  @IsOptional() @IsString() codigo_servicio?: string;
   @IsOptional() @IsBoolean() @Type(() => Boolean) solicitar_proteccion?: boolean;
 
 }

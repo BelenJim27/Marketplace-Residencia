@@ -11,7 +11,6 @@ export class CreateDireccionDto {
   @IsString() id_usuario!: string;
   @IsOptional() @IsString() @MaxLength(150) nombre_destinatario?: string | null;
   @IsOptional() @IsString() @MaxLength(30) telefono?: string | null;
-  @IsOptional() @IsString() @MaxLength(60) nombre_etiqueta?: string | null;
   @IsOptional() @IsBoolean() es_predeterminada?: boolean;
   @IsOptional() @IsBoolean() es_internacional?: boolean;
 
@@ -39,6 +38,5 @@ export class CreateDireccionDto {
   @IsOptional() @IsString() @Length(2, 2) pais_iso2?: string | null;
   @IsOptional() @IsString() referencia?: string | null;
   @IsOptional() @IsString() @MaxLength(20) tipo?: string | null;
-  @IsOptional() ubicacion?: Record<string, unknown> | null;
 }
 export class UpdateDireccionDto extends PartialType(CreateDireccionDto) {}

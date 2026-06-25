@@ -231,6 +231,12 @@ export class AuthService {
       data: { revocado_en: new Date() },
     });
 
+    // Increment version_token to invalidate all existing access tokens for this user
+    await this.prisma.usuarios.update({
+      where: { id_usuario: payload.sub },
+      data: { version_token: { increment: 1 } },
+    });
+
     await this.logAuthEvent('logout', payload.sub, {});
 
     return { message: 'Logout exitoso' };

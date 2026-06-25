@@ -5,7 +5,6 @@ export interface Direccion {
   id?: number | string;
   nombre_destinatario?: string;
   telefono?: string;
-  nombre_etiqueta?: string;
   es_predeterminada?: boolean;
   es_internacional?: boolean;
   
@@ -25,7 +24,6 @@ export interface Direccion {
   pais_iso2?: string;
   tipo?: string;
   referencia?: string;
-  ubicacion?: Record<string, unknown>;
 }
 
 export interface TarjetaMock {

@@ -27,7 +27,6 @@ export class DireccionFiscalDto {
   @IsOptional() @IsString() @MaxLength(20) codigo_postal?: string;
   @IsOptional() @IsString() @MaxLength(2) pais_iso2?: string;
   @IsOptional() @IsString() referencia?: string;
-  @IsOptional() @ValidateNested() ubicacion?: Record<string, unknown>;
   @IsOptional() @IsBoolean() es_internacional?: boolean;
 }
 
@@ -39,7 +38,6 @@ export class DireccionProduccionDto {
   @IsOptional() @IsString() @MaxLength(20) codigo_postal?: string;
   @IsOptional() @IsString() @MaxLength(2) pais_iso2?: string;
   @IsOptional() @IsString() referencia?: string;
-  @IsOptional() @ValidateNested() ubicacion?: Record<string, unknown>;
   @IsOptional() @IsBoolean() es_internacional?: boolean;
 }
 

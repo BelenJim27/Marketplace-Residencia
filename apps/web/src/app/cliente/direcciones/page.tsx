@@ -15,7 +15,6 @@ interface Direccion {
   id_direccion?: number;
   nombre_destinatario?: string;
   telefono?: string;
-  nombre_etiqueta?: string;
   es_predeterminada?: boolean;
   es_internacional?: boolean;
   
@@ -35,7 +34,6 @@ interface Direccion {
   pais_iso2?: string;
   referencia?: string;
   tipo?: string;
-  ubicacion?: Record<string, unknown>;
 }
 
 export default function DireccionesPage() {
@@ -54,7 +52,6 @@ export default function DireccionesPage() {
   const [formData, setFormData] = useState<Direccion>({
     nombre_destinatario: "",
     telefono: "",
-    nombre_etiqueta: "",
     es_predeterminada: false,
     es_internacional: false,
     calle: "",
@@ -100,7 +97,6 @@ export default function DireccionesPage() {
     setFormData({
       nombre_destinatario: user?.nombre || "",
       telefono: user?.telefono || "",
-      nombre_etiqueta: "",
       es_predeterminada: false,
       es_internacional: false,
       calle: "",
@@ -157,7 +153,6 @@ export default function DireccionesPage() {
               codigo_postal: a.postcode ?? prev.codigo_postal ?? "",
               pais_iso2: (a.country_code ?? "MX").toUpperCase(),
               es_internacional: (a.country_code ?? "mx").toUpperCase() !== "MX",
-              ubicacion: { lat, lng, source: "gps" },
             }));
           } catch {
             fb.error("No se pudo obtener la dirección desde las coordenadas.");
@@ -219,7 +214,7 @@ export default function DireccionesPage() {
   };
 
   const solicitarEliminar = (dir: Direccion) => {
-    const etiqueta = dir.nombre_etiqueta || dir.tipo || "Dirección";
+    const etiqueta = dir.tipo || "Dirección";
     deleteAlert.abrir(etiqueta, async () => {
       try {
         const token = getCookie("token") || "";
@@ -629,7 +624,7 @@ export default function DireccionesPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="truncate font-semibold text-dark dark:text-white">
-                      {dir.nombre_etiqueta || dir.tipo || "Dirección"}
+                      {dir.tipo || "Dirección"}
                     </h3>
                     {dir.es_predeterminada && (
                       <span className="inline-block shrink-0 rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-600 dark:bg-blue-900/30">
@@ -679,14 +674,14 @@ export default function DireccionesPage() {
                   )}
                   <button
                     onClick={() => abrirFormulario(dir)}
-                    aria-label={`Editar dirección ${dir.nombre_etiqueta || dir.tipo || "dirección"}`}
+                    aria-label={`Editar dirección ${dir.tipo || "dirección"}`}
                     className="rounded p-3 text-gray-600 hover:bg-gray-1 dark:hover:bg-dark-2"
                   >
                     <Edit2 className="h-5 w-5" aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => solicitarEliminar(dir)}
-                    aria-label={`Eliminar dirección ${dir.nombre_etiqueta || dir.tipo || "dirección"}`}
+                    aria-label={`Eliminar dirección ${dir.tipo || "dirección"}`}
                     className="rounded p-3 text-red-600 hover:bg-red-50 dark:hover:bg-dark-2"
                   >
                     <Trash2 className="h-5 w-5" aria-hidden="true" />

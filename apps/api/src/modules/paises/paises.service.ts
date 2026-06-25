@@ -22,7 +22,7 @@ export class PaisesService {
   async findOne(iso2: string) {
     const pais = await this.prisma.paises.findUnique({
       where: { iso2: iso2.toUpperCase() },
-      include: { idiomas: true },
+
     });
     if (!pais) throw new NotFoundException('País no encontrado');
     return serializeBigInts(pais);

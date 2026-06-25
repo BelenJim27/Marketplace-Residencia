@@ -513,7 +513,6 @@ export const api = {
           codigo_postal?: string;
           pais_iso2?: string;
           referencia?: string;
-          ubicacion?: Record<string, unknown>;
           es_internacional?: boolean;
         };
         direccion_produccion?: {
@@ -524,7 +523,6 @@ export const api = {
           codigo_postal?: string;
           pais_iso2?: string;
           referencia?: string;
-          ubicacion?: Record<string, unknown>;
           es_internacional?: boolean;
         };
       },

@@ -25,7 +25,6 @@ interface Categoria {
   nombre: string;
   slug: string;
   descripcion?: string;
-  imagen_url?: string;
   tipo?: string;
 }
 
@@ -185,16 +184,6 @@ export default function CategoriaPage() {
         style={{ backgroundColor: "white", border: "1px solid #e8dcc8" }}
       >
         <div className="flex gap-8 items-start">
-          {categoria.imagen_url && (
-            <div className="relative h-40 w-40 flex-shrink-0">
-              <Image
-                src={getMediaUrl(categoria.imagen_url)}
-                alt={categoria.nombre}
-                fill
-                className="object-cover rounded-lg"
-              />
-            </div>
-          )}
           <div className="flex-1">
             <h1
               className="text-4xl font-bold mb-2"

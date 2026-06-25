@@ -283,6 +283,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     const { signOut } = await import("next-auth/react");
 
+    // Determine redirect based on role before clearing cookies
+    let redirectTo = "/auth/sign-in";
+    try {
+      const usuarioStr = getCookie("usuario");
+      if (usuarioStr) {
+        const usuario = JSON.parse(usuarioStr);
+        const isAdmin = hasAnyPermission(usuario.permisos, ADMIN_PERMISOS);
+        const isProductor =
+          usuario.id_productor != null &&
+          hasAnyPermission(usuario.permisos, PRODUCTOR_PERMISOS);
+        // Clients and unauthenticated visitors go to catalog
+        if (!isAdmin && !isProductor) {
+          redirectTo = "/producto";
+        }
+      } else {
+        redirectTo = "/producto";
+      }
+    } catch {
+      redirectTo = "/producto";
+    }
+
+    // 1. Sign out from NextAuth FIRST to clear next-auth.session-token before redirect
+    try {
+      await signOut({ redirect: false });
+    } catch {
+      // NextAuth may fail if no OAuth session exists; safe to ignore
+    }
+
+    // 2. Then call backend to revoke the refresh token
     const refreshToken = getCookie("refresh_token");
     if (refreshToken) {
       try {
@@ -292,6 +321,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // 3. Clear all client-side cookies
     removeCookie("token");
     removeCookie("refresh_token");
     removeCookie("session");
@@ -299,14 +329,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     localStorage.removeItem("carrito_items_guest");
 
-    // Navegar inmediatamente para evitar que AuthGuard inyecte ?redirect=
-    window.location.href = "/auth/sign-in";
-
-    try {
-      await signOut({ redirect: false });
-    } catch {
-      // NextAuth may fail if no OAuth session exists; safe to ignore
-    }
+    // 4. Finally navigate away (after all cleanup is done)
+    window.location.href = redirectTo;
   }, []);
 
   const isAdmin = useMemo(

@@ -17,7 +17,6 @@ export class ProductoImagenDto {
   @IsString() @MaxLength(500) url!: string;
   @IsOptional() @IsInt() @Type(() => Number) orden?: number;
   @IsOptional() @IsBoolean() es_principal?: boolean;
-  @IsOptional() @IsString() @MaxLength(255) alt_text?: string;
 }
 
 export class CreateProductoDto {

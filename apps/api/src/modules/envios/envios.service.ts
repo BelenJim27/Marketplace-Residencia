@@ -48,7 +48,7 @@ export class EnviosService {
     const pagina = query.pagina ?? 1;
     const limite = query.limite ?? 20;
     const skip = (pagina - 1) * limite;
-    const include = { pedidos: true, transportistas: true, servicios_envio: true, envio_guias: true };
+    const include = { pedidos: true, transportistas: true, envio_guias: true };
     const [items, total] = await Promise.all([
       this.prisma.envios.findMany({ include, orderBy: { id_envio: 'desc' }, take: limite, skip }),
       this.prisma.envios.count(),
@@ -61,7 +61,6 @@ export class EnviosService {
       include: {
         pedidos: true,
         transportistas: true,
-        servicios_envio: true,
         envio_guias: true,
       },
     });
@@ -73,11 +72,8 @@ export class EnviosService {
       dto.id_pedido,
     );
 
-    // 1. Inicializamos con lo que viene en el DTO
+    // 1. Resolver id_transportista desde código si no se pasa ID directo
     let id_transportista = dto.id_transportista ?? null;
-    let id_servicio = dto.id_servicio ?? null;
-
-    // 2. Si no hay ID pero hay código de transportista, lo buscamos
     if (!id_transportista && dto.transportista_codigo) {
       const t = await this.prisma.transportistas.findUnique({
         where: { codigo: dto.transportista_codigo.toUpperCase() },
@@ -85,28 +81,12 @@ export class EnviosService {
       id_transportista = t?.id_transportista ?? null;
     }
 
-    // 3. Si no hay ID de servicio pero tenemos transportista y código de servicio, lo buscamos
-    if (!id_servicio && id_transportista && dto.codigo_servicio) {
-      const s = await this.prisma.servicios_envio.findUnique({
-        where: {
-          id_transportista_codigo_servicio: {
-            id_transportista,
-            codigo_servicio: dto.codigo_servicio,
-          },
-        },
-      });
-      id_servicio = s?.id_servicio ?? null;
-    }
-
-    // 4. Creamos el registro usando las variables resueltas arriba.
-    // costo_envio se almacena inicialmente con el valor enviado desde checkout;
-    // crearGuia() lo sobrescribe con el costo real devuelto por el carrier.
+    // 2. Creamos el registro
     return serializeBigInts(
       await this.prisma.envios.create({
         data: {
           id_pedido: toBigIntId(dto.id_pedido),
-          id_transportista, // Usamos la variable local resuelta
-          id_servicio,      // Usamos la variable local resuelta
+          id_transportista,
           numero_rastreo: dto.numero_rastreo ?? null,
           valor_declarado_aduana: dto.valor_declarado_aduana ?? null,
           moneda_aduana: (dto.moneda_aduana?.trim() ?? "MXN") as Moneda,
@@ -122,10 +102,6 @@ export class EnviosService {
           estado: dto.estado?.trim() ?? "preparando",
           requires_adult_signature,
           fecha_envio: dto.fecha_envio ? new Date(dto.fecha_envio) : null,
-          fecha_entrega_estimada: dto.fecha_entrega_estimada
-            ? new Date(dto.fecha_entrega_estimada)
-            : null,
-          fecha_entrega: dto.fecha_entrega ? new Date(dto.fecha_entrega) : null,
         },
       }),
     );
@@ -158,7 +134,6 @@ export class EnviosService {
         data: {
           id_pedido: dto.id_pedido ? toBigIntId(dto.id_pedido) : undefined,
           id_transportista: dto.id_transportista,
-          id_servicio: dto.id_servicio,
           numero_rastreo: dto.numero_rastreo,
           valor_declarado_aduana: dto.valor_declarado_aduana,
           moneda_aduana: dto.moneda_aduana?.trim() as Moneda | undefined,
@@ -171,12 +146,6 @@ export class EnviosService {
           moneda_costo: dto.moneda_costo?.trim() as Moneda | undefined,
           estado: dto.estado?.trim(),
           fecha_envio: dto.fecha_envio ? new Date(dto.fecha_envio) : undefined,
-          fecha_entrega_estimada: dto.fecha_entrega_estimada
-            ? new Date(dto.fecha_entrega_estimada)
-            : undefined,
-          fecha_entrega: dto.fecha_entrega
-            ? new Date(dto.fecha_entrega)
-            : undefined,
         },
       }),
     );
@@ -250,8 +219,6 @@ export class EnviosService {
     return serializeBigInts({
       numero_rastreo: envio.numero_rastreo,
       estado_actual: envio.estado,
-      fecha_entrega_estimada: envio.fecha_entrega_estimada,
-      fecha_entrega_real: envio.fecha_entrega,
       eventos: eventos.map((e: any) => ({
         descripcion: e.descripcion,
         // Siempre normalizar para que el frontend reciba estados consistentes
@@ -269,7 +236,6 @@ export class EnviosService {
         pedidos: {
           select: { direccion_envio_snapshot: true, total: true, moneda: true, id_usuario: true },
         },
-        servicios_envio: true,
         transportistas: true,
         envio_guias: { where: { eliminado_en: null } },
       },
@@ -497,14 +463,13 @@ export class EnviosService {
 
     // Protección SkydropX — se llama fuera de la transacción (HTTP externo). Solo aplica cuando
     // la etiqueta ya está lista; si está pendiente, se omite (se podrá proteger al completarse).
-    let proteccionData: { costo_proteccion?: string; moneda_proteccion?: any; proteccion_id?: string } = {};
+    let proteccionData: { costo_proteccion?: string; moneda_proteccion?: any } = {};
     if (!isPending && envio.solicitar_proteccion && result.providerShipmentId && carrier.protegerEnvio) {
       try {
         const prot = await carrier.protegerEnvio(result.providerShipmentId, valor_declarado_usd, 'USD');
         proteccionData = {
           costo_proteccion: prot.costo.toFixed(2),
           moneda_proteccion: 'MXN' as any,
-          proteccion_id: prot.proteccionId,
         };
         this.logger.log(`[crearGuia] Protección: id=${prot.proteccionId} total=${prot.costo} (${prot.porcentaje}% + fijo ${prot.costoFijo})`);
       } catch (err: any) {
@@ -790,7 +755,6 @@ export class EnviosService {
       where: { id_envio: guia.id_envio },
       data: {
         estado: estadoNormalizado ?? estado,
-        ...(estadoNormalizado === 'entregado' ? { fecha_entrega: new Date() } : {}),
       },
     });
 

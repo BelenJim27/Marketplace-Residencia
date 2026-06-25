@@ -28,7 +28,6 @@ import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { EstadisticasLandingModule } from './modules/estadisticas-landing/estadisticas-landing.module';
 import { PaisesModule } from './modules/paises/paises.module';
-import { IdiomasModule } from './modules/idiomas/idiomas.module';
 import { TasasCambioModule } from './modules/tasas-cambio/tasas-cambio.module';
 import { ComisionesModule } from './modules/comisiones/comisiones.module';
 import { PayoutsModule } from './modules/payouts/payouts.module';
@@ -65,7 +64,6 @@ import { HealthModule } from './modules/health/health.module';
     AdminModule,
     EstadisticasLandingModule,
     PaisesModule,
-    IdiomasModule,
     TasasCambioModule,
     ComisionesModule,
     PayoutsModule,

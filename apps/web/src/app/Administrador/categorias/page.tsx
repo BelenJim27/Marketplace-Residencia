@@ -18,7 +18,6 @@ type Categoria = {
   slug: string;
   descripcion: string | null;
   tipo: string;
-  imagen_url: string | null;
   activo: boolean;
   other_categorias?: Categoria[];
 };

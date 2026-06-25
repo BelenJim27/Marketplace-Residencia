@@ -12,7 +12,6 @@ type Categoria = {
   descripcion: string | null;
   tipo: string;
   orden: number;
-  imagen_url: string | null;
   activo: boolean;
   categorias?: Categoria[];
 };

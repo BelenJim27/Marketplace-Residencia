@@ -353,7 +353,6 @@ export class ProductoresService {
         await this.prisma.direcciones.update({
           where: { id_direccion: direccionFiscalExistente.id_direccion },
           data: {
-            ubicacion: (dto.direccion_fiscal.ubicacion ?? {}) as any,
             linea_1: dto.direccion_fiscal.linea_1 ?? null,
             linea_2: dto.direccion_fiscal.linea_2 ?? null,
             ciudad: dto.direccion_fiscal.ciudad ?? null,
@@ -368,7 +367,6 @@ export class ProductoresService {
         await this.prisma.direcciones.create({
           data: {
             id_usuario,
-            ubicacion: (dto.direccion_fiscal.ubicacion ?? {}) as any,
             linea_1: dto.direccion_fiscal.linea_1 ?? null,
             linea_2: dto.direccion_fiscal.linea_2 ?? null,
             ciudad: dto.direccion_fiscal.ciudad ?? null,
@@ -397,7 +395,6 @@ export class ProductoresService {
         const updated = await this.prisma.direcciones.update({
           where: { id_direccion: direccionProduccionExistente.id_direccion },
           data: {
-            ubicacion: (dto.direccion_produccion.ubicacion ?? {}) as any,
             linea_1: dto.direccion_produccion.linea_1 ?? null,
             linea_2: dto.direccion_produccion.linea_2 ?? null,
             ciudad: dto.direccion_produccion.ciudad ?? null,
@@ -414,7 +411,6 @@ export class ProductoresService {
         const created = await this.prisma.direcciones.create({
           data: {
             id_usuario,
-            ubicacion: (dto.direccion_produccion.ubicacion ?? {}) as any,
             linea_1: dto.direccion_produccion.linea_1 ?? null,
             linea_2: dto.direccion_produccion.linea_2 ?? null,
             ciudad: dto.direccion_produccion.ciudad ?? null,
@@ -726,7 +722,6 @@ export class ProductoresService {
             codigo_postal: dto.direccion_fiscal.codigo_postal ?? null,
             pais_iso2: dto.direccion_fiscal.pais_iso2 ?? null,
             referencia: dto.direccion_fiscal.referencia ?? null,
-            ubicacion: (dto.direccion_fiscal.ubicacion ?? {}) as any,
             es_internacional: dto.direccion_fiscal.es_internacional ?? false,
           },
         });
@@ -741,7 +736,6 @@ export class ProductoresService {
             codigo_postal: dto.direccion_fiscal.codigo_postal ?? null,
             pais_iso2: dto.direccion_fiscal.pais_iso2 ?? null,
             referencia: dto.direccion_fiscal.referencia ?? null,
-            ubicacion: (dto.direccion_fiscal.ubicacion ?? {}) as any,
             tipo: 'facturacion',
             es_internacional: dto.direccion_fiscal.es_internacional ?? false,
           },
@@ -767,7 +761,6 @@ export class ProductoresService {
             codigo_postal: dto.direccion_produccion.codigo_postal ?? null,
             pais_iso2: dto.direccion_produccion.pais_iso2 ?? null,
             referencia: dto.direccion_produccion.referencia ?? null,
-            ubicacion: (dto.direccion_produccion.ubicacion ?? {}) as any,
             es_internacional: dto.direccion_produccion.es_internacional ?? false,
           },
         });
@@ -783,7 +776,6 @@ export class ProductoresService {
             codigo_postal: dto.direccion_produccion.codigo_postal ?? null,
             pais_iso2: dto.direccion_produccion.pais_iso2 ?? null,
             referencia: dto.direccion_produccion.referencia ?? null,
-            ubicacion: (dto.direccion_produccion.ubicacion ?? {}) as any,
             tipo: 'produccion',
             es_internacional: dto.direccion_produccion.es_internacional ?? false,
           },

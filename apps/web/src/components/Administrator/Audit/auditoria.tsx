@@ -16,7 +16,6 @@ interface Auditoria {
   registro_id?: string;
   valor_anterior?: Record<string, unknown>;
   valor_nuevo?: Record<string, unknown>;
-  ip_origen?: string;
   fecha: string;
   usuarios?: { nombre: string; email: string };
 }
@@ -213,13 +212,12 @@ export default function AuditoriaUI() {
               <th className="px-4 py-3 text-left">
                 <Clock className="w-4 h-4 inline mr-1" /> Fecha
               </th>
-              <th className="px-4 py-3 text-left">IP</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#C5CFB0]/30 dark:divide-[#2A4830]/30">
             {paginatedAuditoria.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-[#3D6B3F]/70 dark:text-[#7A9E6E] text-sm bg-white dark:bg-[#0F1A13]">
+                <td colSpan={5} className="px-6 py-8 text-center text-[#3D6B3F]/70 dark:text-[#7A9E6E] text-sm bg-white dark:bg-[#0F1A13]">
                   No hay registros de auditoría recientes
                 </td>
               </tr>
@@ -247,9 +245,6 @@ export default function AuditoriaUI() {
                   </td>
                   <td className="px-4 py-3 text-[#3D6B3F]/70 dark:text-[#7A9E6E]">
                     {formatDate(item.fecha)}
-                  </td>
-                  <td className="px-4 py-3 text-[#3D6B3F]/70 dark:text-[#7A9E6E] font-mono">
-                    {item.ip_origen || "-"}
                   </td>
                 </tr>
               ))
