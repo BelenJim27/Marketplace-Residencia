@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@cloudflare/next-on-pages": "^1.13.16",
+    "@marketplace/authorization": "^1.0.0",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/swagger": "^11.4.3",
