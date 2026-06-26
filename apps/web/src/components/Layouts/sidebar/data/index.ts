@@ -91,12 +91,6 @@ export const ADMIN_NAV_DATA: NavSection[] = [
         icon: Boxes,
         children: [
           {
-            title: "Inventario general",
-            url: "/Administrador/inventario",
-            icon: Boxes,
-            requiredPermission: "gestionar_inventario",
-          },
-          {
             title: "Categorías",
             url: "/Administrador/categorias",
             icon: Layers,

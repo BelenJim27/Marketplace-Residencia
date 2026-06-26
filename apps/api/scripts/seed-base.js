@@ -27,19 +27,6 @@ const CATEGORIAS = [
   { nombre: 'Cosméticos', slug: 'cosmeticos', descripcion: 'Productos de belleza', tipo: 'producto', codigo_hs_default: '3304.99' },
 ];
 
-const TRANSPORTISTAS = [
-  {
-    codigo: 'ESTAFETA',
-    nombre: 'Estafeta',
-    paises_operacion: ['MX'],
-    activo: true,
-    servicios: [
-      { codigo_servicio: 'ESTANDARD', nombre: 'Envío Estándar', tiempo_estimado: '3-5 días' },
-      { codigo_servicio: 'EXPRESS', nombre: 'Envío Express', tiempo_estimado: '1-2 días' },
-    ],
-  },
-];
-
 const COMISIONES_DEFAULT = [
   { alcance: 'global', porcentaje: 0.1500, prioridad: 1000 },
   { alcance: 'pais', pais_iso2: 'US', porcentaje: 0.1800, prioridad: 500 },
@@ -52,7 +39,6 @@ const CONFIGURACION = [
   { clave: 'MONEDA_DEFAULT', valor: 'MXN', tipo: 'texto', descripcion: 'Moneda predeterminada' },
   { clave: 'MONEDA_REFERENCIA', valor: 'USD', tipo: 'texto', descripcion: 'Moneda de referencia para type de cambio' },
   { clave: 'PEDIDO_MINIMO', valor: '500', tipo: 'numero', descripcion: 'Monto mínimo para pedido' },
-  { clave: 'ENVIO_GRATIS_DESDE', valor: '1500', tipo: 'numero', descripcion: 'Monto para envío gratis' },
   { clave: 'PAGOS_HABILITADOS', valor: 'true', tipo: 'boolean', descripcion: 'Habilitar pasarela de pagos' },
   { clave: 'INVENTARIO_HABILITADO', valor: 'true', tipo: 'boolean', descripcion: 'Habilitar control de inventario' },
   { clave: 'COMISION_PLATAFORMA', valor: '10', tipo: 'numero', descripcion: 'Porcentaje de comisión de la plataforma' },
@@ -114,33 +100,6 @@ async function main() {
       } else {
         await prisma.categorias.create({ data: { ...cat, activo: true } });
         console.log(`  ✓ Created: ${cat.nombre} (HS: ${cat.codigo_hs_default ?? 'N/A'})`);
-      }
-    }
-
-    console.log('\n=== Transportistas ===');
-    for (const transportista of TRANSPORTISTAS) {
-      const { servicios, ...data } = transportista;
-      const existing = await prisma.transportistas.findUnique({ where: { codigo: data.codigo } });
-      let tran;
-      if (existing) {
-        console.log(`  ✓ Already exists: ${data.codigo}`);
-        tran = existing;
-      } else {
-        tran = await prisma.transportistas.create({ data: { ...data, paises_operacion: data.paises_operacion } });
-        console.log(`  ✓ Created: ${data.codigo} - ${data.nombre}`);
-      }
-      for (const svc of servicios) {
-        const existingServ = await prisma.servicios_envio.findUnique({
-          where: { id_transportista_codigo_servicio: { id_transportista: tran.id_transportista, codigo_servicio: svc.codigo_servicio } },
-        });
-        if (existingServ) {
-          console.log(`    ✓ Already exists: ${svc.codigo_servicio}`);
-        } else {
-          await prisma.servicios_envio.create({
-            data: { id_transportista: tran.id_transportista, ...svc, es_internacional: data.paises_operacion.length > 1, activo: true },
-          });
-          console.log(`    ✓ Created: ${svc.codigo_servicio} - ${svc.nombre}`);
-        }
       }
     }
 

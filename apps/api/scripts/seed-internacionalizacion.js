@@ -3,23 +3,6 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-// Monedas soportadas por el enum Moneda en schema.prisma: MXN, USD.
-// Las monedas adicionales (EUR, GBP, etc.) serán añadidas cuando se expanda el enum.
-
-const IDIOMAS = [
-  { codigo: 'es',    nombre: 'Spanish',                  nombre_local: 'Español' },
-  { codigo: 'en',    nombre: 'English',                  nombre_local: 'English' },
-  { codigo: 'fr',    nombre: 'French',                   nombre_local: 'Français' },
-  { codigo: 'pt',    nombre: 'Portuguese',               nombre_local: 'Português' },
-  { codigo: 'de',    nombre: 'German',                   nombre_local: 'Deutsch' },
-  { codigo: 'it',    nombre: 'Italian',                  nombre_local: 'Italiano' },
-  { codigo: 'es-MX', nombre: 'Spanish (Mexico)',         nombre_local: 'Español (México)' },
-  { codigo: 'es-ES', nombre: 'Spanish (Spain)',          nombre_local: 'Español (España)' },
-  { codigo: 'en-US', nombre: 'English (United States)',  nombre_local: 'English (United States)' },
-  { codigo: 'en-GB', nombre: 'English (United Kingdom)', nombre_local: 'English (United Kingdom)' },
-  { codigo: 'pt-BR', nombre: 'Portuguese (Brazil)',      nombre_local: 'Português (Brasil)' },
-];
-
 // moneda_default usa el enum Moneda {MXN, USD}. Países con otras monedas usan 'USD'
 // hasta que el enum se expanda en una migración futura.
 const PAISES = [
@@ -51,19 +34,6 @@ const TASAS_INICIALES = [
   { moneda_origen: 'MXN', moneda_destino: 'USD', tasa: '0.05882353', fuente: 'manual' }, // ~1/17
   { moneda_origen: 'USD', moneda_destino: 'MXN', tasa: '17.00000000', fuente: 'manual' },
 ];
-
-async function seedIdiomas() {
-  console.log('\n=== Idiomas ===');
-  for (const i of IDIOMAS) {
-    const existing = await prisma.idiomas.findUnique({ where: { codigo: i.codigo } });
-    if (existing) {
-      console.log(`  ✓ Already exists: ${i.codigo}`);
-    } else {
-      await prisma.idiomas.create({ data: i });
-      console.log(`  ✓ Created: ${i.codigo} (${i.nombre_local})`);
-    }
-  }
-}
 
 async function seedPaises() {
   console.log('\n=== Países ===');
@@ -235,7 +205,6 @@ async function seedTasasImpuesto() {
 async function main() {
   console.log('🌍 Starting internacionalización seed...');
   try {
-    await seedIdiomas();
     await seedPaises();
     await seedComisiones();
     await seedTasasCambio();
